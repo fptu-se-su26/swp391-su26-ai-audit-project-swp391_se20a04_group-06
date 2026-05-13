@@ -8,7 +8,7 @@
 | Class | SE20A04 |
 | Semester | SU26 |
 | Group | 06 |
-| Topic |  |
+| Topic | E-commerce website |
 | Repository |  |
 
 ---
@@ -17,10 +17,10 @@
 
 | No | Student ID | Full Name | GitHub Username | Role | Main Responsibility |
 |---:|---|---|---|---|---|
-| 1 |  |  |  | Leader |  |
-| 2 |  |  |  | Member |  |
-| 3 |  |  |  | Member |  |
-| 4 |  |  |  | Member |  |
+| 1 | HE186165 | Đậu Đình Bút| butdaudau | Leader |  |
+| 2 | DE191012 | Nguyễn Thánh Thuận |  | Member |  |
+| 3 | DE191087 | Tô Minh Cường | ToMinhCuong0430 | Member |  |
+| 4 | DE190058 | Trần Mihh Đức |  | Member |  |
 | 5 |  |  |  | Member |  |
 
 ---

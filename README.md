@@ -17,9 +17,9 @@
 
 | No | Student ID | Full Name | GitHub Username | Role | Main Responsibility |
 |---:|---|---|---|---|---|
-| 1 | DE191012| Nguyễn Thành Thuận | thanhthuanDEXXXX12 | Leader |  |
+| 1 | DE191012| Nguyễn Thành Thuận | thanhthuanDEXXXX12 | Member |  |
 | 2 | HE186165| Đậu Đình Bút | butdaudau | Member |  |
-| 3 | DE191087 | Tô Minh Cường | ToMinhCuong0430 | Member |  |
+| 3 | DE191087 | Tô Minh Cường | ToMinhCuong0430 | Leader |  |
 | 4 | DE190058 | Trần Minh Đức | tran-ducc | Member |  |
 | 5 |  |  |  | Member |  |
 

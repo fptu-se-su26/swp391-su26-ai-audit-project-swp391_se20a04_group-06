@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS Message (
   FOREIGN KEY (ReceiverID) REFERENCES User(UserID) ON DELETE CASCADE
 );
 
--- ─── Review (checklist item) ──────────────────────────────────
+-- ─── Review ──────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS Review (
   ReviewID   INT AUTO_INCREMENT PRIMARY KEY,
   ProductID  INT  NOT NULL,
@@ -80,14 +80,6 @@ CREATE TABLE IF NOT EXISTS Review (
   FOREIGN KEY (SellerID)   REFERENCES User(UserID) ON DELETE CASCADE
 );
 
--- ─── Indexes ─────────────────────────────────────────────────
-CREATE INDEX idx_product_type_status  ON Product(Type, Status);
-CREATE INDEX idx_product_seller       ON Product(SellerID);
-CREATE INDEX idx_product_catchtime    ON Product(CatchTime);
-CREATE INDEX idx_message_product      ON Message(ProductID);
-CREATE INDEX idx_message_sender       ON Message(SenderID);
-CREATE INDEX idx_review_seller        ON Review(SellerID);
-
 -- ─── Follow ───────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS Follow (
   FollowID   INT AUTO_INCREMENT PRIMARY KEY,
@@ -99,14 +91,32 @@ CREATE TABLE IF NOT EXISTS Follow (
   UNIQUE KEY unique_follow (FollowerID, SellerID)
 );
 
--- ─── Additional indexes (added in review) ─────────────────────
--- Fix: Follow.SellerID index cho query "SELECT FollowerID FROM Follow WHERE SellerID = ?"
-CREATE INDEX IF NOT EXISTS idx_follow_seller     ON Follow(SellerID);
-CREATE INDEX IF NOT EXISTS idx_follow_follower   ON Follow(FollowerID);
-CREATE INDEX IF NOT EXISTS idx_message_receiver  ON Message(ReceiverID);
-CREATE INDEX IF NOT EXISTS idx_notif_user        ON Notification(UserID, IsRead);
+-- ─── Indexes ─────────────────────────────────────────────────
+CREATE INDEX idx_product_type_status  ON Product(Type, Status);
+CREATE INDEX idx_product_seller       ON Product(SellerID);
+CREATE INDEX idx_product_catchtime    ON Product(CatchTime);
+CREATE INDEX idx_message_product      ON Message(ProductID);
+CREATE INDEX idx_message_sender       ON Message(SenderID);
+CREATE INDEX idx_message_receiver     ON Message(ReceiverID);
+CREATE INDEX idx_review_seller        ON Review(SellerID);
+CREATE INDEX idx_follow_seller        ON Follow(SellerID);
+CREATE INDEX idx_follow_follower      ON Follow(FollowerID);
 
--- Fix: Ngăn duplicate review (cùng người + cùng sản phẩm)
--- Chạy thủ công nếu DB đã tồn tại:
--- ALTER TABLE Review ADD UNIQUE KEY unique_review_per_product (ReviewerID, ProductID);
+-- ─── Constraints ─────────────────────────────────────────────
+-- Ngăn duplicate review (cùng người + cùng sản phẩm)
 ALTER TABLE Review ADD CONSTRAINT unique_review_per_product UNIQUE (ReviewerID, ProductID);
+
+-- ─── NOTE ──────────────────────────────────────────────────────
+-- Các bảng sau đây được tạo tự động qua db.migrations.ts khi server khởi động:
+--   • Notification (với index idx_notif_user)
+--   • Favorite
+--   • Report
+-- Các cột được thêm qua migration:
+--   • User.IsVerified
+--   • Product.ViewCount
+--   • Product.BumpedAt
+--
+-- BUG FIX: Đã XOÁ dòng sau khỏi schema.sql vì gây lỗi khi chạy lần đầu
+-- (bảng Notification chưa tồn tại tại thời điểm schema.sql chạy):
+--   CREATE INDEX IF NOT EXISTS idx_notif_user ON Notification(UserID, IsRead);
+-- Index này đã được chuyển vào db.migrations.ts sau khi CREATE TABLE Notification.

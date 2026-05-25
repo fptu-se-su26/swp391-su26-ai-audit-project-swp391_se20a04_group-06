@@ -1,6 +1,9 @@
 /**
  * db.migrations.ts — updated
  * Migrations: Notification, IsVerified, Favorite, ViewCount, Report
+ *
+ * BUG FIX: Thêm index idx_notif_user vào đây (sau khi CREATE TABLE Notification)
+ * thay vì để trong schema.sql (nơi bảng Notification chưa tồn tại)
  */
 import mysql from "mysql2/promise";
 
@@ -12,7 +15,9 @@ export async function runMigrations(conn: mysql.PoolConnection): Promise<void> {
   console.log("✅ Database schema ready");
 }
 
-async function createNotificationTable(conn: mysql.PoolConnection): Promise<void> {
+async function createNotificationTable(
+  conn: mysql.PoolConnection,
+): Promise<void> {
   await conn.query(`
     CREATE TABLE IF NOT EXISTS Notification (
       NotificationID INT AUTO_INCREMENT PRIMARY KEY,
@@ -28,6 +33,33 @@ async function createNotificationTable(conn: mysql.PoolConnection): Promise<void
       FOREIGN KEY (ReviewID)  REFERENCES Review(ReviewID)   ON DELETE CASCADE
     )
   `);
+
+  // ✅ FIX: Index idx_notif_user nằm ở đây sau CREATE TABLE, không nằm trong schema.sql
+  // Dùng stored procedure để tránh lỗi "duplicate key name" nếu index đã tồn tại
+  try {
+    await conn.query(`
+      SELECT COUNT(1) INTO @idx_exists
+      FROM information_schema.statistics
+      WHERE table_schema = DATABASE()
+        AND table_name = 'Notification'
+        AND index_name = 'idx_notif_user'
+    `);
+    await conn.query(`
+      SET @sql = IF(
+        (SELECT COUNT(1) FROM information_schema.statistics
+         WHERE table_schema = DATABASE()
+           AND table_name = 'Notification'
+           AND index_name = 'idx_notif_user') = 0,
+        'CREATE INDEX idx_notif_user ON Notification(UserID, IsRead)',
+        'SELECT 1'
+      );
+      PREPARE stmt FROM @sql;
+      EXECUTE stmt;
+      DEALLOCATE PREPARE stmt;
+    `);
+  } catch {
+    // Nếu lỗi (MySQL version cũ không hỗ trợ), bỏ qua — index không critical
+  }
 }
 
 async function createFavoriteTable(conn: mysql.PoolConnection): Promise<void> {
@@ -63,36 +95,46 @@ async function createReportTable(conn: mysql.PoolConnection): Promise<void> {
 async function runColumnMigrations(conn: mysql.PoolConnection): Promise<void> {
   const migrations: Array<{ table: string; column: string; sql: string }> = [
     {
-      table: "Notification", column: "ProductID",
+      table: "Notification",
+      column: "ProductID",
       sql: `ALTER TABLE Notification ADD COLUMN ProductID INT NULL, ADD CONSTRAINT fk_notif_product FOREIGN KEY (ProductID) REFERENCES Product(ProductID) ON DELETE CASCADE`,
     },
     {
-      table: "Notification", column: "ReviewID",
+      table: "Notification",
+      column: "ReviewID",
       sql: `ALTER TABLE Notification ADD COLUMN ReviewID INT NULL, ADD CONSTRAINT fk_notif_review FOREIGN KEY (ReviewID) REFERENCES Review(ReviewID) ON DELETE CASCADE`,
     },
     {
-      table: "User", column: "IsVerified",
+      table: "User",
+      column: "IsVerified",
       sql: `ALTER TABLE User ADD COLUMN IsVerified TINYINT(1) NOT NULL DEFAULT 0`,
     },
     {
-      table: "Product", column: "ViewCount",
+      table: "Product",
+      column: "ViewCount",
       sql: `ALTER TABLE Product ADD COLUMN ViewCount INT NOT NULL DEFAULT 0`,
     },
     {
-      table: "Product", column: "BumpedAt",
+      table: "Product",
+      column: "BumpedAt",
       sql: `ALTER TABLE Product ADD COLUMN BumpedAt DATETIME NULL`,
     },
   ];
 
   for (const m of migrations) {
     try {
-      const [cols] = await conn.query(`SHOW COLUMNS FROM \`${m.table}\` LIKE '${m.column}'`);
+      const [cols] = await conn.query(
+        `SHOW COLUMNS FROM \`${m.table}\` LIKE '${m.column}'`,
+      );
       if ((cols as any[]).length === 0) {
         await conn.query(m.sql);
         console.log(`✅ Migration: added ${m.table}.${m.column}`);
       }
     } catch (err) {
-      console.error(`⚠️  Migration ${m.table}.${m.column}:`, (err as Error).message);
+      console.error(
+        `⚠️  Migration ${m.table}.${m.column}:`,
+        (err as Error).message,
+      );
     }
   }
 }

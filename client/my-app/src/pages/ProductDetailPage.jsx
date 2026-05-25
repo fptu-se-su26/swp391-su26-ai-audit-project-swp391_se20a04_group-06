@@ -32,12 +32,16 @@ export function ProductDetailPage({
 
   // ── SEO: dynamic meta per product ────────────────────────────
   useSEO({
-    title: product ? `${product.name} — ${product.sellerName}` : "Chi tiết sản phẩm",
+    title: product
+      ? `${product.name} — ${product.sellerName}`
+      : "Chi tiết sản phẩm",
     description: product
       ? `${product.type === "Fresh" ? "🌊 Hải sản tươi" : "🔥 Hải sản khô"} — ${product.name}. Còn ${product.remainingWeight}kg. Giá ${parseFloat(product.price || 0).toLocaleString("vi-VN")}đ/kg.`
       : undefined,
     image: product ? ogImage(product.coverImg) : undefined,
-    url: product ? `${window.location.origin}/san-pham/${product.id}` : undefined,
+    url: product
+      ? `${window.location.origin}/san-pham/${product.id}`
+      : undefined,
     product: product || undefined,
   });
 
@@ -79,7 +83,11 @@ export function ProductDetailPage({
         body: JSON.stringify({ reason: reportReason }),
       });
       setReportSent(true);
-      setTimeout(() => { setShowReportModal(false); setReportSent(false); setReportReason(""); }, 2000);
+      setTimeout(() => {
+        setShowReportModal(false);
+        setReportSent(false);
+        setReportReason("");
+      }, 2000);
     } catch (e) {
       alert(e.message);
     } finally {
@@ -88,13 +96,18 @@ export function ProductDetailPage({
   };
 
   const handleToggleFavorite = async () => {
-    if (!user) { navigate("/dang-nhap"); return; }
+    if (!user) {
+      navigate("/dang-nhap");
+      return;
+    }
     setFavLoading(true);
     try {
       const res = await api(`/favorites/${product.id}`, { method: "POST" });
       setIsFavorited(res.favorited);
-    } catch {}
-    finally { setFavLoading(false); }
+    } catch {
+    } finally {
+      setFavLoading(false);
+    }
   };
 
   const handleToggleFollow = () => {
@@ -119,7 +132,7 @@ export function ProductDetailPage({
   return (
     <div style={{ maxWidth: 960, margin: "0 auto", padding: "20px 20px 80px" }}>
       <button
-        onClick={() => setPage("home")}
+        onClick={() => (setPage ? setPage("home") : navigate(-1))} // ✅ FIX: setPage may be undefined in router mode
         style={{
           background: "none",
           border: "none",
@@ -358,7 +371,10 @@ export function ProductDetailPage({
                   <div
                     onClick={() => {
                       if (setSelectedSeller) {
-                        setSelectedSeller({ id: product.sellerId, name: product.sellerName });
+                        setSelectedSeller({
+                          id: product.sellerId,
+                          name: product.sellerName,
+                        });
                         if (setPage) setPage("seller");
                       } else {
                         navigate(`/nguoi-ban/${product.sellerId}`);
@@ -499,7 +515,9 @@ export function ProductDetailPage({
                   )
                 ) : (
                   <button
-                    onClick={() => setPage ? setPage("auth") : navigate("/dang-nhap")}
+                    onClick={() =>
+                      setPage ? setPage("auth") : navigate("/dang-nhap")
+                    }
                     style={{
                       width: "100%",
                       padding: 13,
@@ -521,7 +539,14 @@ export function ProductDetailPage({
           </div>
 
           {/* Nút Yêu thích + Báo cáo */}
-          <div style={{ display: "flex", gap: 12, marginBottom: 24, alignItems: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              marginBottom: 24,
+              alignItems: "center",
+            }}
+          >
             <button
               onClick={handleToggleFavorite}
               disabled={favLoading}
@@ -529,9 +554,15 @@ export function ProductDetailPage({
                 background: isFavorited ? "#FEE2E2" : "#fff",
                 color: isFavorited ? "#DC2626" : "#6B7280",
                 border: "1px solid #e5e7eb",
-                padding: "9px 18px", borderRadius: 10,
-                cursor: "pointer", fontSize: 14, fontWeight: 600, fontFamily: "inherit",
-                display: "flex", alignItems: "center", gap: 6,
+                padding: "9px 18px",
+                borderRadius: 10,
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 600,
+                fontFamily: "inherit",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
               }}
             >
               {isFavorited ? "❤️ Đã lưu" : "🤍 Lưu yêu thích"}
@@ -540,18 +571,26 @@ export function ProductDetailPage({
               <button
                 onClick={() => setShowReportModal(true)}
                 style={{
-                  background: "#fff", color: "#9CA3AF",
+                  background: "#fff",
+                  color: "#9CA3AF",
                   border: "1px solid #e5e7eb",
-                  padding: "9px 14px", borderRadius: 10,
-                  cursor: "pointer", fontSize: 13, fontFamily: "inherit",
-                  display: "flex", alignItems: "center", gap: 5,
+                  padding: "9px 14px",
+                  borderRadius: 10,
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontFamily: "inherit",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
                 }}
               >
                 🚩 Báo cáo
               </button>
             )}
             {product.viewCount > 0 && (
-              <span style={{ fontSize: 13, color: "#9CA3AF", marginLeft: "auto" }}>
+              <span
+                style={{ fontSize: 13, color: "#9CA3AF", marginLeft: "auto" }}
+              >
                 👁 {product.viewCount} lượt xem
               </span>
             )}
@@ -559,29 +598,76 @@ export function ProductDetailPage({
 
           {/* Report modal */}
           {showReportModal && (
-            <div style={{
-              position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
-              zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
-            }} onClick={() => setShowReportModal(false)}>
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0,0,0,0.5)",
+                zIndex: 9999,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 16,
+              }}
+              onClick={() => setShowReportModal(false)}
+            >
               <div
                 onClick={(e) => e.stopPropagation()}
                 style={{
-                  background: "#fff", borderRadius: 16, padding: 24,
-                  width: "100%", maxWidth: 420, boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+                  background: "#fff",
+                  borderRadius: 16,
+                  padding: 24,
+                  width: "100%",
+                  maxWidth: 420,
+                  boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
                 }}
               >
-                <h3 style={{ margin: "0 0 16px", fontSize: 17, fontWeight: 800 }}>🚩 Báo cáo bài đăng</h3>
+                <h3
+                  style={{ margin: "0 0 16px", fontSize: 17, fontWeight: 800 }}
+                >
+                  🚩 Báo cáo bài đăng
+                </h3>
                 {reportSent ? (
-                  <div style={{ textAlign: "center", padding: "20px 0", color: "#059669", fontWeight: 700, fontSize: 16 }}>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: "20px 0",
+                      color: "#059669",
+                      fontWeight: 700,
+                      fontSize: 16,
+                    }}
+                  >
                     ✅ Báo cáo đã gửi thành công!
                   </div>
                 ) : (
                   <>
-                    <p style={{ fontSize: 13, color: "#6B7280", marginBottom: 12 }}>
+                    <p
+                      style={{
+                        fontSize: 13,
+                        color: "#6B7280",
+                        marginBottom: 12,
+                      }}
+                    >
                       Chọn lý do báo cáo bài đăng "{product.name}":
                     </p>
-                    {["Thông tin sai sự thật", "Hàng giả/kém chất lượng", "Giá cả gian lận", "Nội dung không phù hợp", "Người bán lừa đảo"].map((r) => (
-                      <label key={r} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", cursor: "pointer", fontSize: 14 }}>
+                    {[
+                      "Thông tin sai sự thật",
+                      "Hàng giả/kém chất lượng",
+                      "Giá cả gian lận",
+                      "Nội dung không phù hợp",
+                      "Người bán lừa đảo",
+                    ].map((r) => (
+                      <label
+                        key={r}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          padding: "8px 0",
+                          cursor: "pointer",
+                          fontSize: 14,
+                        }}
+                      >
                         <input
                           type="radio"
                           name="reason"
@@ -592,10 +678,25 @@ export function ProductDetailPage({
                         {r}
                       </label>
                     ))}
-                    <div style={{ marginTop: 16, display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                    <div
+                      style={{
+                        marginTop: 16,
+                        display: "flex",
+                        gap: 10,
+                        justifyContent: "flex-end",
+                      }}
+                    >
                       <button
                         onClick={() => setShowReportModal(false)}
-                        style={{ background: "#F3F4F6", border: "none", padding: "10px 18px", borderRadius: 8, cursor: "pointer", fontSize: 14, fontFamily: "inherit" }}
+                        style={{
+                          background: "#F3F4F6",
+                          border: "none",
+                          padding: "10px 18px",
+                          borderRadius: 8,
+                          cursor: "pointer",
+                          fontSize: 14,
+                          fontFamily: "inherit",
+                        }}
                       >
                         Huỷ
                       </button>
@@ -605,9 +706,13 @@ export function ProductDetailPage({
                         style={{
                           background: reportReason ? "#EF4444" : "#F3F4F6",
                           color: reportReason ? "#fff" : "#9CA3AF",
-                          border: "none", padding: "10px 18px", borderRadius: 8,
-                          cursor: reportReason ? "pointer" : "default", fontSize: 14,
-                          fontWeight: 700, fontFamily: "inherit",
+                          border: "none",
+                          padding: "10px 18px",
+                          borderRadius: 8,
+                          cursor: reportReason ? "pointer" : "default",
+                          fontSize: 14,
+                          fontWeight: 700,
+                          fontFamily: "inherit",
                         }}
                       >
                         {reportLoading ? "Đang gửi..." : "Gửi báo cáo"}

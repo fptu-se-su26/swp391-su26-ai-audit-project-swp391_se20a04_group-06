@@ -1,14 +1,18 @@
 /**
  * report.controller.ts
  * Báo cáo vi phạm + admin xử lý
+ *
+ * BUG FIX: createReport dùng sai (req as any).user.id thay vì req.user.userId
+ * → userId luôn undefined → INSERT nhận NULL ReporterID → lỗi FK constraint
  */
 import { Request, Response } from 'express';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { pool } from '../db';
 
-// POST /api/reports — tạo báo cáo
+// POST /api/reports/:productId — tạo báo cáo
 export async function createReport(req: Request, res: Response) {
-  const userId = (req as any).user.id;
+  // ✅ FIX: dùng req.user.userId thay vì (req as any).user.id
+  const { userId } = req.user;
   const productId = parseInt(req.params.productId, 10);
   const { reason } = req.body;
   if (!productId || !reason) return res.status(400).json({ message: 'Thiếu thông tin' });
@@ -32,7 +36,7 @@ export async function createReport(req: Request, res: Response) {
   }
 }
 
-// GET /api/reports — admin lấy danh sách báo cáo
+// GET /api/reports — admin lấy danh sách báo cáo (chỉ Admin, bảo vệ bởi adminOnly middleware)
 export async function getReports(req: Request, res: Response) {
   const { status = 'Pending' } = req.query as Record<string, string>;
   try {
@@ -57,6 +61,7 @@ export async function getReports(req: Request, res: Response) {
 }
 
 // PATCH /api/reports/:id — admin xử lý: Resolved (ẩn) | Dismissed (bỏ qua)
+// (chỉ Admin, bảo vệ bởi adminOnly middleware trong routes)
 export async function handleReport(req: Request, res: Response) {
   const reportId = parseInt(req.params.id, 10);
   const { action, adminNote } = req.body; // action: 'resolve' | 'dismiss'
@@ -65,7 +70,6 @@ export async function handleReport(req: Request, res: Response) {
   const newStatus = action === 'resolve' ? 'Resolved' : 'Dismissed';
   try {
     if (action === 'resolve') {
-      // Ẩn sản phẩm
       const [report] = await pool.query<RowDataPacket[]>(
         `SELECT ProductID FROM Report WHERE ReportID = ?`, [reportId]
       );

@@ -36,19 +36,34 @@ export async function register(req: Request, res: Response) {
       "SELECT UserID FROM User WHERE Phone = ?",
       [phone],
     );
+
     if (rows.length > 0)
-      return res.status(409).json({ message: "Số điện thoại đã được đăng ký" });
+      return res.status(409).json({
+        message: "Số điện thoại đã được đăng ký",
+      });
 
     const hash = await bcrypt.hash(password, 10);
+
     const [result] = await pool.query<any>(
       'INSERT INTO User (Name, Phone, PasswordHash, Role) VALUES (?, ?, ?, "User")',
       [name.trim(), phone, hash],
     );
 
     const userId = result.insertId;
+
+    // Tạo JWT
     const token = signToken(userId, "User");
+
+    // Lưu token vào cookie
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
+    });
+
+    // KHÔNG trả token nữa
     return res.status(201).json({
-      token,
       user: {
         id: userId,
         name,
@@ -61,6 +76,15 @@ export async function register(req: Request, res: Response) {
   } catch (err) {
     return sendServerError(res, err);
   }
+}
+
+export async function logout(req: Request, res: Response) {
+  res.clearCookie("token", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+  res.json({ message: "Đã đăng xuất" });
 }
 
 /* ─── POST /api/auth/login ─── */
@@ -95,8 +119,13 @@ export async function login(req: Request, res: Response) {
         .json({ message: "Số điện thoại hoặc mật khẩu không đúng" });
 
     const token = signToken(user.UserID, user.Role);
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production", // chỉ gửi qua HTTPS khi production
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
+    });
     return res.json({
-      token,
       user: {
         id: user.UserID,
         name: user.Name,
@@ -146,8 +175,16 @@ export async function updateProfile(req: Request, res: Response) {
   }
 
   try {
-    // 1. Kiểm tra số điện thoại mới có bị trùng lặp với tài khoản khác không
-    if (phone) {
+    const fieldsToUpdate: string[] = [];
+    const queryParams: any[] = [];
+
+    // Luôn cập nhật name nếu có truyền và hợp lệ
+    fieldsToUpdate.push("Name = ?");
+    queryParams.push(trimmed);
+
+    // Chỉ cập nhật Phone nếu Frontend có truyền giá trị mới lên
+    if (phone !== undefined) {
+      // Kiểm tra trùng lặp số điện thoại
       const [rows] = await pool.query<RowDataPacket[]>(
         "SELECT UserID FROM User WHERE Phone = ? AND UserID != ?",
         [phone, userId],
@@ -157,57 +194,46 @@ export async function updateProfile(req: Request, res: Response) {
           .status(409)
           .json({ message: "Số điện thoại đã được người khác đăng ký" });
       }
+      fieldsToUpdate.push("Phone = ?");
+      queryParams.push(phone);
     }
 
-    // 2. Chuyển đổi dữ liệu nhị phân (Buffer) và truyền thẳng lên Cloudinary
+    // Xử lý upload Cloudinary nếu có file
     let avatarUrl = null;
     if (req.file) {
       try {
         const uploadResult: any = await new Promise((resolve, reject) => {
           const stream = cloudinary.uploader.upload_stream(
-            { folder: "avatars" }, // Lưu vào thư mục "avatars" trên Cloudinary
+            { folder: "avatars" },
             (error, result) => {
               if (result) resolve(result);
               else reject(error);
             },
           );
-          stream.end(req.file.buffer); // Đổ dữ liệu buffer nhị phân vào luồng truyền
+          stream.end(req.file.buffer);
         });
-
-        // Nhận về URL ảnh an toàn từ Cloudinary
         avatarUrl = uploadResult.secure_url || uploadResult.url;
+
+        fieldsToUpdate.push("Avatar = ?");
+        queryParams.push(avatarUrl);
       } catch (uploadErr) {
         console.error("Lỗi upload Cloudinary thất bại:", uploadErr);
         return res.status(500).json({ message: "Lỗi tải ảnh lên Cloudinary" });
       }
     }
 
-    // 3. Tiến hành cập nhật Database bằng câu lệnh có điều kiện
-    if (avatarUrl) {
-      await pool.query(
-        "UPDATE User SET Name = ?, Phone = ?, Avatar = ? WHERE UserID = ?",
-        [trimmed, phone, avatarUrl, userId],
-      );
-    } else {
-      await pool.query("UPDATE User SET Name = ?, Phone = ? WHERE UserID = ?", [
-        trimmed,
-        phone,
-        userId,
-      ]);
-    }
+    // Thêm userId vào cuối danh sách params cho mệnh đề WHERE
+    queryParams.push(userId);
 
-    // Lấy lại Avatar URL mới nhất từ Database để trả về chính xác cho Frontend
-    const [updatedUser] = await pool.query<RowDataPacket[]>(
-      "SELECT Avatar FROM User WHERE UserID = ?",
-      [userId],
-    );
-    const finalAvatarUrl = updatedUser[0]?.Avatar || null;
+    // Ghép câu lệnh SQL động
+    const sql = `UPDATE User SET ${fieldsToUpdate.join(", ")} WHERE UserID = ?`;
+    await pool.query(sql, queryParams);
 
     return res.json({
       message: "Cập nhật tài khoản thành công",
       name: trimmed,
-      phone,
-      avatarUrl: finalAvatarUrl,
+      phone: phone !== undefined ? phone : undefined,
+      avatarUrl: avatarUrl || undefined,
     });
   } catch (err) {
     return sendServerError(res, err);

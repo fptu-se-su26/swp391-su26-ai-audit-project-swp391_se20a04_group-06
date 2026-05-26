@@ -1,27 +1,20 @@
-/**
- * ChatBox.jsx — Modernized UI/UX Version
- *
- * Thêm prop `fullHeight` để hiển thị cao hơn khi dùng trong InboxTab.
- * Giữ nguyên 100% logic Socket.IO và APIs cốt lõi.
- */
-
 import React, { useState, useEffect, useRef } from "react";
 import { C } from "../utils/theme";
 import { getSocket } from "../services/socket";
-import { getToken, api } from "../services/api";
+import { api } from "../services/api";
+import { MessageIcon, XIcon, CheckCircleIcon } from "./icons";
 
 export function ChatBox({ product, onClose, user, fullHeight = false }) {
   const [msgs, setMsgs] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [socketReady, setSocketReady] = useState(false);
-  const [isInputFocused, setIsInputFocused] = useState(false); // Hiệu ứng focus input
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
   const endRef = useRef(null);
   const socketRef = useRef(null);
   const otherUserRef = useRef(null);
 
-  // Fetch lịch sử tin nhắn
   useEffect(() => {
     setMsgs([]);
     setLoading(true);
@@ -45,12 +38,13 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
       .finally(() => setLoading(false));
   }, [product.id, user.id]);
 
-  // Kết nối Socket.IO
   useEffect(() => {
-    const token = getToken();
-    if (!token) return;
+    // 🚀 THAY ĐỔI: Chỉ kết nối socket nếu người dùng đã đăng nhập (kiểm tra qua prop user)
+    if (!user) return;
     let cancelled = false;
-    getSocket(token).then((socket) => {
+
+    // Không cần truyền token làm tham số nữa
+    getSocket().then((socket) => {
       if (cancelled) return;
       socketRef.current = socket;
       socket.emit("join_room", product.id);
@@ -86,7 +80,7 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
         socketRef.current.emit("leave_room", product.id);
       }
     };
-  }, [product.id, user.id]);
+  }, [product.id, user.id]); // trigger lại khi thông tin người dùng thay đổi
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -135,24 +129,22 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
     setInput("");
   };
 
-  const chatHeight = fullHeight ? 420 : 220;
+  const chatHeight = fullHeight ? 420 : 250;
 
   return (
     <div
       style={{
-        border: `1px solid ${C.border}`,
-        borderRadius: 16,
+        border: "1.5px solid #eaeaea",
+        borderRadius: 12,
         overflow: "hidden",
-        boxShadow: "0 10px 30px rgba(11, 79, 108, 0.08)",
         background: C.white,
       }}
     >
-      {/* Header thanh lịch */}
       <div
         style={{
-          background: `linear-gradient(135deg, ${C.ocean} 0%, ${C.oceanL} 100%)`,
+          background: "#0f172a",
           color: "#fff",
-          padding: "14px 18px",
+          padding: "12px 16px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -162,90 +154,37 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
           <div
             style={{
               fontWeight: 700,
-              fontSize: 14,
+              fontSize: 13,
               display: "flex",
               alignItems: "center",
-              gap: 4,
+              gap: 6,
             }}
           >
-            💬 {product.sellerName}
-            {product.sellerIsVerified && <span title="Đã xác minh">✅</span>}
-          </div>
-          <div
-            style={{
-              fontSize: 11,
-              opacity: 0.9,
-              marginTop: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-            }}
-          >
-            <span
-              style={{
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                maxWidth: 140,
-                whiteSpace: "nowrap",
-              }}
-            >
-              Hải sản: {product.name}
-            </span>
-            {socketReady && (
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 3,
-                  fontWeight: 600,
-                }}
-              >
-                •
-                <span
-                  style={{
-                    display: "inline-block",
-                    width: 6,
-                    height: 6,
-                    borderRadius: "50%",
-                    background: "#10B981",
-                    boxShadow: "0 0 0 2px rgba(16, 185, 129, 0.3)",
-                  }}
-                />
-                online
-              </span>
+            <MessageIcon size={14} />
+            <span>{product.sellerName}</span>
+            {product.sellerIsVerified && (
+              <CheckCircleIcon size={12} style={{ color: "#38bdf8" }} />
             )}
+          </div>
+          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
+            Sản phẩm: {product.name}
           </div>
         </div>
         {onClose && (
           <button
             onClick={onClose}
             style={{
-              background: "rgba(255,255,255,0.15)",
+              background: "none",
               border: "none",
-              color: "#fff",
+              color: "#94a3b8",
               cursor: "pointer",
-              fontSize: 18,
-              width: 26,
-              height: 26,
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.2s",
             }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background = "rgba(255,255,255,0.25)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "rgba(255,255,255,0.15)")
-            }
           >
-            ×
+            <XIcon size={16} />
           </button>
         )}
       </div>
 
-      {/* Tin nhắn được thiết kế lại mượt mà */}
       <div
         style={{
           height: chatHeight,
@@ -253,85 +192,79 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
           padding: "16px",
           display: "flex",
           flexDirection: "column",
-          gap: 10,
-          background: "#F1F5F9",
+          gap: 12,
+          background: "#f8fafc",
         }}
       >
-        {loading && (
+        {loading ? (
           <div
             style={{
               textAlign: "center",
-              color: C.muted,
-              fontSize: 13,
-              marginTop: 60,
+              color: "#94a3b8",
+              fontSize: 12,
+              marginTop: 40,
             }}
           >
-            Đang tải dữ liệu trò chuyện...
+            Đang tải tin nhắn...
           </div>
-        )}
-        {!loading && msgs.length === 0 && (
+        ) : msgs.length === 0 ? (
           <div
             style={{
               textAlign: "center",
-              color: C.muted,
-              fontSize: 13,
-              marginTop: 60,
+              color: "#94a3b8",
+              fontSize: 12,
+              marginTop: 40,
             }}
           >
-            Hãy mở lời trước để kết nối giao dịch 👋
+            Gửi tin nhắn để bắt đầu cuộc trò chuyện.
           </div>
-        )}
-
-        {msgs.map((m) => (
-          <div
-            key={m.id}
-            style={{
-              display: "flex",
-              justifyContent: m.isMine ? "flex-end" : "flex-start",
-            }}
-          >
+        ) : (
+          msgs.map((m) => (
             <div
+              key={m.id}
               style={{
-                maxWidth: "75%",
-                background: m.isMine
-                  ? `linear-gradient(135deg, ${C.ocean} 0%, ${C.oceanL} 100%)`
-                  : C.white,
-                color: m.isMine ? "#fff" : C.text,
-                padding: "10px 14px",
-                borderRadius: m.isMine
-                  ? "16px 16px 4px 16px"
-                  : "16px 16px 16px 4px",
-                fontSize: 13,
-                lineHeight: 1.4,
-                boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
-                border: m.isMine ? "none" : `1px solid #E2E8F0`,
+                display: "flex",
+                justifyContent: m.isMine ? "flex-end" : "flex-start",
               }}
             >
-              {m.content}
               <div
                 style={{
-                  fontSize: 9,
-                  opacity: 0.7,
-                  marginTop: 4,
-                  textAlign: m.isMine ? "right" : "left",
-                  color: m.isMine ? "rgba(255, 255, 255, 0.8)" : C.muted,
+                  maxWidth: "75%",
+                  background: m.isMine ? "#0f172a" : "#fff",
+                  color: m.isMine ? "#fff" : "#1e293b",
+                  padding: "8px 12px",
+                  borderRadius: m.isMine
+                    ? "8px 8px 0px 8px"
+                    : "8px 8px 8px 0px",
+                  fontSize: 13,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+                  border: m.isMine ? "none" : "1px solid #f1f5f9",
                 }}
               >
-                {m.time}
+                <div>{m.content}</div>
+                <div
+                  style={{
+                    fontSize: 9,
+                    color: m.isMine ? "rgba(255,255,255,0.6)" : "#94a3b8",
+                    marginTop: 4,
+                    textAlign: "right",
+                  }}
+                >
+                  {m.time}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
         <div ref={endRef} />
       </div>
 
-      {/* Khung nhập liệu nâng cấp viền phát sáng */}
       <div
         style={{
           padding: "12px",
           display: "flex",
           gap: 8,
-          borderTop: `1px solid ${C.border}`,
+          borderTop: "1px solid #f1f5f9",
           background: C.white,
         }}
       >
@@ -344,35 +277,26 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
           placeholder="Nhập tin nhắn..."
           style={{
             flex: 1,
-            border: `1.5px solid ${isInputFocused ? C.ocean : C.border}`,
-            borderRadius: 10,
-            padding: "10px 14px",
+            border: `1.5px solid ${isInputFocused ? "#0f172a" : "#cbd5e1"}`,
+            borderRadius: 6,
+            padding: "8px 12px",
             fontSize: 13,
             outline: "none",
-            fontFamily: "inherit",
-            transition: "all 0.2s ease",
-            boxShadow: isInputFocused
-              ? `0 0 0 3px rgba(11, 79, 108, 0.1)`
-              : "none",
+            transition: "all 0.15s ease",
           }}
         />
         <button
           onClick={send}
           style={{
-            background: C.ocean,
+            background: "#0f172a",
             color: "#fff",
             border: "none",
-            borderRadius: 10,
-            padding: "10px 16px",
+            borderRadius: 6,
+            padding: "8px 14px",
             cursor: "pointer",
             fontWeight: 700,
             fontSize: 13,
-            fontFamily: "inherit",
-            boxShadow: "0 2px 8px rgba(11, 79, 108, 0.25)",
-            transition: "opacity 0.2s",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = 0.9)}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = 1)}
         >
           Gửi
         </button>

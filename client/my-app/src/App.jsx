@@ -1,70 +1,111 @@
 /**
- * App.jsx — React Router version (Upgraded UX with Conditionally Hidden Navbar)
+ * App.jsx — Premium Hand-crafted Routing Entry
+ * Đã tích hợp ErrorBoundary và chuyển sang Cookie-based auth (không lưu token localStorage)
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, Suspense, lazy } from "react";
 import {
   BrowserRouter,
   Routes,
   Route,
   Navigate,
-  useNavigate,
   useParams,
-  useLocation, // ✅ BỔ SUNG: Import useLocation để theo dõi URL
+  useLocation,
 } from "react-router-dom";
-import { C } from "./utils/theme";
-import { api, getToken, saveToken } from "./services/api";
+import { api } from "./services/api";
 import { disconnectSocket } from "./services/socket";
 import { Navbar } from "./layout/Navbar";
-import { HomePage } from "./pages/HomePage";
-import { ProductDetailPage } from "./pages/ProductDetailPage";
-import { AuthPage } from "./pages/AuthPage";
-import { PostListingPage } from "./pages/PostListingPage";
-import { DashboardPage } from "./pages/DashboardPage";
-import { AdminPage } from "./pages/AdminPage";
-import { SellerProfilePage } from "./pages/SellerProfilePage";
-import { ProfilePage } from "./pages/ProfilePage";
 import { ChatBox } from "./components/ChatBox";
+import { useViewTransitionNavigate } from "./hooks/useViewTransitionNavigate";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
-/* ─── Shell: giữ user state + floating chat ─── */
+// ── Code-splitting Modules ──
+const HomePage = lazy(() =>
+  import("./pages/HomePage").then((m) => ({ default: m.HomePage })),
+);
+const ProductDetailPage = lazy(() =>
+  import("./pages/ProductDetailPage").then((m) => ({
+    default: m.ProductDetailPage,
+  })),
+);
+const AuthPage = lazy(() =>
+  import("./pages/AuthPage").then((m) => ({ default: m.AuthPage })),
+);
+const PostListingPage = lazy(() =>
+  import("./pages/PostListingPage").then((m) => ({
+    default: m.PostListingPage,
+  })),
+);
+const DashboardPage = lazy(() =>
+  import("./pages/DashboardPage").then((m) => ({ default: m.DashboardPage })),
+);
+const AdminPage = lazy(() =>
+  import("./pages/AdminPage").then((m) => ({ default: m.AdminPage })),
+);
+const SellerProfilePage = lazy(() =>
+  import("./pages/SellerProfilePage").then((m) => ({
+    default: m.SellerProfilePage,
+  })),
+);
+const ProfilePage = lazy(() =>
+  import("./pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
+);
+
+// ── Skeleton fallback ──
+function PageFallback() {
+  return (
+    <div
+      style={{
+        padding: "40px 24px",
+        display: "grid",
+        gap: 20,
+        gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+        maxWidth: 1200,
+        margin: "0 auto",
+      }}
+    >
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div
+          key={i}
+          className="skeleton-shimmer"
+          style={{
+            height: 320,
+            borderRadius: 12,
+            border: "1px solid var(--border)",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function AppShell() {
-  const navigate = useNavigate();
-  const location = useLocation(); // ✅ BỔ SUNG: Lấy location hiện tại
+  const navigate = useViewTransitionNavigate();
+  const location = useLocation();
   const [user, setUser] = useState(null);
   const [unread, setUnread] = useState(0);
   const [globalChat, setGlobalChat] = useState(null);
 
-  // Load font Be Vietnam Pro
+  // Khôi phục phiên làm việc từ cookie (không cần token trong localStorage)
   useEffect(() => {
-    const link = document.createElement("link");
-    link.href =
-      "https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap";
-    link.rel = "stylesheet";
-    document.head.appendChild(link);
-  }, []);
-
-  // Khôi phục session
-  useEffect(() => {
-    const token = getToken();
-    if (!token) return;
     api("/auth/me")
       .then((u) => setUser(u))
-      .catch(() => saveToken(null));
+      .catch(() => setUser(null));
   }, []);
 
-  // Poll unread count
+  // Poll tin nhắn chưa đọc
   useEffect(() => {
     if (!user) {
       setUnread(0);
       return;
     }
-    const fetch = () =>
+    const fetchUnread = () =>
       api("/messages/unread-count")
         .then((d) => setUnread(d.count))
         .catch(() => {});
-    fetch();
-    const id = setInterval(fetch, 30000);
-    return () => clearInterval(id);
+    fetchUnread();
+    const intervalId = setInterval(fetchUnread, 30000);
+    return () => clearInterval(intervalId);
   }, [user]);
 
   const handleSetUser = (u) => {
@@ -76,18 +117,16 @@ function AppShell() {
     }
   };
 
-  // ✅ BỔ SUNG: Ẩn thanh Navbar nếu đang ở trang Đăng nhập
   const isAuthPage = location.pathname === "/dang-nhap";
 
   return (
     <div
       style={{
-        fontFamily: "'Be Vietnam Pro', system-ui, sans-serif",
-        background: C.bg,
+        fontFamily: "var(--font)",
+        background: "var(--bg)",
         minHeight: "100vh",
       }}
     >
-      {/* Chỉ hiển thị Navbar nếu không phải là trang Đăng nhập */}
       {!isAuthPage && (
         <Navbar
           user={user}
@@ -97,80 +136,72 @@ function AppShell() {
         />
       )}
 
-      <Routes>
-        <Route path="/" element={<HomePage user={user} />} />
+      <Suspense fallback={<PageFallback />}>
+        <Routes>
+          <Route path="/" element={<HomePage user={user} />} />
+          <Route
+            path="/san-pham/:productId"
+            element={<ProductDetailPageRoute user={user} />}
+          />
+          <Route
+            path="/dang-nhap"
+            element={
+              user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <AuthPage setUser={handleSetUser} />
+              )
+            }
+          />
+          <Route
+            path="/dang-bai"
+            element={
+              user ? (
+                <PostListingPage user={user} />
+              ) : (
+                <Navigate to="/dang-nhap" replace />
+              )
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              user ? (
+                <DashboardPage user={user} />
+              ) : (
+                <Navigate to="/dang-nhap" replace />
+              )
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              user?.role === "Admin" ? (
+                <AdminPage />
+              ) : (
+                <Navigate to="/dang-nhap" replace />
+              )
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              user ? (
+                <ProfilePage user={user} setUser={handleSetUser} />
+              ) : (
+                <Navigate to="/dang-nhap" replace />
+              )
+            }
+          />
+          <Route
+            path="/nguoi-ban/:sellerId"
+            element={<SellerProfilePageRoute user={user} />}
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
 
-        {/* Product detail */}
-        <Route
-          path="/san-pham/:productId"
-          element={<ProductDetailPageRoute user={user} />}
-        />
-
-        {/* ✅ CẬP NHẬT: Nếu đã đăng nhập thì tự động chuyển hướng về trang chủ chứ không hiển thị Form login */}
-        <Route
-          path="/dang-nhap"
-          element={
-            user ? (
-              <Navigate to="/" replace />
-            ) : (
-              <AuthPage setUser={handleSetUser} />
-            )
-          }
-        />
-
-        {/* Protected routes */}
-        <Route
-          path="/dang-bai"
-          element={
-            user ? (
-              <PostListingPage user={user} />
-            ) : (
-              <Navigate to="/dang-nhap" replace />
-            )
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            user ? (
-              <DashboardPage user={user} />
-            ) : (
-              <Navigate to="/dang-nhap" replace />
-            )
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            user?.role === "Admin" ? (
-              <AdminPage />
-            ) : (
-              <Navigate to="/dang-nhap" replace />
-            )
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            user ? (
-              <ProfilePage user={user} setUser={handleSetUser} />
-            ) : (
-              <Navigate to="/dang-nhap" replace />
-            )
-          }
-        />
-
-        {/* Seller profile */}
-        <Route
-          path="/nguoi-ban/:sellerId"
-          element={<SellerProfilePageRoute user={user} />}
-        />
-
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-
-      {/* Floating chat box */}
+      {/* Floating Chat Box */}
       {globalChat && (
         <div
           style={{
@@ -179,7 +210,10 @@ function AppShell() {
             right: 24,
             width: 320,
             zIndex: 9999,
-            boxShadow: "0 8px 30px rgba(0,0,0,0.2)",
+            boxShadow: "var(--shadow-xl)",
+            borderRadius: 12,
+            overflow: "hidden",
+            animation: "slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) both",
           }}
         >
           <ChatBox
@@ -198,6 +232,7 @@ function AppShell() {
   );
 }
 
+// ── Routing phụ trợ ──
 function ProductDetailPageRoute({ user }) {
   const { productId } = useParams();
   const [product, setProduct] = useState(null);
@@ -210,19 +245,29 @@ function ProductDetailPageRoute({ user }) {
       .finally(() => setLoading(false));
   }, [productId]);
 
-  if (loading)
+  if (loading) {
     return (
       <div
         style={{
-          padding: 40,
+          padding: "80px 24px",
           textAlign: "center",
-          color: C.muted,
-          fontWeight: 500,
+          color: "var(--muted)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 12,
         }}
       >
-        Đang tải thông tin sản phẩm...
+        <div
+          className="skeleton-shimmer"
+          style={{ width: 40, height: 40, borderRadius: "50%" }}
+        />
+        <span style={{ fontSize: 13, fontWeight: 500 }}>
+          ĐANG TẢI THÔNG TIN SẢN PHẨM…
+        </span>
       </div>
     );
+  }
   if (!product) return <Navigate to="/" replace />;
   return <ProductDetailPage product={product} user={user} />;
 }
@@ -239,19 +284,29 @@ function SellerProfilePageRoute({ user }) {
       .finally(() => setLoading(false));
   }, [sellerId]);
 
-  if (loading)
+  if (loading) {
     return (
       <div
         style={{
-          padding: 40,
+          padding: "80px 24px",
           textAlign: "center",
-          color: C.muted,
-          fontWeight: 500,
+          color: "var(--muted)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 12,
         }}
       >
-        Đang tải hồ sơ ngư dân...
+        <div
+          className="skeleton-shimmer"
+          style={{ width: 40, height: 40, borderRadius: "50%" }}
+        />
+        <span style={{ fontSize: 13, fontWeight: 500 }}>
+          ĐANG TẢI HỒ SƠ NGƯ DÂN…
+        </span>
       </div>
     );
+  }
   if (!seller) return <Navigate to="/" replace />;
   return <SellerProfilePage seller={seller} user={user} />;
 }
@@ -259,7 +314,9 @@ function SellerProfilePageRoute({ user }) {
 export default function App() {
   return (
     <BrowserRouter>
-      <AppShell />
+      <ErrorBoundary>
+        <AppShell />
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

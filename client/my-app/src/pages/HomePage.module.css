@@ -1,0 +1,745 @@
+/* HomePage.module.css — Premium Responsive Landing Page */
+
+.page {
+  width: 100%;
+  background: var(--bg);
+  min-height: 100vh;
+}
+
+/* ─── HERO ───────────────────────────────────────────────── */
+.hero {
+  position: relative;
+  width: 100%;
+  height: 460px;
+  overflow: hidden;
+  margin-bottom: 36px;
+}
+
+.heroTrackWrapper {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.heroTrack {
+  display: flex;
+  height: 100%;
+  transition: transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.heroSlide {
+  height: 100%;
+  flex-shrink: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    rgba(7, 54, 75, 0.58) 0%,
+    rgba(11, 79, 108, 0.3) 55%,
+    rgba(0, 0, 0, 0.1) 100%
+  );
+}
+
+/* ─── HERO ARROWS ────────────────────────────────────────── */
+.heroArrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #fff;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.2s,
+    transform 0.2s;
+  user-select: none;
+}
+
+.heroArrow:hover {
+  background: rgba(255, 255, 255, 0.28);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.heroArrow.prev {
+  left: 20px;
+}
+.heroArrow.next {
+  right: 20px;
+}
+
+/* ─── HERO DOTS ──────────────────────────────────────────── */
+.heroDots {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 3;
+}
+
+.heroDot {
+  height: 7px;
+  border-radius: 99px;
+  border: none;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.45);
+  padding: 0;
+  transition:
+    width 0.3s ease,
+    background 0.3s ease;
+}
+
+.heroDot.activeDot {
+  width: 22px;
+  background: #fff;
+}
+
+/* ─── HERO CONTENT ───────────────────────────────────────── */
+.heroContent {
+  position: relative;
+  z-index: 2;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 28px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.heroCard {
+  background: rgba(7, 34, 55, 0.45);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  padding: 32px 36px;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  max-width: 520px;
+}
+
+.heroEyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(126, 207, 232, 0.9);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.heroH1 {
+  font-size: 32px;
+  font-weight: 900;
+  margin: 0 0 10px;
+  line-height: 1.2;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+
+.heroAccent {
+  color: #7ecfe8;
+}
+
+.heroLead {
+  opacity: 0.8;
+  margin: 0 0 24px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #e8f5fa;
+  font-weight: 400;
+}
+
+.heroActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.heroGpsBtn {
+  color: #fff;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.22s;
+  backdrop-filter: blur(4px);
+  padding: 10px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.13);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.heroGpsBtn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.heroGpsBtn.gpsOk {
+  background: rgba(30, 132, 73, 0.85);
+  border-color: rgba(30, 132, 73, 0.5);
+}
+
+.heroGpsBtn.gpsOk:hover {
+  background: rgba(30, 132, 73, 1);
+}
+
+.heroRegisterBtn {
+  background: var(--coral);
+  color: #fff;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(232, 100, 58, 0.45);
+  transition:
+    background 0.22s,
+    transform 0.22s;
+  letter-spacing: -0.1px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.heroRegisterBtn:hover {
+  background: var(--coral-d);
+  transform: translateY(-2px);
+}
+
+/* ─── MAIN CONTENT AREA ──────────────────────────────────── */
+.content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ─── SEARCH BAR ─────────────────────────────────────────── */
+.searchWrap {
+  position: relative;
+  margin-bottom: 24px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+  display: flex;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 14px 16px 14px 44px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  outline: none;
+  background: var(--white);
+  box-sizing: border-box;
+  transition:
+    border-color 0.22s,
+    box-shadow 0.22s;
+  box-shadow: var(--shadow-sm);
+  color: var(--text);
+}
+
+.searchInput:focus {
+  border-color: var(--ocean);
+  box-shadow:
+    0 0 0 3px rgba(11, 79, 108, 0.1),
+    var(--shadow-sm);
+}
+
+/* ─── TABS + FILTER ROW ──────────────────────────────────── */
+.filterRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.tabGroup {
+  display: flex;
+  gap: 3px;
+  background: var(--bg-2);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  position: relative;
+}
+
+/* Sliding pill indicator */
+.tabIndicator {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  border-radius: 8px;
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+  transform: translateX(calc(var(--tab-offset, 0) * 100%));
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.tab {
+  padding: 9px 22px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  background: transparent;
+  color: var(--muted);
+  transition: color 0.2s;
+  letter-spacing: -0.1px;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+}
+
+.tab.active {
+  /* background handled by tabIndicator */
+}
+
+.tab.tabFresh.active {
+  color: var(--coral);
+}
+.tab.tabDried.active {
+  color: #92400e;
+}
+
+.chipGroup {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 8px 16px;
+  border-radius: 99px;
+  border: 1.5px solid var(--border);
+  background: var(--white);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.18s,
+    border-color 0.18s,
+    color 0.18s;
+  letter-spacing: -0.1px;
+}
+
+.chip:hover {
+  background: var(--bg-2);
+  border-color: #b0c4d8;
+}
+
+.chip.activeChip {
+  border-color: var(--ocean);
+  background: var(--ocean-p);
+  color: var(--ocean);
+  font-weight: 700;
+  animation: chipPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes chipPop {
+  0% {
+    transform: scale(0.92);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ─── ADVANCED FILTERS ───────────────────────────────────── */
+.advancedToggle {
+  background: var(--white);
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  padding: 7px 16px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.advancedToggle:hover {
+  background: var(--bg-2);
+}
+
+.advancedToggle.hasFilter {
+  background: var(--ocean);
+  color: #fff;
+  border-color: var(--ocean);
+}
+
+.advancedToggle.hasFilter:hover {
+  background: var(--ocean-d);
+}
+
+.filterDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--coral);
+  display: inline-block;
+}
+
+.advancedPanel {
+  margin-top: 10px;
+  padding: 18px 22px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  box-shadow: var(--shadow-md);
+  animation: fadeUp 0.2s ease both;
+  margin-bottom: 20px;
+}
+
+.filterGroup label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 7px;
+  letter-spacing: 0.03em;
+}
+
+.filterInputRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.filterSep {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.filterInput {
+  width: 110px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  outline: none;
+  color: var(--text);
+  background: var(--bg);
+  transition: border-color 0.15s;
+}
+
+.filterInput:focus {
+  border-color: var(--ocean);
+}
+
+.clearBtn {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.clearBtn:hover {
+  background: #fecaca;
+}
+
+/* ─── SORT + VIEW ROW ────────────────────────────────────── */
+.sortRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sortLabel {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.sortSelect {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 12px;
+  font-size: 12px;
+  background: var(--white);
+  cursor: pointer;
+  color: var(--text);
+  outline: none;
+  box-shadow: var(--shadow-sm);
+  font-weight: 500;
+}
+
+.sortLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.viewToggle {
+  display: flex;
+  background: var(--bg-2);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  overflow: hidden;
+}
+
+.viewBtn {
+  padding: 7px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 12px;
+  background: transparent;
+  color: var(--muted);
+  transition:
+    background 0.18s,
+    color 0.18s,
+    box-shadow 0.18s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.viewBtn.active {
+  background: var(--white);
+  color: var(--ocean);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ─── INFO BANNER ────────────────────────────────────────── */
+.infoBanner {
+  background: var(--ocean-p);
+  border: 1px solid rgba(26, 127, 160, 0.2);
+  border-left: 3px solid var(--ocean-l);
+  border-radius: var(--radius-md);
+  padding: 11px 16px;
+  margin-bottom: 20px;
+  font-size: 12px;
+  color: var(--ocean);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* ─── ERROR BANNER ───────────────────────────────────────── */
+.errorBanner {
+  background: #fef2f2;
+  color: #991b1b;
+  border-radius: var(--radius-md);
+  padding: 11px 16px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #fecaca;
+  border-left: 3px solid #ef4444;
+}
+
+/* ─── PRODUCT GRID ───────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+/* ─── EMPTY STATE ────────────────────────────────────────── */
+.empty {
+  text-align: center;
+  padding: 72px 20px;
+  color: var(--muted);
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.emptyIcon {
+  font-size: 52px;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.emptyTitle {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--dark);
+  margin-bottom: 6px;
+}
+
+.emptyBody {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ─── LOAD MORE / END ────────────────────────────────────── */
+.endLabel {
+  text-align: center;
+  padding: 32px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* ─── RESPONSIVE POLISH (Cải tiến giao diện Mobile) ──────── */
+@media (max-width: 768px) {
+  .hero {
+    height: 340px; /* Thu bớt chiều cao banner */
+    margin-bottom: 24px;
+  }
+  .heroArrow {
+    display: none !important; /* Ẩn các mũi tên đè chữ vướng víu trên mobile */
+  }
+  .heroContent {
+    padding: 0 16px !important;
+  }
+  .heroCard {
+    padding: 18px 20px !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    border-radius: 14px !important;
+  }
+  .heroH1 {
+    font-size: 22px !important; /* Giảm font chữ tiêu đề tránh chồng dòng */
+    line-height: 1.25 !important;
+  }
+  .heroLead {
+    font-size: 12px !important;
+    margin-bottom: 16px !important;
+    line-height: 1.5 !important;
+  }
+  .heroGpsBtn {
+    padding: 8px 14px !important;
+    font-size: 12px !important;
+  }
+
+  /* main container */
+  .content {
+    padding: 0 16px 60px !important;
+  }
+
+  .searchWrap {
+    margin-bottom: 16px;
+  }
+  .searchInput {
+    padding: 11px 14px 11px 38px !important;
+    font-size: 13px !important;
+  }
+
+  /* ─── TÁI CẤU TRÚC CUỘN NGANG FILTER CHIPS (MOBILE CHUẨN) ─── */
+  .filterRow {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .tabGroup {
+    width: 100% !important;
+    display: flex !important;
+  }
+  .tab {
+    flex: 1 !important; /* Chia đều 2 tab chính */
+    text-align: center !important;
+    padding: 8px 10px !important;
+    font-size: 12px !important;
+  }
+
+  /* Hiệu ứng cuộn ngang tràn lề cực mượt chuẩn Native App */
+  .chipGroup {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    padding: 4px 16px !important;
+    margin-left: -16px; /* Đẩy lùi lề trái sát viền */
+    margin-right: -16px; /* Đẩy lùi lề phải sát viền */
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Ẩn thanh cuộn Firefox */
+  }
+  .chipGroup::-webkit-scrollbar {
+    display: none; /* Ẩn thanh cuộn Chrome, Safari */
+  }
+  .chip {
+    flex-shrink: 0 !important; /* Ngăn thẻ chip bị co ép kích thước */
+    padding: 6px 14px !important;
+    font-size: 11px !important;
+  }
+
+  .advancedToggle {
+    margin-bottom: 16px;
+    font-size: 11px !important;
+    padding: 6px 12px !important;
+  }
+  .sortRow {
+    margin-bottom: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr 1fr; /* Chia 2 cột card sản phẩm đều đặn */
+    gap: 12px;
+  }
+}
+
+@media (max-width: 380px) {
+  .grid {
+    grid-template-columns: 1fr; /* Màn hình siêu nhỏ quay về 1 cột */
+  }
+}

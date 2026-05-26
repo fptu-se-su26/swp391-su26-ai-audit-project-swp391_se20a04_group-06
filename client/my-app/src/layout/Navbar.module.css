@@ -1,0 +1,436 @@
+/* Navbar.module.css — Premium Responsive Glassmorphic Nav */
+
+.topBar {
+  background: #062a3a;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+}
+
+.topBarHidden {
+  transform: translateY(-100%);
+  opacity: 0;
+  height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.topBarItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ─── MAIN NAV ───────────────────────────────────────────── */
+.nav {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  color: #1e293b;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  height: 68px;
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  transition:
+    height 0.3s ease,
+    background-color 0.3s,
+    box-shadow 0.3s;
+}
+
+.navScrolled {
+  height: 58px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+  border-bottom-color: rgba(0, 0, 0, 0.04);
+}
+
+/* ─── LOGO ───────────────────────────────────────────────── */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  margin-right: 24px;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+}
+
+.logoMark {
+  background: var(--ocean-p);
+  border-radius: 8px;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  border: 1px solid rgba(14, 165, 233, 0.15);
+  transition: transform 0.2s;
+}
+
+.logo:hover .logoMark {
+  transform: scale(1.05) rotate(-3deg);
+}
+
+.logoName {
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--dark);
+  line-height: 1.1;
+}
+
+.logoAccent {
+  color: var(--ocean);
+}
+
+.logoTagline {
+  font-size: 8px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 700;
+  display: block;
+  margin-top: 2px;
+}
+
+/* ─── NAV LINKS ──────────────────────────────────────────── */
+.navLinks {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.navBtn {
+  background: transparent;
+  color: #475569;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.navBtn:hover {
+  background: #f1f5f9;
+  color: var(--dark);
+}
+
+.navBtn.active {
+  background: var(--ocean-p);
+  color: var(--ocean);
+}
+
+/* ─── RIGHT ACTIONS ──────────────────────────────────────── */
+.actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.postBtn {
+  background: var(--coral);
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(232, 100, 58, 0.3);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.postBtn:hover {
+  background: var(--coral-d);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(232, 100, 58, 0.4);
+}
+
+.loginBtn {
+  background: #f1f5f9;
+  color: #334155;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+
+.loginBtn:hover {
+  background: #e2e8f0;
+  color: var(--dark);
+}
+
+/* ─── ICON BUTTONS ───────────────────────────────────────── */
+.iconBtn {
+  background: #fff;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  width: 38px;
+  height: 38px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.iconBtn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: var(--dark);
+}
+
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: #fff;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  border: 2px solid #fff;
+}
+
+/* ─── PROFILE BUTTON ─────────────────────────────────────── */
+.profileBtn {
+  background: #fff;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0 12px 0 6px;
+  height: 38px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.profileBtn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.avatarInitial {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--ocean-l) 0%, var(--ocean) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+}
+
+/* ─── DROPDOWN ───────────────────────────────────────────── */
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #fff;
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.08),
+    0 4px 12px rgba(0, 0, 0, 0.02);
+  border-radius: 12px;
+  width: 200px;
+  z-index: 1000;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.dropdownHeader {
+  padding: 14px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.dropdownName {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dark);
+}
+
+.dropdownSub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.dropdownItem {
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+  color: #475569;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.15s;
+}
+
+.dropdownItem:hover {
+  background: #f1f5f9;
+  color: var(--dark);
+}
+
+.dropdownItem.danger {
+  color: #ef4444;
+}
+
+.dropdownItem.danger:hover {
+  background: #fef2f2;
+}
+
+.dropdownDivider {
+  border: none;
+  border-top: 1px solid #f1f5f9;
+  margin: 4px 0;
+}
+
+/* ─── MOBILE TOGGLE (Chỉ hiển thị trên Mobile) ───────────── */
+.mobileActions {
+  display: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.hamburger {
+  background: #fff;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  width: 38px;
+  height: 38px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── MOBILE MENU ────────────────────────────────────────── */
+.mobileMenu {
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: sticky;
+  top: 58px;
+  z-index: 998;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+}
+
+.mobileMenuItem {
+  background: #f8fafc;
+  color: #334155;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobileMenuItem.highlight {
+  background: var(--ocean-p);
+  color: var(--ocean);
+}
+
+/* ─── RESPONSIVE BREAKPOINT ─────────────────────────────── */
+@media (max-width: 768px) {
+  .topBar {
+    display: none !important; /* Ẩn topbar tràn chữ */
+  }
+  .nav {
+    height: 56px !important; /* Thu gọn chiều cao header */
+    padding: 0 16px !important;
+  }
+  .navScrolled {
+    height: 56px !important;
+  }
+  .navLinks {
+    display: none !important; /* Ẩn thanh điều hướng desktop */
+  }
+  .actions {
+    display: none !important; /* Ẩn các nút Profile desktop */
+  }
+  .mobileActions {
+    display: flex !important; /* Kích hoạt nút Hamburger và Chat di động */
+  }
+  .logoMark {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  .logoName {
+    font-size: 14px !important;
+  }
+  .logoTagline {
+    font-size: 7px !important;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

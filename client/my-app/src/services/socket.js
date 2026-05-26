@@ -1,9 +1,7 @@
 let _socketLib = null;
 let _socket = null;
 
-// Tự động xác định URL backend:
-// - Trong dev (Vite proxy): dùng window.location.origin (proxy /socket.io → localhost:5000)
-// - Trong prod: đặt VITE_SOCKET_URL trong .env
+// Tự động xác định URL backend
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || window.location.origin;
 
 export async function loadSocketIO() {
@@ -14,8 +12,8 @@ export async function loadSocketIO() {
       resolve(_socketLib);
       return;
     }
-    const s = document.createElement('script');
-    s.src = 'https://cdn.socket.io/4.7.5/socket.io.min.js';
+    const s = document.createElement("script");
+    s.src = "https://cdn.socket.io/4.7.5/socket.io.min.js";
     s.onload = () => {
       _socketLib = window.io;
       resolve(_socketLib);
@@ -25,14 +23,18 @@ export async function loadSocketIO() {
   });
 }
 
-export async function getSocket(token) {
+export async function getSocket() {
   if (_socket?.connected) return _socket;
+
   const io = await loadSocketIO();
+
+  // ✅ Không gửi token qua auth nữa, thay vào đó dùng cookie (withCredentials)
   _socket = io(SOCKET_URL, {
-    auth: { token },
+    withCredentials: true, // gửi cookie kèm theo handshake
     autoConnect: true,
-    transports: ['websocket', 'polling'],
+    transports: ["websocket", "polling"],
   });
+
   return _socket;
 }
 

@@ -1,7 +1,7 @@
 /**
- * ProductCard.jsx - Premium UI/UX Redesigned Version
+ * ProductCard.jsx — Premium Optimized Component
  */
-import React, { useState } from "react";
+import React, { useState, useCallback, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { C } from "../utils/theme";
 import { fmt } from "../utils/format";
@@ -9,368 +9,233 @@ import { useCountdown } from "../hooks/useCountdown";
 import { VerifiedBadge } from "./VerifiedBadge";
 import { api } from "../services/api";
 import { cardImage } from "../utils/cloudinary";
+import { HeartIcon, WeightIcon, EyeIcon, MapPinIcon, ClockIcon } from "./icons";
+import styles from "./ProductCard.module.css";
+import { useViewTransitionNavigate } from "../hooks/useViewTransitionNavigate";
 
-export function CountdownBadge({ catchTime }) {
+// ── Countdown Badge ──
+export const CountdownBadge = memo(function CountdownBadge({ catchTime }) {
   const rem = useCountdown(catchTime);
   if (!rem) return null;
+
   const expired = rem === "Hết hạn";
   const diff = 24 * 3600000 - (Date.now() - new Date(catchTime).getTime());
   const urgent = !expired && diff > 0 && diff < 5 * 3600000;
+
+  const colorStyle = expired
+    ? { background: "#fee2e2", color: "#991b1b" }
+    : urgent
+      ? { background: "#fecaca", color: "#dc2626" }
+      : { background: "#fffbeb", color: "#b45309" };
+
   return (
-    <span
-      className={urgent ? "pulse-urgent" : ""}
-      style={{
-        background: expired ? "#FEE2E2" : urgent ? "#FECACA" : "#FEF3C7",
-        color: expired ? "#991B1B" : urgent ? "#DC2626" : "#B45309",
-        fontSize: 10,
-        fontWeight: 700,
-        padding: "3px 8px",
-        borderRadius: 6,
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 3,
-      }}
-    >
-      ⏱️ {rem}
+    <span className={styles.countdownBadge} style={colorStyle}>
+      <ClockIcon size={12} />
+      {rem}
     </span>
   );
-}
+});
 
-export function ProductCard({
-  product,
-  onClick,
-  onSellerClick,
-  favoriteIds,
-  onFavoriteChange,
-  user,
-}) {
-  const navigate = useNavigate();
-  const [isHovered, setIsHovered] = useState(false);
+// ── Main Product Card Component ──
+export const ProductCard = memo(
+  function ProductCard({
+    product,
+    onClick,
+    onSellerClick,
+    favoriteIds,
+    onFavoriteChange,
+    user,
+    cardIndex = 0,
+  }) {
+    const navigate = useNavigate();
 
-  const handleClick = onClick || (() => navigate(`/san-pham/${product.id}`));
-  const handleSellerClick = (e) => {
-    e.stopPropagation();
-    if (onSellerClick) onSellerClick(e);
-    else navigate(`/nguoi-ban/${product.sellerId}`);
-  };
+    const handleClick = useCallback(() => {
+      if (onClick) onClick(product.id);
+      else navigate(`/san-pham/${product.id}`);
+    }, [onClick, product.id, navigate]);
 
-  const typeColor = product.type === "Fresh" ? C.coral : "#B45309";
-  const typeLabel = product.type === "Fresh" ? "🌊 Tươi" : "🔥 Khô";
-  const pct = Math.round((product.remainingWeight / product.totalWeight) * 100);
+    const handleSellerClick = useCallback(
+      (e) => {
+        e.stopPropagation();
+        if (onSellerClick) onSellerClick(e);
+        else navigate(`/nguoi-ban/${product.sellerId}`);
+      },
+      [onSellerClick, product.sellerId, navigate],
+    );
 
-  const isFav = favoriteIds ? favoriteIds.includes(product.id) : false;
-  const [favLoading, setFavLoading] = useState(false);
-  const [localFav, setLocalFav] = useState(null);
-  const currentFav = localFav !== null ? localFav : isFav;
+    const isFav = favoriteIds?.includes(product.id) ?? false;
+    const [favLoading, setFavLoading] = useState(false);
+    const [localFav, setLocalFav] = useState(null);
+    const [popKey, setPopKey] = useState(0);
+    const currentFav = localFav !== null ? localFav : isFav;
 
-  const toggleFav = async (e) => {
-    e.stopPropagation();
-    if (!user) {
-      navigate("/dang-nhap");
-      return;
-    }
-    setFavLoading(true);
-    try {
-      const res = await api(`/favorites/${product.id}`, { method: "POST" });
-      setLocalFav(res.favorited);
-      if (onFavoriteChange) onFavoriteChange(product.id, res.favorited);
-    } catch {
-    } finally {
-      setFavLoading(false);
-    }
-  };
+    const toggleFav = useCallback(
+      async (e) => {
+        e.stopPropagation();
+        if (!user) {
+          navigate("/dang-nhap");
+          return;
+        }
+        setFavLoading(true);
+        try {
+          const res = await api(`/favorites/${product.id}`, { method: "POST" });
+          setLocalFav(res.favorited);
+          if (res.favorited) setPopKey((k) => k + 1);
+          onFavoriteChange?.(product.id, res.favorited);
+        } catch {
+          /* silent */
+        } finally {
+          setFavLoading(false);
+        }
+      },
+      [user, product.id, onFavoriteChange, navigate],
+    );
 
-  const optimizedImg = cardImage(product.coverImg);
+    const typeBadgeStyle =
+      product.type === "Fresh"
+        ? { background: "#e0f2fe", color: "#0369a1" }
+        : { background: "#fef3c7", color: "#92400e" };
+    const typeLabel = product.type === "Fresh" ? "Tươi" : "Khô";
 
-  return (
-    <div
-      onClick={() => handleClick(product)}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      style={{
-        background: C.white,
-        borderRadius: 20,
-        border: "1px solid #E5E7EB",
-        overflow: "hidden",
-        cursor: "pointer",
-        position: "relative",
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        transform: isHovered ? "translateY(-4px)" : "none",
-        boxShadow: isHovered
-          ? "0 20px 25px -5px rgba(11, 79, 108, 0.12), 0 10px 10px -5px rgba(11, 79, 108, 0.04)"
-          : "0 4px 6px -1px rgba(11, 79, 108, 0.02), 0 2px 4px -1px rgba(11, 79, 108, 0.01)",
-      }}
-    >
-      {/* Floating Badges trên góc ảnh */}
-      <span
-        style={{
-          position: "absolute",
-          top: 12,
-          left: 12,
-          zIndex: 2,
-          background:
-            product.type === "Fresh"
-              ? "rgba(253, 232, 224, 0.95)"
-              : "rgba(254, 245, 228, 0.95)",
-          backdropFilter: "blur(4px)",
-          WebkitBackdropFilter: "blur(4px)",
-          color: typeColor,
-          fontSize: 11,
-          fontWeight: 800,
-          padding: "4px 10px",
-          borderRadius: 8,
-          boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
-        }}
+    const pct = Math.round(
+      (product.remainingWeight / product.totalWeight) * 100,
+    );
+    const stockColor = pct > 50 ? "#10b981" : pct > 20 ? "#f59e0b" : "#ef4444";
+    const optimizedImg = cardImage(product.coverImg);
+
+    return (
+      <div
+        className={styles.card}
+        onClick={handleClick}
+        style={{ "--card-i": Math.min(cardIndex, 15) }}
       >
-        {typeLabel}
-      </span>
-
-      {/* Nút lưu yêu thích mượt mà */}
-      <button
-        onClick={toggleFav}
-        disabled={favLoading}
-        style={{
-          position: "absolute",
-          top: 12,
-          right: 12,
-          zIndex: 2,
-          background: "rgba(255, 255, 255, 0.92)",
-          backdropFilter: "blur(4px)",
-          WebkitBackdropFilter: "blur(4px)",
-          border: "none",
-          borderRadius: "50%",
-          width: 34,
-          height: 34,
-          cursor: "pointer",
-          fontSize: 15,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
-          transition: "transform 0.2s ease",
-          transform: isHovered ? "scale(1.05)" : "scale(1)",
-        }}
-        title={currentFav ? "Bỏ yêu thích" : "Lưu yêu thích"}
-      >
-        {currentFav ? "❤️" : "🤍"}
-      </button>
-
-      {/* Ảnh bìa sản phẩm */}
-      <div style={{ position: "relative", overflow: "hidden", height: 160 }}>
-        {optimizedImg ? (
-          <img
-            src={optimizedImg}
-            alt={product.name}
-            loading="lazy"
-            decoding="async"
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: "block",
-              transition: "transform 0.5s ease",
-              transform: isHovered ? "scale(1.06)" : "scale(1)",
-            }}
-          />
-        ) : (
-          <div
-            style={{
-              height: "100%",
-              background: `linear-gradient(135deg, ${C.ocean}, ${C.oceanL})`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 56,
-            }}
-          >
-            🐟
-          </div>
-        )}
-      </div>
-
-      {/* Nội dung chi tiết của Card */}
-      <div style={{ padding: "16px 18px" }}>
-        {/* Tên sản phẩm */}
-        <div
-          style={{
-            fontWeight: 700,
-            fontSize: 16,
-            color: C.dark,
-            lineHeight: 1.4,
-            marginBottom: 8,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            height: 44, // Giữ chiều cao cố định để các card thẳng hàng nhau
-          }}
-        >
-          {product.name}
-        </div>
-
-        {/* Giá sản phẩm thiết kế lớn nổi bật */}
-        <div
-          style={{
-            fontSize: 20,
-            fontWeight: 800,
-            color: C.coral,
-            marginBottom: 12,
-            display: "flex",
-            alignItems: "baseline",
-            gap: 2,
-          }}
-        >
-          {fmt(product.price)}
-          <span style={{ fontSize: 13, fontWeight: 500, color: C.muted }}>
-            /kg
-          </span>
-        </div>
-
-        {/* Thông tin số lượng còn lại + lượt xem */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            fontSize: 12,
-            color: C.muted,
-            marginBottom: 8,
-          }}
-        >
-          <span>
-            ⚖️ Sẵn có:{" "}
-            <strong style={{ color: C.dark }}>
-              {product.remainingWeight} kg
-            </strong>
+        <div className={styles.badgeGroup}>
+          <span className={styles.badge} style={typeBadgeStyle}>
+            {typeLabel}
           </span>
           {product.salesType === "Wholesale" && (
             <span
-              style={{
-                color: C.ocean,
-                fontWeight: 700,
-                background: C.oceanP,
-                padding: "1px 6px",
-                borderRadius: 4,
-              }}
+              className={styles.badge}
+              style={{ background: "#f1f5f9", color: "#334155" }}
             >
-              Buôn
+              Sỉ
             </span>
-          )}
-          {product.viewCount > 0 && (
-            <span>👁️ {product.viewCount} lượt xem</span>
           )}
         </div>
 
-        {/* Thanh Progress đo lường nâng cấp bo góc lớn */}
-        <div
-          style={{
-            height: 6,
-            background: "#E5E7EB",
-            borderRadius: 10,
-            marginBottom: 14,
-            overflow: "hidden",
-          }}
+        <button
+          key={currentFav ? `fav-${popKey}` : "unfav"}
+          className={`${styles.favBtn} ${currentFav ? styles.favorited : ""}`}
+          onClick={toggleFav}
+          disabled={favLoading}
+          aria-label="Lưu yêu thích"
         >
-          <div
-            style={{
-              height: "100%",
-              width: `${pct}%`,
-              background: pct > 50 ? C.ok : pct > 20 ? C.warn : "#EF4444",
-              borderRadius: 10,
-              transition: "width 0.4s ease-out",
-            }}
-          />
+          <HeartIcon size={14} filled={currentFav} />
+        </button>
+
+        <div className={styles.imageWrap}>
+          {optimizedImg ? (
+            <img
+              src={optimizedImg}
+              alt={product.name}
+              loading="lazy"
+              className={styles.image}
+            />
+          ) : (
+            <div className={styles.imagePlaceholder}>🐟</div>
+          )}
+          <div className={styles.imageOverlay} />
         </div>
 
-        {/* Dòng xuất xứ thu gọn */}
-        {product.origin && (
-          <div
-            style={{
-              fontSize: 11,
-              color: C.muted,
-              marginBottom: 12,
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            <span>📍</span>
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-              {product.origin}
-            </span>
+        <div className={styles.body}>
+          <h3 className={styles.name}>{product.name}</h3>
+
+          <div className={styles.price}>
+            {fmt(product.price)}
+            <span className={styles.priceUnit}>/kg</span>
           </div>
-        )}
 
-        <hr
-          style={{
-            border: "none",
-            borderTop: "1px solid #F3F4F6",
-            margin: "12px 0 10px",
-          }}
-        />
-
-        {/* Khu vực Người bán + Badge thời gian/địa điểm */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <span
-            onClick={handleSellerClick}
-            style={{
-              fontSize: 13,
-              color: C.ocean,
-              cursor: "pointer",
-              fontWeight: 700,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 3,
-              transition: "opacity 0.2s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.opacity = 0.8)}
-            onMouseLeave={(e) => (e.currentTarget.style.opacity = 1)}
-          >
-            👤 {product.sellerName?.split(" ").pop()}
-            {product.sellerIsVerified && <VerifiedBadge />}
-          </span>
-          {product.type === "Fresh" && product.catchTime && (
-            <CountdownBadge catchTime={product.catchTime} />
-          )}
-          {product.type === "Dried" && product.origin && (
-            <span style={{ fontSize: 11, color: C.muted, fontWeight: 500 }}>
-              📍 {product.origin.split(",").pop()}
+          <div className={styles.statsRow}>
+            <span className={styles.statItem}>
+              <WeightIcon size={13} />
+              <strong className={styles.statValue}>
+                {product.remainingWeight} kg
+              </strong>
             </span>
+            {product.viewCount > 0 && (
+              <span className={styles.statItem}>
+                <EyeIcon size={13} />
+                {product.viewCount} lượt xem
+              </span>
+            )}
+          </div>
+
+          <div className={styles.stockBar}>
+            <div
+              className={styles.stockFill}
+              style={{
+                width: `${Math.min(100, pct)}%`,
+                background: stockColor,
+              }}
+            />
+          </div>
+
+          {product.origin && (
+            <div className={styles.origin}>
+              <MapPinIcon size={12} />
+              <span>{product.origin}</span>
+            </div>
           )}
+
+          <hr className={styles.divider} />
+
+          <div className={styles.sellerRow}>
+            <button className={styles.sellerLink} onClick={handleSellerClick}>
+              <span className={styles.sellerAvatar}>
+                {(product.sellerName || "?").charAt(0).toUpperCase()}
+              </span>
+              <span>{product.sellerName?.split(" ").pop()}</span>
+              {product.sellerIsVerified && <VerifiedBadge />}
+            </button>
+
+            {product.type === "Fresh" && product.catchTime && (
+              <CountdownBadge catchTime={product.catchTime} />
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  },
+  (p, n) =>
+    p.product === n.product &&
+    p.user?.id === n.user?.id &&
+    p.cardIndex === n.cardIndex &&
+    p.favoriteIds?.includes(p.product.id) ===
+      n.favoriteIds?.includes(n.product.id),
+);
 
+// ── Product Skeleton Component ──
 export function ProductSkeleton() {
   return (
-    <div
-      style={{
-        background: C.white,
-        borderRadius: 20,
-        border: "1px solid #E5E7EB",
-        overflow: "hidden",
-      }}
-    >
+    <div className={styles.skeleton}>
       <div
         className="skeleton-shimmer"
-        style={{ width: "100%", height: 160 }}
+        style={{ height: 180, width: "100%" }}
       />
-      <div style={{ padding: "16px 18px" }}>
+      <div className={styles.skeletonBody}>
         <div
           className="skeleton-shimmer"
           style={{
-            width: "80%",
+            width: "75%",
+            height: 14,
+            borderRadius: 4,
+            marginBottom: 10,
+          }}
+        />
+        <div
+          className="skeleton-shimmer"
+          style={{
+            width: "45%",
             height: 18,
             borderRadius: 4,
             marginBottom: 12,
@@ -378,34 +243,25 @@ export function ProductSkeleton() {
         />
         <div
           className="skeleton-shimmer"
-          style={{
-            width: "50%",
-            height: 24,
-            borderRadius: 4,
-            marginBottom: 12,
-          }}
-        />
-        <div
-          className="skeleton-shimmer"
-          style={{ width: "40%", height: 12, borderRadius: 4, marginBottom: 8 }}
+          style={{ width: "55%", height: 10, borderRadius: 4, marginBottom: 8 }}
         />
         <div
           className="skeleton-shimmer"
           style={{
             width: "100%",
-            height: 6,
-            borderRadius: 10,
+            height: 3,
+            borderRadius: 99,
             marginBottom: 16,
           }}
         />
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <div className={styles.skeletonRow}>
           <div
             className="skeleton-shimmer"
-            style={{ width: 70, height: 14, borderRadius: 4 }}
+            style={{ width: 64, height: 12, borderRadius: 4 }}
           />
           <div
             className="skeleton-shimmer"
-            style={{ width: 90, height: 18, borderRadius: 4 }}
+            style={{ width: 80, height: 14, borderRadius: 4 }}
           />
         </div>
       </div>

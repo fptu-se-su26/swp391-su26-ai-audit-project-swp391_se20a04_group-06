@@ -4,6 +4,7 @@ import rateLimit from "express-rate-limit";
 import {
   register,
   login,
+  logout,
   me,
   updateProfile,
   changePassword,
@@ -38,6 +39,7 @@ const registerLimiter = rateLimit({
 
 router.post("/register", registerLimiter, register);
 router.post("/login", loginLimiter, login);
+router.post("/logout", authenticate, logout);
 router.get("/me", authenticate, me);
 
 // ✅ CẬP NHẬT: Cho phép nhận file đơn có tên key là "avatar" gửi lên

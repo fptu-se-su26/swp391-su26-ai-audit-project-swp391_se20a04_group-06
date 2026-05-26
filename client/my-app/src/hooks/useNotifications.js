@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { api, getToken } from '../services/api';
-import { getSocket } from '../services/socket';
+import { useState, useEffect } from "react";
+import { api } from "../services/api";
+import { getSocket } from "../services/socket";
 
 /**
  * Hook quản lý thông báo real-time.
@@ -15,7 +15,7 @@ export function useNotifications(user) {
       setNotifs([]);
       return;
     }
-    api('/notifications')
+    api("/notifications")
       .then((data) =>
         setNotifs(
           data.map((item) => ({
@@ -29,18 +29,18 @@ export function useNotifications(user) {
           })),
         ),
       )
-      .catch((err) => console.error('Lỗi tải thông báo:', err));
+      .catch((err) => console.error("Lỗi tải thông báo:", err));
   }, [user]);
 
   // Lắng nghe thông báo real-time từ socket
   useEffect(() => {
     if (!user) return;
     let active = true;
-    getSocket(getToken())
+    getSocket() // không cần token, dùng cookie
       .then((socket) => {
         if (!active) return;
         const handler = (data) => {
-          if (data.type === 'new_product' || data.type === 'new_review') {
+          if (data.type === "new_product" || data.type === "new_review") {
             setNotifs((prev) => [
               {
                 id: data.id || Date.now(),
@@ -55,17 +55,21 @@ export function useNotifications(user) {
             ]);
           }
         };
-        socket.on('notification', handler);
-        return () => socket.off('notification', handler);
+        socket.on("notification", handler);
+        return () => socket.off("notification", handler);
       })
       .catch(() => {});
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [user]);
 
   const markAllRead = () => {
-    api('/notifications/read', { method: 'PUT' })
-      .then(() => setNotifs((prev) => prev.map((n) => ({ ...n, isRead: true }))))
-      .catch((err) => console.error('Lỗi đánh dấu đã đọc:', err));
+    api("/notifications/read", { method: "PUT" })
+      .then(() =>
+        setNotifs((prev) => prev.map((n) => ({ ...n, isRead: true }))),
+      )
+      .catch((err) => console.error("Lỗi đánh dấu đã đọc:", err));
   };
 
   const unreadCount = notifs.filter((n) => !n.isRead).length;

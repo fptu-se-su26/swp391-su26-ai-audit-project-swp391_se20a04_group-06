@@ -22,7 +22,7 @@ write('pages/HomePage.jsx', `import React, { useState, useEffect } from 'react';
 write('pages/ProductDetailPage.jsx', `import React, { useState, useEffect } from 'react';\nimport { C } from '../utils/theme';\nimport { api } from '../services/api';\nimport { fmt, pill } from '../utils/format';\nimport { ImageSlider } from '../components/ImageSlider';\nimport { MapMini } from '../components/MapMini';\nimport { ChatBox } from '../components/ChatBox';\nexport ${contentMap['PAGE: PRODUCT DETAIL']}`);
 
 // 14. pages/AuthPage.jsx
-write('pages/AuthPage.jsx', `import React, { useState } from 'react';\nimport { C } from '../utils/theme';\nimport { api, saveToken } from '../services/api';\nexport ${contentMap['PAGE: AUTH']}`);
+write('pages/AuthPage.jsx', `import React, { useState } from 'react';\nimport { C } from '../utils/theme';\nimport { api } from '../services/api';\nexport ${contentMap['PAGE: AUTH']}`);
 
 // 15. pages/PostListingPage.jsx
 write('pages/PostListingPage.jsx', `import React, { useState, useRef } from 'react';\nimport { C } from '../utils/theme';\nimport { api } from '../services/api';\nexport ${contentMap['PAGE: POST LISTING']}`);

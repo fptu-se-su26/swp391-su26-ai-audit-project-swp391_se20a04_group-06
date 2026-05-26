@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS User (
   PasswordHash VARCHAR(255)  NOT NULL,
   Role         ENUM('User','Admin') NOT NULL DEFAULT 'User',
   IsActive     TINYINT(1)    NOT NULL DEFAULT 1,
-  Avatar       VARCHAR(255)  DEFAULT NULL, -- 👈 BỔ SUNG: Cột lưu ảnh đại diện người dùng
+  Avatar       VARCHAR(255)  DEFAULT NULL,
   CreatedAt    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS Product (
   -- Hải sản khô
   Origin          VARCHAR(100) NULL COMMENT 'Xuất xứ (tỉnh / địa danh)',
   ExpiryDate      DATE         NULL COMMENT 'Hạn sử dụng',
+  BumpedAt        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Thời điểm đẩy bài đăng lên đầu', -- 👈 ĐÃ BỔ SUNG CỘT NÀY
   CreatedAt       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (SellerID) REFERENCES User(UserID) ON DELETE CASCADE
 );
@@ -96,7 +97,7 @@ CREATE TABLE IF NOT EXISTS Follow (
 CREATE INDEX idx_product_type_status  ON Product(Type, Status);
 CREATE INDEX idx_product_seller       ON Product(SellerID);
 CREATE INDEX idx_product_catchtime    ON Product(CatchTime);
-CREATE INDEX idx_product_bumpedat     ON Product(BumpedAt);
+CREATE INDEX idx_product_bumpedat     ON Product(BumpedAt); -- 👈 Hoạt động chính xác sau khi thêm cột
 CREATE INDEX idx_product_status_type_bumped ON Product(Status, Type, BumpedAt);
 CREATE FULLTEXT INDEX idx_product_fulltext ON Product(Name, Description);
 CREATE INDEX idx_message_product      ON Message(ProductID);
@@ -107,20 +108,4 @@ CREATE INDEX idx_follow_seller        ON Follow(SellerID);
 CREATE INDEX idx_follow_follower      ON Follow(FollowerID);
 
 -- ─── Constraints ─────────────────────────────────────────────
--- Ngăn duplicate review (cùng người + cùng sản phẩm)
 ALTER TABLE Review ADD CONSTRAINT unique_review_per_product UNIQUE (ReviewerID, ProductID);
-
--- ─── NOTE ──────────────────────────────────────────────────────
--- Các bảng sau đây được tạo tự động qua db.migrations.ts khi server khởi động:
---   • Notification (với index idx_notif_user)
---   • Favorite
---   • Report
--- Các cột được thêm qua migration:
---   • User.IsVerified
---   • Product.ViewCount
---   • Product.BumpedAt
---
--- BUG FIX: Đã XOÁ dòng sau khỏi schema.sql vì gây lỗi khi chạy lần đầu
--- (bảng Notification chưa tồn tại tại thời điểm schema.sql chạy):
---   CREATE INDEX IF NOT EXISTS idx_notif_user ON Notification(UserID, IsRead);
--- Index này đã được chuyển vào db.migrations.ts sau khi CREATE TABLE Notification.

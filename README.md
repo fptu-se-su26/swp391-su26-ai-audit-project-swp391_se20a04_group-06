@@ -775,8 +775,3 @@ CLOUDINARY_API_SECRET=<api secret>
 VITE_SOCKET_URL=http://localhost:5000
 ```
 
-> **Lưu ý bảo mật:** Không commit file `.env` thực lên git. File `.env.example` đã được include để tham khảo cấu trúc.
-
----
-
-*Tài liệu được tạo tự động từ codebase — cần bổ sung phần thông tin nhóm và demo screenshots.*

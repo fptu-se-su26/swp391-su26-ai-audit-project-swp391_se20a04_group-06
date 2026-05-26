@@ -15,8 +15,21 @@ export function ReviewList({ sellerId, user, productId, scrollToReviewId }) {
 
   const fetchReviews = () => {
     api(`/reviews/seller/${sellerId}`)
-      .then((data) => setReviews(data))
-      .catch(() => {})
+      .then((res) => {
+        // Kiểm tra định dạng trả về của API
+        if (Array.isArray(res)) {
+          setReviews(res);
+        } else if (res && Array.isArray(res.data)) {
+          setReviews(res.data);
+        } else if (res && Array.isArray(res.reviews)) {
+          setReviews(res.reviews);
+        } else {
+          setReviews([]);
+        }
+      })
+      .catch(() => {
+        setReviews([]);
+      })
       .finally(() => setLoading(false));
   };
 
@@ -24,9 +37,12 @@ export function ReviewList({ sellerId, user, productId, scrollToReviewId }) {
     fetchReviews();
   }, [sellerId]);
 
+  // Đảm bảo reviewsList luôn luôn là một mảng
+  const reviewsList = Array.isArray(reviews) ? reviews : [];
+
   // Scroll to specific review after data loads
   useEffect(() => {
-    if (!scrollToReviewId || loading || reviews.length === 0) return;
+    if (!scrollToReviewId || loading || reviewsList.length === 0) return;
     const el = document.getElementById(`review-${scrollToReviewId}`);
     if (el) {
       // Small delay to ensure paint is complete
@@ -42,7 +58,7 @@ export function ReviewList({ sellerId, user, productId, scrollToReviewId }) {
         }, 3000);
       }, 100);
     }
-  }, [scrollToReviewId, loading, reviews]);
+  }, [scrollToReviewId, loading, reviewsList]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -93,7 +109,7 @@ export function ReviewList({ sellerId, user, productId, scrollToReviewId }) {
         }}
       >
         <h3 style={{ margin: 0, fontSize: 16, color: C.dark }}>
-          ⭐ Đánh giá người bán ({reviews.length})
+          ⭐ Đánh giá người bán ({reviewsList.length})
         </h3>
         {user && user.id !== sellerId && (
           <button
@@ -116,13 +132,13 @@ export function ReviewList({ sellerId, user, productId, scrollToReviewId }) {
 
       {loading ? (
         <div style={{ color: C.muted, fontSize: 13 }}>Đang tải đánh giá...</div>
-      ) : reviews.length === 0 ? (
+      ) : reviewsList.length === 0 ? (
         <div style={{ color: C.muted, fontSize: 13 }}>
           Chưa có đánh giá nào cho người bán này.
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {reviews.map((r) => (
+          {reviewsList.map((r) => (
             <div
               key={r.ReviewID}
               id={`review-${r.ReviewID}`}

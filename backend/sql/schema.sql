@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS User (
   PasswordHash VARCHAR(255)  NOT NULL,
   Role         ENUM('User','Admin') NOT NULL DEFAULT 'User',
   IsActive     TINYINT(1)    NOT NULL DEFAULT 1,
+  Avatar       VARCHAR(255)  DEFAULT NULL, -- 👈 BỔ SUNG: Cột lưu ảnh đại diện người dùng
   CreatedAt    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -95,6 +96,9 @@ CREATE TABLE IF NOT EXISTS Follow (
 CREATE INDEX idx_product_type_status  ON Product(Type, Status);
 CREATE INDEX idx_product_seller       ON Product(SellerID);
 CREATE INDEX idx_product_catchtime    ON Product(CatchTime);
+CREATE INDEX idx_product_bumpedat     ON Product(BumpedAt);
+CREATE INDEX idx_product_status_type_bumped ON Product(Status, Type, BumpedAt);
+CREATE FULLTEXT INDEX idx_product_fulltext ON Product(Name, Description);
 CREATE INDEX idx_message_product      ON Message(ProductID);
 CREATE INDEX idx_message_sender       ON Message(SenderID);
 CREATE INDEX idx_message_receiver     ON Message(ReceiverID);

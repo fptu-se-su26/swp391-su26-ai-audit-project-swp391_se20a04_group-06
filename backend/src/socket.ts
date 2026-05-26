@@ -3,7 +3,7 @@ import { Server as HttpServer } from 'http';
 import { Server as IOServer, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { pool } from './db';
-import { ResultSetHeader } from 'mysql2';
+import { ResultSetHeader, RowDataPacket } from 'mysql2';
 
 interface AuthPayload { userId: number; role: string }
 
@@ -35,8 +35,29 @@ export function initSocket(server: HttpServer) {
     console.log(`🔌 Socket connected: userId=${userId}`);
 
     /* Buyer / Seller tham gia room của product để nhận tin real-time */
-    socket.on('join_room', (productId: number) => {
-      socket.join(`product_${productId}`);
+    socket.on('join_room', async (productId: number) => {
+      if (!productId) return;
+      try {
+        // Kiểm tra xem user có phải người bán không
+        const [prodRows] = await pool.query<RowDataPacket[]>(
+          'SELECT SellerID FROM Product WHERE ProductID = ?',
+          [productId]
+        );
+        const isSeller = prodRows[0] && prodRows[0].SellerID === userId;
+
+        // Kiểm tra xem user đã có tin nhắn nào về sản phẩm này chưa
+        const [msgRows] = await pool.query<RowDataPacket[]>(
+          'SELECT 1 FROM Message WHERE ProductID = ? AND (SenderID = ? OR ReceiverID = ?) LIMIT 1',
+          [productId, userId, userId]
+        );
+        const hasMessages = msgRows.length > 0;
+
+        if (isSeller || hasMessages) {
+          socket.join(`product_${productId}`);
+        }
+      } catch (err) {
+        console.error('Socket join_room error:', err);
+      }
     });
 
     socket.on('leave_room', (productId: number) => {
@@ -49,6 +70,11 @@ export function initSocket(server: HttpServer) {
       async (data: { productId: number; receiverId: number; content: string }) => {
         const { productId, receiverId, content } = data;
         if (!productId || !receiverId || !content?.trim()) return;
+
+        if (receiverId === userId) {
+          socket.emit('error', { message: 'Không thể tự gửi tin nhắn cho chính mình' });
+          return;
+        }
 
         try {
           const [result] = await pool.query<ResultSetHeader>(
@@ -66,8 +92,9 @@ export function initSocket(server: HttpServer) {
             isRead:     false,
           };
 
-          /* Phát tin đến toàn bộ người trong room */
-          io.to(`product_${productId}`).emit('new_message', message);
+          /* Phát tin nhắn riêng biệt đến sender và receiver nhằm bảo mật tuyệt đối */
+          io.to(`user_${userId}`).emit('new_message', message);
+          io.to(`user_${receiverId}`).emit('new_message', message);
 
           /* Phát notification riêng đến receiver (nếu không trong room) */
           io.to(`user_${receiverId}`).emit('notification', {

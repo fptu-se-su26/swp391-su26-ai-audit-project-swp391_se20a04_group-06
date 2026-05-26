@@ -6,6 +6,50 @@ import { sendServerError, parseId } from "../helpers/response.helper";
 import { notifyFollowersNewProduct } from "../services/notification.service";
 
 /**
+ * Helper function to build WHERE filters for products to avoid DRY violation.
+ */
+function buildProductFilters(query: Record<string, string | undefined>) {
+  const { type, search, sellerId, lat, lng } = query;
+  let filterSql = " WHERE p.Status = 'Active'";
+  const params: any[] = [];
+
+  if (type === "Fresh" || type === "Dried") {
+    filterSql += " AND p.Type = ?";
+    params.push(type);
+  }
+  if (search) {
+    filterSql += " AND p.Name LIKE ?";
+    params.push(`%${search}%`);
+  }
+  if (sellerId) {
+    const parsedSellerId = parseInt(sellerId);
+    if (!isNaN(parsedSellerId)) {
+      filterSql += " AND p.SellerID = ?";
+      params.push(parsedSellerId);
+    }
+  }
+
+  // Pre-filter using a GPS bounding box in SQL if buyer sends coordinates for Fresh seafood
+  if (type === "Fresh" && lat && lng) {
+    const latVal = parseFloat(lat);
+    const lngVal = parseFloat(lng);
+    if (!isNaN(latVal) && !isNaN(lngVal)) {
+      const latDelta = 20 / 111.0;
+      const lngDelta = 20 / (111.0 * Math.cos((latVal * Math.PI) / 180.0));
+      filterSql += " AND p.Lat BETWEEN ? AND ? AND p.Lng BETWEEN ? AND ?";
+      params.push(
+        latVal - latDelta,
+        latVal + latDelta,
+        lngVal - lngDelta,
+        lngVal + lngDelta,
+      );
+    }
+  }
+
+  return { filterSql, params };
+}
+
+/**
  * Cột SELECT dùng chung cho danh sách sản phẩm.
  * Khai báo một lần để tránh lặp lại (DRY).
  */
@@ -16,10 +60,33 @@ const PRODUCT_LIST_COLUMNS = `
   p.SalesType AS salesType, p.TotalWeight AS totalWeight, p.RemainingWeight AS remainingWeight,
   p.Status AS status, p.CatchTime AS catchTime, p.Lat AS lat, p.Lng AS lng,
   p.Origin AS origin, p.ExpiryDate AS expiryDate, p.CreatedAt AS createdAt, p.ViewCount AS viewCount, p.BumpedAt AS bumpedAt,
-  (SELECT COUNT(*) FROM ProductImage pi WHERE pi.ProductID = p.ProductID) AS imgCount,
-  COALESCE((SELECT AVG(Rating) FROM Review r WHERE r.SellerID = p.SellerID), 0) AS sellerRating,
-  (SELECT COUNT(*) FROM Review r WHERE r.SellerID = p.SellerID) AS ratingCount,
-  (SELECT CloudinaryURL FROM ProductImage pi WHERE pi.ProductID = p.ProductID ORDER BY SortOrder LIMIT 1) AS coverImg
+  COALESCE(pi_agg.imgCount, 0) AS imgCount,
+  COALESCE(r_agg.sellerRating, 0) AS sellerRating,
+  COALESCE(r_agg.ratingCount, 0) AS ratingCount,
+  pi_cover.coverImg AS coverImg
+`;
+
+const JOIN_TABLES_AGG = `
+  LEFT JOIN (
+    SELECT ProductID, COUNT(*) AS imgCount
+    FROM ProductImage
+    GROUP BY ProductID
+  ) pi_agg ON pi_agg.ProductID = p.ProductID
+  LEFT JOIN (
+    SELECT SellerID, AVG(Rating) AS sellerRating, COUNT(*) AS ratingCount
+    FROM Review
+    GROUP BY SellerID
+  ) r_agg ON r_agg.SellerID = p.SellerID
+  LEFT JOIN (
+    SELECT pi.ProductID, MAX(pi.CloudinaryURL) AS coverImg
+    FROM ProductImage pi
+    JOIN (
+      SELECT ProductID, MIN(SortOrder) AS min_order
+      FROM ProductImage
+      GROUP BY ProductID
+    ) pi2 ON pi.ProductID = pi2.ProductID AND pi.SortOrder = pi2.min_order
+    GROUP BY pi.ProductID
+  ) pi_cover ON pi_cover.ProductID = p.ProductID
 `;
 
 /* ─── GET /api/products ──────────────────────────────────────
@@ -45,50 +112,76 @@ export async function getProducts(req: Request, res: Response) {
     const pageNum = Math.max(1, parseInt(page || "1"));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit || "20")));
 
-    // Khi lọc GPS: fetch nhiều hơn để bù các bản ghi bị lọc ra
-    const fetchLimit = type === "Fresh" && lat && lng ? limitNum * 5 : limitNum;
-    const fetchOffset =
-      type === "Fresh" && lat && lng ? 0 : (pageNum - 1) * limitNum;
+    const { filterSql, params: filterParams } = buildProductFilters(
+      req.query as Record<string, string | undefined>,
+    );
 
-    let sql = `
-      SELECT ${PRODUCT_LIST_COLUMNS}
-      FROM Product p
-      JOIN User u ON u.UserID = p.SellerID
-      WHERE p.Status = 'Active'
-    `;
-    const params: (string | number)[] = [];
+    let products: RowDataPacket[] = [];
+    let total = 0;
 
-    if (type === "Fresh" || type === "Dried") {
-      sql += " AND p.Type = ?";
-      params.push(type);
-    }
-    if (search) {
-      sql += " AND p.Name LIKE ?";
-      params.push(`%${search}%`);
-    }
-    if (sellerId) {
-      sql += " AND p.SellerID = ?";
-      params.push(parseInt(sellerId));
-    }
-    sql += " ORDER BY p.CreatedAt DESC LIMIT ? OFFSET ?";
-    params.push(fetchLimit, fetchOffset);
-
-    const [rows] = await pool.query<RowDataPacket[]>(sql, params);
-    let products = rows as RowDataPacket[];
-
-    /* Lọc hải sản tươi theo khoảng cách Haversine nếu buyer gửi GPS */
     if (type === "Fresh" && lat && lng) {
+      // Fetch all candidate products within the bounding box
+      const sql = `
+        SELECT ${PRODUCT_LIST_COLUMNS}
+        FROM Product p
+        JOIN User u ON u.UserID = p.SellerID
+        ${JOIN_TABLES_AGG}
+        ${filterSql}
+        ORDER BY p.BumpedAt DESC, p.CreatedAt DESC
+      `;
+      const [rows] = await pool.query<RowDataPacket[]>(sql, filterParams);
+
       const bLat = parseFloat(lat);
       const bLng = parseFloat(lng);
-      products = products.filter((p) => {
+
+      const filtered = (rows as RowDataPacket[]).filter((p) => {
         if (!p.lat || !p.lng) return false;
-        return haversineKm(bLat, bLng, p.lat, p.lng) <= MAX_FRESH_DISTANCE_KM;
+        return (
+          haversineKm(bLat, bLng, parseFloat(p.lat), parseFloat(p.lng)) <=
+          MAX_FRESH_DISTANCE_KM
+        );
       });
+
+      total = filtered.length;
       const start = (pageNum - 1) * limitNum;
-      products = products.slice(start, start + limitNum);
+      products = filtered.slice(start, start + limitNum);
+    } else {
+      // Standard query with SQL pagination
+      const countSql = `
+        SELECT COUNT(*) AS total
+        FROM Product p
+        ${filterSql}
+      `;
+      const [[countRow]] = await pool.query<RowDataPacket[]>(
+        countSql,
+        filterParams,
+      );
+      total = countRow.total;
+
+      const sql = `
+        SELECT ${PRODUCT_LIST_COLUMNS}
+        FROM Product p
+        JOIN User u ON u.UserID = p.SellerID
+        ${JOIN_TABLES_AGG}
+        ${filterSql}
+        ORDER BY p.BumpedAt DESC, p.CreatedAt DESC
+        LIMIT ? OFFSET ?
+      `;
+      const [rows] = await pool.query<RowDataPacket[]>(sql, [
+        ...filterParams,
+        limitNum,
+        (pageNum - 1) * limitNum,
+      ]);
+      products = rows;
     }
 
-    return res.json({ data: products, page: pageNum, limit: limitNum });
+    return res.json({
+      data: products,
+      page: pageNum,
+      limit: limitNum,
+      total,
+      totalPages: Math.ceil(total / limitNum),
+    });
   } catch (err) {
     return sendServerError(res, err);
   }
@@ -104,6 +197,7 @@ export async function getProductById(req: Request, res: Response) {
       `SELECT ${PRODUCT_LIST_COLUMNS}
        FROM Product p
        JOIN User u ON u.UserID = p.SellerID
+       ${JOIN_TABLES_AGG}
        WHERE p.ProductID = ?`,
       [id],
     );
@@ -144,11 +238,9 @@ export async function createProduct(req: Request, res: Response) {
   } = req.body;
 
   if (!type || !name || !price || !totalWeight)
-    return res
-      .status(400)
-      .json({
-        message: "Thiếu thông tin bắt buộc: loại, tên, giá, khối lượng",
-      });
+    return res.status(400).json({
+      message: "Thiếu thông tin bắt buộc: loại, tên, giá, khối lượng",
+    });
 
   if (type === "Fresh" && (!lat || !lng))
     return res
@@ -287,9 +379,24 @@ export async function getMyProducts(req: Request, res: Response) {
         p.SalesType AS salesType, p.TotalWeight AS totalWeight, p.RemainingWeight AS remainingWeight,
         p.Status AS status, p.CatchTime AS catchTime, p.Origin AS origin, p.ExpiryDate AS expiryDate,
         p.CreatedAt AS createdAt, p.ViewCount AS viewCount, p.BumpedAt AS bumpedAt,
-        (SELECT COUNT(*) FROM ProductImage pi WHERE pi.ProductID = p.ProductID) AS imgCount,
-        (SELECT CloudinaryURL FROM ProductImage pi WHERE pi.ProductID = p.ProductID ORDER BY SortOrder LIMIT 1) AS coverImg
+        COALESCE(pi_agg.imgCount, 0) AS imgCount,
+        pi_cover.coverImg AS coverImg
        FROM Product p
+       LEFT JOIN (
+         SELECT ProductID, COUNT(*) AS imgCount
+         FROM ProductImage
+         GROUP BY ProductID
+       ) pi_agg ON pi_agg.ProductID = p.ProductID
+       LEFT JOIN (
+         SELECT pi.ProductID, MAX(pi.CloudinaryURL) AS coverImg
+         FROM ProductImage pi
+         JOIN (
+           SELECT ProductID, MIN(SortOrder) AS min_order
+           FROM ProductImage
+           GROUP BY ProductID
+         ) pi2 ON pi.ProductID = pi2.ProductID AND pi.SortOrder = pi2.min_order
+         GROUP BY pi.ProductID
+       ) pi_cover ON pi_cover.ProductID = p.ProductID
        WHERE p.SellerID = ? AND p.Status != 'Deleted'
        ORDER BY p.CreatedAt DESC`,
       [userId],

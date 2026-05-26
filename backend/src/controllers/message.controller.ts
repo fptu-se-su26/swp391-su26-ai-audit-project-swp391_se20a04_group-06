@@ -41,6 +41,9 @@ export async function sendMessage(req: Request, res: Response) {
   if (!productId || !receiverId || !content?.trim())
     return res.status(400).json({ message: 'Thiếu productId, receiverId hoặc nội dung tin' });
 
+  if (receiverId === userId)
+    return res.status(400).json({ message: 'Không thể tự gửi tin nhắn cho chính mình' });
+
   try {
     const [result] = await pool.query<ResultSetHeader>(
       'INSERT INTO Message (ProductID, SenderID, ReceiverID, Content) VALUES (?, ?, ?, ?)',

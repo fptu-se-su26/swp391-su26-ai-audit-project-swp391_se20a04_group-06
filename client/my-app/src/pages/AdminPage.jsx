@@ -1,10 +1,16 @@
+/**
+ * AdminPage.jsx — Premium UI/UX Redesigned Version
+ *
+ * Nâng cấp toàn diện giao diện quản trị Admin.
+ * Giữ nguyên 100% logic states, APIs và các hàm hỗ trợ.
+ */
 import React, { useState, useEffect } from "react";
 import { C } from "../utils/theme";
 import { api } from "../services/api";
 import { fmt } from "../utils/format";
 import { AdminUserRow, useVerifyUser } from "./AdminPage_verify_patch";
 
-/* ─── Mini bar chart (SVG thuần, không cần thư viện) ─── */
+/* ─── Mini bar chart nâng cấp với Linear Gradients ─── */
 function BarChart({ data, color }) {
   const W = 340,
     H = 130,
@@ -20,9 +26,18 @@ function BarChart({ data, color }) {
 
   /* Đường kẻ ngang */
   const gridLines = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(max * f));
+  const gradientId = `bar-gradient-${color.replace("#", "")}`;
 
   return (
     <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
+      {/* Định nghĩa dải màu Gradient cho cột biểu đồ */}
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="1" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.5" />
+        </linearGradient>
+      </defs>
+
       {/* Grid lines */}
       {gridLines.map((v, gi) => {
         const y = padT + cH - (v / max) * cH;
@@ -33,15 +48,16 @@ function BarChart({ data, color }) {
               x2={W - padR}
               y1={y}
               y2={y}
-              stroke="#e5e7eb"
-              strokeWidth={0.5}
-              strokeDasharray="3,3"
+              stroke="#f3f4f6"
+              strokeWidth={1}
+              strokeDasharray="4,4"
             />
             <text
-              x={padL - 4}
+              x={padL - 6}
               y={y + 3}
               textAnchor="end"
-              fontSize={8}
+              fontSize={8.5}
+              fontWeight="600"
               fill="#9ca3af"
             >
               {v}
@@ -52,7 +68,7 @@ function BarChart({ data, color }) {
 
       {/* Bars */}
       {data.map((d, i) => {
-        const bH = Math.max((d.count / max) * cH, d.count > 0 ? 3 : 0);
+        const bH = Math.max((d.count / max) * cH, d.count > 0 ? 4 : 0);
         const x = padL + i * step + (step - bW) / 2;
         const y = padT + cH - bH;
         return (
@@ -62,18 +78,18 @@ function BarChart({ data, color }) {
               y={y}
               width={bW}
               height={bH}
-              fill={color}
-              rx={3}
-              opacity={0.85}
+              fill={`url(#${gradientId})`}
+              rx={4} // Bo tròn cột biểu đồ mềm mại hơn
+              style={{ transition: "all 0.3s ease" }}
             />
             {d.count > 0 && (
               <text
                 x={x + bW / 2}
-                y={y - 3}
+                y={y - 4}
                 textAnchor="middle"
-                fontSize={8}
+                fontSize={8.5}
                 fill={color}
-                fontWeight="600"
+                fontWeight="700"
               >
                 {d.count}
               </text>
@@ -82,7 +98,8 @@ function BarChart({ data, color }) {
               x={x + bW / 2}
               y={H - 5}
               textAnchor="middle"
-              fontSize={8}
+              fontSize={8.5}
+              fontWeight="500"
               fill="#6b7280"
             >
               {d.label}
@@ -97,14 +114,14 @@ function BarChart({ data, color }) {
         x2={padL}
         y1={padT}
         y2={padT + cH}
-        stroke="#d1d5db"
-        strokeWidth={0.5}
+        stroke="#e5e7eb"
+        strokeWidth={1}
       />
     </svg>
   );
 }
 
-/* ─── Pill badge ─── */
+/* ─── Pill badge thiết kế lại mềm dịu ─── */
 function Pill({ bg, color, children }) {
   return (
     <span
@@ -113,8 +130,10 @@ function Pill({ bg, color, children }) {
         color,
         fontSize: 11,
         fontWeight: 700,
-        padding: "3px 8px",
+        padding: "3px 10px",
         borderRadius: 20,
+        display: "inline-block",
+        lineHeight: 1.2,
       }}
     >
       {children}
@@ -126,37 +145,70 @@ function Pill({ bg, color, children }) {
 function Stars({ value }) {
   const num = parseFloat(value) || 0;
   return (
-    <span style={{ fontSize: 12, color: "#f59e0b", letterSpacing: 1 }}>
+    <span
+      style={{
+        fontSize: 11,
+        color: "#f59e0b",
+        letterSpacing: 1,
+        display: "inline-flex",
+        alignItems: "center",
+      }}
+    >
       {"★".repeat(Math.round(num))}
       {"☆".repeat(5 - Math.round(num))}
-      <span style={{ color: "#6b7280", marginLeft: 4 }}>{num.toFixed(1)}</span>
+      <span style={{ color: "#6b7280", marginLeft: 4, fontWeight: 700 }}>
+        {num.toFixed(1)}
+      </span>
     </span>
   );
 }
 
-/* ─── Stat card ─── */
+/* ─── Stat card nâng cấp phong cách vạch chỉ thị lề trái ─── */
 function StatCard({ value, label, sub, color, icon }) {
   return (
     <div
       style={{
         background: C.white,
-        borderRadius: 12,
+        borderRadius: 16,
         border: `1px solid ${C.border}`,
-        padding: "16px 18px",
+        borderLeft: `4px solid ${color}`, // Vạch chỉ thị màu lề trái chuyên nghiệp
+        padding: "18px 20px",
+        boxShadow:
+          "0 4px 6px -1px rgba(0,0,0,0.01), 0 2px 4px -1px rgba(0,0,0,0.01)",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
       }}
     >
-      <div style={{ fontSize: 20, marginBottom: 4 }}>{icon}</div>
-      <div style={{ fontSize: 26, fontWeight: 800, color }}>{value}</div>
-      <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{label}</div>
-      {sub && (
-        <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>{sub}</div>
-      )}
+      <div>
+        <div style={{ fontSize: 24, marginBottom: 6 }}>{icon}</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color, lineHeight: 1.1 }}>
+          {value}
+        </div>
+      </div>
+      <div style={{ marginTop: 8 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: C.dark }}>
+          {label}
+        </div>
+        {sub && (
+          <div
+            style={{
+              fontSize: 11,
+              color: C.muted,
+              marginTop: 2,
+              fontWeight: 500,
+            }}
+          >
+            {sub}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 /* ═══════════════════════════════════════════════════════════
-   AdminPage
+   AdminPage Main Component
 ═══════════════════════════════════════════════════════════ */
 export function AdminPage() {
   const [tab, setTab] = useState("stats");
@@ -172,7 +224,7 @@ export function AdminPage() {
       .finally(() => setReportsLoading(false));
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (tab === "reports") loadReports(reportStatus);
   }, [tab, reportStatus]);
 
@@ -210,8 +262,21 @@ export function AdminPage() {
     ])
       .then(([s, u, l]) => {
         setStats(s);
-        setUsers(u);
-        setListings(l);
+
+        // Kiểm tra u và l có phải là mảng không, nếu bọc trong .data thì lấy .data
+        const safeUsers = Array.isArray(u)
+          ? u
+          : u && Array.isArray(u.data)
+            ? u.data
+            : [];
+        const safeListings = Array.isArray(l)
+          ? l
+          : l && Array.isArray(l.data)
+            ? l.data
+            : [];
+
+        setUsers(safeUsers);
+        setListings(safeListings);
       })
       .catch((e) => alert("Admin error: " + e.message))
       .finally(() => setLoading(false));
@@ -245,14 +310,20 @@ export function AdminPage() {
 
   if (loading)
     return (
-      <div style={{ textAlign: "center", padding: 80, color: C.muted }}>
-        ⏳ Đang tải dữ liệu admin...
+      <div
+        style={{
+          textAlign: "center",
+          padding: 80,
+          color: C.muted,
+          fontWeight: 500,
+        }}
+      >
+        ⏳ Đang tải dữ liệu quản trị... Vui lòng đợi trong giây lát...
       </div>
     );
 
   const totalActive = stats ? stats.activeFresh + stats.activeDried : 0;
 
-  // Fallback an toàn cho các mảng — tránh crash nếu backend chưa trả đủ field
   const safeStats = stats
     ? {
         ...stats,
@@ -271,39 +342,39 @@ export function AdminPage() {
 
   return (
     <div
-      style={{ maxWidth: 1040, margin: "0 auto", padding: "24px 20px 80px" }}
+      style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px 80px" }}
     >
       <h1
         style={{
-          fontSize: 22,
+          fontSize: 24,
           fontWeight: 800,
           color: C.dark,
-          marginBottom: 20,
+          marginBottom: 24,
         }}
       >
-        ⚙️ Trang Quản Trị Admin
+        ⚙️ Trang Quản Trị Hệ Thống Admin
       </h1>
 
-      {/* ── Stat cards ── */}
+      {/* ── Stat cards Grid ── */}
       {stats && (
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-            gap: 12,
-            marginBottom: 24,
+            gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+            gap: 16,
+            marginBottom: 32,
           }}
         >
           <StatCard
             value={safeStats.totalUsers}
             icon="👥"
-            label="Tổng người dùng"
+            label="Người dùng"
             color={C.ocean}
           />
           <StatCard
             value={totalActive}
             icon="📋"
-            label="Bài đang rao"
+            label="Tin rao active"
             color={C.ok}
           />
           <StatCard
@@ -321,8 +392,8 @@ export function AdminPage() {
           <StatCard
             value={safeStats.totalReviews}
             icon="⭐"
-            label="Đánh giá"
-            sub={`TB: ${safeStats.avgRating} / 5`}
+            label="Tổng đánh giá"
+            sub={`Trung bình: ${safeStats.avgRating}/5`}
             color="#f59e0b"
           />
           <StatCard
@@ -334,29 +405,28 @@ export function AdminPage() {
           <StatCard
             value={safeStats.totalMessages}
             icon="💬"
-            label="Tin nhắn"
+            label="Lượt nhắn tin"
             color="#3b82f6"
           />
           <StatCard
             value={safeStats.expiredTotal}
             icon="⏰"
-            label="Bài hết hạn"
+            label="Bài đã hết hạn"
             color="#ef4444"
           />
         </div>
       )}
 
-      {/* ── Tabs ── */}
+      {/* ── Tabs Chuyên Nghiệp ── */}
       <div
         style={{
           display: "flex",
           gap: 4,
-          background: C.white,
-          border: `1px solid ${C.border}`,
-          borderRadius: 10,
+          background: "#E2E8F0",
+          borderRadius: 12,
           padding: 4,
           width: "fit-content",
-          marginBottom: 20,
+          marginBottom: 24,
         }}
       >
         {[
@@ -369,15 +439,17 @@ export function AdminPage() {
             key={k}
             onClick={() => setTab(k)}
             style={{
-              padding: "8px 18px",
-              borderRadius: 8,
+              padding: "10px 22px",
+              borderRadius: 10,
               border: "none",
               cursor: "pointer",
               fontWeight: 700,
               fontSize: 13,
               fontFamily: "inherit",
-              background: tab === k ? C.ocean : "transparent",
-              color: tab === k ? "#fff" : C.muted,
+              background: tab === k ? C.white : "transparent",
+              color: tab === k ? C.dark : C.muted,
+              boxShadow: tab === k ? "0 4px 10px rgba(0,0,0,0.06)" : "none",
+              transition: "all 0.2s ease",
             }}
           >
             {l}
@@ -387,33 +459,41 @@ export function AdminPage() {
 
       {/* ══════════════════════ TAB THỐNG KÊ ══════════════════════ */}
       {tab === "stats" && stats && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           {/* Hàng 1: 2 biểu đồ cột */}
           <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+              gap: 24,
+            }}
           >
             {/* Biểu đồ bài đăng 7 ngày */}
             <div
               style={{
                 background: C.white,
-                borderRadius: 12,
+                borderRadius: 16,
                 border: `1px solid ${C.border}`,
-                padding: "18px 20px",
+                padding: "24px",
+                boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
               }}
             >
               <div
                 style={{
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: 700,
                   color: C.dark,
                   marginBottom: 4,
                 }}
               >
-                📋 Bài đăng mới — 7 ngày gần nhất
+                📋 Tin đăng mới — 7 ngày gần nhất
               </div>
-              <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>
-                Tổng: {safeStats.postsPerDay.reduce((s, d) => s + d.count, 0)}{" "}
-                bài trong tuần
+              <div style={{ fontSize: 11, color: C.muted, marginBottom: 16 }}>
+                Tổng cộng:{" "}
+                <strong>
+                  {safeStats.postsPerDay.reduce((s, d) => s + d.count, 0)}
+                </strong>{" "}
+                bài đăng mới trong tuần
               </div>
               <BarChart data={safeStats.postsPerDay} color={C.coral} />
             </div>
@@ -422,24 +502,28 @@ export function AdminPage() {
             <div
               style={{
                 background: C.white,
-                borderRadius: 12,
+                borderRadius: 16,
                 border: `1px solid ${C.border}`,
-                padding: "18px 20px",
+                padding: "24px",
+                boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
               }}
             >
               <div
                 style={{
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: 700,
                   color: C.dark,
                   marginBottom: 4,
                 }}
               >
-                👥 Người dùng mới — 7 ngày gần nhất
+                👥 Đăng ký mới — 7 ngày gần nhất
               </div>
-              <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>
-                Tổng: {safeStats.usersPerDay.reduce((s, d) => s + d.count, 0)}{" "}
-                tài khoản trong tuần
+              <div style={{ fontSize: 11, color: C.muted, marginBottom: 16 }}>
+                Tổng cộng:{" "}
+                <strong>
+                  {safeStats.usersPerDay.reduce((s, d) => s + d.count, 0)}
+                </strong>{" "}
+                tài khoản mới trong tuần
               </div>
               <BarChart data={safeStats.usersPerDay} color={C.ocean} />
             </div>
@@ -447,60 +531,69 @@ export function AdminPage() {
 
           {/* Hàng 2: Phân bố loại + Top người bán */}
           <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+              gap: 24,
+            }}
           >
             {/* Phân bố Fresh / Dried */}
             <div
               style={{
                 background: C.white,
-                borderRadius: 12,
+                borderRadius: 16,
                 border: `1px solid ${C.border}`,
-                padding: "18px 20px",
+                padding: "24px",
+                boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
               }}
             >
               <div
                 style={{
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: 700,
                   color: C.dark,
-                  marginBottom: 16,
+                  marginBottom: 20,
                 }}
               >
-                🐟 Phân bố loại sản phẩm
+                🐟 Phân bố loại sản phẩm hoạt động
               </div>
               {[
-                ["Hải sản tươi", safeStats.activeFresh, C.coral, "🌊"],
-                ["Hải sản khô", safeStats.activeDried, C.warn, "🔥"],
+                ["Hải sản tươi sống", safeStats.activeFresh, C.coral, "🌊"],
+                ["Hải sản khô đóng gói", safeStats.activeDried, C.warn, "🔥"],
               ].map(([lbl, n, col, ico]) => {
                 const pct =
                   totalActive > 0 ? Math.round((n / totalActive) * 100) : 0;
                 return (
-                  <div key={lbl} style={{ marginBottom: 16 }}>
+                  <div key={lbl} style={{ marginBottom: 20 }}>
                     <div
                       style={{
                         display: "flex",
                         justifyContent: "space-between",
                         fontSize: 13,
-                        marginBottom: 6,
+                        marginBottom: 8,
                       }}
                     >
-                      <span style={{ color: C.text, fontWeight: 600 }}>
+                      <span style={{ color: C.text, fontWeight: 700 }}>
                         {ico} {lbl}
                       </span>
-                      <span style={{ color: C.muted }}>
+                      <span style={{ color: C.muted, fontWeight: 600 }}>
                         {n} bài ({pct}%)
                       </span>
                     </div>
                     <div
-                      style={{ height: 10, background: C.bg, borderRadius: 5 }}
+                      style={{
+                        height: 10,
+                        background: "#F1F5F9",
+                        borderRadius: 10,
+                      }}
                     >
                       <div
                         style={{
                           height: "100%",
                           width: `${pct}%`,
                           background: col,
-                          borderRadius: 5,
-                          transition: "width 0.5s",
+                          borderRadius: 10,
+                          transition: "width 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
                         }}
                       />
                     </div>
@@ -510,19 +603,31 @@ export function AdminPage() {
 
               <div
                 style={{
-                  marginTop: 20,
-                  paddingTop: 14,
+                  marginTop: 24,
+                  paddingTop: 18,
                   borderTop: `1px solid ${C.border}`,
                   display: "flex",
                   flexDirection: "column",
-                  gap: 8,
+                  gap: 10,
                 }}
               >
                 {[
-                  ["Tổng bài đang rao", totalActive, C.dark],
-                  ["Bài đã hết hạn", safeStats.expiredTotal, "#ef4444"],
-                  ["Tổng tin nhắn", safeStats.totalMessages, C.muted],
-                  ["Lượt theo dõi", safeStats.totalFollows, "#8b5cf6"],
+                  ["Tổng bài đang rao bán", totalActive, C.dark],
+                  [
+                    "Bài đã quá hạn (24h tươi)",
+                    safeStats.expiredTotal,
+                    "#ef4444",
+                  ],
+                  [
+                    "Tổng số tin nhắn liên lạc",
+                    safeStats.totalMessages,
+                    C.muted,
+                  ],
+                  [
+                    "Tổng lượt theo dõi ngư dân",
+                    safeStats.totalFollows,
+                    "#8b5cf6",
+                  ],
                 ].map(([lbl, val, col]) => (
                   <div
                     key={lbl}
@@ -532,36 +637,43 @@ export function AdminPage() {
                       fontSize: 13,
                     }}
                   >
-                    <span style={{ color: C.muted }}>{lbl}</span>
-                    <strong style={{ color: col }}>{val}</strong>
+                    <span style={{ color: C.muted, fontWeight: 500 }}>
+                      {lbl}
+                    </span>
+                    <strong style={{ color: col, fontWeight: 700 }}>
+                      {val}
+                    </strong>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Top 5 người bán */}
+            {/* Top 5 người bán uy tín */}
             <div
               style={{
                 background: C.white,
-                borderRadius: 12,
+                borderRadius: 16,
                 border: `1px solid ${C.border}`,
-                padding: "18px 20px",
+                padding: "24px",
+                boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
               }}
             >
               <div
                 style={{
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: 700,
                   color: C.dark,
-                  marginBottom: 14,
+                  marginBottom: 18,
                 }}
               >
-                🏆 Top 5 người bán nhiều nhất
+                🏆 Top 5 người bán tích cực nhất
               </div>
 
               {safeStats.topSellers.length === 0 && (
-                <div style={{ color: C.muted, fontSize: 13 }}>
-                  Chưa có dữ liệu
+                <div
+                  style={{ color: C.muted, fontSize: 13, padding: "20px 0" }}
+                >
+                  Chưa có dữ liệu hoạt động.
                 </div>
               )}
 
@@ -573,27 +685,27 @@ export function AdminPage() {
                     : 0;
                 const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"];
                 return (
-                  <div key={seller.id} style={{ marginBottom: 14 }}>
+                  <div key={seller.id} style={{ marginBottom: 16 }}>
                     <div
                       style={{
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
-                        marginBottom: 4,
+                        marginBottom: 6,
                       }}
                     >
                       <div
                         style={{
                           display: "flex",
                           alignItems: "center",
-                          gap: 6,
+                          gap: 8,
                         }}
                       >
-                        <span style={{ fontSize: 14 }}>{medals[idx]}</span>
+                        <span style={{ fontSize: 16 }}>{medals[idx]}</span>
                         <span
                           style={{
                             fontSize: 13,
-                            fontWeight: 600,
+                            fontWeight: 700,
                             color: C.dark,
                           }}
                         >
@@ -624,8 +736,8 @@ export function AdminPage() {
                         style={{
                           flex: 1,
                           height: 6,
-                          background: C.bg,
-                          borderRadius: 3,
+                          background: "#F1F5F9",
+                          borderRadius: 10,
                         }}
                       >
                         <div
@@ -633,8 +745,9 @@ export function AdminPage() {
                             height: "100%",
                             width: `${barPct}%`,
                             background: idx === 0 ? "#f59e0b" : C.ocean,
-                            borderRadius: 3,
-                            transition: "width 0.6s",
+                            borderRadius: 10,
+                            transition:
+                              "width 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
                           }}
                         />
                       </div>
@@ -643,6 +756,7 @@ export function AdminPage() {
                           fontSize: 11,
                           color: C.muted,
                           whiteSpace: "nowrap",
+                          fontWeight: 500,
                         }}
                       >
                         🔔 {seller.followers} followers
@@ -658,51 +772,66 @@ export function AdminPage() {
           <div
             style={{
               background: C.white,
-              borderRadius: 12,
+              borderRadius: 16,
               border: `1px solid ${C.border}`,
-              padding: "18px 20px",
+              padding: "24px",
+              boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
             }}
           >
             <div
               style={{
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: 700,
                 color: C.dark,
-                marginBottom: 12,
+                marginBottom: 16,
               }}
             >
-              ⭐ Tổng kết đánh giá người bán
+              ⭐ Thống kê phản hồi &amp; Đánh giá từ người mua
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
-              <div style={{ textAlign: "center" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 40,
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={{ textAlign: "center", minWidth: 120 }}>
                 <div
-                  style={{ fontSize: 40, fontWeight: 800, color: "#f59e0b" }}
+                  style={{
+                    fontSize: 44,
+                    fontWeight: 900,
+                    color: "#f59e0b",
+                    lineHeight: 1,
+                  }}
                 >
                   {safeStats.avgRating}
                 </div>
-                <Stars value={safeStats.avgRating} />
-                <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>
-                  Điểm trung bình
+                <div style={{ margin: "6px 0" }}>
+                  <Stars value={safeStats.avgRating} />
+                </div>
+                <div style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}>
+                  Điểm hài lòng trung bình
                 </div>
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, color: C.muted }}>
-                  Dựa trên{" "}
+              <div style={{ flex: 1, minWidth: 260 }}>
+                <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5 }}>
+                  Dữ liệu được thống kê dựa trên tổng số{" "}
                   <strong style={{ color: C.dark }}>
                     {safeStats.totalReviews}
                   </strong>{" "}
-                  đánh giá từ người mua thực tế trên toàn nền tảng.
+                  lượt đánh giá giao dịch thực tế từ người dùng toàn hệ thống.
                 </div>
                 <div
                   style={{
-                    marginTop: 10,
+                    marginTop: 12,
                     display: "flex",
-                    gap: 10,
+                    gap: 8,
                     flexWrap: "wrap",
                   }}
                 >
-                  <Pill bg="#FDE8E0" color="#C0401A">
-                    {safeStats.totalReviews} reviews tổng
+                  <Pill bg="#EAF5EE" color="#166534">
+                    {safeStats.totalReviews} reviews đã ghi nhận
                   </Pill>
                   <Pill
                     bg={safeStats.avgRating >= 4 ? "#dcfce7" : "#fef9c3"}
@@ -711,10 +840,10 @@ export function AdminPage() {
                     {safeStats.avgRating >= 4.5
                       ? "🌟 Xuất sắc"
                       : safeStats.avgRating >= 4
-                        ? "👍 Tốt"
+                        ? "👍 Uy tín tốt"
                         : safeStats.avgRating >= 3
-                          ? "😐 Trung bình"
-                          : "⚠️ Cần cải thiện"}
+                          ? "😐 Bình thường"
+                          : "⚠️ Cần rà soát"}
                   </Pill>
                 </div>
               </div>
@@ -728,54 +857,62 @@ export function AdminPage() {
         <div
           style={{
             background: C.white,
-            borderRadius: 12,
+            borderRadius: 16,
             border: `1px solid ${C.border}`,
             overflow: "hidden",
+            boxShadow: "0 10px 25px -5px rgba(0,0,0,0.02)",
           }}
         >
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: C.bg }}>
-                {[
-                  "#",
-                  "Tên",
-                  "SĐT",
-                  "Bài đăng",
-                  "Quyền",
-                  "Trạng thái",
-                  "Xác minh",
-                  "Thao tác",
-                ].map((h) => (
-                  <th
-                    key={h}
-                    style={{
-                      padding: "12px 16px",
-                      textAlign: "left",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: C.muted,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                    }}
-                  >
-                    {h}
-                  </th>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr
+                  style={{
+                    background: "#F8FAFC",
+                    borderBottom: `1px solid ${C.border}`,
+                  }}
+                >
+                  {[
+                    "#ID",
+                    "Họ và tên",
+                    "Số điện thoại",
+                    "Tin đã đăng",
+                    "Vai trò",
+                    "Trạng thái",
+                    "Xác minh danh tính",
+                    "Hành động",
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      style={{
+                        padding: "16px 20px",
+                        textAlign: "left",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: "#4B5563",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((u) => (
+                  <AdminUserRow
+                    key={u.id}
+                    user={u}
+                    onToggleActive={toggleUser}
+                    onToggleVerify={toggleVerify}
+                    verifyingId={verifyingId}
+                    togglingId={togglingId}
+                  />
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <AdminUserRow
-                  key={u.id}
-                  user={u}
-                  onToggleActive={toggleUser}
-                  onToggleVerify={toggleVerify}
-                  verifyingId={verifyingId}
-                  togglingId={togglingId}
-                />
-              ))}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -784,247 +921,357 @@ export function AdminPage() {
         <div
           style={{
             background: C.white,
-            borderRadius: 12,
+            borderRadius: 16,
             border: `1px solid ${C.border}`,
             overflow: "hidden",
+            boxShadow: "0 10px 25px -5px rgba(0,0,0,0.02)",
           }}
         >
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: C.bg }}>
-                {[
-                  "Sản phẩm",
-                  "Loại",
-                  "Hình thức",
-                  "Người bán",
-                  "Giá/kg",
-                  "Còn lại",
-                  "Thao tác",
-                ].map((h) => (
-                  <th
-                    key={h}
-                    style={{
-                      padding: "12px 16px",
-                      textAlign: "left",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: C.muted,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                    }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {listings.map((p) => (
-                <tr key={p.id} style={{ borderTop: `1px solid ${C.border}` }}>
-                  <td
-                    style={{
-                      padding: "12px 16px",
-                      fontWeight: 600,
-                      fontSize: 14,
-                      maxWidth: 180,
-                    }}
-                  >
-                    <div
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr
+                  style={{
+                    background: "#F8FAFC",
+                    borderBottom: `1px solid ${C.border}`,
+                  }}
+                >
+                  {[
+                    "Sản phẩm",
+                    "Phân loại",
+                    "Bán Sỉ / Lẻ",
+                    "Chủ tin đăng",
+                    "Đơn giá",
+                    "Trọng lượng sẵn có",
+                    "Hành động",
+                  ].map((h) => (
+                    <th
+                      key={h}
                       style={{
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {p.name}
-                    </div>
-                    <div style={{ fontSize: 11, color: C.muted }}>#{p.id}</div>
-                  </td>
-                  <td style={{ padding: "12px 16px" }}>
-                    {p.type === "Fresh" ? (
-                      <Pill bg="#FDE8E0" color="#C0401A">
-                        🌊 Tươi
-                      </Pill>
-                    ) : (
-                      <Pill bg="#FEF5E4" color="#8A5C00">
-                        🔥 Khô
-                      </Pill>
-                    )}
-                  </td>
-                  <td style={{ padding: "12px 16px" }}>
-                    {p.salesType === "Retail" ? (
-                      <Pill bg="#eff6ff" color="#1d4ed8">
-                        Lẻ
-                      </Pill>
-                    ) : (
-                      <Pill bg="#f0fdf4" color="#15803d">
-                        Sỉ
-                      </Pill>
-                    )}
-                  </td>
-                  <td
-                    style={{
-                      padding: "12px 16px",
-                      fontSize: 13,
-                      color: C.muted,
-                    }}
-                  >
-                    {p.sellerName}
-                  </td>
-                  <td
-                    style={{
-                      padding: "12px 16px",
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: C.coral,
-                    }}
-                  >
-                    {fmt(p.price)}
-                  </td>
-                  <td style={{ padding: "12px 16px", fontSize: 13 }}>
-                    {p.remainingWeight}kg
-                  </td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <button
-                      onClick={() => deleteProduct(p.id)}
-                      style={{
-                        background: "#fee2e2",
-                        color: "#991b1b",
-                        border: "none",
-                        padding: "6px 12px",
-                        borderRadius: 8,
-                        cursor: "pointer",
-                        fontSize: 12,
+                        padding: "16px 20px",
+                        textAlign: "left",
+                        fontSize: 11,
                         fontWeight: 700,
-                        fontFamily: "inherit",
+                        color: "#4B5563",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
                       }}
                     >
-                      🗑️ Xoá
-                    </button>
-                  </td>
+                      {h}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {listings.map((p) => (
+                  <tr
+                    key={p.id}
+                    style={{
+                      borderBottom: `1px solid ${C.border}`,
+                      transition: "background 0.2s",
+                    }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = "#F8FAFC")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = "transparent")
+                    }
+                  >
+                    <td
+                      style={{
+                        padding: "16px 20px",
+                        fontWeight: 700,
+                        fontSize: 14,
+                        maxWidth: 200,
+                      }}
+                    >
+                      <div
+                        style={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {p.name}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: C.muted,
+                          fontWeight: 500,
+                        }}
+                      >
+                        ID: #{p.id}
+                      </div>
+                    </td>
+                    <td style={{ padding: "16px 20px" }}>
+                      {p.type === "Fresh" ? (
+                        <Pill bg="#FDE8E0" color="#C0401A">
+                          🌊 Tươi sống
+                        </Pill>
+                      ) : (
+                        <Pill bg="#FEF5E4" color="#8A5C00">
+                          🔥 Đồ khô
+                        </Pill>
+                      )}
+                    </td>
+                    <td style={{ padding: "16px 20px" }}>
+                      {p.salesType === "Retail" ? (
+                        <Pill bg="#eff6ff" color="#1d4ed8">
+                          Bán lẻ
+                        </Pill>
+                      ) : (
+                        <Pill bg="#f0fdf4" color="#15803d">
+                          Bán sỉ
+                        </Pill>
+                      )}
+                    </td>
+                    <td
+                      style={{
+                        padding: "16px 20px",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        color: C.text,
+                      }}
+                    >
+                      {p.sellerName}
+                    </td>
+                    <td
+                      style={{
+                        padding: "16px 20px",
+                        fontSize: 14,
+                        fontWeight: 800,
+                        color: C.coral,
+                      }}
+                    >
+                      {fmt(p.price)}
+                    </td>
+                    <td
+                      style={{
+                        padding: "16px 20px",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: C.dark,
+                      }}
+                    >
+                      {p.remainingWeight} kg
+                    </td>
+                    <td style={{ padding: "16px 20px" }}>
+                      <button
+                        onClick={() => deleteProduct(p.id)}
+                        style={{
+                          background: "#fee2e2",
+                          color: "#991b1b",
+                          border: "none",
+                          padding: "8px 14px",
+                          borderRadius: 8,
+                          cursor: "pointer",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          fontFamily: "inherit",
+                          transition: "all 0.2s",
+                        }}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.background = "#fecaca")
+                        }
+                        onMouseLeave={(e) =>
+                          (e.currentTarget.style.background = "#fee2e2")
+                        }
+                      >
+                        🗑️ Xoá bài
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
+
+      {/* ══════════════════════ TAB BÁO CÁO ══════════════════════ */}
       {tab === "reports" && (
         <div>
-          {/* Status filter */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          {/* Status filters */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
             {["Pending", "Resolved", "Dismissed"].map((s) => (
               <button
                 key={s}
                 onClick={() => setReportStatus(s)}
                 style={{
-                  padding: "7px 16px",
-                  borderRadius: 8,
+                  padding: "10px 18px",
+                  borderRadius: 10,
                   border: "none",
                   cursor: "pointer",
                   fontSize: 13,
-                  fontWeight: 600,
+                  fontWeight: 700,
                   fontFamily: "inherit",
-                  background: reportStatus === s ? "#0EA5E9" : "#F3F4F6",
-                  color: reportStatus === s ? "#fff" : "#6B7280",
+                  background: reportStatus === s ? C.ocean : "#F1F5F9",
+                  color: reportStatus === s ? "#fff" : "#475569",
+                  transition: "all 0.2s",
                 }}
               >
                 {s === "Pending"
-                  ? "⏳ Chờ xử lý"
+                  ? "⏳ Đang chờ xử lý"
                   : s === "Resolved"
-                    ? "✅ Đã xử lý"
-                    : "❌ Đã bỏ qua"}
+                    ? "✅ Đã gỡ bỏ bài"
+                    : "❌ Đã từ chối báo cáo"}
               </button>
             ))}
           </div>
 
           {reportsLoading ? (
-            <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>
-              Đang tải...
+            <div
+              style={{
+                textAlign: "center",
+                padding: 40,
+                color: "#9CA3AF",
+                fontWeight: 500,
+              }}
+            >
+              Đang truy xuất các báo cáo liên quan...
             </div>
           ) : reports.length === 0 ? (
-            <div style={{ textAlign: "center", padding: 60, color: "#9CA3AF" }}>
-              <div style={{ fontSize: 48 }}>🎉</div>
-              <div style={{ marginTop: 12, fontWeight: 600 }}>
-                Không có báo cáo nào
+            <div
+              style={{
+                textAlign: "center",
+                padding: "80px 20px",
+                color: "#9CA3AF",
+                background: C.white,
+                borderRadius: 16,
+                border: `1px solid ${C.border}`,
+              }}
+            >
+              <div style={{ fontSize: 56, marginBottom: 12 }}>🎉</div>
+              <div style={{ fontWeight: 700, color: C.dark }}>
+                Không có báo cáo nào tồn đọng
+              </div>
+              <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>
+                Hệ thống hoạt động rất sạch sẽ và an toàn.
               </div>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {reports.map((r) => (
                 <div
                   key={r.id}
                   style={{
                     background: "#fff",
-                    borderRadius: 12,
+                    borderRadius: 16,
                     border: "1px solid #e5e7eb",
-                    padding: "16px 20px",
+                    padding: "20px 24px",
                     display: "flex",
-                    gap: 16,
+                    gap: 20,
                     alignItems: "flex-start",
+                    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
                   }}
                 >
                   <div style={{ flex: 1 }}>
                     <div
-                      style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}
+                      style={{
+                        fontWeight: 800,
+                        fontSize: 15,
+                        marginBottom: 8,
+                        color: "#991B1B",
+                      }}
                     >
-                      🚩 {r.reason}
+                      🚩 Lý do: {r.reason}
                     </div>
                     <div
                       style={{
                         fontSize: 13,
-                        color: "#6B7280",
-                        marginBottom: 2,
+                        color: C.dark,
+                        marginBottom: 4,
+                        fontWeight: 600,
                       }}
                     >
-                      Sản phẩm: <strong>{r.productName}</strong> (ID:{" "}
-                      {r.productId})
+                      Sản phẩm vi phạm:{" "}
+                      <strong style={{ color: C.ocean }}>
+                        {r.productName}
+                      </strong>{" "}
+                      (ID tin: #{r.productId})
                     </div>
                     <div
                       style={{
                         fontSize: 13,
-                        color: "#6B7280",
-                        marginBottom: 2,
+                        color: C.muted,
+                        marginBottom: 4,
+                        fontWeight: 500,
                       }}
                     >
-                      Người bán: {r.sellerName} | Người báo cáo:{" "}
-                      {r.reporterName}
+                      Người bán:{" "}
+                      <strong style={{ color: C.dark }}>{r.sellerName}</strong>{" "}
+                      | Người báo cáo:{" "}
+                      <strong style={{ color: C.dark }}>
+                        {r.reporterName}
+                      </strong>
                     </div>
-                    <div style={{ fontSize: 11, color: "#9CA3AF" }}>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "#9CA3AF",
+                        marginTop: 8,
+                        fontWeight: 500,
+                      }}
+                    >
+                      🕒 Báo cáo gửi lúc:{" "}
                       {new Date(r.createdAt).toLocaleString("vi-VN")}
                     </div>
                   </div>
                   {reportStatus === "Pending" && (
-                    <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        flexShrink: 0,
+                        alignSelf: "center",
+                      }}
+                    >
                       <button
                         onClick={() => handleReport(r.id, "resolve")}
                         style={{
                           background: "#FEE2E2",
                           color: "#991B1B",
                           border: "none",
-                          padding: "8px 14px",
+                          padding: "10px 16px",
                           borderRadius: 8,
                           cursor: "pointer",
                           fontSize: 13,
                           fontWeight: 700,
                           fontFamily: "inherit",
+                          transition: "all 0.2s",
                         }}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.background = "#fecaca")
+                        }
+                        onMouseLeave={(e) =>
+                          (e.currentTarget.style.background = "#FEE2E2")
+                        }
                       >
-                        🗑️ Ẩn bài
+                        🗑️ Ẩn tin vi phạm
                       </button>
                       <button
                         onClick={() => handleReport(r.id, "dismiss")}
                         style={{
-                          background: "#F3F4F6",
-                          color: "#6B7280",
+                          background: "#F1F5F9",
+                          color: "#475569",
                           border: "none",
-                          padding: "8px 14px",
+                          padding: "10px 16px",
                           borderRadius: 8,
                           cursor: "pointer",
                           fontSize: 13,
+                          fontWeight: 700,
                           fontFamily: "inherit",
+                          transition: "all 0.2s",
                         }}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.background = "#e2e8f0")
+                        }
+                        onMouseLeave={(e) =>
+                          (e.currentTarget.style.background = "#F1F5F9")
+                        }
                       >
-                        Bỏ qua
+                        Bỏ qua báo cáo
                       </button>
                     </div>
                   )}

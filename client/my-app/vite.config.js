@@ -1,13 +1,15 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// Trong Docker: backend service name (docker-compose service name)
-// Ngoài Docker: localhost:5000
+// Kiểm tra xem frontend có đang chạy trong container Docker hay không
+const isDocker =
+  process.env.IS_DOCKER === "true" || !!process.env.VITE_API_TARGET;
+
 const backendTarget =
   process.env.VITE_API_TARGET ||
-  (process.env.NODE_ENV === "production"
-    ? "http://backend:5000"
-    : "http://localhost:5000");
+  (isDocker
+    ? "http://seafood_backend:5000" // Khi chạy trong Docker thì gọi qua tên service
+    : "http://localhost:5000"); // Khi chạy ngoài Docker (npm run dev máy local) thì gọi localhost
 
 export default defineConfig({
   plugins: [react()],

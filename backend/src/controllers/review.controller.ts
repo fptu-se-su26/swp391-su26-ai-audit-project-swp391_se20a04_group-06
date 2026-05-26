@@ -63,7 +63,17 @@ export async function getReviewsBySeller(req: Request, res: Response) {
   const sellerId = parseId(req.params.sellerId);
   if (!sellerId) return res.status(400).json({ message: 'ID người bán không hợp lệ' });
 
+  const page  = Math.max(1, parseInt((req.query.page as string) || '1', 10));
+  const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || '20', 10)));
+  const offset = (page - 1) * limit;
+
   try {
+    const [[countRow]] = await pool.query<RowDataPacket[]>(
+      'SELECT COUNT(*) AS total FROM Review WHERE SellerID = ?',
+      [sellerId]
+    );
+    const total = countRow.total;
+
     const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT r.ReviewID, r.Rating, r.Comment, r.ImageURL, r.CreatedAt,
               u.Name AS ReviewerName, p.Name AS ProductName
@@ -71,10 +81,18 @@ export async function getReviewsBySeller(req: Request, res: Response) {
        JOIN User    u ON r.ReviewerID = u.UserID
        JOIN Product p ON r.ProductID  = p.ProductID
        WHERE r.SellerID = ?
-       ORDER BY r.CreatedAt DESC`,
-      [sellerId],
+       ORDER BY r.CreatedAt DESC
+       LIMIT ? OFFSET ?`,
+      [sellerId, limit, offset],
     );
-    return res.json(rows);
+
+    return res.json({
+      data: rows,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (err) {
     return sendServerError(res, err);
   }

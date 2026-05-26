@@ -56,9 +56,12 @@ app.use('/api/reports',       reportRoutes);
 app.use((_req, res) => res.status(404).json({ message: 'Không tìm thấy endpoint này' }));
 
 /* ─── Global error handler ──────────────────────────────────── */
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error('[ERROR]', err.message);
-  res.status(500).json({ message: err.message || 'Lỗi máy chủ' });
+app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error(`[ERROR] ${req.method} ${req.url} - ${err.message}`);
+  if (err.stack) {
+    console.error(err.stack);
+  }
+  return res.status(500).json({ message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
 });
 
 /* ─── Start ─────────────────────────────────────────────────── */

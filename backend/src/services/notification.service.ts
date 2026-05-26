@@ -19,21 +19,28 @@ export async function notifyFollowersNewProduct(
   const io = getIO();
   const previewText = `${sellerName} vừa đăng mẻ hải sản mới: ${productName}`;
 
-  for (const f of followers) {
-    try {
-      await pool.query(
-        'INSERT INTO Notification (UserID, Type, Content, ProductID) VALUES (?, ?, ?, ?)',
-        [f.FollowerID, 'new_product', previewText, productId],
-      );
+  if (followers.length === 0) {
+    return;
+  }
+
+  try {
+    const values = followers.map((f) => [f.FollowerID, 'new_product', previewText, productId]);
+    await pool.query(
+      'INSERT INTO Notification (UserID, Type, Content, ProductID) VALUES ?',
+      [values],
+    );
+
+    // Emit sockets concurrently/non-blocking
+    for (const f of followers) {
       io.to(`user_${f.FollowerID}`).emit('notification', {
         type: 'new_product',
         productId,
         sellerId,
         preview: previewText,
       });
-    } catch (err) {
-      console.error('Lỗi khi lưu/phát thông báo sản phẩm mới:', err);
     }
+  } catch (err) {
+    console.error('Lỗi khi lưu/phát thông báo sản phẩm mới:', err);
   }
 }
 

@@ -1,12 +1,9 @@
 /**
- * InboxTab.jsx
+ * InboxTab.jsx — Modernized UI/UX Version
  *
  * Tab "Tin nhắn" đầy đủ trong Dashboard.
- * Hiện danh sách hội thoại + mở ChatBox inline khi click.
- *
- * Dùng API đã có sẵn:
- *   GET /api/messages/conversations  → danh sách hội thoại
- *   GET /api/messages/:productId      → lịch sử tin nhắn (trong ChatBox)
+ * Giữ nguyên 100% logic fetch conversations, cập nhật unread = 0 và mở ChatBox inline.
+ * Tích hợp responsive grid mượt mà cho thiết bị di động.
  */
 
 import React, { useState, useEffect } from "react";
@@ -31,10 +28,8 @@ export function InboxTab({ user }) {
     loadConversations();
   }, []);
 
-  // Đánh dấu đã đọc khi mở hội thoại
   const openChat = (conv) => {
     setActiveChat(conv);
-    // Update local unread = 0 ngay lập tức
     setConversations((prev) =>
       prev.map((c) =>
         c.productId === conv.productId && c.otherUserId === conv.otherUserId
@@ -48,13 +43,14 @@ export function InboxTab({ user }) {
 
   return (
     <div
+      className="inbox-tab-grid"
       style={{
         display: "grid",
         gridTemplateColumns: activeChat ? "1fr 1fr" : "1fr",
-        gap: 20,
+        gap: 24,
       }}
     >
-      {/* ─── Danh sách hội thoại ─── */}
+      {/* ─── DANH SÁCH HỘI THOẠI ─── */}
       <div>
         <div
           style={{
@@ -65,19 +61,27 @@ export function InboxTab({ user }) {
           }}
         >
           <h2
-            style={{ fontSize: 16, fontWeight: 800, color: C.dark, margin: 0 }}
+            style={{
+              fontSize: 16,
+              fontWeight: 800,
+              color: C.dark,
+              margin: 0,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
           >
-            📬 Hộp thư
+            📬 Hộp thư tin nhắn
             {totalUnread > 0 && (
               <span
                 style={{
-                  marginLeft: 8,
                   background: C.coral,
                   color: "#fff",
-                  borderRadius: 12,
-                  padding: "2px 8px",
-                  fontSize: 12,
+                  borderRadius: 20,
+                  padding: "2px 10px",
+                  fontSize: 11,
                   fontWeight: 700,
+                  boxShadow: "0 2px 8px rgba(232, 100, 58, 0.45)",
                 }}
               >
                 {totalUnread} chưa đọc
@@ -87,17 +91,22 @@ export function InboxTab({ user }) {
           <button
             onClick={loadConversations}
             style={{
-              background: "none",
+              background: C.white,
               border: `1px solid ${C.border}`,
-              borderRadius: 6,
-              padding: "4px 10px",
+              borderRadius: 8,
+              padding: "6px 12px",
               cursor: "pointer",
               fontSize: 12,
+              fontWeight: 700,
               color: C.muted,
               fontFamily: "inherit",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.01)",
+              transition: "all 0.2s",
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#F1F5F9")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = C.white)}
           >
-            🔄 Làm mới
+            🔄 Làm mới hộp thư
           </button>
         </div>
 
@@ -108,36 +117,41 @@ export function InboxTab({ user }) {
               textAlign: "center",
               color: C.muted,
               fontSize: 13,
+              fontWeight: 500,
             }}
           >
-            Đang tải hội thoại...
+            Đang tải dữ liệu hội thoại...
           </div>
         ) : conversations.length === 0 ? (
           <div
             style={{
-              padding: 40,
+              padding: "48px 24px",
               textAlign: "center",
               color: C.muted,
               fontSize: 14,
               background: C.white,
-              borderRadius: 12,
+              borderRadius: 16,
               border: `1px solid ${C.border}`,
+              boxShadow: "0 4px 10px rgba(0,0,0,0.01)",
             }}
           >
-            <div style={{ fontSize: 36, marginBottom: 8 }}>💬</div>
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>
-              Chưa có tin nhắn nào
+            <div style={{ fontSize: 44, marginBottom: 10 }}>💬</div>
+            <div style={{ fontWeight: 700, marginBottom: 4, color: C.dark }}>
+              Chưa có cuộc trò chuyện nào
             </div>
-            <div style={{ fontSize: 12 }}>
-              Khi ai đó hỏi về sản phẩm của bạn, tin nhắn sẽ hiện ở đây.
+            <div style={{ fontSize: 12, color: C.muted }}>
+              Khi có bất kỳ ai hỏi mua hoặc hỏi về sản phẩm của bạn, hộp chat sẽ
+              xuất hiện tại đây.
             </div>
           </div>
         ) : (
           <div
             style={{
-              borderRadius: 12,
+              borderRadius: 16,
               overflow: "hidden",
               border: `1px solid ${C.border}`,
+              boxShadow: "0 10px 25px -5px rgba(0,0,0,0.02)",
+              background: C.white,
             }}
           >
             {conversations.map((conv, i) => {
@@ -152,75 +166,79 @@ export function InboxTab({ user }) {
                   style={{
                     display: "flex",
                     gap: 12,
-                    padding: "14px 16px",
+                    padding: "16px",
                     cursor: "pointer",
                     background: isActive
-                      ? C.oceanP
+                      ? "rgba(11, 79, 108, 0.05)"
                       : conv.unread > 0
-                        ? "#FFF8F0"
+                        ? "rgba(11, 79, 108, 0.03)"
                         : C.white,
                     borderBottom:
                       i < conversations.length - 1
-                        ? `1px solid ${C.border}`
+                        ? `1px solid #F1F5F9`
                         : "none",
-                    transition: "background 0.15s",
+                    transition: "all 0.2s ease",
+                    // Vạch lề trái chỉ thị đang hoạt động/chưa đọc đồng bộ
                     borderLeft: isActive
-                      ? `3px solid ${C.ocean}`
-                      : "3px solid transparent",
+                      ? `4px solid ${C.ocean}`
+                      : conv.unread > 0
+                        ? `4px solid ${C.coral}`
+                        : "4px solid transparent",
                   }}
                   onMouseEnter={(e) => {
-                    if (!isActive) e.currentTarget.style.background = C.bg;
+                    if (!isActive) e.currentTarget.style.background = "#F1F5F9";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = isActive
-                      ? C.oceanP
+                      ? "rgba(11, 79, 108, 0.05)"
                       : conv.unread > 0
-                        ? "#FFF8F0"
+                        ? "rgba(11, 79, 108, 0.03)"
                         : C.white;
                   }}
                 >
-                  {/* Avatar */}
+                  {/* Avatar Tròn Gradient */}
                   <div
                     style={{
                       width: 44,
                       height: 44,
                       borderRadius: "50%",
-                      background: C.ocean,
+                      background: `linear-gradient(135deg, ${C.ocean} 0%, ${C.oceanL} 100%)`,
                       color: "#fff",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       fontWeight: 800,
-                      fontSize: 16,
+                      fontSize: 15,
                       flexShrink: 0,
+                      boxShadow: "0 2px 6px rgba(11, 79, 108, 0.15)",
                     }}
                   >
                     {conv.otherUserName.charAt(0).toUpperCase()}
                   </div>
 
-                  {/* Content */}
+                  {/* Chi tiết tin nhắn */}
                   <div style={{ flex: 1, overflow: "hidden", minWidth: 0 }}>
                     <div
                       style={{
                         display: "flex",
                         justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        marginBottom: 2,
+                        alignItems: "center",
+                        marginBottom: 4,
                       }}
                     >
                       <div
                         style={{
-                          fontWeight: conv.unread > 0 ? 800 : 600,
+                          fontWeight: conv.unread > 0 ? 800 : 700,
                           fontSize: 14,
                           color: C.dark,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4,
                         }}
                       >
                         {conv.otherUserName}
                         {conv.otherUserIsVerified && (
-                          <span
-                            title="Đã xác minh"
-                            style={{ marginLeft: 4, fontSize: 12 }}
-                          >
+                          <span title="Đã xác minh" style={{ fontSize: 12 }}>
                             ✅
                           </span>
                         )}
@@ -229,6 +247,7 @@ export function InboxTab({ user }) {
                         style={{
                           fontSize: 11,
                           color: C.muted,
+                          fontWeight: 500,
                           flexShrink: 0,
                           marginLeft: 8,
                         }}
@@ -237,6 +256,7 @@ export function InboxTab({ user }) {
                       </div>
                     </div>
 
+                    {/* Tin nhắn cuối cùng */}
                     <div
                       style={{
                         fontSize: 13,
@@ -245,7 +265,7 @@ export function InboxTab({ user }) {
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
-                        marginBottom: 2,
+                        marginBottom: 6,
                       }}
                     >
                       {conv.lastMessage}
@@ -258,27 +278,36 @@ export function InboxTab({ user }) {
                         alignItems: "center",
                       }}
                     >
-                      <div
+                      {/* Thẻ sản phẩm Tag bo tròn mượt mà */}
+                      <span
                         style={{
-                          fontSize: 11,
-                          color: C.muted,
-                          whiteSpace: "nowrap",
+                          display: "inline-block",
+                          fontSize: 10,
+                          fontWeight: 600,
+                          background: "#E2E8F0",
+                          color: "#475569",
+                          padding: "2px 8px",
+                          borderRadius: 6,
+                          maxWidth: "75%",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
                         }}
                       >
-                        🐟 {conv.productName}
-                      </div>
+                        📦 {conv.productName}
+                      </span>
+
                       {conv.unread > 0 && (
                         <div
                           style={{
                             background: C.coral,
                             color: "#fff",
                             borderRadius: 10,
-                            padding: "1px 7px",
-                            fontSize: 11,
+                            padding: "1px 8px",
+                            fontSize: 10,
                             fontWeight: 700,
                             flexShrink: 0,
+                            boxShadow: "0 2px 6px rgba(232, 100, 58, 0.3)",
                           }}
                         >
                           {conv.unread}
@@ -293,18 +322,20 @@ export function InboxTab({ user }) {
         )}
       </div>
 
-      {/* ─── ChatBox khi đã chọn hội thoại ─── */}
+      {/* ─── KHUNG CHAT INLINE KHI ĐÃ CHỌN HỘI THOẠI ─── */}
       {activeChat && (
         <div style={{ position: "sticky", top: 80, alignSelf: "flex-start" }}>
           <div
             style={{
-              marginBottom: 8,
+              marginBottom: 10,
               fontSize: 13,
               color: C.muted,
-              fontWeight: 600,
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
             }}
           >
-            Đang chat với{" "}
+            Đang chat với:{" "}
             <strong style={{ color: C.dark }}>
               {activeChat.otherUserName}
             </strong>
@@ -318,10 +349,19 @@ export function InboxTab({ user }) {
             }}
             user={user}
             onClose={() => setActiveChat(null)}
-            fullHeight // prop để ChatBox biết dùng height lớn hơn
+            fullHeight // Sử dụng kích thước chiều cao đầy đủ
           />
         </div>
       )}
+
+      {/* Đoạn mã CSS hỗ trợ co giãn/responsive cho Khung Inbox */}
+      <style>{`
+        @media (max-width: 768px) {
+          .inbox-tab-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -1,0 +1,75 @@
+Folder PATH listing for volume OS
+Volume serial number is 00000086 98EE:EB1B
+C:.
+|   client.jsx
+|   structure.txt
+|   
+\---my-app
+    |   .env.example
+    |   .gitignore
+    |   Dockerfile
+    |   eslint.config.js
+    |   index.html
+    |   package-lock.json
+    |   package.json
+    |   README.md
+    |   refactor.cjs
+    |   vite.config.js
+    |   
+    +---node_modules
+    +---public
+    |       favicon.svg
+    |       hero-ocean.png
+    |       icons.svg
+    |       
+    \---src
+        |   App.css
+        |   App.jsx
+        |   index.css
+        |   main.jsx
+        |   
+        +---assets
+        |       hero.png
+        |       react.svg
+        |       vite.svg
+        |       
+        +---components
+        |       ChatBox.jsx
+        |       ChatPopover.jsx
+        |       ImageSlider.jsx
+        |       InboxTab.jsx
+        |       MapExplore.jsx
+        |       MapMini.jsx
+        |       NotificationBell.jsx
+        |       ProductCard.jsx
+        |       ReviewList.jsx
+        |       VerifiedBadge.jsx
+        |       
+        +---hooks
+        |       useCountdown.js
+        |       useNotifications.js
+        |       useSEO.js
+        |       
+        +---layout
+        |       Navbar.jsx
+        |       
+        +---pages
+        |       AdminPage.jsx
+        |       AdminPage_verify_patch.jsx
+        |       AuthPage.jsx
+        |       DashboardPage.jsx
+        |       DashboardPage_PATCH_NOTES.js
+        |       HomePage.jsx
+        |       PostListingPage.jsx
+        |       ProductDetailPage.jsx
+        |       SellerProfilePage.jsx
+        |       
+        +---services
+        |       api.js
+        |       socket.js
+        |       
+        \---utils
+                cloudinary.js
+                format.jsx
+                theme.js
+                

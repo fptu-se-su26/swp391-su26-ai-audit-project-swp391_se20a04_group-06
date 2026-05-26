@@ -1,18 +1,5 @@
 /**
- * App.jsx — React Router version
- *
- * Thay thế toàn bộ `state page` bằng real URL.
- * Routes:
- *   /                    → HomePage
- *   /san-pham/:id        → ProductDetailPage
- *   /dang-nhap           → AuthPage
- *   /dang-bai            → PostListingPage
- *   /dashboard           → DashboardPage
- *   /admin               → AdminPage
- *   /nguoi-ban/:id       → SellerProfilePage
- *
- * Cài đặt trước:
- *   npm install react-router-dom
+ * App.jsx — React Router version (Upgraded UX with Conditionally Hidden Navbar)
  */
 
 import React, { useState, useEffect } from "react";
@@ -23,6 +10,7 @@ import {
   Navigate,
   useNavigate,
   useParams,
+  useLocation, // ✅ BỔ SUNG: Import useLocation để theo dõi URL
 } from "react-router-dom";
 import { C } from "./utils/theme";
 import { api, getToken, saveToken } from "./services/api";
@@ -35,16 +23,18 @@ import { PostListingPage } from "./pages/PostListingPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { AdminPage } from "./pages/AdminPage";
 import { SellerProfilePage } from "./pages/SellerProfilePage";
+import { ProfilePage } from "./pages/ProfilePage";
 import { ChatBox } from "./components/ChatBox";
 
 /* ─── Shell: giữ user state + floating chat ─── */
 function AppShell() {
   const navigate = useNavigate();
+  const location = useLocation(); // ✅ BỔ SUNG: Lấy location hiện tại
   const [user, setUser] = useState(null);
   const [unread, setUnread] = useState(0);
   const [globalChat, setGlobalChat] = useState(null);
 
-  // Load font
+  // Load font Be Vietnam Pro
   useEffect(() => {
     const link = document.createElement("link");
     link.href =
@@ -86,6 +76,9 @@ function AppShell() {
     }
   };
 
+  // ✅ BỔ SUNG: Ẩn thanh Navbar nếu đang ở trang Đăng nhập
+  const isAuthPage = location.pathname === "/dang-nhap";
+
   return (
     <div
       style={{
@@ -94,25 +87,35 @@ function AppShell() {
         minHeight: "100vh",
       }}
     >
-      <Navbar
-        user={user}
-        setUser={handleSetUser}
-        unread={unread}
-        onOpenGlobalChat={setGlobalChat}
-      />
+      {/* Chỉ hiển thị Navbar nếu không phải là trang Đăng nhập */}
+      {!isAuthPage && (
+        <Navbar
+          user={user}
+          setUser={handleSetUser}
+          unread={unread}
+          onOpenGlobalChat={setGlobalChat}
+        />
+      )}
 
       <Routes>
         <Route path="/" element={<HomePage user={user} />} />
 
-        {/* Product detail — đọc productId từ URL */}
+        {/* Product detail */}
         <Route
           path="/san-pham/:productId"
           element={<ProductDetailPageRoute user={user} />}
         />
 
+        {/* ✅ CẬP NHẬT: Nếu đã đăng nhập thì tự động chuyển hướng về trang chủ chứ không hiển thị Form login */}
         <Route
           path="/dang-nhap"
-          element={<AuthPage setUser={handleSetUser} />}
+          element={
+            user ? (
+              <Navigate to="/" replace />
+            ) : (
+              <AuthPage setUser={handleSetUser} />
+            )
+          }
         />
 
         {/* Protected routes */}
@@ -146,8 +149,18 @@ function AppShell() {
             )
           }
         />
+        <Route
+          path="/profile"
+          element={
+            user ? (
+              <ProfilePage user={user} setUser={handleSetUser} />
+            ) : (
+              <Navigate to="/dang-nhap" replace />
+            )
+          }
+        />
 
-        {/* Seller profile — đọc sellerId từ URL */}
+        {/* Seller profile */}
         <Route
           path="/nguoi-ban/:sellerId"
           element={<SellerProfilePageRoute user={user} />}
@@ -157,7 +170,7 @@ function AppShell() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
-      {/* Floating chat box — giữ nguyên behavior */}
+      {/* Floating chat box */}
       {globalChat && (
         <div
           style={{
@@ -185,10 +198,6 @@ function AppShell() {
   );
 }
 
-/**
- * ProductDetailPageRoute — fetch product theo :productId từ URL
- * Hỗ trợ cả direct link và back button.
- */
 function ProductDetailPageRoute({ user }) {
   const { productId } = useParams();
   const [product, setProduct] = useState(null);
@@ -203,17 +212,21 @@ function ProductDetailPageRoute({ user }) {
 
   if (loading)
     return (
-      <div style={{ padding: 40, textAlign: "center", color: C.muted }}>
-        Đang tải...
+      <div
+        style={{
+          padding: 40,
+          textAlign: "center",
+          color: C.muted,
+          fontWeight: 500,
+        }}
+      >
+        Đang tải thông tin sản phẩm...
       </div>
     );
   if (!product) return <Navigate to="/" replace />;
   return <ProductDetailPage product={product} user={user} />;
 }
 
-/**
- * SellerProfilePageRoute — fetch seller theo :sellerId từ URL
- */
 function SellerProfilePageRoute({ user }) {
   const { sellerId } = useParams();
   const [seller, setSeller] = useState(null);
@@ -228,8 +241,15 @@ function SellerProfilePageRoute({ user }) {
 
   if (loading)
     return (
-      <div style={{ padding: 40, textAlign: "center", color: C.muted }}>
-        Đang tải...
+      <div
+        style={{
+          padding: 40,
+          textAlign: "center",
+          color: C.muted,
+          fontWeight: 500,
+        }}
+      >
+        Đang tải hồ sơ ngư dân...
       </div>
     );
   if (!seller) return <Navigate to="/" replace />;

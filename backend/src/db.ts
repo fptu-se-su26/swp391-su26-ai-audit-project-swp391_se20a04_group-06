@@ -1,17 +1,17 @@
-import mysql from 'mysql2/promise';
-import dotenv from 'dotenv';
-import { runMigrations } from './db.migrations';
+import mysql from "mysql2/promise";
+import dotenv from "dotenv";
+import { runMigrations } from "./db.migrations";
 dotenv.config();
 
 export const pool = mysql.createPool({
-  host:               process.env.DB_HOST     || 'localhost',
-  port:               parseInt(process.env.DB_PORT || '3306'),
-  user:               process.env.DB_USER     || 'root',
-  password:           process.env.DB_PASS     || '',
-  database:           process.env.DB_NAME     || 'seafood_db',
+  host: process.env.DB_HOST || "localhost",
+  port: parseInt(process.env.DB_PORT || "3306"),
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASS || "root123",
+  database: process.env.DB_NAME || "seafood_db",
   waitForConnections: true,
-  connectionLimit:    10,
-  charset:            'utf8mb4',
+  connectionLimit: 10,
+  charset: "utf8mb4",
 });
 
 /**
@@ -20,7 +20,7 @@ export const pool = mysql.createPool({
  */
 export async function testConnection() {
   const conn = await pool.getConnection();
-  console.log('✅ MySQL connected');
+  console.log("✅ MySQL connected");
   await runMigrations(conn);
   conn.release();
 }

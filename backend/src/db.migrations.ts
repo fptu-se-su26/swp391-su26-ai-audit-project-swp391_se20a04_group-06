@@ -12,6 +12,7 @@ export async function runMigrations(conn: mysql.PoolConnection): Promise<void> {
   await createFavoriteTable(conn);
   await createReportTable(conn);
   await runColumnMigrations(conn);
+  await createProductIndexes(conn);
   console.log("✅ Database schema ready");
 }
 
@@ -109,6 +110,12 @@ async function runColumnMigrations(conn: mysql.PoolConnection): Promise<void> {
       column: "IsVerified",
       sql: `ALTER TABLE User ADD COLUMN IsVerified TINYINT(1) NOT NULL DEFAULT 0`,
     },
+    // 🌟 BỔ SUNG DI TRÚ TỰ ĐỘNG CHO CỘT AVATAR TẠI ĐÂY:
+    {
+      table: "User",
+      column: "Avatar",
+      sql: `ALTER TABLE User ADD COLUMN Avatar VARCHAR(255) DEFAULT NULL`,
+    },
     {
       table: "Product",
       column: "ViewCount",
@@ -136,5 +143,49 @@ async function runColumnMigrations(conn: mysql.PoolConnection): Promise<void> {
         (err as Error).message,
       );
     }
+  }
+}
+
+async function createProductIndexes(conn: mysql.PoolConnection): Promise<void> {
+  try {
+    const [stats] = await conn.query(
+      `SELECT COUNT(1) AS cnt
+       FROM information_schema.statistics
+       WHERE table_schema = DATABASE()
+         AND table_name = 'Product'
+         AND index_name = 'idx_product_bumpedat'`,
+    );
+    if ((stats as any[])[0]?.cnt === 0) {
+      await conn.query(
+        `CREATE INDEX idx_product_bumpedat ON Product(BumpedAt)`,
+      );
+      console.log("✅ Migration: added idx_product_bumpedat index");
+    }
+  } catch (err) {
+    console.error(
+      "⚠️ Migration idx_product_bumpedat error:",
+      (err as Error).message,
+    );
+  }
+
+  try {
+    const [stats] = await conn.query(
+      `SELECT COUNT(1) AS cnt
+       FROM information_schema.statistics
+       WHERE table_schema = DATABASE()
+         AND table_name = 'Product'
+         AND index_name = 'idx_product_status_type_bumped'`,
+    );
+    if ((stats as any[])[0]?.cnt === 0) {
+      await conn.query(
+        `CREATE INDEX idx_product_status_type_bumped ON Product(Status, Type, BumpedAt)`,
+      );
+      console.log("✅ Migration: added idx_product_status_type_bumped index");
+    }
+  } catch (err) {
+    console.error(
+      "⚠️ Migration idx_product_status_type_bumped error:",
+      (err as Error).message,
+    );
   }
 }

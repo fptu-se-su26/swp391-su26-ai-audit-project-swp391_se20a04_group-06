@@ -387,6 +387,24 @@ export function HomePage({ user }) {
               Mua bán hải sản tươi &amp; khô trực tiếp từ ngư dân. Giao tươi
               trong 20km · Khô giao toàn quốc.
             </p>
+
+            {/* ── Search (Đã chuyển lên đây) ── */}
+            <div
+              className={styles.searchWrap}
+              style={{ margin: "16px 0 24px 0" }}
+            >
+              <span className={styles.searchIcon}>
+                <SearchIcon size={16} />
+              </span>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Tìm cá thu, tôm hùm, mực khô..."
+                className={styles.searchInput}
+                aria-label="Tìm kiếm sản phẩm"
+              />
+            </div>
+
             <div className={styles.heroActions}>
               <button
                 onClick={handleGps}
@@ -412,278 +430,269 @@ export function HomePage({ user }) {
 
       {/* ══ MAIN CONTENT ══ */}
       <div className={styles.content}>
-        {/* ── Search ── */}
-        <div className={styles.searchWrap}>
-          <span className={styles.searchIcon}>
-            <SearchIcon size={16} />
-          </span>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Tìm cá thu, tôm hùm, mực khô..."
-            className={styles.searchInput}
-            aria-label="Tìm kiếm sản phẩm"
-          />
-        </div>
-
-        {/* ── Tab + Filter row ── */}
-        <div className={styles.filterRow}>
-          <div
-            className={styles.tabGroup}
-            role="tablist"
-            style={{ "--tab-offset": tab === "fresh" ? "0" : "1" }}
-          >
-            <div className={styles.tabIndicator} aria-hidden="true" />
-            {[
-              { k: "fresh", l: "🌊 Hải sản tươi" },
-              { k: "dried", l: "🔥 Hải sản khô" },
-            ].map(({ k, l }) => (
-              <button
-                key={k}
-                role="tab"
-                aria-selected={tab === k}
-                className={`${styles.tab} ${k === "fresh" ? styles.tabFresh : styles.tabDried} ${tab === k ? styles.active : ""}`}
-                onClick={() => {
-                  setTab(k);
-                  setProducts([]);
-                }}
-              >
-                {l}
-              </button>
-            ))}
-          </div>
-
-          <div className={styles.chipGroup}>
-            {[
-              { id: "all", label: "Tất cả", icon: null },
-              {
-                id: "recent",
-                label: "Mới đánh bắt < 6h",
-                icon: <ClockIcon size={12} />,
-              },
-              {
-                id: "topRated",
-                label: "Người bán uy tín",
-                icon: <StarIcon size={12} />,
-              },
-              {
-                id: "wholesale",
-                label: "Bán buôn",
-                icon: <PackageIcon size={12} />,
-              },
-            ].map((f) => (
-              <button
-                key={f.id}
-                className={`${styles.chip} ${filter === f.id ? styles.activeChip : ""}`}
-                onClick={() => setFilter(f.id)}
-                aria-pressed={filter === f.id}
-              >
-                {f.icon}
-                {f.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Advanced filters ── */}
-        <button
-          className={`${styles.advancedToggle} ${hasAdvancedFilter ? styles.hasFilter : ""}`}
-          onClick={() => setShowAdvanced((v) => !v)}
-        >
-          <SlidersIcon size={13} />
-          Bộ lọc nâng cao
-          {hasAdvancedFilter && (
-            <span className={styles.filterDot} aria-hidden="true" />
-          )}
-          {showAdvanced ? (
-            <ChevronLeftIcon
-              size={10}
-              strokeWidth={2.5}
-              style={{ transform: "rotate(90deg)" }}
-            />
-          ) : (
-            <ChevronRightIcon
-              size={10}
-              strokeWidth={2.5}
-              style={{ transform: "rotate(90deg)" }}
-            />
-          )}
-        </button>
-
-        {showAdvanced && (
-          <div className={styles.advancedPanel}>
-            <div className={styles.filterGroup}>
-              <label>Khoảng giá (VNĐ/kg)</label>
-              <div className={styles.filterInputRow}>
-                <input
-                  type="number"
-                  placeholder="Từ"
-                  value={priceMin}
-                  onChange={(e) => setPriceMin(e.target.value)}
-                  className={styles.filterInput}
-                />
-                <span className={styles.filterSep}>—</span>
-                <input
-                  type="number"
-                  placeholder="Đến"
-                  value={priceMax}
-                  onChange={(e) => setPriceMax(e.target.value)}
-                  className={styles.filterInput}
-                />
+        <div className={styles.layoutWrapper}>
+          {/* ── THANH DANH MỤC DỌC BÊN TRÁI ── */}
+          <aside className={styles.leftSidebar}>
+            <div className={styles.sidebarSticky}>
+              <h3 className={styles.sidebarTitle}>Loại hải sản</h3>
+              <div className={styles.verticalTabGroup} role="tablist">
+                {[
+                  { k: "fresh", l: "🌊 Hải sản tươi" },
+                  { k: "dried", l: "🔥 Hải sản khô" },
+                ].map(({ k, l }) => (
+                  <button
+                    key={k}
+                    role="tab"
+                    aria-selected={tab === k}
+                    className={`${styles.verticalTab} ${tab === k ? styles.verticalActive : ""}`}
+                    onClick={() => {
+                      setTab(k);
+                      setProducts([]);
+                    }}
+                  >
+                    {l}
+                  </button>
+                ))}
               </div>
             </div>
-            <div className={styles.filterGroup}>
-              <label>Sẵn có tối thiểu (kg)</label>
-              <input
-                type="number"
-                placeholder="VD: 5"
-                value={minWeight}
-                onChange={(e) => setMinWeight(e.target.value)}
-                className={styles.filterInput}
-                style={{ width: 130 }}
-              />
-            </div>
-            {hasAdvancedFilter && (
-              <button
-                className={styles.clearBtn}
-                onClick={() => {
-                  setPriceMin("");
-                  setPriceMax("");
-                  setMinWeight("");
-                }}
-              >
-                <XIcon size={12} />
-                Xoá bộ lọc
-              </button>
-            )}
-          </div>
-        )}
+          </aside>
 
-        {/* ── Sort + View toggle ── */}
-        <div className={styles.sortRow}>
-          <div className={styles.sortLeft}>
-            <span className={styles.sortLabel}>Sắp xếp:</span>
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value)}
-              className={styles.sortSelect}
+          {/* ── PHẦN NỘI DUNG CHÍNH BÊN PHẢI ── */}
+          <div className={styles.mainLayoutBody}>
+            {/* ── Filter row (Chỉ giữ lại chipGroup lọc nhanh) ── */}
+            <div className={styles.filterRow}>
+              <div className={styles.chipGroup}>
+                {[
+                  { id: "all", label: "Tất cả", icon: null },
+                  {
+                    id: "recent",
+                    label: "Mới đánh bắt < 6h",
+                    icon: <ClockIcon size={12} />,
+                  },
+                  {
+                    id: "topRated",
+                    label: "Người bán uy tín",
+                    icon: <StarIcon size={12} />,
+                  },
+                  {
+                    id: "wholesale",
+                    label: "Bán buôn",
+                    icon: <PackageIcon size={12} />,
+                  },
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    className={`${styles.chip} ${filter === f.id ? styles.activeChip : ""}`}
+                    onClick={() => setFilter(f.id)}
+                    aria-pressed={filter === f.id}
+                  >
+                    {f.icon}
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Advanced filters ── */}
+            <button
+              className={`${styles.advancedToggle} ${hasAdvancedFilter ? styles.hasFilter : ""}`}
+              onClick={() => setShowAdvanced((v) => !v)}
             >
-              <option value="newest">Mới nhất / Đã đẩy</option>
-              <option value="price_asc">Giá tăng dần</option>
-              <option value="price_desc">Giá giảm dần</option>
-              <option value="rating">Đánh giá người bán</option>
-              <option value="views">Nhiều lượt xem</option>
-            </select>
-          </div>
-
-          {tab === "fresh" && (
-            <div
-              className={styles.viewToggle}
-              role="group"
-              aria-label="Chế độ xem"
-            >
-              {[
-                { k: "grid", icon: <GridIcon size={13} />, l: "Lưới" },
-                { k: "map", icon: <MapIcon size={13} />, l: "Bản đồ" },
-              ].map(({ k, icon, l }) => (
-                <button
-                  key={k}
-                  className={`${styles.viewBtn} ${viewMode === k ? styles.active : ""}`}
-                  onClick={() => setViewMode(k)}
-                  aria-pressed={viewMode === k}
-                >
-                  {icon}
-                  {l}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* ── Info / error banners ── */}
-        {tab === "fresh" && (
-          <div className={styles.infoBanner} role="note">
-            <InfoIcon size={14} style={{ flexShrink: 0, marginTop: 1 }} />
-            <span>
-              Chỉ hiển thị hải sản tươi trong phạm vi <strong>20km</strong> từ
-              vị trí của bạn. Bài đăng tự ẩn sau <strong>24 giờ</strong> để đảm
-              bảo độ tươi.
-            </span>
-          </div>
-        )}
-
-        {error && (
-          <div className={styles.errorBanner} role="alert">
-            <AlertCircleIcon size={14} style={{ flexShrink: 0 }} />
-            {error}
-          </div>
-        )}
-
-        {/* ── Products ── */}
-        {loading ? (
-          <div className={styles.grid}>
-            {Array.from({ length: 8 }).map((_, i) => (
-              <ProductSkeleton key={i} />
-            ))}
-          </div>
-        ) : sortedProducts.length === 0 ? (
-          <div className={styles.empty}>
-            <div className={styles.emptyIcon} aria-hidden="true">
-              🔍
-            </div>
-            <div className={styles.emptyTitle}>
-              Không tìm thấy kết quả phù hợp
-            </div>
-            <div className={styles.emptyBody}>
-              Hãy thử thay đổi từ khoá hoặc bộ lọc của bạn
-            </div>
-          </div>
-        ) : viewMode === "map" && tab === "fresh" ? (
-          <MapExplore
-            products={sortedProducts}
-            userLocation={
-              gps.status === "ok" ? { lat: gps.lat, lng: gps.lng } : null
-            }
-            onProductClick={(prod) => {
-              sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
-              vtNavigate(`/san-pham/${prod.id}`);
-            }}
-          />
-        ) : (
-          <>
-            {/* PERF FIX 3: Stagger index qua CSS custom property — không tạo inline style object mới */}
-            <div className={`${styles.grid} product-grid`}>
-              {sortedProducts.map((p, i) => (
-                <ProductCard
-                  key={p.id}
-                  product={p}
-                  user={user}
-                  cardIndex={i}
-                  onClick={handleProductClick}
-                  favoriteIds={favoriteIds}
-                  onFavoriteChange={handleFavoriteChange}
+              <SlidersIcon size={13} />
+              Bộ lọc nâng cao
+              {hasAdvancedFilter && (
+                <span className={styles.filterDot} aria-hidden="true" />
+              )}
+              {showAdvanced ? (
+                <ChevronLeftIcon
+                  size={10}
+                  strokeWidth={2.5}
+                  style={{ transform: "rotate(90deg)" }}
                 />
-              ))}
+              ) : (
+                <ChevronRightIcon
+                  size={10}
+                  strokeWidth={2.5}
+                  style={{ transform: "rotate(90deg)" }}
+                />
+              )}
+            </button>
+
+            {showAdvanced && (
+              <div className={styles.advancedPanel}>
+                <div className={styles.filterGroup}>
+                  <label>Khoảng giá (VNĐ/kg)</label>
+                  <div className={styles.filterInputRow}>
+                    <input
+                      type="number"
+                      placeholder="Từ"
+                      value={priceMin}
+                      onChange={(e) => setPriceMin(e.target.value)}
+                      className={styles.filterInput}
+                    />
+                    <span className={styles.filterSep}>—</span>
+                    <input
+                      type="number"
+                      placeholder="Đến"
+                      value={priceMax}
+                      onChange={(e) => setPriceMax(e.target.value)}
+                      className={styles.filterInput}
+                    />
+                  </div>
+                </div>
+                <div className={styles.filterGroup}>
+                  <label>Sẵn có tối thiểu (kg)</label>
+                  <input
+                    type="number"
+                    placeholder="VD: 5"
+                    value={minWeight}
+                    onChange={(e) => setMinWeight(e.target.value)}
+                    className={styles.filterInput}
+                    style={{ width: 130 }}
+                  />
+                </div>
+                {hasAdvancedFilter && (
+                  <button
+                    className={styles.clearBtn}
+                    onClick={() => {
+                      setPriceMin("");
+                      setPriceMax("");
+                      setMinWeight("");
+                    }}
+                  >
+                    <XIcon size={12} />
+                    Xoá bộ lọc
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* ── Sort + View toggle ── */}
+            <div className={styles.sortRow}>
+              <div className={styles.sortLeft}>
+                <span className={styles.sortLabel}>Sắp xếp:</span>
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value)}
+                  className={styles.sortSelect}
+                >
+                  <option value="newest">Mới nhất / Đã đẩy</option>
+                  <option value="price_asc">Giá tăng dần</option>
+                  <option value="price_desc">Giá giảm dần</option>
+                  <option value="rating">Đánh giá người bán</option>
+                  <option value="views">Nhiều lượt xem</option>
+                </select>
+              </div>
+
+              {tab === "fresh" && (
+                <div
+                  className={styles.viewToggle}
+                  role="group"
+                  aria-label="Chế độ xem"
+                >
+                  {[
+                    { k: "grid", icon: <GridIcon size={13} />, l: "Lưới" },
+                    { k: "map", icon: <MapIcon size={13} />, l: "Bản đồ" },
+                  ].map(({ k, icon, l }) => (
+                    <button
+                      key={k}
+                      className={`${styles.viewBtn} ${viewMode === k ? styles.active : ""}`}
+                      onClick={() => setViewMode(k)}
+                      aria-pressed={viewMode === k}
+                    >
+                      {icon}
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <div ref={sentinelRef} style={{ height: 1, marginTop: 32 }} />
+            {/* ── Info / error banners ── */}
+            {tab === "fresh" && (
+              <div className={styles.infoBanner} role="note">
+                <InfoIcon size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+                <span>
+                  Chỉ hiển thị hải sản tươi trong phạm vi <strong>20km</strong>{" "}
+                  từ vị trí của bạn. Bài đăng tự ẩn sau <strong>24 giờ</strong>{" "}
+                  để đảm bảo độ tươi.
+                </span>
+              </div>
+            )}
 
-            {loadingMore && (
-              <div className={styles.grid} style={{ marginTop: 20 }}>
-                {Array.from({ length: 4 }).map((_, i) => (
+            {error && (
+              <div className={styles.errorBanner} role="alert">
+                <AlertCircleIcon size={14} style={{ flexShrink: 0 }} />
+                {error}
+              </div>
+            )}
+
+            {/* ── Products ── */}
+            {loading ? (
+              <div className={styles.grid}>
+                {Array.from({ length: 8 }).map((_, i) => (
                   <ProductSkeleton key={i} />
                 ))}
               </div>
-            )}
-
-            {!hasMore && products.length > PAGE_SIZE && (
-              <div className={styles.endLabel}>
-                <CheckCircleIcon size={14} />
-                Đã hiển thị toàn bộ {sortedProducts.length} sản phẩm
+            ) : sortedProducts.length === 0 ? (
+              <div className={styles.empty}>
+                <div className={styles.emptyIcon} aria-hidden="true">
+                  🔍
+                </div>
+                <div className={styles.emptyTitle}>
+                  Không tìm thấy kết quả phù hợp
+                </div>
+                <div className={styles.emptyBody}>
+                  Hãy thử thay đổi từ khoá hoặc bộ lọc của bạn
+                </div>
               </div>
+            ) : viewMode === "map" && tab === "fresh" ? (
+              <MapExplore
+                products={sortedProducts}
+                userLocation={
+                  gps.status === "ok" ? { lat: gps.lat, lng: gps.lng } : null
+                }
+                onProductClick={(prod) => {
+                  sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
+                  vtNavigate(`/san-pham/${prod.id}`);
+                }}
+              />
+            ) : (
+              <>
+                <div className={`${styles.grid} product-grid`}>
+                  {sortedProducts.map((p, i) => (
+                    <ProductCard
+                      key={p.id}
+                      product={p}
+                      user={user}
+                      cardIndex={i}
+                      onClick={handleProductClick}
+                      favoriteIds={favoriteIds}
+                      onFavoriteChange={handleFavoriteChange}
+                    />
+                  ))}
+                </div>
+
+                <div ref={sentinelRef} style={{ height: 1, marginTop: 32 }} />
+
+                {loadingMore && (
+                  <div className={styles.grid} style={{ marginTop: 20 }}>
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <ProductSkeleton key={i} />
+                    ))}
+                  </div>
+                )}
+
+                {!hasMore && products.length > PAGE_SIZE && (
+                  <div className={styles.endLabel}>
+                    <CheckCircleIcon size={14} />
+                    Đã hiển thị toàn bộ {sortedProducts.length} sản phẩm
+                  </div>
+                )}
+              </>
             )}
-          </>
-        )}
+          </div>
+        </div>
       </div>
     </div>
   );

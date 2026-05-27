@@ -6,9 +6,14 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { SparklesIcon, AlertCircleIcon } from "../components/icons";
+import { useAuth } from "../context/AuthContext";
 
-export function AuthPage({ setUser }) {
+export function AuthPage() {
   const navigate = useNavigate();
+
+  // 3. Lấy trực tiếp setUser từ Context thông qua hook useAuth
+  const { setUser } = useAuth();
+
   const [mode, setMode] = useState("login");
   const [phone, setPhone] = useState("");
   const [pw, setPw] = useState("");

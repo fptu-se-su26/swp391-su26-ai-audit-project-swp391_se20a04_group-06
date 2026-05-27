@@ -1,15 +1,5 @@
 /**
- * AuthContext.jsx
- *
- * PATTERN: Context + Provider Pattern
- *
- * Vấn đề cũ:
- *   - `user` và `setUser` được prop-drill từ AppShell → Navbar → mọi Page
- *   - Mỗi Page cần nhận `user` qua props dù không phải parent trực tiếp
- *
- * Giải pháp:
- *   - Một AuthProvider bọc toàn bộ app
- *   - Mọi component cần user chỉ cần gọi `useAuth()` — không cần prop
+ * AuthContext.jsx — PATTERN: Context + Provider Pattern
  */
 import React, {
   createContext,
@@ -21,31 +11,26 @@ import React, {
 import { api } from "../services/api";
 import { disconnectSocket } from "../services/socket";
 
-// ── 1. Tạo Context ──────────────────────────────────────────
 const AuthContext = createContext(null);
 
-// ── 2. Provider component ───────────────────────────────────
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // loading phiên ban đầu
+  const [loading, setLoading] = useState(true);
 
-  // Khôi phục session từ cookie khi app khởi động
+  // FIX: /auth/me giờ trả 200 + null khi chưa login (không còn 401).
+  // setUser(null) khi response là null, setUser(data) khi đã login.
   useEffect(() => {
     api("/auth/me")
-      .then((u) => setUser(u))
+      .then((u) => setUser(u ?? null))
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []);
 
-  // Hàm logout tập trung — không cần truyền callback qua props
   const logout = useCallback(async () => {
     try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
+      await api("/auth/logout", { method: "POST" });
     } catch {
-      // Bỏ qua lỗi nếu server không có endpoint
+      // Bỏ qua lỗi server — vẫn tiếp tục logout ở client side
     }
     disconnectSocket();
     setUser(null);
@@ -56,18 +41,8 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-// ── 3. Custom Hook — đây là interface duy nhất mọi component dùng ──
-/**
- * useAuth()
- * @returns {{ user, setUser, logout, loading }}
- *
- * @example
- *   const { user, logout } = useAuth();
- */
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error("useAuth phải được dùng bên trong <AuthProvider>");
-  }
+  if (!ctx) throw new Error("useAuth phải được dùng bên trong <AuthProvider>");
   return ctx;
 }

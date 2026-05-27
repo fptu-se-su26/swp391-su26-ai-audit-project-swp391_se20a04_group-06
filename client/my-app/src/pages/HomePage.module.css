@@ -10,7 +10,7 @@
 .hero {
   position: relative;
   width: 100%;
-  height: 460px;
+  height: 480px;
   overflow: hidden;
   margin-bottom: 36px;
 }
@@ -103,6 +103,7 @@
   transition:
     width 0.3s ease,
     background 0.3s ease;
+  min-width: 7px;
 }
 
 .heroDot.activeDot {
@@ -146,7 +147,7 @@
 }
 
 .heroH1 {
-  font-size: 32px;
+  font-size: 34px;
   font-weight: 900;
   margin: 0 0 10px;
   line-height: 1.2;
@@ -187,6 +188,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  min-height: 40px;
 }
 
 .heroGpsBtn:hover {
@@ -219,6 +221,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
+  min-height: 40px;
 }
 
 .heroRegisterBtn:hover {
@@ -321,10 +324,7 @@
   position: relative;
   z-index: 1;
   flex: 1;
-}
-
-.tab.active {
-  /* background handled by tabIndicator */
+  min-height: 38px;
 }
 
 .tab.tabFresh.active {
@@ -354,6 +354,10 @@
     border-color 0.18s,
     color 0.18s;
   letter-spacing: -0.1px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .chip:hover {
@@ -397,6 +401,7 @@
   align-items: center;
   gap: 6px;
   margin-bottom: 20px;
+  min-height: 36px;
 }
 
 .advancedToggle:hover {
@@ -466,6 +471,7 @@
   color: var(--text);
   background: var(--bg);
   transition: border-color 0.15s;
+  min-height: 36px;
 }
 
 .filterInput:focus {
@@ -485,6 +491,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
+  min-height: 36px;
 }
 
 .clearBtn:hover {
@@ -518,6 +525,7 @@
   outline: none;
   box-shadow: var(--shadow-sm);
   font-weight: 500;
+  min-height: 34px;
 }
 
 .sortLeft {
@@ -550,6 +558,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
+  min-height: 32px;
 }
 
 .viewBtn.active {
@@ -637,14 +646,155 @@
   gap: 6px;
 }
 
-/* ─── RESPONSIVE POLISH (Cải tiến giao diện Mobile) ──────── */
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE BREAKPOINTS
+   Strategy:
+   - ≥ 1440px  : large desktop   → 4–5 card columns, tall hero
+   - 1025–1439px: laptop          → 4 columns, content max 1200px
+   - 769–1024px : tablet landscape → 3 columns, tighter padding
+   - 641–768px  : tablet portrait  → 2 columns, hero 320px
+   - 481–640px  : phone landscape  → 2 columns, compact
+   - ≤ 480px   : phone portrait   → 2 columns, minimal
+   - ≤ 380px   : small phone      → 1 column, bare minimum
+═══════════════════════════════════════════════════════════ */
+
+/* ── Large desktop (≥ 1440px) ── */
+@media (min-width: 1440px) {
+  .hero {
+    height: 540px;
+  }
+  .heroH1 {
+    font-size: 40px;
+  }
+  .heroLead {
+    font-size: 15px;
+  }
+  .heroCard {
+    max-width: 580px;
+    padding: 40px 44px;
+  }
+  .content {
+    padding: 0 32px 100px;
+  }
+  .grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 24px;
+  }
+}
+
+/* ── Laptop (1025–1439px) ── */
+@media (max-width: 1439px) and (min-width: 1025px) {
+  .hero {
+    height: 480px;
+  }
+  .grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+}
+
+/* ── Tablet landscape (769–1024px) ── */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .hero {
+    height: 380px;
+    margin-bottom: 28px;
+  }
+  .heroH1 {
+    font-size: 28px;
+  }
+  .heroCard {
+    padding: 24px 28px;
+    max-width: 440px;
+  }
+  .heroContent {
+    padding: 0 20px;
+  }
+  .content {
+    padding: 0 20px 80px;
+  }
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .filterRow {
+    gap: 10px;
+  }
+}
+
+/* ── Tablet portrait (641–768px) ── */
+@media (max-width: 768px) and (min-width: 641px) {
+  .hero {
+    height: 320px;
+    margin-bottom: 20px;
+  }
+  .heroArrow {
+    display: none;
+  }
+  .heroH1 {
+    font-size: 24px;
+    line-height: 1.25;
+  }
+  .heroLead {
+    font-size: 13px;
+    margin-bottom: 18px;
+  }
+  .heroCard {
+    padding: 22px 24px;
+    max-width: 100%;
+    border-radius: 16px;
+  }
+  .heroContent {
+    padding: 0 20px;
+    align-items: flex-end;
+    padding-bottom: 36px;
+  }
+  .content {
+    padding: 0 20px 60px;
+  }
+  .grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .filterRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .tabGroup {
+    width: 100%;
+  }
+  .tab {
+    flex: 1;
+    text-align: center;
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+  .chipGroup {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 4px 20px;
+    margin-left: -20px;
+    margin-right: -20px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .chipGroup::-webkit-scrollbar {
+    display: none;
+  }
+  .chip {
+    flex-shrink: 0;
+  }
+}
+
+/* ── Mobile (≤ 768px) ── */
 @media (max-width: 768px) {
   .hero {
-    height: 340px; /* Thu bớt chiều cao banner */
+    height: 340px;
     margin-bottom: 24px;
   }
   .heroArrow {
-    display: none !important; /* Ẩn các mũi tên đè chữ vướng víu trên mobile */
+    display: none !important;
   }
   .heroContent {
     padding: 0 16px !important;
@@ -656,7 +806,7 @@
     border-radius: 14px !important;
   }
   .heroH1 {
-    font-size: 22px !important; /* Giảm font chữ tiêu đề tránh chồng dòng */
+    font-size: 22px !important;
     line-height: 1.25 !important;
   }
   .heroLead {
@@ -668,12 +818,9 @@
     padding: 8px 14px !important;
     font-size: 12px !important;
   }
-
-  /* main container */
   .content {
     padding: 0 16px 60px !important;
   }
-
   .searchWrap {
     margin-bottom: 16px;
   }
@@ -681,65 +828,230 @@
     padding: 11px 14px 11px 38px !important;
     font-size: 13px !important;
   }
-
-  /* ─── TÁI CẤU TRÚC CUỘN NGANG FILTER CHIPS (MOBILE CHUẨN) ─── */
   .filterRow {
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 12px !important;
     margin-bottom: 16px !important;
   }
-
   .tabGroup {
     width: 100% !important;
     display: flex !important;
   }
   .tab {
-    flex: 1 !important; /* Chia đều 2 tab chính */
+    flex: 1 !important;
     text-align: center !important;
     padding: 8px 10px !important;
     font-size: 12px !important;
   }
-
-  /* Hiệu ứng cuộn ngang tràn lề cực mượt chuẩn Native App */
   .chipGroup {
     flex-wrap: nowrap !important;
     overflow-x: auto !important;
     padding: 4px 16px !important;
-    margin-left: -16px; /* Đẩy lùi lề trái sát viền */
-    margin-right: -16px; /* Đẩy lùi lề phải sát viền */
+    margin-left: -16px;
+    margin-right: -16px;
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Ẩn thanh cuộn Firefox */
+    scrollbar-width: none;
   }
   .chipGroup::-webkit-scrollbar {
-    display: none; /* Ẩn thanh cuộn Chrome, Safari */
+    display: none;
   }
   .chip {
-    flex-shrink: 0 !important; /* Ngăn thẻ chip bị co ép kích thước */
+    flex-shrink: 0 !important;
     padding: 6px 14px !important;
     font-size: 11px !important;
   }
-
   .advancedToggle {
     margin-bottom: 16px;
     font-size: 11px !important;
     padding: 6px 12px !important;
   }
+  .advancedPanel {
+    padding: 14px 16px;
+    gap: 14px;
+  }
+  .filterInput {
+    width: 90px !important;
+  }
   .sortRow {
     margin-bottom: 16px;
   }
+  .empty {
+    padding: 48px 16px;
+  }
+  .emptyIcon {
+    font-size: 40px;
+  }
 }
 
+/* ── Phone landscape / large phone (481–640px) ── */
 @media (max-width: 640px) {
   .grid {
-    grid-template-columns: 1fr 1fr; /* Chia 2 cột card sản phẩm đều đặn */
+    grid-template-columns: 1fr 1fr;
     gap: 12px;
   }
 }
 
+/* ── Phone portrait nhỏ (≤ 480px) ── */
+@media (max-width: 480px) {
+  .hero {
+    height: 300px;
+  }
+  .heroEyebrow {
+    font-size: 10px;
+    margin-bottom: 6px;
+  }
+  .heroH1 {
+    font-size: 20px !important;
+  }
+  .heroLead {
+    display: none; /* Ẩn mô tả trên phone rất nhỏ */
+  }
+  .heroActions {
+    gap: 8px;
+  }
+  .heroRegisterBtn {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+  .searchInput {
+    font-size: 14px !important; /* iOS auto-zoom prevention: min 16px */
+  }
+}
+
+/* ── Phone siêu nhỏ (≤ 380px) ── */
 @media (max-width: 380px) {
   .grid {
-    grid-template-columns: 1fr; /* Màn hình siêu nhỏ quay về 1 cột */
+    grid-template-columns: 1fr !important;
+  }
+  .hero {
+    height: 260px;
+  }
+  .heroCard {
+    padding: 14px 16px !important;
+  }
+  .heroH1 {
+    font-size: 18px !important;
+  }
+}
+/* ─── LAYOUT CHUNG CHO TRANG ─── */
+.layoutWrapper {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  width: 100%;
+  margin-top: 16px;
+}
+
+/* Cột bên phải chứa nội dung chính */
+.mainLayoutBody {
+  flex: 1;
+  min-width: 0; /* Giúp grid-layout co giãn chính xác */
+}
+
+/* ─── THANH SIDEBAR DANH MỤC DỌC BÊN TRÁI ─── */
+.leftSidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+}
+
+.sidebarSticky {
+  position: sticky;
+  top: 90px; /* Cố định thanh dọc khi cuộn trang, điều chỉnh phù hợp với chiều cao Navbar */
+}
+
+.sidebarTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 12px;
+  padding-left: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.verticalTabGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Từng nút tab dọc */
+.verticalTab {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.verticalTab:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Trạng thái tab đang kích hoạt */
+.verticalTab.verticalActive {
+  background: var(--ocean-p, #e0f2fe);
+  color: var(--ocean, #0284c7);
+  box-shadow: inset 4px 0 0 var(--ocean, #0284c7);
+  font-weight: 700;
+}
+
+/* ─── THIẾT BỊ DI ĐỘNG (RESPONSIVE) ─── */
+@media (max-width: 768px) {
+  .layoutWrapper {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .leftSidebar {
+    width: 100%;
+    position: relative;
+    padding: 10px;
+    box-shadow: none;
+    border-color: rgba(0, 0, 0, 0.06);
+  }
+
+  .sidebarSticky {
+    position: static;
+  }
+
+  .sidebarTitle {
+    display: none; /* Ẩn tiêu đề khi chuyển sang màn hình nhỏ */
+  }
+
+  /* Chuyển các tab từ chiều dọc thành chiều ngang khi xem trên điện thoại */
+  .verticalTabGroup {
+    flex-direction: row;
+    gap: 6px;
+  }
+
+  .verticalTab {
+    flex: 1;
+    justify-content: center;
+    font-size: 13px;
+    padding: 10px;
+  }
+
+  .verticalTab.verticalActive {
+    box-shadow: none;
+    border-bottom: 3px solid var(--ocean, #0284c7); /* Chỉ hiển thị đường gạch chân nhỏ trên mobile */
+    border-radius: 8px 8px 0 0;
   }
 }

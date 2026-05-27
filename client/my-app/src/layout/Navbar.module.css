@@ -68,6 +68,7 @@
   border: none;
   padding: 0;
   text-align: left;
+  flex-shrink: 0;
 }
 
 .logoMark {
@@ -128,6 +129,7 @@
   align-items: center;
   gap: 6px;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .navBtn:hover {
@@ -145,6 +147,7 @@
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .postBtn {
@@ -161,6 +164,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
 }
 
 .postBtn:hover {
@@ -179,6 +183,7 @@
   font-size: 13px;
   font-weight: 700;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .loginBtn:hover {
@@ -200,6 +205,7 @@
   justify-content: center;
   transition: all 0.2s;
   position: relative;
+  flex-shrink: 0;
 }
 
 .iconBtn:hover {
@@ -240,6 +246,7 @@
   font-size: 13px;
   font-weight: 600;
   transition: all 0.2s;
+  flex-shrink: 0;
 }
 
 .profileBtn:hover {
@@ -317,6 +324,7 @@
   align-items: center;
   gap: 10px;
   transition: background 0.15s;
+  min-height: 40px;
 }
 
 .dropdownItem:hover {
@@ -384,6 +392,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-height: 44px;
 }
 
 .mobileMenuItem.highlight {
@@ -391,36 +400,117 @@
   color: var(--ocean);
 }
 
-/* ─── RESPONSIVE BREAKPOINT ─────────────────────────────── */
-@media (max-width: 768px) {
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE BREAKPOINTS
+═══════════════════════════════════════════════════════════ */
+
+/* ── Tablet landscape (1025–1280px): thu gọn padding nav ── */
+@media (max-width: 1280px) and (min-width: 1025px) {
+  .nav {
+    padding: 0 20px;
+  }
+  .navBtn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  .postBtn,
+  .loginBtn {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+  .logo {
+    margin-right: 16px;
+  }
+}
+
+/* ── Tablet portrait (769–1024px): thu nhỏ, ẩn tagline ── */
+@media (max-width: 1024px) and (min-width: 769px) {
   .topBar {
-    display: none !important; /* Ẩn topbar tràn chữ */
+    display: none;
   }
   .nav {
-    height: 56px !important; /* Thu gọn chiều cao header */
+    padding: 0 16px;
+    height: 60px;
+  }
+  .navScrolled {
+    height: 52px;
+  }
+  .navBtn {
+    padding: 7px 10px;
+    font-size: 12px;
+    gap: 4px;
+  }
+  .logoTagline {
+    display: none;
+  }
+  .postBtn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  .loginBtn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  .logo {
+    margin-right: 12px;
+  }
+}
+
+/* ── Mobile (≤ 768px): hamburger menu ── */
+@media (max-width: 768px) {
+  .topBar {
+    display: none !important;
+  }
+  .nav {
+    height: 56px !important;
     padding: 0 16px !important;
   }
   .navScrolled {
     height: 56px !important;
   }
   .navLinks {
-    display: none !important; /* Ẩn thanh điều hướng desktop */
+    display: none !important;
   }
   .actions {
-    display: none !important; /* Ẩn các nút Profile desktop */
+    display: none !important;
   }
   .mobileActions {
-    display: flex !important; /* Kích hoạt nút Hamburger và Chat di động */
+    display: flex !important;
+    margin-left: auto; /* 👈 đẩy hamburger về góc phải */
   }
   .logoMark {
     width: 32px !important;
     height: 32px !important;
+    font-size: 17px !important;
   }
   .logoName {
     font-size: 14px !important;
   }
   .logoTagline {
     font-size: 7px !important;
+  }
+}
+
+/* ── Phone nhỏ (≤ 480px): compact thêm ── */
+@media (max-width: 480px) {
+  .nav {
+    padding: 0 12px !important;
+  }
+  .logoTagline {
+    display: none !important;
+  }
+  .mobileMenu {
+    padding: 10px 12px;
+    top: 56px;
+  }
+  .mobileMenuItem {
+    padding: 11px 14px;
+    font-size: 13px;
+  }
+  /* Dropdown rộng hơn trên mobile nhỏ */
+  .dropdown {
+    width: min(200px, calc(100vw - 32px));
+    right: -8px;
   }
 }
 

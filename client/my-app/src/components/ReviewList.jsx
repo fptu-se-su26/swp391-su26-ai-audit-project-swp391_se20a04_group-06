@@ -7,7 +7,6 @@ export function ReviewList({ sellerId, user, productId, scrollToReviewId }) {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
 
-  // Form
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [imageFile, setImageFile] = useState(null);
@@ -16,7 +15,6 @@ export function ReviewList({ sellerId, user, productId, scrollToReviewId }) {
   const fetchReviews = () => {
     api(`/reviews/seller/${sellerId}`)
       .then((res) => {
-        // Kiểm tra định dạng trả về của API
         if (Array.isArray(res)) {
           setReviews(res);
         } else if (res && Array.isArray(res.data)) {
@@ -27,25 +25,25 @@ export function ReviewList({ sellerId, user, productId, scrollToReviewId }) {
           setReviews([]);
         }
       })
-      .catch(() => {
-        setReviews([]);
-      })
+      .catch(() => setReviews([]))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
+    // FIX: guard tránh gọi API với sellerId = undefined
+    if (!sellerId) {
+      setLoading(false);
+      return;
+    }
     fetchReviews();
   }, [sellerId]);
 
-  // Đảm bảo reviewsList luôn luôn là một mảng
   const reviewsList = Array.isArray(reviews) ? reviews : [];
 
-  // Scroll to specific review after data loads
   useEffect(() => {
     if (!scrollToReviewId || loading || reviewsList.length === 0) return;
     const el = document.getElementById(`review-${scrollToReviewId}`);
     if (el) {
-      // Small delay to ensure paint is complete
       setTimeout(() => {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
         el.style.transition = "background 0.3s ease, box-shadow 0.3s ease";
@@ -70,14 +68,9 @@ export function ReviewList({ sellerId, user, productId, scrollToReviewId }) {
     fd.append("sellerId", sellerId);
     fd.append("rating", rating);
     fd.append("comment", comment);
-    if (imageFile) {
-      fd.append("image", imageFile);
-    }
+    if (imageFile) fd.append("image", imageFile);
 
-    api("/reviews", {
-      method: "POST",
-      body: fd,
-    })
+    api("/reviews", { method: "POST", body: fd })
       .then(() => {
         alert("Cảm ơn bạn đã đánh giá!");
         setShowModal(false);
@@ -111,7 +104,8 @@ export function ReviewList({ sellerId, user, productId, scrollToReviewId }) {
         <h3 style={{ margin: 0, fontSize: 16, color: C.dark }}>
           ⭐ Đánh giá người bán ({reviewsList.length})
         </h3>
-        {user && user.id !== sellerId && (
+        {/* FIX: dùng user.userId thay vì user.id cho nhất quán với auth payload */}
+        {user && user.userId !== sellerId && (
           <button
             onClick={() => setShowModal(true)}
             style={{

@@ -10,7 +10,7 @@ import {
   changePassword,
 } from "../controllers/auth.controller";
 import { authenticate } from "../middlewares/auth";
-import { upload } from "../middlewares/upload"; // ✅ BỔ SUNG: Import middleware upload ảnh của bạn
+import { upload } from "../middlewares/upload";
 import { getUserPublicProfile } from "../controllers/user.controller";
 
 const router = Router();
@@ -39,10 +39,13 @@ const registerLimiter = rateLimit({
 
 router.post("/register", registerLimiter, register);
 router.post("/login", loginLimiter, login);
-router.post("/logout", authenticate, logout);
-router.get("/me", authenticate, me);
+router.post("/logout", logout);
 
-// ✅ CẬP NHẬT: Cho phép nhận file đơn có tên key là "avatar" gửi lên
+// FIX: Bỏ authenticate — me() tự xử lý token bên trong.
+// Khi chưa login → trả 200 + null (không phải 401)
+// → Browser không hiển thị lỗi đỏ trong console.
+router.get("/me", me);
+
 router.put("/profile", authenticate, upload.single("avatar"), updateProfile);
 router.post("/change-password", authenticate, changePassword);
 

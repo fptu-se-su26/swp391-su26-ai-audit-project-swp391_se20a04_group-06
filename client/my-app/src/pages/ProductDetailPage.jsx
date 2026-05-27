@@ -1,10 +1,10 @@
 /**
  * ProductDetailPage.jsx — Refactored
  *
- * CHANGES:
- *   - Loại bỏ prop `user` → useAuth() (Context Pattern)
- *   - Thay toàn bộ alert() → useToast() (Observer Pattern)
- *   - Giữ nguyên 100% UI, layout, SEO logic
+ * FIXES:
+ *   - ReviewList: truyền đúng props (sellerId, productId) thay vì object product
+ *   - Follow button: ẩn khi user là chủ sản phẩm, tránh gọi API 400
+ *   - handleToggleFollow: guard thêm để chặn tự-follow
  */
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -18,11 +18,10 @@ import { CountdownBadge } from "../components/ProductCard";
 import { ReviewList } from "../components/ReviewList";
 import { useSEO } from "../hooks/useSEO";
 import { ogImage } from "../utils/cloudinary";
-import { useAuth } from "../context/AuthContext"; // ← NEW
-import { useToast } from "../context/ToastContext"; // ← NEW
+import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 export function ProductDetailPage({ product: initialProduct }) {
-  // ← THAY ĐỔI: không nhận user qua props nữa
   const { user } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
@@ -93,7 +92,7 @@ export function ProductDetailPage({ product: initialProduct }) {
         setReportReason("");
       }, 2000);
     } catch (e) {
-      toast.error(e.message); // ← THAY alert()
+      toast.error(e.message);
     } finally {
       setReportLoading(false);
     }
@@ -117,22 +116,30 @@ export function ProductDetailPage({ product: initialProduct }) {
 
   const handleToggleFollow = () => {
     if (!user) {
-      toast.warn("Vui lòng đăng nhập để theo dõi!"); // ← THAY alert()
+      toast.warn("Vui lòng đăng nhập để theo dõi!");
+      return;
+    }
+    // FIX: chặn tự-follow ngay ở client, tránh gọi API nhận 400
+    if (user.userId === product.sellerId) {
+      toast.warn("Bạn không thể tự theo dõi chính mình!");
       return;
     }
     setTogglingFollow(true);
     api(`/follows/${product.sellerId}/toggle`, { method: "POST" })
       .then((res) => {
         setIsFollowing(res.isFollowing);
-        toast.success(res.message); // ← THAY alert()
+        toast.success(res.message);
       })
-      .catch((err) => toast.error(err.message)) // ← THAY alert()
+      .catch((err) => toast.error(err.message))
       .finally(() => setTogglingFollow(false));
   };
 
   if (!product) return null;
 
   const pct = Math.round((product.remainingWeight / product.totalWeight) * 100);
+
+  // FIX: true khi user đang xem sản phẩm của chính mình
+  const isOwnProduct = user?.userId === product?.sellerId;
 
   return (
     <div
@@ -431,6 +438,7 @@ export function ProductDetailPage({ product: initialProduct }) {
                   >
                     💬 Nhắn tin với ngư dân
                   </button>
+
                   <button
                     onClick={handleToggleFavorite}
                     disabled={favLoading}
@@ -448,23 +456,28 @@ export function ProductDetailPage({ product: initialProduct }) {
                   >
                     {isFavorited ? "❤️ Đã lưu" : "🤍 Lưu yêu thích"}
                   </button>
-                  <button
-                    onClick={handleToggleFollow}
-                    disabled={togglingFollow}
-                    style={{
-                      padding: "12px 0",
-                      borderRadius: 12,
-                      border: `1.5px solid ${isFollowing ? C.ocean : C.border}`,
-                      background: isFollowing ? C.oceanP : C.white,
-                      color: isFollowing ? C.ocean : C.muted,
-                      fontWeight: 700,
-                      fontSize: 14,
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                    }}
-                  >
-                    {isFollowing ? "✅ Đang theo dõi" : "+ Theo dõi ngư dân"}
-                  </button>
+
+                  {/* FIX: Ẩn nút Follow khi user là chủ sản phẩm */}
+                  {!isOwnProduct && (
+                    <button
+                      onClick={handleToggleFollow}
+                      disabled={togglingFollow}
+                      style={{
+                        padding: "12px 0",
+                        borderRadius: 12,
+                        border: `1.5px solid ${isFollowing ? C.ocean : C.border}`,
+                        background: isFollowing ? C.oceanP : C.white,
+                        color: isFollowing ? C.ocean : C.muted,
+                        fontWeight: 700,
+                        fontSize: 14,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      {isFollowing ? "✅ Đang theo dõi" : "+ Theo dõi ngư dân"}
+                    </button>
+                  )}
+
                   <button
                     onClick={() => setShowReportModal(true)}
                     style={{
@@ -484,8 +497,15 @@ export function ProductDetailPage({ product: initialProduct }) {
             </div>
           </div>
 
-          {/* Reviews */}
-          <ReviewList product={product} user={user} />
+          {/* FIX: Truyền đúng props cho ReviewList thay vì object product */}
+          {product?.sellerId && (
+            <ReviewList
+              sellerId={product.sellerId}
+              productId={product.id}
+              user={user}
+              scrollToReviewId={product.scrollToReviewId}
+            />
+          )}
 
           {/* Report Modal */}
           {showReportModal && (

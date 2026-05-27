@@ -4,7 +4,7 @@ import cors from "cors";
 import http from "http";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
-import rateLimit from "express-rate-limit"; // ✅ Đã tích hợp
+import rateLimit from "express-rate-limit";
 
 import { testConnection } from "./db";
 import { initSocket } from "./socket";
@@ -27,16 +27,15 @@ const server = http.createServer(app);
 
 /* ─── Rate Limiter (Bảo vệ tài nguyên & Chống Brute-force) ──── */
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 phút
-  max: 100, // Giới hạn tối đa 100 requests mỗi IP trong 15 phút
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: {
     message: "Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau 15 phút.",
   },
-  standardHeaders: true, // Trả về thông tin hạn mức trong header RateLimit-*
-  legacyHeaders: false, // Tắt header X-RateLimit-* cũ
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
-// Áp dụng giới hạn tần suất cho tất cả các endpoint /api
 app.use("/api", apiLimiter);
 
 /* ─── Security Header (Helmet) ───────────────────────────────── */
@@ -51,14 +50,13 @@ app.use(
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:3000",
-    credentials: true, // Cho phép gửi nhận cookie an toàn
+    credentials: true,
   }),
 );
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
-app.use(cookieParser()); // Để đọc Cookie-based JWT và CSRF
+app.use(cookieParser());
 
-// Logger Middleware có cấu trúc cơ bản thay vì dùng console.log đơn lẻ
 app.use((req, _res, next) => {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] [INFO] ${req.method} ${req.url} - IP: ${req.ip}`);
@@ -69,10 +67,17 @@ app.use((req, _res, next) => {
 app.use(generateCsrfToken);
 
 // Áp dụng validate CSRF loại trừ các public path tĩnh
+// BUG FIX: Khi dùng app.use("/api", handler), req.path đã bị strip prefix "/api".
+// Ví dụ: request tới "/api/auth/login" → req.path = "/auth/login" (không phải "/api/auth/login")
+// Nên publicPaths phải là path tương đối (không có "/api" prefix).
 app.use("/api", (req, res, next) => {
-  const publicPaths = ["/api/auth/login", "/api/auth/register", "/api/health"];
+  const publicPaths = [
+    "/auth/login",
+    "/auth/register",
+    "/health",
+    "/auth/logout",
+  ];
 
-  // Loại bỏ ký tự gạch chéo dư thừa ở cuối trước khi so sánh đường dẫn
   const cleanPath = req.path.replace(/\/$/, "");
   const isPublic = publicPaths.some((p) => p.replace(/\/$/, "") === cleanPath);
 
@@ -105,7 +110,7 @@ app.use((_req, res) =>
   res.status(404).json({ message: "Không tìm thấy endpoint này" }),
 );
 
-/* ─── Global error handler (Xử lý lỗi tập trung) ─────────────── */
+/* ─── Global error handler ─────────────────────────────────── */
 app.use(
   (
     err: Error,
@@ -129,7 +134,6 @@ app.use(
 /* ─── Xử lý uncaughtException / unhandledRejection ────────── */
 process.on("uncaughtException", (err) => {
   console.error("[CRITICAL] uncaughtException:", err);
-  // Thực hiện thoát tiến trình an toàn để PM2/Docker tự khởi động lại
   process.exit(1);
 });
 
@@ -158,6 +162,8 @@ async function bootstrap() {
 }
 
 bootstrap().catch((err) => {
-  console.error("❌ Khởi động thất bại:", err);
+  console.error("[CRITICAL] Bootstrap failed:", err);
   process.exit(1);
 });
+
+export { app, server };

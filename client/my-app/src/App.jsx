@@ -1,25 +1,42 @@
 /**
- * App.jsx — Premium Hand-crafted Routing Entry
- * Đã tích hợp ErrorBoundary và chuyển sang Cookie-based auth (không lưu token localStorage)
+ * App.jsx — Refactored Entry Point
+ *
+ * PATTERNS APPLIED:
+ *   1. Context + Provider Pattern  → AuthProvider, ToastProvider
+ *   2. HOC / Wrapper Pattern       → PrivateRoute, AdminRoute, GuestRoute
+ *   3. Custom Hook Pattern         → useApiFetch (thay thế ProductDetailPageRoute,
+ *                                    SellerProfilePageRoute tay)
+ *   4. DRY                         → LoadingSpinner, PageLoader extracted ra component
+ *
+ * TRƯỚC: App.jsx có 5 inline ternaries guard route + 2 Route components
+ *        trùng pattern fetch → loading → render
+ * SAU:   Route khai báo sạch, gọn — đọc như spec của app
  */
-
-import React, { useState, useEffect, useCallback, Suspense, lazy } from "react";
+import React, { useState, useEffect, Suspense, lazy } from "react";
 import {
   BrowserRouter,
   Routes,
   Route,
   Navigate,
   useParams,
-  useLocation,
 } from "react-router-dom";
-import { api } from "./services/api";
-import { disconnectSocket } from "./services/socket";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { ToastProvider } from "./context/ToastContext";
+import {
+  PrivateRoute,
+  AdminRoute,
+  GuestRoute,
+} from "./components/PrivateRoute";
+import { useApiFetch } from "./hooks/useApiFetch";
 import { Navbar } from "./layout/Navbar";
 import { ChatBox } from "./components/ChatBox";
-import { useViewTransitionNavigate } from "./hooks/useViewTransitionNavigate";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { useViewTransitionNavigate } from "./hooks/useViewTransitionNavigate";
+import { disconnectSocket } from "./services/socket";
+import { api } from "./services/api";
+import { useLocation } from "react-router-dom";
 
-// ── Code-splitting Modules ──
+// ── Code-splitting ──────────────────────────────────────────
 const HomePage = lazy(() =>
   import("./pages/HomePage").then((m) => ({ default: m.HomePage })),
 );
@@ -51,7 +68,7 @@ const ProfilePage = lazy(() =>
   import("./pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
 );
 
-// ── Skeleton fallback ──
+// ── Shared loading UI ───────────────────────────────────────
 function PageFallback() {
   return (
     <div
@@ -79,42 +96,88 @@ function PageFallback() {
   );
 }
 
+/**
+ * PageLoader — Spinner nhỏ dùng chung cho các route wrapper
+ * (trước đây bị copy-paste 2 lần trong ProductDetailPageRoute và SellerProfilePageRoute)
+ */
+function PageLoader({ label }) {
+  return (
+    <div
+      style={{
+        padding: "80px 24px",
+        textAlign: "center",
+        color: "var(--muted)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 12,
+      }}
+    >
+      <div
+        className="skeleton-shimmer"
+        style={{ width: 40, height: 40, borderRadius: "50%" }}
+      />
+      <span style={{ fontSize: 13, fontWeight: 500 }}>{label}</span>
+    </div>
+  );
+}
+
+// ── Route wrappers (sử dụng useApiFetch thay vì copy-paste) ─
+/**
+ * TRƯỚC: 30 dòng lặp lại hoàn toàn cho mỗi route
+ * SAU: useApiFetch + 10 dòng render
+ */
+function ProductDetailPageRoute() {
+  const { productId } = useParams();
+  const { data: product, loading } = useApiFetch(`/products/${productId}`, [
+    productId,
+  ]);
+  const { user } = useAuth();
+
+  if (loading) return <PageLoader label="ĐANG TẢI THÔNG TIN SẢN PHẨM…" />;
+  if (!product) return <Navigate to="/" replace />;
+  return <ProductDetailPage product={product} user={user} />;
+}
+
+function SellerProfilePageRoute() {
+  const { sellerId } = useParams();
+  const { data: seller, loading } = useApiFetch(`/users/${sellerId}`, [
+    sellerId,
+  ]);
+  const { user } = useAuth();
+
+  if (loading) return <PageLoader label="ĐANG TẢI HỒ SƠ NGƯ DÂN…" />;
+  if (!seller) return <Navigate to="/" replace />;
+  return <SellerProfilePage seller={seller} user={user} />;
+}
+
+// ── AppShell — layout + routes ───────────────────────────────
 function AppShell() {
+  const { user, logout } = useAuth();
   const navigate = useViewTransitionNavigate();
   const location = useLocation();
-  const [user, setUser] = useState(null);
   const [unread, setUnread] = useState(0);
   const [globalChat, setGlobalChat] = useState(null);
 
-  // Khôi phục phiên làm việc từ cookie (không cần token trong localStorage)
-  useEffect(() => {
-    api("/auth/me")
-      .then((u) => setUser(u))
-      .catch(() => setUser(null));
-  }, []);
-
-  // Poll tin nhắn chưa đọc
+  // Poll unread message count
   useEffect(() => {
     if (!user) {
       setUnread(0);
       return;
     }
-    const fetchUnread = () =>
+    const fetch = () =>
       api("/messages/unread-count")
         .then((d) => setUnread(d.count))
         .catch(() => {});
-    fetchUnread();
-    const intervalId = setInterval(fetchUnread, 30000);
-    return () => clearInterval(intervalId);
+    fetch();
+    const id = setInterval(fetch, 30_000);
+    return () => clearInterval(id);
   }, [user]);
 
-  const handleSetUser = (u) => {
-    setUser(u);
-    if (!u) {
-      setUnread(0);
-      disconnectSocket();
-      navigate("/");
-    }
+  // Logout handler: gọi logout từ AuthContext rồi navigate
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
   };
 
   const isAuthPage = location.pathname === "/dang-nhap";
@@ -129,74 +192,71 @@ function AppShell() {
     >
       {!isAuthPage && (
         <Navbar
-          user={user}
-          setUser={handleSetUser}
           unread={unread}
           onOpenGlobalChat={setGlobalChat}
+          onLogout={handleLogout}
         />
       )}
 
       <Suspense fallback={<PageFallback />}>
         <Routes>
-          <Route path="/" element={<HomePage user={user} />} />
+          {/* ── Public routes ─────────────────────────── */}
+          <Route path="/" element={<HomePage />} />
           <Route
             path="/san-pham/:productId"
-            element={<ProductDetailPageRoute user={user} />}
+            element={<ProductDetailPageRoute />}
           />
+          <Route
+            path="/nguoi-ban/:sellerId"
+            element={<SellerProfilePageRoute />}
+          />
+
+          {/* ── Guest only (redirect nếu đã login) ────── */}
           <Route
             path="/dang-nhap"
             element={
-              user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <AuthPage setUser={handleSetUser} />
-              )
+              <GuestRoute>
+                <AuthPage />
+              </GuestRoute>
             }
           />
+
+          {/* ── Protected routes ─────────────────────── */}
           <Route
             path="/dang-bai"
             element={
-              user ? (
-                <PostListingPage user={user} />
-              ) : (
-                <Navigate to="/dang-nhap" replace />
-              )
+              <PrivateRoute>
+                <PostListingPage />
+              </PrivateRoute>
             }
           />
           <Route
             path="/dashboard"
             element={
-              user ? (
-                <DashboardPage user={user} />
-              ) : (
-                <Navigate to="/dang-nhap" replace />
-              )
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              user?.role === "Admin" ? (
-                <AdminPage />
-              ) : (
-                <Navigate to="/dang-nhap" replace />
-              )
+              <PrivateRoute>
+                <DashboardPage />
+              </PrivateRoute>
             }
           />
           <Route
             path="/profile"
             element={
-              user ? (
-                <ProfilePage user={user} setUser={handleSetUser} />
-              ) : (
-                <Navigate to="/dang-nhap" replace />
-              )
+              <PrivateRoute>
+                <ProfilePage />
+              </PrivateRoute>
             }
           />
+
+          {/* ── Admin only ────────────────────────────── */}
           <Route
-            path="/nguoi-ban/:sellerId"
-            element={<SellerProfilePageRoute user={user} />}
+            path="/admin"
+            element={
+              <AdminRoute>
+                <AdminPage />
+              </AdminRoute>
+            }
           />
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
@@ -232,90 +292,22 @@ function AppShell() {
   );
 }
 
-// ── Routing phụ trợ ──
-function ProductDetailPageRoute({ user }) {
-  const { productId } = useParams();
-  const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api(`/products/${productId}`)
-      .then((p) => setProduct(p))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [productId]);
-
-  if (loading) {
-    return (
-      <div
-        style={{
-          padding: "80px 24px",
-          textAlign: "center",
-          color: "var(--muted)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 12,
-        }}
-      >
-        <div
-          className="skeleton-shimmer"
-          style={{ width: 40, height: 40, borderRadius: "50%" }}
-        />
-        <span style={{ fontSize: 13, fontWeight: 500 }}>
-          ĐANG TẢI THÔNG TIN SẢN PHẨM…
-        </span>
-      </div>
-    );
-  }
-  if (!product) return <Navigate to="/" replace />;
-  return <ProductDetailPage product={product} user={user} />;
-}
-
-function SellerProfilePageRoute({ user }) {
-  const { sellerId } = useParams();
-  const [seller, setSeller] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api(`/users/${sellerId}`)
-      .then((s) => setSeller(s))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [sellerId]);
-
-  if (loading) {
-    return (
-      <div
-        style={{
-          padding: "80px 24px",
-          textAlign: "center",
-          color: "var(--muted)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 12,
-        }}
-      >
-        <div
-          className="skeleton-shimmer"
-          style={{ width: 40, height: 40, borderRadius: "50%" }}
-        />
-        <span style={{ fontSize: 13, fontWeight: 500 }}>
-          ĐANG TẢI HỒ SƠ NGƯ DÂN…
-        </span>
-      </div>
-    );
-  }
-  if (!seller) return <Navigate to="/" replace />;
-  return <SellerProfilePage seller={seller} user={user} />;
-}
-
+// ── Root ─────────────────────────────────────────────────────
+/**
+ * Provider order (ngoài → trong):
+ *   BrowserRouter > ErrorBoundary > AuthProvider > ToastProvider > AppShell
+ *
+ * AuthProvider trước ToastProvider vì AppShell cần cả hai
+ */
 export default function App() {
   return (
     <BrowserRouter>
       <ErrorBoundary>
-        <AppShell />
+        <AuthProvider>
+          <ToastProvider>
+            <AppShell />
+          </ToastProvider>
+        </AuthProvider>
       </ErrorBoundary>
     </BrowserRouter>
   );

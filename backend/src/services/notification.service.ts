@@ -2,9 +2,11 @@ import { pool } from '../db';
 import { getIO } from '../socket';
 
 /**
- * Gửi thông báo "sản phẩm mới" đến toàn bộ người follow người bán.
- * Tách ra khỏi product.controller để tuân theo Single Responsibility Principle.
+ * Notification Service — gửi thông báo cho người dùng.
+ * Tách ra khỏi các controller để tuân theo Single Responsibility Principle.
  */
+
+/** Gửi thông báo "sản phẩm mới" đến toàn bộ người follow người bán */
 export async function notifyFollowersNewProduct(
   sellerId: number,
   sellerName: string,
@@ -15,13 +17,10 @@ export async function notifyFollowersNewProduct(
     'SELECT FollowerID FROM Follow WHERE SellerID = ?',
     [sellerId],
   );
+  if (followers.length === 0) return;
 
-  const io = getIO();
   const previewText = `${sellerName} vừa đăng mẻ hải sản mới: ${productName}`;
-
-  if (followers.length === 0) {
-    return;
-  }
+  const io = getIO();
 
   try {
     const values = followers.map((f) => [f.FollowerID, 'new_product', previewText, productId]);
@@ -30,7 +29,6 @@ export async function notifyFollowersNewProduct(
       [values],
     );
 
-    // Emit sockets concurrently/non-blocking
     for (const f of followers) {
       io.to(`user_${f.FollowerID}`).emit('notification', {
         type: 'new_product',
@@ -44,10 +42,7 @@ export async function notifyFollowersNewProduct(
   }
 }
 
-/**
- * Gửi thông báo "đánh giá mới" đến người bán.
- * Tách ra khỏi review.controller để tuân theo Single Responsibility Principle.
- */
+/** Gửi thông báo "đánh giá mới" đến người bán */
 export async function notifySellerNewReview(params: {
   sellerId: number;
   reviewerId: number;

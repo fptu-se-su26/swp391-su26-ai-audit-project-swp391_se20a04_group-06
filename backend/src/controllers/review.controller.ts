@@ -4,6 +4,12 @@ import { RowDataPacket } from 'mysql2';
 import { uploadToCloudinary } from '../middlewares/upload';
 import { sendServerError, parseId } from '../helpers/response.helper';
 import { notifySellerNewReview } from '../services/notification.service';
+import { parsePagination, paginatedResponse } from '../utils/pagination';
+
+/**
+ * Review Controller
+ * Clean: dùng parsePagination/paginatedResponse thay vì tự tính page/limit/offset inline.
+ */
 
 export async function addReview(req: Request, res: Response) {
   const { userId: reviewerId } = req.user;
@@ -39,15 +45,18 @@ export async function addReview(req: Request, res: Response) {
     );
     const reviewId = (result as any).insertId;
 
-    // Lấy tên người đánh giá và tên sản phẩm rồi uỷ thác cho notification service
-    const [reviewerRows] = await pool.query<RowDataPacket[]>('SELECT Name FROM User WHERE UserID = ?', [reviewerId]);
-    const [productRows]  = await pool.query<RowDataPacket[]>('SELECT Name FROM Product WHERE ProductID = ?', [Number(productId)]);
+    const [reviewerRows] = await pool.query<RowDataPacket[]>(
+      'SELECT Name FROM User WHERE UserID = ?', [reviewerId],
+    );
+    const [productRows] = await pool.query<RowDataPacket[]>(
+      'SELECT Name FROM Product WHERE ProductID = ?', [Number(productId)],
+    );
     await notifySellerNewReview({
-      sellerId:     Number(sellerId),
+      sellerId: Number(sellerId),
       reviewerId,
       reviewerName: (reviewerRows[0] as any)?.Name || 'Một người dùng',
-      productId:    Number(productId),
-      productName:  (productRows[0] as any)?.Name  || 'sản phẩm',
+      productId: Number(productId),
+      productName: (productRows[0] as any)?.Name || 'sản phẩm',
       reviewId,
       rating: numRating,
       comment: comment || null,
@@ -63,17 +72,15 @@ export async function getReviewsBySeller(req: Request, res: Response) {
   const sellerId = parseId(req.params.sellerId);
   if (!sellerId) return res.status(400).json({ message: 'ID người bán không hợp lệ' });
 
-  const page  = Math.max(1, parseInt((req.query.page as string) || '1', 10));
-  const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || '20', 10)));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(
+    req.query.page as string,
+    req.query.limit as string,
+  );
 
   try {
     const [[countRow]] = await pool.query<RowDataPacket[]>(
-      'SELECT COUNT(*) AS total FROM Review WHERE SellerID = ?',
-      [sellerId]
+      'SELECT COUNT(*) AS total FROM Review WHERE SellerID = ?', [sellerId],
     );
-    const total = countRow.total;
-
     const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT r.ReviewID, r.Rating, r.Comment, r.ImageURL, r.CreatedAt,
               u.Name AS ReviewerName, p.Name AS ProductName
@@ -86,13 +93,7 @@ export async function getReviewsBySeller(req: Request, res: Response) {
       [sellerId, limit, offset],
     );
 
-    return res.json({
-      data: rows,
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    });
+    return res.json(paginatedResponse(rows, countRow.total, page, limit));
   } catch (err) {
     return sendServerError(res, err);
   }

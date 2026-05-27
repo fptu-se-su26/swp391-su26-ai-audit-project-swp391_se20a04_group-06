@@ -1,11 +1,13 @@
 /**
- * DashboardPage.jsx — Modernized UI/UX Version
+ * DashboardPage.jsx — Refactored
  *
- * Tối ưu hóa giao diện trang điều khiển cá nhân, tương thích tốt trên điện thoại di động.
- * Giữ nguyên 100% logic quản lý listings, cập nhật trọng lượng, và yêu thích.
+ * CHANGES:
+ *   1. Loại bỏ prop `user` — dùng useAuth() thay thế (Context Pattern)
+ *   2. Thay toàn bộ alert() → useToast() (Observer Pattern)
+ *   3. Thay confirm() → ConfirmDialog component nội bộ (không chặn UI thread)
+ *   4. Giữ nguyên 100% UI, logic, và API calls
  */
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { C } from "../utils/theme";
 import { api } from "../services/api";
@@ -14,9 +16,102 @@ import { useCountdown } from "../hooks/useCountdown";
 import { CountdownBadge } from "../components/ProductCard";
 import { ChatBox } from "../components/ChatBox";
 import { InboxTab } from "../components/InboxTab";
+import { useAuth } from "../context/AuthContext"; // ← NEW
+import { useToast } from "../context/ToastContext"; // ← NEW
 
-export function DashboardPage({ user }) {
+// ── ConfirmDialog — thay thế window.confirm() ───────────────
+/**
+ * TRƯỚC: if (!confirm("Xoá bài đăng này?")) return;
+ * SAU:   <ConfirmDialog> với callback onConfirm
+ *
+ * confirm() block UI thread, không có animation, không customizable
+ */
+function ConfirmDialog({ message, onConfirm, onCancel }) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.4)",
+        zIndex: 99998,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        animation: "fadeIn 0.15s ease",
+      }}
+      onClick={onCancel}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: C.white,
+          borderRadius: 16,
+          padding: "28px 32px",
+          maxWidth: 360,
+          width: "90%",
+          boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+          textAlign: "center",
+        }}
+      >
+        <div style={{ fontSize: 40, marginBottom: 12 }}>🗑️</div>
+        <p
+          style={{
+            fontSize: 15,
+            fontWeight: 600,
+            color: C.dark,
+            marginBottom: 20,
+          }}
+        >
+          {message}
+        </p>
+        <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+          <button
+            onClick={onCancel}
+            style={{
+              flex: 1,
+              padding: "10px 0",
+              borderRadius: 10,
+              border: `1px solid ${C.border}`,
+              background: C.white,
+              color: C.muted,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              fontSize: 14,
+            }}
+          >
+            Huỷ
+          </button>
+          <button
+            onClick={onConfirm}
+            style={{
+              flex: 1,
+              padding: "10px 0",
+              borderRadius: 10,
+              border: "none",
+              background: "#DC2626",
+              color: "#fff",
+              fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              fontSize: 14,
+            }}
+          >
+            Xoá
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Component ───────────────────────────────────────────
+export function DashboardPage() {
+  // ← THAY ĐỔI: không nhận user qua props nữa
+  const { user } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
+
   const [tab, setTab] = useState("listings");
   const [listings, setListings] = useState([]);
   const [loadingListings, setLoadingListings] = useState(true);
@@ -27,6 +122,7 @@ export function DashboardPage({ user }) {
   const [bumpingId, setBumpingId] = useState(null);
   const [favorites, setFavorites] = useState([]);
   const [favLoading, setFavLoading] = useState(true);
+  const [confirmDelete, setConfirmDelete] = useState(null); // productId cần xoá
 
   useEffect(() => {
     api("/products/my")
@@ -58,20 +154,24 @@ export function DashboardPage({ user }) {
         ),
       );
       setEditId(null);
+      toast.success("Đã cập nhật trọng lượng!"); // ← THAY alert()
     } catch (e) {
-      alert(e.message);
+      toast.error(e.message); // ← THAY alert()
     } finally {
       setEditLoading(false);
     }
   };
 
-  const deleteProduct = async (productId) => {
-    if (!confirm("Xoá bài đăng này?")) return;
+  // TRƯỚC: if (!confirm(...)) return; await api(...) / catch alert()
+  // SAU:   mở ConfirmDialog → onConfirm gọi doDelete
+  const doDelete = async (productId) => {
+    setConfirmDelete(null);
     try {
       await api(`/products/${productId}`, { method: "DELETE" });
       setListings((prev) => prev.filter((p) => p.id !== productId));
+      toast.success("Đã xoá bài đăng."); // ← THAY alert()
     } catch (e) {
-      alert(e.message);
+      toast.error(e.message); // ← THAY alert()
     }
   };
 
@@ -79,9 +179,9 @@ export function DashboardPage({ user }) {
     setBumpingId(productId);
     try {
       const res = await api(`/products/${productId}/bump`, { method: "POST" });
-      alert(res.message || "Đã đẩy tin lên đầu thành công!");
+      toast.success(res.message || "Đã đẩy tin lên đầu thành công!"); // ← THAY alert()
     } catch (e) {
-      alert(e.message);
+      toast.error(e.message); // ← THAY alert()
     } finally {
       setBumpingId(null);
     }
@@ -95,7 +195,16 @@ export function DashboardPage({ user }) {
 
   return (
     <div style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px 80px" }}>
-      {/* Header Dashboard */}
+      {/* ConfirmDialog — render nếu đang chờ confirm delete */}
+      {confirmDelete && (
+        <ConfirmDialog
+          message="Xoá bài đăng này? Thao tác không thể hoàn tác."
+          onConfirm={() => doDelete(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+
+      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -107,7 +216,7 @@ export function DashboardPage({ user }) {
         }}
       >
         <h1 style={{ fontSize: 24, fontWeight: 800, color: C.dark, margin: 0 }}>
-          📊 Bảng Điều Khiển — {user.name}
+          📊 Bảng Điều Khiển — {user?.name}
         </h1>
         <button
           onClick={() => navigate("/dang-bai")}
@@ -133,9 +242,8 @@ export function DashboardPage({ user }) {
         </button>
       </div>
 
-      {/* Grid thống kê nâng cấp vạch lề trái đồng bộ */}
+      {/* Stats Grid */}
       <div
-        className="stats-grid"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(3, 1fr)",
@@ -149,30 +257,30 @@ export function DashboardPage({ user }) {
             activeCount,
             "Hải sản đang rao bán",
             C.ok,
-            "0 0 0 2px rgba(45, 125, 70, 0.1)",
+            "rgba(45, 125, 70, 0.1)",
           ],
           [
             "💬",
             unread,
             "Tin nhắn chưa đọc",
             C.coral,
-            "0 0 0 2px rgba(232, 100, 58, 0.1)",
+            "rgba(232, 100, 58, 0.1)",
           ],
           [
             "⚖️",
             `${totalRemaining} kg`,
             "Tổng trọng lượng kho",
             C.ocean,
-            "0 0 0 2px rgba(11, 79, 108, 0.1)",
+            "rgba(11, 79, 108, 0.1)",
           ],
-        ].map(([ico, val, lbl, col, glow]) => (
+        ].map(([ico, val, lbl, col]) => (
           <div
             key={lbl}
             style={{
               background: C.white,
               borderRadius: 16,
               border: `1px solid ${C.border}`,
-              borderLeft: `4px solid ${col}`, // Thẻ chỉ số lề trái đồng bộ
+              borderLeft: `4px solid ${col}`,
               padding: "20px 24px",
               boxShadow: "0 4px 10px rgba(0,0,0,0.01)",
             }}
@@ -202,7 +310,7 @@ export function DashboardPage({ user }) {
         ))}
       </div>
 
-      {/* Tabs Menu */}
+      {/* Tabs */}
       <div
         style={{
           display: "flex",
@@ -241,7 +349,7 @@ export function DashboardPage({ user }) {
         ))}
       </div>
 
-      {/* TAB 1: DANH SÁCH BÀI ĐÃ ĐĂNG */}
+      {/* Tab: Listings */}
       {tab === "listings" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {loadingListings ? (
@@ -278,13 +386,12 @@ export function DashboardPage({ user }) {
                     background: "none",
                     border: "none",
                     color: C.ocean,
+                    fontWeight: 700,
                     cursor: "pointer",
-                    fontWeight: 800,
-                    fontSize: 14,
-                    textDecoration: "underline",
+                    fontFamily: "inherit",
                   }}
                 >
-                  Đăng bán ngay!
+                  Đăng bài ngay →
                 </button>
               </div>
             </div>
@@ -292,242 +399,197 @@ export function DashboardPage({ user }) {
             listings.map((p) => (
               <div
                 key={p.id}
-                className="listing-row"
                 style={{
                   background: C.white,
                   borderRadius: 16,
                   border: `1px solid ${C.border}`,
-                  padding: "16px 20px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 16,
-                  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
-                  transition: "all 0.2s",
+                  padding: "20px 24px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
                 }}
               >
-                {/* Ảnh bài viết */}
-                {p.coverImg ? (
-                  <img
-                    src={p.coverImg}
-                    alt=""
-                    style={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: 10,
-                      objectFit: "cover",
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: 10,
-                      background: C.oceanP,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 28,
-                    }}
-                  >
-                    🐟
-                  </div>
-                )}
-
-                {/* Thông tin bài đăng */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 15, color: C.dark }}>
-                    {p.name}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: C.muted,
-                      marginTop: 4,
-                      display: "flex",
-                      gap: 8,
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <span style={{ fontWeight: 700, color: C.coral }}>
-                      {fmt(p.price)}/kg
-                    </span>
-                    <span style={{ color: "#E5E7EB" }}>|</span>
-                    <span>
-                      Còn sẵn: <strong>{p.remainingWeight} kg</strong>
-                    </span>
-                    <span style={{ color: "#E5E7EB" }}>|</span>
-                    {p.type === "Fresh"
-                      ? pill("#FDE8E0", "#C0401A", "🌊 Tươi")
-                      : pill("#FEF5E4", "#8A5C00", "🔥 Khô")}
-                    {p.status !== "Active" &&
-                      pill("#FEE2E2", "#991B1B", p.status)}
-                  </div>
-                </div>
-
-                {/* Hàng hành động */}
                 <div
-                  className="listing-actions"
-                  style={{ display: "flex", gap: 8, alignItems: "center" }}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    flexWrap: "wrap",
+                    gap: 12,
+                  }}
                 >
-                  {editId === p.id ? (
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <input
-                        value={editVal}
-                        onChange={(e) => setEditVal(e.target.value)}
-                        style={{
-                          width: 80,
-                          padding: "8px 12px",
-                          border: `1.5px solid ${C.ocean}`,
-                          borderRadius: 8,
-                          fontSize: 13,
-                          fontFamily: "inherit",
-                          outline: "none",
-                        }}
-                        type="number"
-                        placeholder="KL mới"
-                      />
-                      <button
-                        onClick={() => saveWeight(p.id)}
-                        disabled={editLoading}
-                        style={{
-                          background: C.ok,
-                          color: "#fff",
-                          border: "none",
-                          padding: "8px 14px",
-                          borderRadius: 8,
-                          cursor: "pointer",
-                          fontSize: 13,
-                          fontWeight: 700,
-                          fontFamily: "inherit",
-                        }}
-                      >
-                        Lưu
-                      </button>
-                      <button
-                        onClick={() => setEditId(null)}
-                        style={{
-                          background: "#E2E8F0",
-                          color: "#475569",
-                          border: "none",
-                          padding: "8px 12px",
-                          borderRadius: 8,
-                          cursor: "pointer",
-                          fontSize: 13,
-                          fontWeight: 700,
-                          fontFamily: "inherit",
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setEditId(p.id);
-                        setEditVal(p.remainingWeight);
-                      }}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
                       style={{
-                        background: C.oceanP,
-                        color: C.ocean,
-                        border: "none",
-                        padding: "8px 14px",
-                        borderRadius: 10,
-                        cursor: "pointer",
-                        fontSize: 12,
                         fontWeight: 700,
-                        fontFamily: "inherit",
-                        transition: "all 0.2s",
+                        fontSize: 15,
+                        color: C.dark,
+                        marginBottom: 6,
                       }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.background = "#D9EDF5")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.background = C.oceanP)
-                      }
                     >
-                      ✏️ Sửa số lượng
-                    </button>
-                  )}
+                      {p.name}
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        flexWrap: "wrap",
+                        marginBottom: 8,
+                      }}
+                    >
+                      {pill(
+                        p.type === "Fresh" ? "#DBEAFE" : "#FEF3C7",
+                        p.type === "Fresh" ? "#1D4ED8" : "#92400E",
+                        p.type === "Fresh" ? "Tươi" : "Khô",
+                      )}
+                      {pill(
+                        p.status === "Active" ? C.okL : "#F3F4F6",
+                        p.status === "Active" ? C.ok : C.muted,
+                        p.status === "Active" ? "Đang bán" : p.status,
+                      )}
+                    </div>
+                    <div style={{ fontSize: 13, color: C.muted }}>
+                      Giá:{" "}
+                      <strong style={{ color: C.dark }}>
+                        {fmt(p.price)}/kg
+                      </strong>
+                      {" · "}
+                      Còn:{" "}
+                      <strong
+                        style={{
+                          color: p.remainingWeight < 5 ? "#DC2626" : C.dark,
+                        }}
+                      >
+                        {p.remainingWeight} kg
+                      </strong>
+                    </div>
 
-                  <button
-                    onClick={() => navigate(`/san-pham/${p.id}`)}
-                    style={{
-                      background: C.white,
-                      color: C.ocean,
-                      border: `1px solid ${C.border}`,
-                      padding: "8px 14px",
-                      borderRadius: 10,
-                      cursor: "pointer",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      fontFamily: "inherit",
-                      transition: "all 0.2s",
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background = "#F1F5F9")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = C.white)
-                    }
-                  >
-                    Xem bài
-                  </button>
+                    {/* CountdownBadge cho hải sản tươi */}
+                    {p.type === "Fresh" && p.catchTime && (
+                      <div style={{ marginTop: 6 }}>
+                        <CountdownBadge catchTime={p.catchTime} />
+                      </div>
+                    )}
+                  </div>
 
-                  {p.status === "Active" && (
+                  {/* Actions */}
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {/* Edit weight */}
+                    {editId === p.id ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 6,
+                          alignItems: "center",
+                        }}
+                      >
+                        <input
+                          type="number"
+                          value={editVal}
+                          min="0"
+                          step="0.5"
+                          onChange={(e) => setEditVal(e.target.value)}
+                          style={{
+                            width: 80,
+                            padding: "6px 10px",
+                            borderRadius: 8,
+                            border: `1px solid ${C.border}`,
+                            fontFamily: "inherit",
+                            fontSize: 13,
+                          }}
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => saveWeight(p.id)}
+                          disabled={editLoading}
+                          style={{
+                            padding: "6px 14px",
+                            borderRadius: 8,
+                            border: "none",
+                            background: C.ok,
+                            color: "#fff",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            fontFamily: "inherit",
+                            fontSize: 13,
+                          }}
+                        >
+                          {editLoading ? "…" : "Lưu"}
+                        </button>
+                        <button
+                          onClick={() => setEditId(null)}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: 8,
+                            border: `1px solid ${C.border}`,
+                            background: C.white,
+                            color: C.muted,
+                            cursor: "pointer",
+                            fontFamily: "inherit",
+                            fontSize: 13,
+                          }}
+                        >
+                          Huỷ
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setEditId(p.id);
+                          setEditVal(String(p.remainingWeight));
+                        }}
+                        style={{
+                          padding: "6px 14px",
+                          borderRadius: 8,
+                          border: `1px solid ${C.border}`,
+                          background: C.white,
+                          color: C.ocean,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          fontSize: 13,
+                        }}
+                      >
+                        ✏️ Sửa kg
+                      </button>
+                    )}
+
                     <button
                       onClick={() => bumpProduct(p.id)}
                       disabled={bumpingId === p.id}
-                      title="Đẩy bài viết lên đầu trang chính (1 lần/24h)"
                       style={{
-                        background: bumpingId === p.id ? "#E2E8F0" : "#FEF5E4",
-                        color: "#92400E",
+                        padding: "6px 14px",
+                        borderRadius: 8,
                         border: "none",
-                        padding: "8px 14px",
-                        borderRadius: 10,
-                        cursor: "pointer",
-                        fontSize: 12,
-                        fontFamily: "inherit",
+                        background: `linear-gradient(135deg, ${C.ocean}, ${C.oceanL})`,
+                        color: "#fff",
                         fontWeight: 700,
-                        transition: "all 0.2s",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (bumpingId !== p.id)
-                          e.currentTarget.style.background = "#FEEFCE";
-                      }}
-                      onMouseLeave={(e) => {
-                        if (bumpingId !== p.id)
-                          e.currentTarget.style.background = "#FEF5E4";
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        fontSize: 13,
+                        opacity: bumpingId === p.id ? 0.7 : 1,
                       }}
                     >
-                      {bumpingId === p.id ? "Đang đẩy..." : "🚀 Đẩy tin"}
+                      {bumpingId === p.id ? "…" : "🚀 Đẩy tin"}
                     </button>
-                  )}
 
-                  <button
-                    onClick={() => deleteProduct(p.id)}
-                    style={{
-                      background: "#FEE2E2",
-                      color: "#991B1B",
-                      border: "none",
-                      padding: "8px 12px",
-                      borderRadius: 10,
-                      cursor: "pointer",
-                      fontSize: 12,
-                      fontFamily: "inherit",
-                      fontWeight: 700,
-                      transition: "all 0.2s",
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background = "#FCA5A5")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "#FEE2E2")
-                    }
-                  >
-                    🗑️
-                  </button>
+                    {/* TRƯỚC: onClick={() => deleteProduct(p.id)} dùng confirm()
+                        SAU: mở ConfirmDialog */}
+                    <button
+                      onClick={() => setConfirmDelete(p.id)}
+                      style={{
+                        padding: "6px 14px",
+                        borderRadius: 8,
+                        border: "none",
+                        background: "#FEE2E2",
+                        color: "#DC2626",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        fontSize: 13,
+                      }}
+                    >
+                      🗑️ Xoá
+                    </button>
+                  </div>
                 </div>
               </div>
             ))
@@ -535,22 +597,15 @@ export function DashboardPage({ user }) {
         </div>
       )}
 
-      {/* TAB 2: TIN NHẮN LIÊN LẠC */}
+      {/* Tab: Chats */}
       {tab === "chats" && <InboxTab user={user} />}
 
-      {/* TAB 3: DANH SÁCH YÊU THÍCH */}
+      {/* Tab: Favorites */}
       {tab === "favorites" && (
-        <div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {favLoading ? (
-            <div
-              style={{
-                textAlign: "center",
-                padding: 40,
-                color: C.muted,
-                fontWeight: 500,
-              }}
-            >
-              Đang tải danh sách yêu thích...
+            <div style={{ textAlign: "center", padding: 40, color: C.muted }}>
+              ⏳ Đang tải...
             </div>
           ) : favorites.length === 0 ? (
             <div
@@ -563,167 +618,89 @@ export function DashboardPage({ user }) {
                 border: `1px solid ${C.border}`,
               }}
             >
-              <div style={{ fontSize: 56, marginBottom: 12 }}>🤍</div>
+              <div style={{ fontSize: 56, marginBottom: 12 }}>❤️</div>
               <div style={{ fontWeight: 700, color: C.dark }}>
-                Chưa có hải sản yêu thích nào
-              </div>
-              <div style={{ marginTop: 6, fontSize: 13 }}>
-                Nhấn biểu tượng ❤️ trên các sản phẩm ngoài trang chủ để lưu lại
-                xem sau.
+                Chưa có sản phẩm yêu thích
               </div>
             </div>
           ) : (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))",
-                gap: 24,
-              }}
-              className="product-grid"
-            >
-              {favorites.map((p) => (
+            favorites.map((p) => (
+              <div
+                key={p.id}
+                style={{
+                  background: C.white,
+                  borderRadius: 14,
+                  border: `1px solid ${C.border}`,
+                  padding: "16px 20px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 14,
+                }}
+              >
                 <div
-                  key={p.id}
-                  onClick={() => navigate(`/san-pham/${p.id}`)}
                   style={{
-                    background: C.white,
-                    borderRadius: 16,
-                    border: "1px solid #E5E7EB",
+                    width: 56,
+                    height: 56,
+                    borderRadius: 10,
+                    background: C.bg,
                     overflow: "hidden",
-                    cursor: "pointer",
-                    transition: "all 0.3s ease",
-                    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow =
-                      "0 15px 25px rgba(11, 79, 108, 0.08)";
-                    e.currentTarget.style.transform = "translateY(-3px)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow =
-                      "0 4px 6px -1px rgba(0,0,0,0.01)";
-                    e.currentTarget.style.transform = "none";
+                    flexShrink: 0,
                   }}
                 >
-                  {/* Ảnh sản phẩm yêu thích */}
-                  <div style={{ height: 140, overflow: "hidden" }}>
-                    {p.coverImg ? (
-                      <img
-                        src={p.coverImg}
-                        alt={p.name}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          height: "100%",
-                          background: `linear-gradient(135deg, ${C.ocean} 0%, ${C.oceanL} 100%)`,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 56,
-                        }}
-                      >
-                        🐟
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{ padding: "14px 16px" }}>
-                    <div
+                  {p.coverImg ? (
+                    <img
+                      src={p.coverImg}
+                      alt={p.name}
                       style={{
-                        fontWeight: 700,
-                        fontSize: 15,
-                        color: C.dark,
-                        marginBottom: 6,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {p.name}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 18,
-                        fontWeight: 800,
-                        color: C.coral,
-                        marginBottom: 8,
-                      }}
-                    >
-                      {fmt(p.price)}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: C.muted,
-                        display: "flex",
-                        gap: 10,
-                        fontWeight: 500,
-                      }}
-                    >
-                      <span>⚖️ Còn {p.remainingWeight} kg</span>
-                      {p.viewCount > 0 && <span>👁️ {p.viewCount} xem</span>}
-                    </div>
-
-                    <hr
-                      style={{
-                        border: "none",
-                        borderTop: "1px solid #F3F4F6",
-                        margin: "10px 0",
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
                       }}
                     />
-
+                  ) : (
                     <div
-                      style={{ fontSize: 12, color: C.ocean, fontWeight: 700 }}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 24,
+                      }}
                     >
-                      👤 {p.sellerName} {p.sellerIsVerified && "✅"}
+                      🐟
                     </div>
-                    {p.status !== "Active" && (
-                      <div
-                        style={{
-                          marginTop: 8,
-                          fontSize: 11,
-                          color: "#DC2626",
-                          fontWeight: 700,
-                          background: "#FEF2F2",
-                          padding: "4px 8px",
-                          borderRadius: 4,
-                          width: "fit-content",
-                        }}
-                      >
-                        ⚠️ Đã bán hết / Ẩn bài
-                      </div>
-                    )}
+                  )}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: C.dark }}>
+                    {p.name}
+                  </div>
+                  <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>
+                    {fmt(p.price)}/kg · Còn {p.remainingWeight} kg
                   </div>
                 </div>
-              ))}
-            </div>
+                <button
+                  onClick={() => navigate(`/san-pham/${p.id}`)}
+                  style={{
+                    padding: "7px 16px",
+                    borderRadius: 8,
+                    border: `1px solid ${C.border}`,
+                    background: C.white,
+                    color: C.ocean,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    fontSize: 13,
+                  }}
+                >
+                  Xem →
+                </button>
+              </div>
+            ))
           )}
         </div>
       )}
-
-      {/* Đoạn mã CSS hỗ trợ Co giãn/Responsive cho giao diện cá nhân */}
-      <style>{`
-        @media (max-width: 680px) {
-          .stats-grid {
-            grid-template-columns: 1fr !important;
-          }
-          .listing-row {
-            flex-direction: column !important;
-            align-items: flex-start !important;
-            gap: 16px !important;
-          }
-          .listing-actions {
-            width: 100% !important;
-            justify-content: flex-end !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

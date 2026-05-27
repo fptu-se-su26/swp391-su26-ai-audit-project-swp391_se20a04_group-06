@@ -1,6 +1,15 @@
+/**
+ * Navbar.jsx — Refactored
+ *
+ * CHANGES:
+ *   - Loại bỏ props: `user`, `setUser` → dùng useAuth() (Context Pattern)
+ *   - Loại bỏ prop: `onLogout` → logout từ AuthContext
+ *   - Giữ nguyên props: `unread`, `onOpenGlobalChat` (vẫn còn hợp lý từ AppShell)
+ *   - Giữ nguyên 100% UI và logic khác
+ */
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-// ĐÃ XÓA: import { saveToken } from "../services/api";
+import { useAuth } from "../context/AuthContext"; // ← NEW
 import { disconnectSocket } from "../services/socket";
 import { ChatPopover } from "../components/ChatPopover";
 import { NotificationBell } from "../components/NotificationBell";
@@ -21,7 +30,9 @@ import {
 } from "../components/icons";
 import styles from "./Navbar.module.css";
 
-export function Navbar({ user, setUser, unread, onOpenGlobalChat }) {
+export function Navbar({ unread, onOpenGlobalChat }) {
+  // ← THAY ĐỔI: không nhận user/setUser qua props nữa
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const dropdownRef = useRef(null);
@@ -35,19 +46,18 @@ export function Navbar({ user, setUser, unread, onOpenGlobalChat }) {
   const { notifs, unreadCount, markAllRead } = useNotifications(user);
 
   useEffect(() => {
-    const handleClickOutside = (e) => {
+    const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setShowProfileDropdown(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
-
     const observer = new IntersectionObserver(
       ([entry]) => setScrolled(!entry.isIntersecting),
       { threshold: 0 },
@@ -60,26 +70,15 @@ export function Navbar({ user, setUser, unread, onOpenGlobalChat }) {
     if (n.productId) navigate(`/san-pham/${n.productId}`);
   };
 
-  // Hàm logout: xóa user state, ngắt socket, và gọi API logout (nếu có)
-  const logout = async () => {
-    // Gọi API logout để server xóa cookie (tuỳ chọn, nếu có endpoint)
-    try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch (e) {
-      // Bỏ qua lỗi nếu chưa có endpoint logout
-    }
-    disconnectSocket();
-    setUser(null);
+  // logout từ AuthContext — không cần truyền qua props
+  const handleLogout = async () => {
+    await logout();
     navigate("/");
     setMenuOpen(false);
     setShowProfileDropdown(false);
   };
 
   const isActive = (path) => location.pathname === path;
-
   const navTo = (path) => {
     navigate(path);
     setMenuOpen(false);
@@ -207,7 +206,7 @@ export function Navbar({ user, setUser, unread, onOpenGlobalChat }) {
                 >
                   {user.avatarUrl ? (
                     <img
-                      src={user.avatarUrl} // 🚀 SỬA TẠI ĐÂY: Đổi user.avatar thành user.avatarUrl
+                      src={user.avatarUrl}
                       alt={user.name}
                       className={styles.avatar}
                     />
@@ -249,7 +248,7 @@ export function Navbar({ user, setUser, unread, onOpenGlobalChat }) {
                     <hr className={styles.dropdownDivider} />
                     <button
                       className={`${styles.dropdownItem} ${styles.danger}`}
-                      onClick={logout}
+                      onClick={handleLogout}
                     >
                       <LogOutIcon size={13} />
                       Đăng xuất
@@ -312,7 +311,7 @@ export function Navbar({ user, setUser, unread, onOpenGlobalChat }) {
           {user ? (
             <button
               className={`${styles.mobileMenuItem} ${styles.danger}`}
-              onClick={logout}
+              onClick={handleLogout}
             >
               <LogOutIcon size={14} />
               Đăng xuất

@@ -5,17 +5,10 @@ import { cloudinary } from '../config/cloudinary';
 
 /**
  * Auth Service — chứa toàn bộ business logic liên quan đến xác thực.
- * Pattern: Service Layer
- *
- * BEFORE: bcrypt, jwt.sign, Cloudinary upload, và DB query tất cả nằm lẫn lộn
- *   trong auth.controller.ts (~250 dòng). Controller vừa validate HTTP,
- *   vừa xử lý business logic, vừa gọi DB.
- * AFTER: Controller chỉ xử lý HTTP (parse req, trả res).
- *   Service xử lý business logic và ném Error có .status khi cần.
  */
 
 export interface AuthUserResult {
-  userId: number;
+  userId: string;
   name: string;
   phone: string;
   role: string;
@@ -66,7 +59,7 @@ export const authService = {
 
   /** Cập nhật profile — trả về các field đã được cập nhật */
   async updateProfile(
-    userId: number,
+    userId: string,
     data: { name: string; phone?: string; fileBuffer?: Buffer },
   ): Promise<{ name: string; phone?: string; avatarUrl?: string }> {
     const updates: { name?: string; phone?: string; avatar?: string } = {
@@ -94,7 +87,7 @@ export const authService = {
 
   /** Đổi mật khẩu sau khi xác minh mật khẩu hiện tại */
   async changePassword(
-    userId: number,
+    userId: string,
     currentPassword: string,
     newPassword: string,
   ): Promise<void> {
@@ -109,10 +102,8 @@ export const authService = {
 
   /**
    * Ký JWT token.
-   * BEFORE: hàm signToken() khai báo lẻ loi ở cuối auth.controller.ts.
-   * AFTER: thuộc về auth service — dễ tìm, dễ mock khi test.
    */
-  signToken(userId: number, role: string): string {
+  signToken(userId: string, role: string): string {
     const secret = process.env.JWT_SECRET;
     if (!secret) throw new Error('JWT_SECRET chưa được cấu hình trong file .env');
     const options: SignOptions = {

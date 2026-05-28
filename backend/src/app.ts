@@ -4,7 +4,9 @@ import cors from "cors";
 import http from "http";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
-import rateLimit from "express-rate-limit";
+import mongoose from "mongoose"; // 🌟 Import Mongoose
+import { connectRedis, redis } from "./config/redis";
+import { logger } from "./utils/logger";
 
 import { testConnection } from "./db";
 import { initSocket } from "./socket";
@@ -12,6 +14,7 @@ import { startCronJobs } from "./cron";
 import { generateCsrfToken, validateCsrf } from "./middlewares/csrf";
 
 import authRoutes, { userRouter } from "./routes/auth.routes";
+import otpRoutes from "./routes/otp.routes";
 import productRoutes from "./routes/product.routes";
 import imageRoutes from "./routes/image.routes";
 import messageRoutes from "./routes/message.routes";
@@ -25,20 +28,6 @@ import reportRoutes from "./routes/report.routes";
 const app = express();
 const server = http.createServer(app);
 
-/* ─── Rate Limiter (Bảo vệ tài nguyên & Chống Brute-force) ──── */
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: {
-    message: "Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau 15 phút.",
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-app.use("/api", apiLimiter);
-
-/* ─── Security Header (Helmet) ───────────────────────────────── */
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -46,7 +35,6 @@ app.use(
   }),
 );
 
-/* ─── Middleware ────────────────────────────────────────────── */
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:3000",
@@ -58,24 +46,22 @@ app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use(cookieParser());
 
 app.use((req, _res, next) => {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] [INFO] ${req.method} ${req.url} - IP: ${req.ip}`);
+  logger.info(`HTTP Request: ${req.method} ${req.url} - IP: ${req.ip}`);
   next();
 });
 
-// CSRF: Khởi tạo/tạo token mới cho tất cả request
 app.use(generateCsrfToken);
 
-// Áp dụng validate CSRF loại trừ các public path tĩnh
-// BUG FIX: Khi dùng app.use("/api", handler), req.path đã bị strip prefix "/api".
-// Ví dụ: request tới "/api/auth/login" → req.path = "/auth/login" (không phải "/api/auth/login")
-// Nên publicPaths phải là path tương đối (không có "/api" prefix).
 app.use("/api", (req, res, next) => {
   const publicPaths = [
     "/auth/login",
     "/auth/register",
     "/health",
     "/auth/logout",
+    "/auth/forgot-password",
+    "/auth/verify-otp",
+    "/auth/reset-password",
+    "/auth/refresh",
   ];
 
   const cleanPath = req.path.replace(/\/$/, "");
@@ -87,13 +73,12 @@ app.use("/api", (req, res, next) => {
   validateCsrf(req, res, next);
 });
 
-/* ─── Health check ─────────────────────────────────────────── */
 app.get("/api/health", (_req, res) =>
   res.json({ status: "ok", time: new Date() }),
 );
 
-/* ─── Routes ────────────────────────────────────────────────── */
 app.use("/api/auth", authRoutes);
+app.use("/api/auth", otpRoutes);
 app.use("/api/users", userRouter);
 app.use("/api/products", productRoutes);
 app.use("/api", imageRoutes);
@@ -105,12 +90,10 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/reports", reportRoutes);
 
-/* ─── 404 handler ───────────────────────────────────────────── */
 app.use((_req, res) =>
   res.status(404).json({ message: "Không tìm thấy endpoint này" }),
 );
 
-/* ─── Global error handler ─────────────────────────────────── */
 app.use(
   (
     err: Error,
@@ -118,51 +101,83 @@ app.use(
     res: express.Response,
     _next: express.NextFunction,
   ) => {
-    const timestamp = new Date().toISOString();
-    console.error(
-      `[${timestamp}] [ERROR] ${req.method} ${req.url} - Error: ${err.message}`,
-    );
-    if (err.stack) {
-      console.error(err.stack);
-    }
+    logger.error(`Exception on ${req.method} ${req.url}: ${err.message}`, {
+      stack: err.stack,
+    });
     return res
       .status(500)
       .json({ message: "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau." });
   },
 );
 
-/* ─── Xử lý uncaughtException / unhandledRejection ────────── */
 process.on("uncaughtException", (err) => {
-  console.error("[CRITICAL] uncaughtException:", err);
+  logger.error(`[CRITICAL] uncaughtException: ${err.message}`, {
+    stack: err.stack,
+  });
   process.exit(1);
 });
 
 process.on("unhandledRejection", (reason, promise) => {
-  console.error(
-    "[CRITICAL] unhandledRejection tại:",
-    promise,
-    "Lý do:",
-    reason,
+  logger.error(
+    `[CRITICAL] unhandledRejection at: ${promise}, reason: ${reason}`,
   );
 });
 
-/* ─── Khởi chạy Server ────────────────────────────────────────── */
 const PORT = parseInt(process.env.PORT || "5000");
+let serverInstance: any;
 
 async function bootstrap() {
-  await testConnection();
+  await testConnection(); // Gọi Mongoose Connection mới
+  await connectRedis();
+
   initSocket(server);
   startCronJobs();
-  server.listen(PORT, () => {
-    console.log(`\n🚀 Server chạy tại http://localhost:${PORT}`);
-    console.log(`🔒 Helmet + CSRF + Cookie-based JWT đã bật`);
-    console.log(`📡 Socket.IO sẵn sàng (dùng cookie)`);
-    console.log(`🗄️  Database: ${process.env.DB_NAME || "seafood_db"}\n`);
+
+  serverInstance = server.listen(PORT, () => {
+    logger.info(`\n🚀 Server is running on http://localhost:${PORT}`);
+    logger.info(`🔒 Helmet + CSRF + Cookie-based JWT Enabled`);
+    logger.info(`📡 Socket.IO server is ready (cookie-based handshake)`);
+    logger.info(`🗄️  Active Database: MongoDB (NoSQL)\n`);
   });
 }
 
+// Graceful Shutdown
+async function gracefulShutdown(signal: string) {
+  logger.warn(`Received ${signal}. Starting Graceful Shutdown...`);
+
+  if (serverInstance) {
+    serverInstance.close(async () => {
+      logger.info("HTTP Server stopped accepting new connections.");
+      try {
+        await redis.quit();
+        logger.info("Redis connection closed cleanly.");
+
+        // 🌟 Giải phóng kết nối cơ sở dữ liệu MongoDB an toàn
+        await mongoose.connection.close();
+        logger.info("Mongoose connection closed cleanly.");
+
+        logger.info("Graceful shutdown completed successfully. Exiting.");
+        process.exit(0);
+      } catch (err: any) {
+        logger.error(`Error during graceful shutdown: ${err.message}`);
+        process.exit(1);
+      }
+    });
+  }
+
+  setTimeout(() => {
+    logger.error("Forceful shutdown triggered after timeout.");
+    process.exit(1);
+  }, 10000);
+}
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
 bootstrap().catch((err) => {
-  console.error("[CRITICAL] Bootstrap failed:", err);
+  logger.error(`[CRITICAL] Bootstrap failed: ${err.message}`, {
+    stack: err.stack,
+  });
   process.exit(1);
 });
 

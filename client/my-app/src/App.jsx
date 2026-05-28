@@ -35,6 +35,7 @@ import { useViewTransitionNavigate } from "./hooks/useViewTransitionNavigate";
 import { disconnectSocket } from "./services/socket";
 import { api } from "./services/api";
 import { useLocation } from "react-router-dom";
+import { Link } from "react-router-dom"; // đảm bảo đã import
 
 // ── Code-splitting ──────────────────────────────────────────
 const HomePage = lazy(() =>
@@ -43,6 +44,11 @@ const HomePage = lazy(() =>
 const ProductDetailPage = lazy(() =>
   import("./pages/ProductDetailPage").then((m) => ({
     default: m.ProductDetailPage,
+  })),
+);
+const ForgotPasswordPage = lazy(() =>
+  import("./pages/ForgotPasswordPage").then((m) => ({
+    default: m.ForgotPasswordPage,
   })),
 );
 const AuthPage = lazy(() =>
@@ -205,6 +211,14 @@ function AppShell() {
           <Route
             path="/san-pham/:productId"
             element={<ProductDetailPageRoute />}
+          />
+          <Route
+            path="/quen-mat-khau"
+            element={
+              <GuestRoute>
+                <ForgotPasswordPage />
+              </GuestRoute>
+            }
           />
           <Route
             path="/nguoi-ban/:sellerId"

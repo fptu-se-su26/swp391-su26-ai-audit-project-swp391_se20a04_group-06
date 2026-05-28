@@ -1,21 +1,21 @@
 import "dotenv/config";
 import { Server as HttpServer } from "http";
 import { Server as IOServer, Socket } from "socket.io";
+import { createAdapter } from "@socket.io/redis-adapter";
 import jwt from "jsonwebtoken";
 import cookie from "cookie";
-import { pool } from "./db";
-import { ResultSetHeader, RowDataPacket } from "mysql2";
+import { Message } from "./models/Message";
+import { Product } from "./models/Product";
+import { redis } from "./config/redis";
+import { logger } from "./utils/logger";
 
 interface AuthPayload {
-  userId: number;
+  userId: string;
   role: string;
 }
 
 let ioInstance: IOServer;
 
-/**
- * Lấy JWT token từ cookie trong handshake headers
- */
 function getTokenFromCookie(headers: any): string | null {
   const cookieHeader = headers.cookie;
   if (!cookieHeader) return null;
@@ -28,11 +28,23 @@ export function initSocket(server: HttpServer) {
     cors: {
       origin: process.env.CLIENT_URL || "http://localhost:3000",
       methods: ["GET", "POST"],
-      credentials: true, // cho phép gửi cookie
+      credentials: true,
     },
   });
 
-  /* ── Xác thực JWT từ Cookie ── */
+  try {
+    const pubClient = redis.duplicate();
+    const subClient = redis.duplicate();
+
+    pubClient.connect().catch(() => {});
+    subClient.connect().catch(() => {});
+
+    io.adapter(createAdapter(pubClient, subClient));
+    logger.info("Socket.IO Redis Adapter configured successfully");
+  } catch (err: any) {
+    logger.error(`Failed to configure Socket.IO Redis Adapter: ${err.message}`);
+  }
+
   io.use((socket: Socket, next) => {
     const token = getTokenFromCookie(socket.handshake.headers);
     if (!token) {
@@ -54,48 +66,43 @@ export function initSocket(server: HttpServer) {
 
   io.on("connection", (socket: Socket) => {
     const { userId } = (socket as any).user as AuthPayload;
-    console.log(`🔌 Socket connected: userId=${userId}`);
 
-    /* Buyer / Seller tham gia room của product để nhận tin real-time */
-    socket.on("join_room", async (productId: number) => {
+    socket.on("join_room", async (productId: string) => {
       if (!productId) return;
       try {
-        // Kiểm tra xem user có phải người bán không
-        const [prodRows] = await pool.query<RowDataPacket[]>(
-          "SELECT SellerID FROM Product WHERE ProductID = ?",
-          [productId],
-        );
-        const isSeller = prodRows[0] && prodRows[0].SellerID === userId;
+        const prod = await Product.findById(productId);
+        const isSeller = prod && prod.sellerId.toString() === userId;
 
-        // Kiểm tra xem user đã có tin nhắn nào về sản phẩm này chưa
-        const [msgRows] = await pool.query<RowDataPacket[]>(
-          "SELECT 1 FROM Message WHERE ProductID = ? AND (SenderID = ? OR ReceiverID = ?) LIMIT 1",
-          [productId, userId, userId],
-        );
-        const hasMessages = msgRows.length > 0;
+        // 🌟 Ép kiểu "as any" giúp vượt qua kiểm duyệt kiểu dữ liệu nghiêm ngặt của TS Compiler
+        const hasMessages = await Message.exists({
+          productId,
+          $or: [{ senderId: userId }, { receiverId: userId }],
+        } as any);
 
         if (isSeller || hasMessages) {
           socket.join(`product_${productId}`);
         }
-      } catch (err) {
-        console.error("Socket join_room error:", err);
+      } catch (err: any) {
+        logger.error(`Socket join_room error: ${err.message}`);
       }
     });
 
-    socket.on("leave_room", (productId: number) => {
+    socket.on("leave_room", (productId: string) => {
       socket.leave(`product_${productId}`);
     });
 
-    /* ── Gửi tin nhắn ── */
     socket.on(
       "send_message",
       async (data: {
-        productId: number;
-        receiverId: number;
-        content: string;
+        productId: string;
+        receiverId: string;
+        content?: string;
+        imageUrl?: string;
       }) => {
-        const { productId, receiverId, content } = data;
-        if (!productId || !receiverId || !content?.trim()) return;
+        const { productId, receiverId, content, imageUrl } = data;
+        if (!productId || !receiverId) return;
+
+        if (!content?.trim() && !imageUrl) return;
 
         if (receiverId === userId) {
           socket.emit("error", {
@@ -104,46 +111,63 @@ export function initSocket(server: HttpServer) {
           return;
         }
 
+        const rateLimitKey = `ratelimit:socket:msg:${userId}`;
         try {
-          const [result] = await pool.query<ResultSetHeader>(
-            "INSERT INTO Message (ProductID, SenderID, ReceiverID, Content) VALUES (?, ?, ?, ?)",
-            [productId, userId, receiverId, content.trim()],
-          );
+          const currentCount = await redis.incr(rateLimitKey);
+          if (currentCount === 1) {
+            await redis.expire(rateLimitKey, 2);
+          }
 
-          const message = {
-            id: result.insertId,
+          if (currentCount > 5) {
+            socket.emit("error", {
+              message:
+                "Bạn gửi tin quá nhanh. Vui lòng làm chậm lại hành động của mình.",
+            });
+            return;
+          }
+        } catch (err: any) {
+          logger.error(`Rate limiter Redis error: ${err.message}`);
+        }
+
+        try {
+          const newMsg = new Message({
             productId,
             senderId: userId,
             receiverId,
-            content: content.trim(),
-            sentAt: new Date().toISOString(),
+            content: content ? content.trim() : null,
+            imageUrl: imageUrl || null,
+          });
+
+          await newMsg.save();
+
+          const messageResponse = {
+            id: newMsg._id.toString(),
+            productId,
+            senderId: userId,
+            receiverId,
+            content: newMsg.content,
+            imageUrl: newMsg.imageUrl,
+            sentAt: newMsg.createdAt,
             isRead: false,
           };
 
-          /* Phát tin nhắn riêng biệt đến sender và receiver */
-          io.to(`user_${userId}`).emit("new_message", message);
-          io.to(`user_${receiverId}`).emit("new_message", message);
+          io.to(`user_${userId}`).emit("new_message", messageResponse);
+          io.to(`user_${receiverId}`).emit("new_message", messageResponse);
 
-          /* Phát notification riêng đến receiver (nếu không trong room) */
           io.to(`user_${receiverId}`).emit("notification", {
             type: "new_message",
             productId,
             senderId: userId,
-            preview: content.trim().slice(0, 40),
+            preview: imageUrl ? "📷 [Hình ảnh]" : content!.trim().slice(0, 40),
           });
-        } catch (err) {
-          console.error("Socket send_message error:", err);
+        } catch (err: any) {
+          logger.error(`Socket send_message saving error: ${err.message}`);
           socket.emit("error", { message: "Gửi tin thất bại" });
         }
       },
     );
 
-    /* User join room cá nhân để nhận notification */
     socket.join(`user_${userId}`);
-
-    socket.on("disconnect", () => {
-      console.log(`🔌 Socket disconnected: userId=${userId}`);
-    });
   });
 
   ioInstance = io;

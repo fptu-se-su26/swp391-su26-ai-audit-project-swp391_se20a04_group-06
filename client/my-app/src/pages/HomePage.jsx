@@ -1,11 +1,3 @@
-/**
- * HomePage.jsx
- * PERF FIX:
- *  1. useMemo cho filteredProducts & sortedProducts — không tính lại khi carousel tick
- *  2. useCallback cho handleFavoriteChange — stable reference, React.memo có tác dụng
- *  3. Truyền product.id thay vì inline closure vào onClick để tránh tạo function mới
- *  4. CSS stagger: mỗi card nhận --card-i để animation xuất hiện lần lượt
- */
 import React, {
   useState,
   useEffect,
@@ -27,7 +19,6 @@ import {
   GridIcon,
   MapIcon,
   MapPinIcon,
-  FilterIcon,
   SlidersIcon,
   CheckCircleIcon,
   AlertCircleIcon,
@@ -44,11 +35,23 @@ const PAGE_SIZE = 20;
 const SCROLL_KEY = "homepage_scroll_y";
 const HERO_BGS = ["/hero-ocean.jpg", "/hero-ocean2.jpg", "/hero-ocean3.jpg"];
 
+// Danh mục phân loại chi tiết hỗ trợ filter
+const CATEGORY_CHIPS = [
+  { id: "All", label: "🏷️ Tất cả loài" },
+  { id: "Fish", label: "🐟 Cá tươi sạch" },
+  { id: "Shrimp", label: "🦐 Tôm biển" },
+  { id: "Squid", label: "🦑 Mực, Bạch tuộc" },
+  { id: "Crab", label: "🦀 Cua, Ghẹ" },
+  { id: "Shellfish", label: "🐚 Nghêu, Sò, Ốc" },
+  { id: "Others", label: "✨ Loại khác" },
+];
+
 export function HomePage({ user }) {
   const navigate = useNavigate();
   const vtNavigate = useViewTransitionNavigate();
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("fresh");
+  const [category, setCategory] = useState("All"); // Phân loại chi tiết đang chọn
   const [gps, setGps] = useState({ status: "idle", lat: null, lng: null });
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -102,8 +105,6 @@ export function HomePage({ user }) {
     resetAutoplay();
   };
 
-  // ── PERF FIX 1: useMemo — không tính lại khi bgIndex hay state khác thay đổi ──
-
   const filteredProducts = useMemo(
     () =>
       products.filter((p) => {
@@ -154,8 +155,6 @@ export function HomePage({ user }) {
     [filteredProducts, sort],
   );
 
-  // ── GPS ────────────────────────────────────────────────
-
   const handleGps = () => {
     setGps((g) => ({ ...g, status: "loading" }));
     if (navigator.geolocation) {
@@ -197,8 +196,6 @@ export function HomePage({ user }) {
       .catch(() => {});
   }, [user]);
 
-  // ── Fetch ──────────────────────────────────────────────
-
   const fetchPage1 = useCallback(
     async (currentSearch) => {
       setLoading(true);
@@ -211,6 +208,10 @@ export function HomePage({ user }) {
         limit: String(PAGE_SIZE),
       });
       if (currentSearch) params.set("search", currentSearch);
+
+      // Đính kèm danh mục nếu được chọn
+      if (category && category !== "All") params.set("category", category);
+
       if (tab === "fresh" && gps.lat) {
         params.set("lat", gps.lat);
         params.set("lng", gps.lng);
@@ -226,13 +227,13 @@ export function HomePage({ user }) {
         setLoading(false);
       }
     },
-    [tab, gps.lat, gps.lng],
+    [tab, category, gps.lat, gps.lng],
   );
 
   useEffect(() => {
     const t = setTimeout(() => fetchPage1(search), search ? 400 : 0);
     return () => clearTimeout(t);
-  }, [tab, search, gps.lat, gps.lng, fetchPage1]);
+  }, [tab, search, category, gps.lat, gps.lng, fetchPage1]);
 
   const fetchNextPage = useCallback(async () => {
     if (loadingMore || !hasMore || loading) return;
@@ -244,6 +245,8 @@ export function HomePage({ user }) {
       limit: String(PAGE_SIZE),
     });
     if (searchRef.current) params.set("search", searchRef.current);
+    if (category && category !== "All") params.set("category", category);
+
     if (tab === "fresh" && gps.lat) {
       params.set("lat", gps.lat);
       params.set("lng", gps.lng);
@@ -259,7 +262,7 @@ export function HomePage({ user }) {
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasMore, loading, page, tab, gps.lat, gps.lng]);
+  }, [loadingMore, hasMore, loading, page, tab, category, gps.lat, gps.lng]);
 
   useEffect(() => {
     observerRef.current?.disconnect();
@@ -289,14 +292,11 @@ export function HomePage({ user }) {
     [vtNavigate],
   );
 
-  // ── PERF FIX 2: stable callback — React.memo trên ProductCard sẽ có tác dụng ──
   const handleFavoriteChange = useCallback((id, fav) => {
     setFavoriteIds((prev) =>
       fav ? [...prev, id] : prev.filter((x) => x !== id),
     );
   }, []);
-
-  // ── GPS button label ───────────────────────────────────
 
   const gpsLabel =
     {
@@ -306,13 +306,9 @@ export function HomePage({ user }) {
       idle: "Bật GPS xem gần bạn",
     }[gps.status] ?? "Bật GPS";
 
-  // ── Render ─────────────────────────────────────────────
-
   return (
     <div className={styles.page}>
-      {/* ══ HERO ══ */}
       <section className={styles.hero} aria-label="Banner">
-        {/* Sliding track */}
         <div className={styles.heroTrackWrapper}>
           <div
             className={styles.heroTrack}
@@ -336,7 +332,6 @@ export function HomePage({ user }) {
 
         <div className={styles.heroOverlay} />
 
-        {/* Arrows */}
         <button
           className={`${styles.heroArrow} ${styles.prev}`}
           onClick={handlePrev}
@@ -352,7 +347,6 @@ export function HomePage({ user }) {
           <ChevronRightIcon size={22} />
         </button>
 
-        {/* Dots */}
         <div className={styles.heroDots} role="tablist" aria-label="Slides">
           {HERO_BGS.map((_, i) => (
             <button
@@ -371,7 +365,6 @@ export function HomePage({ user }) {
           ))}
         </div>
 
-        {/* Content */}
         <div className={styles.heroContent}>
           <div className={styles.heroCard}>
             <p className={styles.heroEyebrow}>
@@ -388,7 +381,6 @@ export function HomePage({ user }) {
               trong 20km · Khô giao toàn quốc.
             </p>
 
-            {/* ── Search (Đã chuyển lên đây) ── */}
             <div
               className={styles.searchWrap}
               style={{ margin: "16px 0 24px 0" }}
@@ -428,13 +420,11 @@ export function HomePage({ user }) {
         </div>
       </section>
 
-      {/* ══ MAIN CONTENT ══ */}
       <div className={styles.content}>
         <div className={styles.layoutWrapper}>
-          {/* ── THANH DANH MỤC DỌC BÊN TRÁI ── */}
           <aside className={styles.leftSidebar}>
             <div className={styles.sidebarSticky}>
-              <h3 className={styles.sidebarTitle}>Loại hải sản</h3>
+              <h3 className={styles.sidebarTitle}>Nguồn hải sản</h3>
               <div className={styles.verticalTabGroup} role="tablist">
                 {[
                   { k: "fresh", l: "🌊 Hải sản tươi" },
@@ -457,9 +447,51 @@ export function HomePage({ user }) {
             </div>
           </aside>
 
-          {/* ── PHẦN NỘI DUNG CHÍNH BÊN PHẢI ── */}
           <div className={styles.mainLayoutBody}>
-            {/* ── Filter row (Chỉ giữ lại chipGroup lọc nhanh) ── */}
+            {/* Thanh cuộn ngang bộ lọc danh mục động nâng cao */}
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                overflowX: "auto",
+                paddingBottom: 10,
+                marginBottom: 20,
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+              }}
+              className="category-scroll-container"
+            >
+              {CATEGORY_CHIPS.map((cat) => {
+                const isSelected = category === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => {
+                      setCategory(cat.id);
+                      setProducts([]);
+                    }}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: 20,
+                      border: `1.5px solid ${isSelected ? C.ocean : C.border}`,
+                      background: isSelected ? C.ocean : C.white,
+                      color: isSelected ? C.white : C.text,
+                      cursor: "pointer",
+                      fontWeight: 700,
+                      fontSize: 13,
+                      whiteSpace: "nowrap",
+                      transition: "all 0.2s ease",
+                      boxShadow: isSelected
+                        ? "0 4px 10px rgba(11, 79, 108, 0.2)"
+                        : "none",
+                    }}
+                  >
+                    {cat.label}
+                  </button>
+                );
+              })}
+            </div>
+
             <div className={styles.filterRow}>
               <div className={styles.chipGroup}>
                 {[
@@ -493,7 +525,6 @@ export function HomePage({ user }) {
               </div>
             </div>
 
-            {/* ── Advanced filters ── */}
             <button
               className={`${styles.advancedToggle} ${hasAdvancedFilter ? styles.hasFilter : ""}`}
               onClick={() => setShowAdvanced((v) => !v)}
@@ -567,7 +598,6 @@ export function HomePage({ user }) {
               </div>
             )}
 
-            {/* ── Sort + View toggle ── */}
             <div className={styles.sortRow}>
               <div className={styles.sortLeft}>
                 <span className={styles.sortLabel}>Sắp xếp:</span>
@@ -608,7 +638,6 @@ export function HomePage({ user }) {
               )}
             </div>
 
-            {/* ── Info / error banners ── */}
             {tab === "fresh" && (
               <div className={styles.infoBanner} role="note">
                 <InfoIcon size={14} style={{ flexShrink: 0, marginTop: 1 }} />
@@ -627,7 +656,6 @@ export function HomePage({ user }) {
               </div>
             )}
 
-            {/* ── Products ── */}
             {loading ? (
               <div className={styles.grid}>
                 {Array.from({ length: 8 }).map((_, i) => (

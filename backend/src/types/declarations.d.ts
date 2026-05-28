@@ -1,18 +1,23 @@
-declare module 'streamifier' {
-  import { Readable } from 'stream';
+import { Readable } from "stream";
+
+declare module "streamifier" {
   export function createReadStream(
     buffer: Buffer | string,
-    options?: any
+    options?: any,
   ): Readable;
 }
 
-// Mở rộng Request của Express để chứa thông tin user từ JWT
-// Tránh phải dùng (req as any).user ở mọi controller
-declare namespace Express {
-  interface Request {
-    user: {
-      userId: number;
-      role: 'User' | 'Admin';
-    };
+// 🌟 Mở rộng thuộc tính Express Request một cách toàn cục (Global)
+declare global {
+  namespace Express {
+    interface Request {
+      user: {
+        userId: string;
+        role: "User" | "Admin";
+      };
+      csrfToken?: string;
+    }
   }
 }
+
+export {};

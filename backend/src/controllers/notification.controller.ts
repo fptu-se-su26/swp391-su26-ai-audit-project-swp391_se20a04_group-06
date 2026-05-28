@@ -1,23 +1,25 @@
 import { Request, Response } from "express";
-import { pool } from "../db";
-import { RowDataPacket } from "mysql2";
-import { sendServerError } from "../helpers/response.helper";
+import { Notification } from "../models/Notification";
+import { sendServerError, parseId } from "../helpers/response.helper";
 
 export async function getNotifications(req: Request, res: Response) {
   const { userId } = req.user;
   try {
-    const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT
-        NotificationID AS id, Type AS type, Content AS content,
-        IsRead AS isRead, CreatedAt AS createdAt,
-        ProductID AS productId, ReviewID AS reviewId
-       FROM Notification
-       WHERE UserID = ?
-       ORDER BY CreatedAt DESC
-       LIMIT 50`,
-      [userId],
-    );
-    return res.json(rows);
+    const notifications = await Notification.find({ userId })
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    const formattedRows = notifications.map((n) => ({
+      id: n._id.toString(),
+      type: n.type,
+      content: n.content,
+      isRead: n.isRead ? 1 : 0,
+      createdAt: n.createdAt,
+      productId: n.productId?.toString() || null,
+      reviewId: n.reviewId?.toString() || null
+    }));
+
+    return res.json(formattedRows);
   } catch (err) {
     return sendServerError(res, err);
   }
@@ -26,9 +28,7 @@ export async function getNotifications(req: Request, res: Response) {
 export async function markAllAsRead(req: Request, res: Response) {
   const { userId } = req.user;
   try {
-    await pool.query("UPDATE Notification SET IsRead = 1 WHERE UserID = ?", [
-      userId,
-    ]);
+    await Notification.updateMany({ userId }, { $set: { isRead: true } });
     return res.json({ message: "Đã đánh dấu đọc toàn bộ thông báo" });
   } catch (err) {
     return sendServerError(res, err);
@@ -38,23 +38,19 @@ export async function markAllAsRead(req: Request, res: Response) {
 /* ─── PATCH /api/notifications/:id ─── */
 export async function markSingleAsRead(req: Request, res: Response) {
   const { userId } = req.user;
-  const notifId = parseInt(req.params.id, 10);
+  const notifId = parseId(req.params.id);
 
-  if (!notifId || isNaN(notifId))
+  if (!notifId)
     return res.status(400).json({ message: "ID thông báo không hợp lệ" });
 
   try {
-    const [rows] = await pool.query<RowDataPacket[]>(
-      "SELECT NotificationID FROM Notification WHERE NotificationID = ? AND UserID = ?",
-      [notifId, userId],
-    );
-    if (!rows[0])
+    const notif = await Notification.findOne({ _id: notifId, userId });
+    if (!notif)
       return res.status(404).json({ message: "Không tìm thấy thông báo" });
 
-    await pool.query(
-      "UPDATE Notification SET IsRead = 1 WHERE NotificationID = ? AND UserID = ?",
-      [notifId, userId],
-    );
+    notif.isRead = true;
+    await notif.save();
+
     return res.json({ message: "Đã đánh dấu đọc thông báo" });
   } catch (err) {
     return sendServerError(res, err);

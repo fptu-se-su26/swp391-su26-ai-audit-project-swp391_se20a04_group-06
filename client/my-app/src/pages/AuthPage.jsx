@@ -3,15 +3,13 @@
  */
 
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { api } from "../services/api";
 import { SparklesIcon, AlertCircleIcon } from "../components/icons";
 import { useAuth } from "../context/AuthContext";
 
 export function AuthPage() {
   const navigate = useNavigate();
-
-  // 3. Lấy trực tiếp setUser từ Context thông qua hook useAuth
   const { setUser } = useAuth();
 
   const [mode, setMode] = useState("login");
@@ -22,7 +20,6 @@ export function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
 
-  // Helper tối ưu hóa giao diện Input thủ công
   const inputStyle = (field) => ({
     width: "100%",
     padding: "12px 16px",
@@ -39,7 +36,6 @@ export function AuthPage() {
       focusedField === field ? "0 0 0 3px rgba(8, 29, 44, 0.08)" : "none",
   });
 
-  // Luồng logic API nguyên bản 100%
   const submit = async (e) => {
     e.preventDefault();
     setErr("");
@@ -94,7 +90,6 @@ export function AuthPage() {
       >
         {/* ── Header ── */}
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          {/* Logo Mark tối giản tinh tế */}
           <div
             style={{
               width: 56,
@@ -136,7 +131,6 @@ export function AuthPage() {
             Tươi từ đại dương
           </p>
 
-          {/* Bộ chuyển Tab dẹt phẳng phong cách hiện đại */}
           <div
             style={{
               display: "flex",
@@ -179,7 +173,7 @@ export function AuthPage() {
           </div>
         </div>
 
-        {/* ── Form Nhập Liệu ── */}
+        {/* ── Form ── */}
         <form
           onSubmit={submit}
           style={{ display: "flex", flexDirection: "column", gap: 14 }}
@@ -220,11 +214,33 @@ export function AuthPage() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <label
-              style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)" }}
+            {/* BUG FIX: Thêm link "Quên mật khẩu?" cạnh label Mật khẩu */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
             >
-              Mật khẩu
-            </label>
+              <label
+                style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)" }}
+              >
+                Mật khẩu
+              </label>
+              {mode === "login" && (
+                <Link
+                  to="/quen-mat-khau"
+                  style={{
+                    fontSize: 11,
+                    color: "var(--ocean)",
+                    textDecoration: "none",
+                    fontWeight: 600,
+                  }}
+                >
+                  Quên mật khẩu?
+                </Link>
+              )}
+            </div>
             <input
               value={pw}
               onChange={(e) => setPw(e.target.value)}
@@ -236,7 +252,6 @@ export function AuthPage() {
             />
           </div>
 
-          {/* Banner báo lỗi mảnh, trực quan */}
           {err && (
             <div
               style={{
@@ -259,7 +274,6 @@ export function AuthPage() {
             </div>
           )}
 
-          {/* Nút bấm phẳng (Flat premium button) */}
           <button
             type="submit"
             disabled={loading}
@@ -292,7 +306,6 @@ export function AuthPage() {
           </button>
         </form>
 
-        {/* Footer bảo mật tối giản */}
         <div
           style={{
             marginTop: 24,

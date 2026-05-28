@@ -1,48 +1,58 @@
-import { Request, Response } from 'express';
-import { pool } from '../db';
-import { RowDataPacket } from 'mysql2';
-import { sendServerError, parseId } from '../helpers/response.helper';
+import { Request, Response } from "express";
+import { User } from "../models/User";
+import { sendServerError } from "../helpers/response.helper";
+import mongoose from "mongoose";
 
 export async function toggleFollow(req: Request, res: Response) {
-  const { userId: followerId } = req.user;
-  const sellerId = parseId(req.params.sellerId);
+  const { userId } = req.user;
+  const sellerId = req.params.sellerId;
 
-  if (!sellerId) return res.status(400).json({ message: 'ID người bán không hợp lệ' });
-  if (followerId === sellerId) return res.status(400).json({ message: 'Không thể tự follow chính mình' });
+  if (!sellerId || !mongoose.Types.ObjectId.isValid(sellerId)) {
+    return res.status(400).json({ message: "ID người bán không hợp lệ" });
+  }
+  if (userId.toString() === sellerId) {
+    return res.status(400).json({ message: "Không thể tự follow chính mình" });
+  }
 
   try {
-    const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT FollowID FROM Follow WHERE FollowerID = ? AND SellerID = ?',
-      [followerId, sellerId],
-    );
+    const user = await User.findById(userId);
+    if (!user)
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
 
-    if (rows.length > 0) {
-      await pool.query('DELETE FROM Follow WHERE FollowID = ?', [rows[0].FollowID]);
-      return res.json({ message: 'Đã hủy theo dõi', isFollowing: false });
+    const sellerObjId = new mongoose.Types.ObjectId(sellerId);
+    const isFollowing = user.following.some((id) => id.toString() === sellerId);
+
+    if (isFollowing) {
+      await User.findByIdAndUpdate(userId, {
+        $pull: { following: sellerObjId },
+      });
+      return res.json({ message: "Đã hủy theo dõi", isFollowing: false });
     }
 
-    await pool.query(
-      'INSERT INTO Follow (FollowerID, SellerID) VALUES (?, ?)',
-      [followerId, sellerId],
-    );
-    return res.json({ message: 'Đã theo dõi thành công', isFollowing: true });
+    await User.findByIdAndUpdate(userId, {
+      $addToSet: { following: sellerObjId },
+    });
+    return res.json({ message: "Đã theo dõi thành công", isFollowing: true });
   } catch (err) {
     return sendServerError(res, err);
   }
 }
 
 export async function checkFollow(req: Request, res: Response) {
-  const { userId: followerId } = req.user;
-  const sellerId = parseId(req.params.sellerId);
+  const { userId } = req.user;
+  const sellerId = req.params.sellerId;
 
-  if (!sellerId) return res.status(400).json({ message: 'ID người bán không hợp lệ' });
+  if (!sellerId || !mongoose.Types.ObjectId.isValid(sellerId)) {
+    return res.status(400).json({ message: "ID người bán không hợp lệ" });
+  }
 
   try {
-    const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT FollowID FROM Follow WHERE FollowerID = ? AND SellerID = ?',
-      [followerId, sellerId],
-    );
-    return res.json({ isFollowing: rows.length > 0 });
+    const user = await User.findById(userId);
+    if (!user)
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
+
+    const isFollowing = user.following.some((id) => id.toString() === sellerId);
+    return res.json({ isFollowing });
   } catch (err) {
     return sendServerError(res, err);
   }

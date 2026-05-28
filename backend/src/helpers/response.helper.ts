@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import mongoose from 'mongoose';
 
 /**
  * Ghi log lỗi server và trả về HTTP 500 chuẩn.
@@ -12,10 +13,9 @@ export function sendServerError(res: Response, err: unknown): Response {
 
 /**
  * Parse và validate một tham số ID từ URL params.
- * Trả về số nguyên dương hợp lệ, hoặc undefined nếu không hợp lệ.
+ * Trả về chuỗi ObjectId hợp lệ, hoặc undefined nếu không hợp lệ.
  */
-export function parseId(raw: string | undefined): number | undefined {
+export function parseId(raw: string | undefined): string | undefined {
   if (!raw) return undefined;
-  const id = parseInt(raw, 10);
-  return isNaN(id) || id <= 0 ? undefined : id;
+  return mongoose.Types.ObjectId.isValid(raw) ? raw : undefined;
 }

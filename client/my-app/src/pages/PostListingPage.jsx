@@ -1,18 +1,21 @@
-/**
- * PostListingPage.jsx — Modernized UI/UX Version
- *
- * Giữ nguyên 100% logic tự động reverse geocoding qua Nominatim,
- * tải file FormData lên API, kiểm duyệt GPS và giới hạn tối đa 5 ảnh.
- */
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { C } from "../utils/theme";
 import { api } from "../services/api";
 
+const CATEGORIES = [
+  { id: "Fish", label: "🐟 Cá các loại" },
+  { id: "Shrimp", label: "🦐 Tôm sống" },
+  { id: "Squid", label: "🦑 Mực, Bạch tuộc" },
+  { id: "Crab", label: "🦀 Cua, Ghẹ" },
+  { id: "Shellfish", label: "🐚 Sò, Nghêu, Ốc" },
+  { id: "Others", label: "✨ Phân loại khác" },
+];
+
 export function PostListingPage({ user }) {
   const navigate = useNavigate();
   const [type, setType] = useState("Fresh");
+  const [category, setCategory] = useState("Fish"); // Giá trị phân loại mặc định
   const [salesType, setSalesType] = useState("Retail");
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
@@ -28,13 +31,9 @@ export function PostListingPage({ user }) {
   const [done, setDone] = useState(false);
   const [err, setErr] = useState("");
 
-  // State theo dõi ô nhập liệu đang được focus để làm hiệu ứng phát sáng viền
   const [focusedField, setFocusedField] = useState(null);
-
-  // States hỗ trợ hover các nút chọn loại
   const [hoveredType, setHoveredType] = useState(null);
 
-  // Hàm helper sinh CSS phát sáng động cho các Input
   const getInputStyle = (fieldName) => ({
     width: "100%",
     padding: "12px 14px",
@@ -91,6 +90,7 @@ export function PostListingPage({ user }) {
     try {
       const body = {
         type,
+        category, // Đính kèm phân loại chi tiết vào payload
         name,
         description: desc,
         price,
@@ -129,7 +129,6 @@ export function PostListingPage({ user }) {
     }
   };
 
-  // Giao diện Đăng Bài Thành Công nâng cấp
   if (done)
     return (
       <div
@@ -202,7 +201,6 @@ export function PostListingPage({ user }) {
 
   return (
     <div style={{ maxWidth: 720, margin: "0 auto", padding: "32px 24px 80px" }}>
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -238,7 +236,6 @@ export function PostListingPage({ user }) {
         </h1>
       </div>
 
-      {/* Phân loại loại hải sản (🌊 Tươi vs 🔥 Khô) */}
       <section
         style={{
           background: C.white,
@@ -320,7 +317,6 @@ export function PostListingPage({ user }) {
         </div>
       </section>
 
-      {/* GPS Banner chuyên nghiệp */}
       {type === "Fresh" && (
         <div
           style={{
@@ -375,7 +371,6 @@ export function PostListingPage({ user }) {
         </div>
       )}
 
-      {/* Địa chỉ dịch tự động từ GPS */}
       {type === "Fresh" && gps.status === "ok" && (
         <div style={{ marginBottom: 16 }}>
           <div
@@ -387,9 +382,7 @@ export function PostListingPage({ user }) {
             }}
           >
             📍 Khu vực bán hải sản tươi sống{" "}
-            <span style={{ fontWeight: 400 }}>
-              (tự động lấy từ GPS, bạn có thể chỉnh lại)
-            </span>
+            <span style={{ fontWeight: 400 }}>(tự động lấy từ GPS)</span>
           </div>
           <input
             value={address}
@@ -402,7 +395,6 @@ export function PostListingPage({ user }) {
         </div>
       )}
 
-      {/* Form thông tin chi tiết */}
       <section
         style={{
           background: C.white,
@@ -426,52 +418,98 @@ export function PostListingPage({ user }) {
           Thông tin chi tiết mẻ hàng
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {/* Tên hải sản */}
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onFocus={() => setFocusedField("name")}
-            onBlur={() => setFocusedField(null)}
-            placeholder="Tên hải sản (VD: Cá Thu Câu, Cá Bớp Cảng Sơn Trà...)"
-            style={getInputStyle("name")}
-          />
+          {/* Dropdown Phân loại chi tiết (Category) */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <label
+              style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)" }}
+            >
+              Phân loại mẻ hàng *
+            </label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              onFocus={() => setFocusedField("category")}
+              onBlur={() => setFocusedField(null)}
+              style={getInputStyle("category")}
+            >
+              {CATEGORIES.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          {/* Giá và Trọng lượng xếp lưới */}
-          <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}
-          >
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <label
+              style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)" }}
+            >
+              Tên sản phẩm *
+            </label>
             <input
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              onFocus={() => setFocusedField("price")}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onFocus={() => setFocusedField("name")}
               onBlur={() => setFocusedField(null)}
-              placeholder="Đơn giá (VNĐ / kg)"
-              style={getInputStyle("price")}
-              type="number"
-            />
-            <input
-              value={weight}
-              onChange={(e) => setWeight(e.target.value)}
-              onFocus={() => setFocusedField("weight")}
-              onBlur={() => setFocusedField(null)}
-              placeholder="Khối lượng sẵn có (kg)"
-              style={getInputStyle("weight")}
-              type="number"
+              placeholder="Tên hải sản (VD: Cá Thu Câu, Cá Bớp Cảng Sơn Trà...)"
+              style={getInputStyle("name")}
             />
           </div>
 
-          {/* Mô tả chi tiết */}
-          <textarea
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
-            onFocus={() => setFocusedField("desc")}
-            onBlur={() => setFocusedField(null)}
-            placeholder="Mô tả chất lượng hải sản (VD: Mới đánh bắt còn bơi, béo ngọt, làm sạch miễn phí...)"
-            rows={4}
-            style={{ ...getInputStyle("desc"), resize: "vertical" }}
-          />
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <label
+                style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)" }}
+              >
+                Giá bán (VND/kg) *
+              </label>
+              <input
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                onFocus={() => setFocusedField("price")}
+                onBlur={() => setFocusedField(null)}
+                placeholder="Đơn giá"
+                style={getInputStyle("price")}
+                type="number"
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <label
+                style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)" }}
+              >
+                Trọng lượng (kg) *
+              </label>
+              <input
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                onFocus={() => setFocusedField("weight")}
+                onBlur={() => setFocusedField(null)}
+                placeholder="Khối lượng sẵn có"
+                style={getInputStyle("weight")}
+                type="number"
+              />
+            </div>
+          </div>
 
-          {/* Loại bán sỉ/lẻ Sliding Switch */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <label
+              style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)" }}
+            >
+              Mô tả sản phẩm
+            </label>
+            <textarea
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+              onFocus={() => setFocusedField("desc")}
+              onBlur={() => setFocusedField(null)}
+              placeholder="Mô tả chất lượng hải sản (VD: Mới đánh bắt còn bơi, ngọt béo...)"
+              rows={4}
+              style={{ ...getInputStyle("desc"), resize: "vertical" }}
+            />
+          </div>
+
           <div
             style={{
               display: "grid",
@@ -488,6 +526,7 @@ export function PostListingPage({ user }) {
             ].map(([k, l]) => (
               <button
                 key={k}
+                type="button"
                 onClick={() => setSalesType(k)}
                 style={{
                   padding: "10px",
@@ -509,17 +548,22 @@ export function PostListingPage({ user }) {
             ))}
           </div>
 
-          {/* Form động cho Tươi hoặc Khô */}
           {type === "Fresh" && (
-            <input
-              value={catchTime}
-              onChange={(e) => setCatchTime(e.target.value)}
-              onFocus={() => setFocusedField("catchTime")}
-              onBlur={() => setFocusedField(null)}
-              placeholder="Thời gian đánh bắt kéo mẻ lưới"
-              style={getInputStyle("catchTime")}
-              type="datetime-local"
-            />
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <label
+                style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)" }}
+              >
+                Thời gian đánh bắt *
+              </label>
+              <input
+                value={catchTime}
+                onChange={(e) => setCatchTime(e.target.value)}
+                onFocus={() => setFocusedField("catchTime")}
+                onBlur={() => setFocusedField(null)}
+                style={getInputStyle("catchTime")}
+                type="datetime-local"
+              />
+            </div>
           )}
           {type === "Dried" && (
             <div
@@ -529,29 +573,49 @@ export function PostListingPage({ user }) {
                 gap: 14,
               }}
             >
-              <input
-                value={origin}
-                onChange={(e) => setOrigin(e.target.value)}
-                onFocus={() => setFocusedField("origin")}
-                onBlur={() => setFocusedField(null)}
-                placeholder="Xuất xứ nơi sản xuất (VD: Phú Quốc)"
-                style={getInputStyle("origin")}
-              />
-              <input
-                value={expiry}
-                onChange={(e) => setExpiry(e.target.value)}
-                onFocus={() => setFocusedField("expiry")}
-                onBlur={() => setFocusedField(null)}
-                placeholder="Hạn sử dụng ghi trên bao bì"
-                style={getInputStyle("expiry")}
-                type="date"
-              />
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <label
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "var(--muted)",
+                  }}
+                >
+                  Xuất xứ *
+                </label>
+                <input
+                  value={origin}
+                  onChange={(e) => setOrigin(e.target.value)}
+                  onFocus={() => setFocusedField("origin")}
+                  onBlur={() => setFocusedField(null)}
+                  placeholder="VD: Phú Quốc"
+                  style={getInputStyle("origin")}
+                />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <label
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "var(--muted)",
+                  }}
+                >
+                  Hạn sử dụng *
+                </label>
+                <input
+                  value={expiry}
+                  onChange={(e) => setExpiry(e.target.value)}
+                  onFocus={() => setFocusedField("expiry")}
+                  onBlur={() => setFocusedField(null)}
+                  style={getInputStyle("expiry")}
+                  type="date"
+                />
+              </div>
             </div>
           )}
         </div>
       </section>
 
-      {/* Ảnh mẻ hải sản uploader */}
       <section
         style={{
           background: C.white,
@@ -565,7 +629,7 @@ export function PostListingPage({ user }) {
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
+            justifyContext: "space-between",
             alignItems: "center",
             marginBottom: 14,
           }}
@@ -579,16 +643,15 @@ export function PostListingPage({ user }) {
               letterSpacing: "0.05em",
             }}
           >
-            📸 Hình ảnh thực tế của mẻ hàng
+            📸 Hình ảnh thực tế mẻ hàng
           </div>
           {images.length > 0 && (
             <span style={{ fontSize: 12, color: C.muted, fontWeight: 700 }}>
-              Đã chọn: {images.length} / 5 ảnh tối đa
+              Đã chọn: {images.length} / 5 ảnh
             </span>
           )}
         </div>
 
-        {/* Drop zone thiết kế tròn bo */}
         <label
           style={{
             display: "block",
@@ -615,8 +678,7 @@ export function PostListingPage({ user }) {
             onChange={(e) =>
               setImages((prev) => {
                 const newFiles = Array.from(e.target.files);
-                const combined = [...prev, ...newFiles].slice(0, 5);
-                return combined;
+                return [...prev, ...newFiles].slice(0, 5);
               })
             }
             style={{ display: "none" }}
@@ -625,21 +687,19 @@ export function PostListingPage({ user }) {
             <>
               <div style={{ fontSize: 36, marginBottom: 8 }}>🖼️</div>
               <div style={{ fontSize: 14, fontWeight: 700, color: C.ocean }}>
-                Nhấn chuột để tải ảnh hải sản lên
+                Nhấn để chọn ảnh hải sản
               </div>
               <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
-                Hỗ trợ PNG, JPG • Hệ thống tự đặt ảnh thứ nhất làm ảnh đại diện
-                bìa
+                Hỗ trợ PNG, JPG, WEBP
               </div>
             </>
           ) : (
             <div style={{ fontSize: 12, color: C.ok, fontWeight: 700 }}>
-              ➕ Thêm ảnh hải sản khác
+              ➕ Chọn thêm ảnh khác
             </div>
           )}
         </label>
 
-        {/* Preview grid */}
         {images.length > 0 && (
           <div
             style={{
@@ -682,8 +742,8 @@ export function PostListingPage({ user }) {
                     Ảnh bìa chính
                   </div>
                 )}
-                {/* Nút xóa ảnh đỏ rực rỡ có viền trắng */}
                 <button
+                  type="button"
                   onClick={() =>
                     setImages((prev) => prev.filter((_, j) => j !== i))
                   }
@@ -700,20 +760,12 @@ export function PostListingPage({ user }) {
                     cursor: "pointer",
                     fontSize: 10,
                     fontWeight: 800,
-                    lineHeight: 1,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     padding: 0,
                     boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-                    transition: "transform 0.2s",
                   }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.transform = "scale(1.1)")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.transform = "none")
-                  }
                 >
                   ✕
                 </button>
@@ -723,7 +775,6 @@ export function PostListingPage({ user }) {
         )}
       </section>
 
-      {/* Alert lỗi lề trái đỏ đồng bộ */}
       {err && (
         <div
           style={{
@@ -734,16 +785,12 @@ export function PostListingPage({ user }) {
             marginBottom: 16,
             fontSize: 13,
             fontWeight: 700,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
           }}
         >
           ⚠️ {err}
         </div>
       )}
 
-      {/* Nút Đăng Bài lớn nổi bật */}
       <button
         onClick={submit}
         disabled={loading}
@@ -763,16 +810,8 @@ export function PostListingPage({ user }) {
           boxShadow: loading ? "none" : "0 4px 14px rgba(232, 100, 58, 0.3)",
           transition: "all 0.25s ease",
         }}
-        onMouseEnter={(e) => {
-          if (!loading) e.currentTarget.style.transform = "translateY(-1.5px)";
-        }}
-        onMouseLeave={(e) => {
-          if (!loading) e.currentTarget.style.transform = "none";
-        }}
       >
-        {loading
-          ? "⏳ Hệ thống đang xuất bản bài viết..."
-          : "🚀 Xác nhận đăng bài ngay"}
+        {loading ? "⏳ Đang đăng bài bán..." : "🚀 Đăng mẻ hàng ngay"}
       </button>
     </div>
   );

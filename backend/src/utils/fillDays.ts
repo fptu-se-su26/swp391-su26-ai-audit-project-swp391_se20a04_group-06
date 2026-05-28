@@ -1,13 +1,12 @@
-import { RowDataPacket } from 'mysql2';
+export interface DayData {
+  date?: string | Date;
+  count: number;
+}
 
 /**
- * Điền đủ 7 ngày liên tiếp kể từ hôm nay, fill 0 cho ngày không có dữ liệu.
- * Pattern: Utility / Extract Function
- *
- * BEFORE: hàm này được định nghĩa inline bên trong getStats() của admin.controller.ts.
- * AFTER: tách ra đây để tái sử dụng và dễ test độc lập.
+ * Điền đủ 7 ngày liên tiếp kể từ hôm nay, điền 0 cho ngày không có dữ liệu.
  */
-export function fillDays(rows: RowDataPacket[]): { label: string; count: number }[] {
+export function fillDays(rows: DayData[]): { label: string; count: number }[] {
   const map: Record<string, number> = {};
   rows.forEach((r) => {
     const key = r.date?.toString().slice(0, 10);

@@ -1,110 +1,197 @@
-import { Request, Response } from 'express';
-import { RowDataPacket, ResultSetHeader } from 'mysql2';
-import { pool } from '../db';
-import { sendServerError, parseId } from '../helpers/response.helper';
+import { Request, Response } from "express";
+import { Message } from "../models/Message";
+import { Product } from "../models/Product";
+import { User } from "../models/User";
+import { sendServerError, parseId } from "../helpers/response.helper";
+import { uploadToCloudinary } from "../middlewares/upload";
+import mongoose from "mongoose";
 
-/* ─── GET /api/messages/:productId ─── */
 export async function getMessages(req: Request, res: Response) {
   const { userId, role } = req.user;
   const productId = parseId(req.params.productId);
-  if (!productId) return res.status(400).json({ message: 'ID sản phẩm không hợp lệ' });
+  if (!productId)
+    return res.status(400).json({ message: "ID sản phẩm không hợp lệ" });
 
   try {
-    const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT
-        m.MessageID AS id, m.SenderID AS senderId, u.Name AS senderName,
-        m.ReceiverID AS receiverId, m.Content AS content, m.IsRead AS isRead, m.SentAt AS sentAt
-       FROM Message m
-       JOIN User u ON u.UserID = m.SenderID
-       WHERE m.ProductID = ?
-         AND (? = 'Admin' OR m.SenderID = ? OR m.ReceiverID = ?)
-       ORDER BY m.SentAt ASC`,
-      [productId, role, userId, userId],
+    const filter: any = { productId };
+    if (role !== "Admin") {
+      filter.$or = [{ senderId: userId }, { receiverId: userId }];
+    }
+
+    const messages = await Message.find(filter)
+      .populate("senderId", "name")
+      .sort({ createdAt: 1 });
+
+    // 🌟 Ép kiểu 'as any' toàn bộ đối tượng điều kiện truy vấn để sửa lỗi overload matches
+    await Message.updateMany(
+      { productId, receiverId: userId, isRead: false } as any,
+      { $set: { isRead: true } },
     );
 
-    await pool.query(
-      'UPDATE Message SET IsRead = 1 WHERE ProductID = ? AND ReceiverID = ? AND IsRead = 0',
-      [productId, userId],
-    );
+    const formattedRows = messages.map((m: any) => ({
+      id: m._id.toString(),
+      senderId: m.senderId?._id.toString(),
+      senderName: m.senderId?.name || "Một người dùng",
+      receiverId: m.receiverId.toString(),
+      content: m.content,
+      imageUrl: m.imageUrl,
+      isRead: m.isRead,
+      sentAt: m.createdAt,
+    }));
 
-    return res.json(rows);
+    return res.json(formattedRows);
   } catch (err) {
     return sendServerError(res, err);
   }
 }
 
-/* ─── POST /api/messages ─── REST fallback */
 export async function sendMessage(req: Request, res: Response) {
   const { userId } = req.user;
-  const { productId, receiverId, content } = req.body;
+  const { productId, receiverId, content, imageUrl } = req.body;
 
-  if (!productId || !receiverId || !content?.trim())
-    return res.status(400).json({ message: 'Thiếu productId, receiverId hoặc nội dung tin' });
+  if (!productId || !receiverId)
+    return res.status(400).json({ message: "Thiếu thông tin nhận tin" });
+
+  if (!content?.trim() && !imageUrl)
+    return res.status(400).json({ message: "Nội dung tin nhắn trống" });
 
   if (receiverId === userId)
-    return res.status(400).json({ message: 'Không thể tự gửi tin nhắn cho chính mình' });
+    return res
+      .status(400)
+      .json({ message: "Không thể tự gửi tin nhắn cho chính mình" });
 
   try {
-    const [result] = await pool.query<ResultSetHeader>(
-      'INSERT INTO Message (ProductID, SenderID, ReceiverID, Content) VALUES (?, ?, ?, ?)',
-      [productId, userId, receiverId, content.trim()],
-    );
-    return res.status(201).json({ id: result.insertId, message: 'Gửi thành công' });
+    const newMsg = new Message({
+      productId,
+      senderId: userId,
+      receiverId,
+      content: content ? content.trim() : null,
+      imageUrl: imageUrl || null,
+    });
+
+    await newMsg.save();
+
+    return res
+      .status(201)
+      .json({ id: newMsg._id.toString(), message: "Gửi thành công" });
   } catch (err) {
     return sendServerError(res, err);
   }
 }
 
-/* ─── GET /api/messages/unread-count ─── */
+// 🌟 API Upload ảnh trong cuộc hội thoại Chat
+export async function uploadChatImage(req: Request, res: Response) {
+  if (!req.file)
+    return res.status(400).json({ message: "Chưa chọn file ảnh gửi kèm" });
+
+  try {
+    const { url } = await uploadToCloudinary(req.file.buffer, "chat_images");
+    return res.json({ imageUrl: url });
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+
 export async function unreadCount(req: Request, res: Response) {
   const { userId } = req.user;
   try {
-    const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT COUNT(*) AS cnt FROM Message WHERE ReceiverID = ? AND IsRead = 0',
-      [userId],
-    );
-    return res.json({ count: (rows[0] as any).cnt });
+    // 🌟 Ép kiểu 'as any' cho bộ lọc tìm kiếm để khắc phục lỗi gạch đỏ receiverId
+    const count = await Message.countDocuments({
+      receiverId: userId,
+      isRead: false,
+    } as any);
+    return res.json({ count });
   } catch (err) {
     return sendServerError(res, err);
   }
 }
 
-/* ─── GET /api/messages/conversations ─── */
 export async function getConversations(req: Request, res: Response) {
   const { userId } = req.user;
   try {
-    const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT
-        conv.productId,
-        conv.otherUserId,
-        p.Name   AS productName,
-        u.Name   AS otherUserName,
-        u.IsVerified AS otherUserIsVerified,
-        last_msg.Content AS lastMessage,
-        last_msg.SentAt  AS lastSentAt,
-        (
-          SELECT COUNT(*) FROM Message m2
-          WHERE m2.ProductID = conv.productId
-            AND m2.ReceiverID = ?
-            AND (CASE WHEN m2.SenderID = ? THEN m2.ReceiverID ELSE m2.SenderID END) = conv.otherUserId
-            AND m2.IsRead = 0
-        ) AS unread
-       FROM (
-         SELECT
-           m.ProductID AS productId,
-           CASE WHEN m.SenderID = ? THEN m.ReceiverID ELSE m.SenderID END AS otherUserId,
-           MAX(m.MessageID) AS lastMsgId
-         FROM Message m
-         WHERE m.SenderID = ? OR m.ReceiverID = ?
-         GROUP BY m.ProductID, otherUserId
-       ) conv
-       JOIN Message   last_msg ON last_msg.MessageID = conv.lastMsgId
-       JOIN Product   p        ON p.ProductID = conv.productId
-       JOIN User      u        ON u.UserID    = conv.otherUserId
-       ORDER BY last_msg.SentAt DESC`,
-      [userId, userId, userId, userId, userId],
-    );
-    return res.json(rows);
+    const conversations = await Message.aggregate([
+      // 1. Lọc các tin nhắn liên quan đến userId
+      {
+        $match: {
+          $or: [
+            { senderId: new mongoose.Types.ObjectId(userId) },
+            { receiverId: new mongoose.Types.ObjectId(userId) },
+          ],
+        },
+      },
+      // 2. Sắp xếp giảm dần theo thời gian
+      { $sort: { createdAt: -1 } },
+      // 3. Nhóm theo cặp (productId, otherUserId)
+      {
+        $group: {
+          _id: {
+            productId: "$productId",
+            otherUserId: {
+              $cond: [
+                { $eq: ["$senderId", new mongoose.Types.ObjectId(userId)] },
+                "$receiverId",
+                "$senderId",
+              ],
+            },
+          },
+          lastMessage: { $first: "$content" },
+          lastMessageImageUrl: { $first: "$imageUrl" },
+          lastSentAt: { $first: "$createdAt" },
+          unreadMsgs: {
+            $push: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ["$isRead", false] },
+                    {
+                      $eq: ["$receiverId", new mongoose.Types.ObjectId(userId)],
+                    },
+                  ],
+                },
+                1,
+                "$$REMOVE",
+              ],
+            },
+          },
+        },
+      },
+      // 4. Lookup Product details
+      {
+        $lookup: {
+          from: "products",
+          localField: "_id.productId",
+          foreignField: "_id",
+          as: "product",
+        },
+      },
+      // 5. Lookup User details (other user)
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id.otherUserId",
+          foreignField: "_id",
+          as: "otherUser",
+        },
+      },
+      { $unwind: { path: "$product", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$otherUser", preserveNullAndEmptyArrays: true } },
+      // Sắp xếp các cuộc hội thoại theo tin nhắn cuối cùng mới nhất
+      { $sort: { lastSentAt: -1 } },
+    ]);
+
+    const formattedRows = conversations.map((conv: any) => ({
+      productId: conv._id.productId?.toString() || "",
+      otherUserId: conv._id.otherUserId?.toString() || "",
+      productName: conv.product?.name || "Sản phẩm đã bị xóa",
+      otherUserName: conv.otherUser?.name || "Một người dùng",
+      otherUserIsVerified: conv.otherUser?.isVerified ? 1 : 0,
+      lastMessage: conv.lastMessage,
+      lastMessageImageUrl: conv.lastMessageImageUrl,
+      lastSentAt: conv.lastSentAt,
+      unread: conv.unreadMsgs ? conv.unreadMsgs.length : 0,
+    }));
+
+    return res.json(formattedRows);
   } catch (err) {
     return sendServerError(res, err);
   }

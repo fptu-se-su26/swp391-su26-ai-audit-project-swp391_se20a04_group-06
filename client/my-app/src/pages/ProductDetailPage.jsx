@@ -1,11 +1,3 @@
-/**
- * ProductDetailPage.jsx — Refactored
- *
- * FIXES:
- *   - ReviewList: truyền đúng props (sellerId, productId) thay vì object product
- *   - Follow button: ẩn khi user là chủ sản phẩm, tránh gọi API 400
- *   - handleToggleFollow: guard thêm để chặn tự-follow
- */
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { C } from "../utils/theme";
@@ -20,6 +12,15 @@ import { useSEO } from "../hooks/useSEO";
 import { ogImage } from "../utils/cloudinary";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+
+const CATEGORY_MAP = {
+  Fish: "🐟 Cá tươi câu",
+  Shrimp: "🦐 Tôm sống",
+  Squid: "🦑 Mực, Bạch tuộc",
+  Crab: "🦀 Cua, Ghẹ",
+  Shellfish: "🐚 Nghêu, Sò, Ốc",
+  Others: "✨ Loại khác",
+};
 
 export function ProductDetailPage({ product: initialProduct }) {
   const { user } = useAuth();
@@ -38,6 +39,10 @@ export function ProductDetailPage({ product: initialProduct }) {
   const [isFavorited, setIsFavorited] = useState(false);
   const [favLoading, setFavLoading] = useState(false);
 
+  // 🌟 State quản lý lịch sử biến động giá
+  const [priceHistory, setPriceHistory] = useState([]);
+  const [showPriceHistory, setShowPriceHistory] = useState(false);
+
   useSEO({
     title: product
       ? `${product.name} — ${product.sellerName}`
@@ -54,6 +59,8 @@ export function ProductDetailPage({ product: initialProduct }) {
 
   useEffect(() => {
     if (!initialProduct?.id) return;
+
+    // Tải thông tin chi tiết sản phẩm
     api(`/products/${initialProduct.id}`)
       .then((data) =>
         setProduct({
@@ -64,6 +71,11 @@ export function ProductDetailPage({ product: initialProduct }) {
       )
       .catch(() => {})
       .finally(() => setLoading(false));
+
+    // 🌟 Gọi API lấy lịch sử thay đổi giá bán
+    api(`/products/${initialProduct.id}/price-history`)
+      .then((history) => setPriceHistory(history || []))
+      .catch(() => {});
 
     if (user && initialProduct.sellerId) {
       api(`/follows/${initialProduct.sellerId}/check`)
@@ -119,7 +131,6 @@ export function ProductDetailPage({ product: initialProduct }) {
       toast.warn("Vui lòng đăng nhập để theo dõi!");
       return;
     }
-    // FIX: chặn tự-follow ngay ở client, tránh gọi API nhận 400
     if (user.userId === product.sellerId) {
       toast.warn("Bạn không thể tự theo dõi chính mình!");
       return;
@@ -137,8 +148,6 @@ export function ProductDetailPage({ product: initialProduct }) {
   if (!product) return null;
 
   const pct = Math.round((product.remainingWeight / product.totalWeight) * 100);
-
-  // FIX: true khi user đang xem sản phẩm của chính mình
   const isOwnProduct = user?.userId === product?.sellerId;
 
   return (
@@ -323,6 +332,21 @@ export function ProductDetailPage({ product: initialProduct }) {
                       ? "🌊 Hải sản Tươi"
                       : "🔥 Hải sản Khô"}
                   </span>
+
+                  {/* nhãn Category phân loại Việt hóa */}
+                  <span
+                    style={{
+                      background: C.oceanP,
+                      color: C.ocean,
+                      borderRadius: 8,
+                      padding: "4px 12px",
+                      fontSize: 11,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {CATEGORY_MAP[product.category] || "✨ Phân loại khác"}
+                  </span>
+
                   {product.salesType === "Wholesale" && (
                     <span
                       style={{
@@ -351,14 +375,7 @@ export function ProductDetailPage({ product: initialProduct }) {
                   {product.name}
                 </h1>
 
-                <div
-                  style={{
-                    fontSize: 28,
-                    fontWeight: 900,
-                    color: C.ocean,
-                    marginBottom: 16,
-                  }}
-                >
+                <div style={{ fontSize: 28, fontWeight: 900, color: C.ocean }}>
                   {fmt(product.price)}
                   <span
                     style={{ fontSize: 14, fontWeight: 600, color: C.muted }}
@@ -366,6 +383,89 @@ export function ProductDetailPage({ product: initialProduct }) {
                     /kg
                   </span>
                 </div>
+
+                {/* 🌟 Accordion Timeline biến động giá bán */}
+                {priceHistory.length > 0 && (
+                  <div style={{ marginTop: 12, marginBottom: 16 }}>
+                    <button
+                      onClick={() => setShowPriceHistory(!showPriceHistory)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: C.ocean,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        fontSize: 12,
+                        padding: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      📈{" "}
+                      {showPriceHistory
+                        ? "Ẩn lịch sử đổi giá ▲"
+                        : "Xem lịch sử đổi giá ▼"}
+                    </button>
+                    {showPriceHistory && (
+                      <div
+                        style={{
+                          background: "#F8FAFC",
+                          border: `1.5px solid ${C.border}`,
+                          borderRadius: 8,
+                          padding: 12,
+                          marginTop: 8,
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 10,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: C.muted,
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          Biến động giá trị mẻ hàng
+                        </div>
+                        {priceHistory.map((history, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              fontSize: 12,
+                              borderLeft: `2.5px solid ${C.ocean}`,
+                              paddingLeft: 10,
+                            }}
+                          >
+                            <div>
+                              <span
+                                style={{
+                                  textDecoration: "line-through",
+                                  color: C.muted,
+                                }}
+                              >
+                                {fmt(history.oldPrice)}
+                              </span>{" "}
+                              ➔{" "}
+                              <strong style={{ color: C.coral }}>
+                                {fmt(history.newPrice)}
+                              </strong>
+                            </div>
+                            <span style={{ fontSize: 11, color: C.muted }}>
+                              {new Date(history.changedAt).toLocaleDateString(
+                                "vi-VN",
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Stock */}
                 <div style={{ marginBottom: 16 }}>
@@ -438,7 +538,6 @@ export function ProductDetailPage({ product: initialProduct }) {
                   >
                     💬 Nhắn tin với ngư dân
                   </button>
-
                   <button
                     onClick={handleToggleFavorite}
                     disabled={favLoading}
@@ -456,8 +555,6 @@ export function ProductDetailPage({ product: initialProduct }) {
                   >
                     {isFavorited ? "❤️ Đã lưu" : "🤍 Lưu yêu thích"}
                   </button>
-
-                  {/* FIX: Ẩn nút Follow khi user là chủ sản phẩm */}
                   {!isOwnProduct && (
                     <button
                       onClick={handleToggleFollow}
@@ -477,7 +574,6 @@ export function ProductDetailPage({ product: initialProduct }) {
                       {isFollowing ? "✅ Đang theo dõi" : "+ Theo dõi ngư dân"}
                     </button>
                   )}
-
                   <button
                     onClick={() => setShowReportModal(true)}
                     style={{
@@ -497,7 +593,6 @@ export function ProductDetailPage({ product: initialProduct }) {
             </div>
           </div>
 
-          {/* FIX: Truyền đúng props cho ReviewList thay vì object product */}
           {product?.sellerId && (
             <ReviewList
               sellerId={product.sellerId}

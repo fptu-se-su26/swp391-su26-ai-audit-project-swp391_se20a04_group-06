@@ -2,20 +2,27 @@ import React, { useState, useEffect, useRef } from "react";
 import { C } from "../utils/theme";
 import { getSocket } from "../services/socket";
 import { api } from "../services/api";
-import { MessageIcon, XIcon, CheckCircleIcon } from "./icons";
+import { MessageIcon, XIcon, CheckCircleIcon } from "./icons/index"; // 🌟 Sửa đường dẫn rõ ràng
+import { useToast } from "../context/ToastContext";
 
 export function ChatBox({ product, onClose, user, fullHeight = false }) {
+  const toast = useToast();
   const [msgs, setMsgs] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [socketReady, setSocketReady] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const endRef = useRef(null);
   const socketRef = useRef(null);
+  const fileInputRef = useRef(null);
   const otherUserRef = useRef(null);
 
+  const currentUserId = user?.id || user?.userId;
+
   useEffect(() => {
+    if (!user || !currentUserId) return; // 🌟 Chặn sớm nếu chưa load xong user
     setMsgs([]);
     setLoading(true);
     api(`/messages/${product.id}`)
@@ -24,26 +31,25 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
           id: m.id,
           senderId: m.senderId,
           content: m.content,
+          imageUrl: m.imageUrl,
           time: new Date(m.sentAt).toLocaleTimeString("vi", {
             hour: "2-digit",
             minute: "2-digit",
           }),
-          isMine: m.senderId === user.id,
+          isMine: m.senderId === currentUserId,
         }));
         setMsgs(mapped);
-        const other = data.find((m) => m.senderId !== user.id);
+        const other = data.find((m) => m.senderId !== currentUserId);
         if (other) otherUserRef.current = other.senderId;
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [product.id, user.id]);
+  }, [product.id, user, currentUserId]);
 
   useEffect(() => {
-    // 🚀 THAY ĐỔI: Chỉ kết nối socket nếu người dùng đã đăng nhập (kiểm tra qua prop user)
-    if (!user) return;
+    if (!user || !currentUserId) return; // 🌟 Chặn sớm tránh lỗi null pointer
     let cancelled = false;
 
-    // Không cần truyền token làm tham số nữa
     getSocket().then((socket) => {
       if (cancelled) return;
       socketRef.current = socket;
@@ -54,7 +60,7 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
 
     function handleNewMessage(msg) {
       if (msg.productId !== product.id) return;
-      if (msg.senderId !== user.id) otherUserRef.current = msg.senderId;
+      if (msg.senderId !== currentUserId) otherUserRef.current = msg.senderId;
       setMsgs((prev) => {
         if (prev.some((m) => m.id === msg.id)) return prev;
         return [
@@ -63,11 +69,12 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
             id: msg.id,
             senderId: msg.senderId,
             content: msg.content,
+            imageUrl: msg.imageUrl,
             time: new Date(msg.sentAt).toLocaleTimeString("vi", {
               hour: "2-digit",
               minute: "2-digit",
             }),
-            isMine: msg.senderId === user.id,
+            isMine: msg.senderId === currentUserId,
           },
         ];
       });
@@ -80,25 +87,30 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
         socketRef.current.emit("leave_room", product.id);
       }
     };
-  }, [product.id, user.id]); // trigger lại khi thông tin người dùng thay đổi
+  }, [product.id, user, currentUserId]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs]);
 
-  const send = () => {
-    if (!input.trim()) return;
+  const send = (txtContent = "", imgUrl = null) => {
+    const finalContent = txtContent.trim();
+    if (!finalContent && !imgUrl) return;
+
     const sellerId = product.sellerId;
-    const receiverId = user.id === sellerId ? otherUserRef.current : sellerId;
+    const receiverId =
+      currentUserId === sellerId ? otherUserRef.current : sellerId;
     if (!receiverId) {
-      alert("Chưa có người nhận. Hãy chờ người mua nhắn trước.");
+      toast.warn("Chưa có người nhận. Hãy chờ người mua nhắn trước.");
       return;
     }
+
     if (socketRef.current?.connected) {
       socketRef.current.emit("send_message", {
         productId: product.id,
         receiverId,
-        content: input.trim(),
+        content: finalContent || null,
+        imageUrl: imgUrl,
       });
     } else {
       api("/messages", {
@@ -106,7 +118,8 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
         body: JSON.stringify({
           productId: product.id,
           receiverId,
-          content: input.trim(),
+          content: finalContent || null,
+          imageUrl: imgUrl,
         }),
       })
         .then((res) => {
@@ -114,8 +127,9 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
             ...prev,
             {
               id: res.id,
-              senderId: user.id,
-              content: input.trim(),
+              senderId: currentUserId,
+              content: finalContent || null,
+              imageUrl: imgUrl,
               time: new Date().toLocaleTimeString("vi", {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -124,9 +138,30 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
             },
           ]);
         })
-        .catch((e) => alert(e.message));
+        .catch((e) => toast.error(e.message));
     }
     setInput("");
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    const fd = new FormData();
+    fd.append("image", file);
+
+    try {
+      const res = await api("/messages/upload-image", {
+        method: "POST",
+        body: fd,
+      });
+      send("", res.imageUrl);
+    } catch (err) {
+      toast.error("Gửi ảnh thất bại: " + err.message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const chatHeight = fullHeight ? 420 : 250;
@@ -241,7 +276,25 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
                   border: m.isMine ? "none" : "1px solid #f1f5f9",
                 }}
               >
-                <div>{m.content}</div>
+                {m.content && (
+                  <div style={{ wordBreak: "break-word" }}>{m.content}</div>
+                )}
+
+                {m.imageUrl && (
+                  <img
+                    src={m.imageUrl}
+                    alt="Ảnh hải sản đính kèm"
+                    style={{
+                      maxWidth: "100%",
+                      borderRadius: 8,
+                      marginTop: m.content ? 6 : 0,
+                      maxHeight: 180,
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                  />
+                )}
+
                 <div
                   style={{
                     fontSize: 9,
@@ -266,12 +319,41 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
           gap: 8,
           borderTop: "1px solid #f1f5f9",
           background: C.white,
+          alignItems: "center",
         }}
       >
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          type="button"
+          style={{
+            background: "#f1f5f9",
+            border: "none",
+            borderRadius: 6,
+            width: 36,
+            height: 36,
+            cursor: "pointer",
+            fontSize: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          title="Gửi hình ảnh thực tế"
+        >
+          {uploading ? "⏳" : "📷"}
+        </button>
+        <input
+          type="file"
+          accept="image/*"
+          ref={fileInputRef}
+          onChange={handleImageUpload}
+          style={{ display: "none" }}
+        />
+
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && send()}
+          onKeyDown={(e) => e.key === "Enter" && send(input)}
           onFocus={() => setIsInputFocused(true)}
           onBlur={() => setIsInputFocused(false)}
           placeholder="Nhập tin nhắn..."
@@ -286,7 +368,7 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
           }}
         />
         <button
-          onClick={send}
+          onClick={() => send(input)}
           style={{
             background: "#0f172a",
             color: "#fff",

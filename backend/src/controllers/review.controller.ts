@@ -1,99 +1,113 @@
-import { Request, Response } from 'express';
-import { pool } from '../db';
-import { RowDataPacket } from 'mysql2';
-import { uploadToCloudinary } from '../middlewares/upload';
-import { sendServerError, parseId } from '../helpers/response.helper';
-import { notifySellerNewReview } from '../services/notification.service';
-import { parsePagination, paginatedResponse } from '../utils/pagination';
-
-/**
- * Review Controller
- * Clean: dùng parsePagination/paginatedResponse thay vì tự tính page/limit/offset inline.
- */
+import { Request, Response } from "express";
+import { Review } from "../models/Review";
+import { User } from "../models/User";
+import { Product } from "../models/Product";
+import { uploadToCloudinary } from "../middlewares/upload";
+import { sendServerError } from "../helpers/response.helper";
+import { notifySellerNewReview } from "../services/notification.service";
+import mongoose from "mongoose";
 
 export async function addReview(req: Request, res: Response) {
   const { userId: reviewerId } = req.user;
   const { productId, sellerId, rating, comment } = req.body;
 
   if (!productId || !sellerId || !rating)
-    return res.status(400).json({ message: 'Thiếu thông tin đánh giá' });
+    return res.status(400).json({ message: "Thiếu thông tin đánh giá" });
 
   const numRating = Number(rating);
   if (isNaN(numRating) || numRating < 1 || numRating > 5)
-    return res.status(400).json({ message: 'Đánh giá phải từ 1 đến 5 sao' });
+    return res.status(400).json({ message: "Đánh giá phải từ 1 đến 5 sao" });
 
-  if (reviewerId === Number(sellerId))
-    return res.status(400).json({ message: 'Bạn không thể tự đánh giá chính mình' });
+  if (reviewerId.toString() === sellerId.toString())
+    return res
+      .status(400)
+      .json({ message: "Bạn không thể tự đánh giá chính mình" });
 
   try {
-    const [existing] = await pool.query<RowDataPacket[]>(
-      'SELECT ReviewID FROM Review WHERE ReviewerID = ? AND ProductID = ?',
-      [reviewerId, Number(productId)],
-    );
-    if ((existing as any[]).length > 0)
-      return res.status(409).json({ message: 'Bạn đã đánh giá sản phẩm này rồi' });
+    const existing = await Review.findOne({ reviewerId, productId });
+    if (existing)
+      return res
+        .status(409)
+        .json({ message: "Bạn đã đánh giá sản phẩm này rồi" });
 
     let finalImageUrl = req.body.imageUrl || null;
     if (req.file) {
-      const { url } = await uploadToCloudinary(req.file.buffer, 'reviews');
+      const { url } = await uploadToCloudinary(req.file.buffer, "reviews");
       finalImageUrl = url;
     }
 
-    const [result] = await pool.query(
-      'INSERT INTO Review (ProductID, ReviewerID, SellerID, Rating, Comment, ImageURL) VALUES (?, ?, ?, ?, ?, ?)',
-      [Number(productId), reviewerId, Number(sellerId), numRating, comment || null, finalImageUrl],
-    );
-    const reviewId = (result as any).insertId;
-
-    const [reviewerRows] = await pool.query<RowDataPacket[]>(
-      'SELECT Name FROM User WHERE UserID = ?', [reviewerId],
-    );
-    const [productRows] = await pool.query<RowDataPacket[]>(
-      'SELECT Name FROM Product WHERE ProductID = ?', [Number(productId)],
-    );
-    await notifySellerNewReview({
-      sellerId: Number(sellerId),
+    const newReview = new Review({
+      productId,
       reviewerId,
-      reviewerName: (reviewerRows[0] as any)?.Name || 'Một người dùng',
-      productId: Number(productId),
-      productName: (productRows[0] as any)?.Name || 'sản phẩm',
-      reviewId,
+      sellerId,
+      rating: numRating,
+      comment: comment || null,
+      imageUrl: finalImageUrl,
+    });
+
+    await newReview.save();
+
+    const reviewer = await User.findById(reviewerId);
+    const product = await Product.findById(productId);
+
+    await notifySellerNewReview({
+      sellerId: sellerId as any,
+      reviewerId: reviewerId as any,
+      reviewerName: reviewer?.name || "Một người dùng",
+      productId: productId as any,
+      productName: product?.name || "sản phẩm",
+      reviewId: newReview._id as any,
       rating: numRating,
       comment: comment || null,
     });
 
-    return res.status(201).json({ message: 'Đánh giá thành công', reviewId });
+    return res
+      .status(201)
+      .json({ message: "Đánh giá thành công", reviewId: newReview._id });
   } catch (err) {
     return sendServerError(res, err);
   }
 }
 
 export async function getReviewsBySeller(req: Request, res: Response) {
-  const sellerId = parseId(req.params.sellerId);
-  if (!sellerId) return res.status(400).json({ message: 'ID người bán không hợp lệ' });
+  const sellerId = req.params.sellerId;
+  if (!sellerId || !mongoose.Types.ObjectId.isValid(sellerId)) {
+    return res.status(400).json({ message: "ID người bán không hợp lệ" });
+  }
 
-  const { page, limit, offset } = parsePagination(
-    req.query.page as string,
-    req.query.limit as string,
+  const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
+  const limit = Math.min(
+    100,
+    Math.max(1, parseInt((req.query.limit as string) || "20", 10)),
   );
+  const skip = (page - 1) * limit;
 
   try {
-    const [[countRow]] = await pool.query<RowDataPacket[]>(
-      'SELECT COUNT(*) AS total FROM Review WHERE SellerID = ?', [sellerId],
-    );
-    const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT r.ReviewID, r.Rating, r.Comment, r.ImageURL, r.CreatedAt,
-              u.Name AS ReviewerName, p.Name AS ProductName
-       FROM Review r
-       JOIN User    u ON r.ReviewerID = u.UserID
-       JOIN Product p ON r.ProductID  = p.ProductID
-       WHERE r.SellerID = ?
-       ORDER BY r.CreatedAt DESC
-       LIMIT ? OFFSET ?`,
-      [sellerId, limit, offset],
-    );
+    const total = await Review.countDocuments({ sellerId });
+    const rows = await Review.find({ sellerId })
+      .populate("reviewerId", "name")
+      .populate("productId", "name")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    return res.json(paginatedResponse(rows, countRow.total, page, limit));
+    const formatted = rows.map((r: any) => ({
+      ReviewID: r._id,
+      Rating: r.rating,
+      Comment: r.comment,
+      ImageURL: r.imageUrl,
+      CreatedAt: r.createdAt,
+      ReviewerName: r.reviewerId?.name || "Một người dùng",
+      ProductName: r.productId?.name || "Sản phẩm",
+    }));
+
+    return res.json({
+      data: formatted,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (err) {
     return sendServerError(res, err);
   }

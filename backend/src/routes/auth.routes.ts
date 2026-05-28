@@ -1,4 +1,3 @@
-// ─── routes/auth.routes.ts ───────────────────────────────────
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import {
@@ -6,8 +5,10 @@ import {
   login,
   logout,
   me,
+  refreshToken,
   updateProfile,
   changePassword,
+  deleteAccount, // ← Import
 } from "../controllers/auth.controller";
 import { authenticate } from "../middlewares/auth";
 import { upload } from "../middlewares/upload";
@@ -15,7 +16,6 @@ import { getUserPublicProfile } from "../controllers/user.controller";
 
 const router = Router();
 
-/* ─── Rate limiting chống brute force login ─── */
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -40,17 +40,16 @@ const registerLimiter = rateLimit({
 router.post("/register", registerLimiter, register);
 router.post("/login", loginLimiter, login);
 router.post("/logout", logout);
-
-// FIX: Bỏ authenticate — me() tự xử lý token bên trong.
-// Khi chưa login → trả 200 + null (không phải 401)
-// → Browser không hiển thị lỗi đỏ trong console.
+router.post("/refresh", refreshToken);
 router.get("/me", me);
 
 router.put("/profile", authenticate, upload.single("avatar"), updateProfile);
 router.post("/change-password", authenticate, changePassword);
 
+// 🌟 Định tuyến GDPR: Người dùng tự xóa thông tin tài khoản vĩnh viễn
+router.delete("/account", authenticate, deleteAccount);
+
 export default router;
 
-// ─── Separate user public router ─────────────────────────────────────────────
 export const userRouter = Router();
 userRouter.get("/:id", getUserPublicProfile);

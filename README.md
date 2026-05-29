@@ -1,31 +1,36 @@
-# HảiSản.vn — Tài Liệu Kỹ Thuật (Technical Documentation)
+# 🐟 HảiSản.vn — Phase 3
 
-> **Phiên bản:** Phase 3 · **Cập nhật:** 2026-05-27  
-> **Loại:** Đồ án Web Application — Marketplace kết nối ngư dân & người mua
+> **Marketplace kết nối ngư dân & người mua hải sản theo GPS thời gian thực**
+
+[![Node.js](https://img.shields.io/badge/Node.js-v20+-339933?style=flat-square&logo=node.js)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)](https://react.dev/)
+[![Bootstrap](https://img.shields.io/badge/Bootstrap-5-7952B3?style=flat-square&logo=bootstrap)](https://getbootstrap.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-7+-47A248?style=flat-square&logo=mongodb)](https://www.mongodb.com/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker)](https://docs.docker.com/compose/)
 
 ---
 
-## Mục Lục
+## 📋 Mục Lục
 
-1. [Tổng Quan Dự Án](#1-tổng-quan-dự-án)
+1. [Tổng Quan](#1-tổng-quan)
 2. [Kiến Trúc Hệ Thống](#2-kiến-trúc-hệ-thống)
 3. [Tech Stack](#3-tech-stack)
 4. [Cấu Trúc Thư Mục](#4-cấu-trúc-thư-mục)
 5. [Database Schema](#5-database-schema)
 6. [API Reference](#6-api-reference)
 7. [Tính Năng Bảo Mật](#7-tính-năng-bảo-mật)
-8. [Cài Đặt & Chạy (Local)](#8-cài-đặt--chạy-local)
+8. [Cài Đặt & Chạy Local](#8-cài-đặt--chạy-local)
 9. [Triển Khai Docker](#9-triển-khai-docker)
 10. [Tính Năng Chi Tiết](#10-tính-năng-chi-tiết)
 11. [Biến Môi Trường](#11-biến-môi-trường)
 
 ---
 
-## 1. Tổng Quan Dự Án
+## 1. Tổng Quan
 
 **HảiSản.vn** là ứng dụng web marketplace giúp kết nối trực tiếp ngư dân (người bán) và người mua hải sản dựa trên khoảng cách địa lý (GPS). Hệ thống tích hợp đầy đủ các tính năng của một nền tảng thương mại điện tử hiện đại.
 
-### Mục Tiêu
+### Bài Toán & Giải Pháp
 
 | Bài toán | Giải pháp |
 |---|---|
@@ -34,20 +39,20 @@
 | Thiếu tin tưởng giữa hai bên | Hệ thống đánh giá (Review) & huy hiệu xác minh |
 | Liên lạc chậm, bất tiện | Real-time Chat tích hợp theo từng bài đăng |
 
-### Phạm Vi Chức Năng (Scope)
+### Phạm Vi Chức Năng
 
-- Đăng ký / Đăng nhập bằng số điện thoại
-- Đăng bán hải sản (tươi / khô) kèm ảnh, GPS, thời gian đánh bắt
-- Tìm kiếm sản phẩm theo GPS bán kính, full-text search, lọc loại/giá
-- Chat thời gian thực (Socket.IO) gắn với từng bài đăng
-- Đẩy bài đăng lên đầu (Bump — cooldown 24h)
-- Đánh giá người bán sau giao dịch (1–5 sao, kèm ảnh)
-- Follow người bán yêu thích
-- Yêu thích (Favorite) bài đăng
-- Thông báo real-time (Notification)
-- Báo cáo vi phạm (Report)
-- Bảng điều khiển Admin: quản lý người dùng, sản phẩm, báo cáo, thống kê
-- Dashboard cá nhân: quản lý bài đăng, hội thoại, thông báo
+- ✅ Đăng ký / Đăng nhập bằng số điện thoại (OTP) hoặc Google OAuth 2.0
+- ✅ Đăng bán hải sản (tươi / khô) kèm ảnh, GPS, thời gian đánh bắt
+- ✅ Tìm kiếm theo GPS bán kính, full-text search, lọc loại/giá
+- ✅ Chat thời gian thực (Socket.IO) gắn với từng bài đăng
+- ✅ Đẩy bài đăng lên đầu — Bump (cooldown 24h)
+- ✅ Đánh giá người bán sau giao dịch (1–5 sao, kèm ảnh)
+- ✅ Follow người bán yêu thích
+- ✅ Yêu thích (Favorite) bài đăng
+- ✅ Thông báo real-time (Notification)
+- ✅ Báo cáo vi phạm (Report)
+- ✅ Bảng điều khiển Admin: quản lý người dùng, sản phẩm, báo cáo, thống kê
+- ✅ Dashboard cá nhân: quản lý bài đăng, hội thoại, thông báo
 
 ---
 
@@ -57,7 +62,7 @@
 ┌─────────────────────────────────────────────────────────┐
 │                    CLIENT (Browser)                       │
 │  React 19 + Vite · React Router v6 · React-Leaflet       │
-│  Lazy Loading · Error Boundary · CSS Modules             │
+│  Bootstrap 5 · Lazy Loading · Error Boundary             │
 └───────────────┬─────────────────────┬───────────────────┘
                 │  REST API (Fetch)   │  WebSocket (Socket.IO)
                 │  + HttpOnly Cookie  │  + Cookie Auth
@@ -71,20 +76,21 @@
 │  └──────┬──────┘ └──────┬───────┘ └──────────────────┘  │
 │         │               │                                  │
 │  ┌──────▼───────────────▼──────────────────────────────┐ │
-│  │         Middlewares (Auth · CSRF · Rate Limit)        │ │
+│  │   Middlewares (Auth JWT · CSRF · Rate Limit)          │ │
 │  └──────────────────────┬──────────────────────────────┘ │
 └─────────────────────────┼───────────────────────────────┘
                            │
-          ┌────────────────┼────────────────┐
-          ▼                ▼                ▼
-    ┌─────────────┐  ┌────────────┐  ┌─────────────┐
-    │   MongoDB   │  │ Cloudinary │  │  Node-Cron  │
-    │  (Database) │  │  (Images)  │  │  (Scheduler)│
-    └─────────────┘  └────────────┘  └─────────────┘
+          ┌────────────────┼───────────────────┐
+          ▼                ▼                   ▼
+    ┌─────────────┐  ┌────────────┐  ┌─────────────────┐
+    │   MongoDB   │  │   Redis    │  │   Cloudinary    │
+    │  (Database) │  │  (Cache)   │  │  (Image CDN)    │
+    └─────────────┘  └────────────┘  └─────────────────┘
 ```
 
 ### Luồng Xác Thực (Auth Flow)
 
+**Phone/Password:**
 ```
 [Client] → POST /api/auth/login
          ← Set-Cookie: token=<JWT>; HttpOnly; SameSite=Strict
@@ -94,6 +100,15 @@
            Header: X-CSRF-Token: <từ cookie csrf_token>
            Cookie: token=<JWT> (tự động đính kèm)
          ← 200 OK | 403 Forbidden (nếu CSRF không khớp)
+```
+
+**Google OAuth (Sign-in with Google):**
+```
+[Client] → Google Identity Services (One Tap / Button)
+         ← Google trả về id_token (JWT)
+
+[Client] → POST /api/auth/google { id_token }
+         ← Verify token với Google → Set-Cookie (same as above)
 ```
 
 ---
@@ -107,15 +122,16 @@
 | Node.js | v20+ | Runtime |
 | TypeScript | ^5.5 | Ngôn ngữ lập trình |
 | Express | ^4.19 | HTTP Framework |
-| mongoose | ^9.6 | Thư viện ODM kết nối MongoDB |
+| Mongoose | ^9.6 | ODM kết nối MongoDB |
 | socket.io | ^4.7 | Real-time WebSocket |
 | jsonwebtoken | ^9.0 | Tạo & xác minh JWT |
 | bcryptjs | ^2.4 | Hash mật khẩu |
 | helmet | ^7.1 | Bảo mật HTTP Headers |
 | express-rate-limit | ^7.4 | Rate Limiting chống spam |
-| multer | ^1.4 | Xử lý file upload (Memory Storage) |
+| multer | ^1.4 | Xử lý file upload |
 | cloudinary | ^2.5 | Lưu trữ ảnh trên cloud |
 | node-cron | ^3.0 | Tác vụ tự động định kỳ |
+| ioredis | — | Redis client (OTP, cache) |
 | cookie-parser | ^1.4 | Đọc cookie |
 
 ### Frontend
@@ -124,17 +140,19 @@
 |---|---|---|
 | React | ^19.2 | UI Framework |
 | Vite | ^8.0 | Build tool / Dev server |
+| Bootstrap | 5 | Responsive UI framework |
 | react-router-dom | ^6.30 | Client-side routing |
 | react-leaflet | ^5.0 | Hiển thị bản đồ (OpenStreetMap) |
-| leaflet | ^1.9 | Map engine |
+| Google Identity Services | CDN | Sign-in with Google / One Tap |
 
 ### Infrastructure
 
 | Công nghệ | Mục đích |
 |---|---|
-| MongoDB | Cơ sở dữ liệu tài liệu |
+| MongoDB | Cơ sở dữ liệu tài liệu (NoSQL) |
+| Redis | Cache OTP, session hỗ trợ |
 | Cloudinary | CDN lưu trữ & xử lý ảnh |
-| Docker + Docker Compose | Container hóa môi trường phát triển |
+| Docker + Docker Compose | Container hóa môi trường |
 
 ---
 
@@ -145,7 +163,7 @@ shop_sea_fixed/
 ├── backend/
 │   ├── src/
 │   │   ├── controllers/          # Business logic
-│   │   │   ├── auth.controller.ts       # Đăng ký, đăng nhập, profile
+│   │   │   ├── auth.controller.ts       # Đăng ký, đăng nhập, Google OAuth, profile
 │   │   │   ├── product.controller.ts    # CRUD sản phẩm, tìm kiếm GPS
 │   │   │   ├── message.controller.ts    # Lịch sử chat, danh sách hội thoại
 │   │   │   ├── review.controller.ts     # Đánh giá người bán
@@ -169,12 +187,8 @@ shop_sea_fixed/
 │   │   │   └── response.helper.ts  # Chuẩn hóa response format
 │   │   ├── app.ts                # Entry point, khởi tạo Express & Middleware
 │   │   ├── db.ts                 # Kết nối MongoDB thông qua Mongoose
-│   │   ├── db.migrations.ts      # Tự động cấu hình index bởi Mongoose (Deprecated)
 │   │   ├── socket.ts             # Socket.IO server (chat + notifications)
 │   │   └── cron.ts               # Cron job tự động hết hạn sản phẩm
-│   ├── sql/
-│   │   ├── schema.sql            # DDL: tạo bảng, index, constraints
-│   │   └── seed.sql              # Dữ liệu mẫu
 │   ├── Dockerfile
 │   ├── .env.example
 │   └── package.json
@@ -183,11 +197,12 @@ shop_sea_fixed/
 │   ├── src/
 │   │   ├── pages/
 │   │   │   ├── HomePage.jsx           # Trang chủ + bản đồ + danh sách sản phẩm
-│   │   │   ├── AuthPage.jsx           # Đăng nhập / Đăng ký
+│   │   │   ├── AuthPage.jsx           # Đăng nhập / Đăng ký + Google OAuth
 │   │   │   ├── ProductDetailPage.jsx  # Chi tiết sản phẩm + chat + review
 │   │   │   ├── PostListingPage.jsx    # Đăng / chỉnh sửa bài đăng
 │   │   │   ├── DashboardPage.jsx      # Dashboard cá nhân
 │   │   │   ├── ProfilePage.jsx        # Trang hồ sơ cá nhân
+│   │   │   ├── ForgotPasswordPage.jsx # Quên mật khẩu (OTP)
 │   │   │   ├── SellerProfilePage.jsx  # Trang hồ sơ công khai người bán
 │   │   │   └── AdminPage.jsx          # Bảng điều khiển Admin
 │   │   ├── components/
@@ -219,7 +234,7 @@ shop_sea_fixed/
 │   └── package.json
 │
 ├── database/
-│   └── seafood_db.sql            # Full database dump (dùng cho Docker init)
+│   └── seafood_db.sql             # Full database dump (dùng cho Docker init)
 ├── docker-compose.yml
 └── README.md
 ```
@@ -234,7 +249,7 @@ shop_sea_fixed/
 User ──< Product ──< ProductImage
  │           │
  │           └──< Message (SenderID, ReceiverID)
- │           └──< Review (ReviewerID, SellerID)
+ │           └──< Review  (ReviewerID, SellerID)
  │           └──< Favorite
  │           └──< Report
  │
@@ -242,100 +257,68 @@ User ──< Product ──< ProductImage
  └──< Notification
 ```
 
-### Chi Tiết Bảng
+> **Lưu ý:** Dự án dùng **MongoDB** (NoSQL). Các "bảng" bên dưới là Mongoose collections. Kiểu dữ liệu được ánh xạ tương đương.
 
-#### `User`
-| Cột | Kiểu | Mô tả |
+### Collections Chi Tiết
+
+#### `users`
+| Field | Kiểu | Mô tả |
 |---|---|---|
-| UserID | INT PK AUTO_INCREMENT | Khóa chính |
-| Name | VARCHAR(100) NOT NULL | Họ tên |
-| Phone | VARCHAR(15) UNIQUE NOT NULL | Số điện thoại (dùng đăng nhập) |
-| PasswordHash | VARCHAR(255) NOT NULL | Mật khẩu đã hash (bcrypt) |
-| Role | ENUM('User','Admin') | Vai trò, mặc định 'User' |
-| IsActive | TINYINT(1) | Tài khoản còn hoạt động (Admin toggle) |
-| Avatar | VARCHAR(255) | URL ảnh đại diện (Cloudinary) |
-| CreatedAt | DATETIME | Thời điểm đăng ký |
+| `_id` | ObjectId | Khóa chính |
+| `name` | String | Họ tên |
+| `phone` | String (unique) | Số điện thoại (đăng nhập truyền thống) |
+| `googleId` | String | Google Account ID (OAuth) |
+| `email` | String | Email (Google OAuth) |
+| `passwordHash` | String | Mật khẩu đã hash (bcrypt) |
+| `role` | `'User'` \| `'Admin'` | Vai trò, mặc định `'User'` |
+| `isActive` | Boolean | Tài khoản còn hoạt động (Admin toggle) |
+| `isVerified` | Boolean | Huy hiệu xác minh (Admin cấp) |
+| `avatar` | String | URL ảnh đại diện (Cloudinary) |
+| `createdAt` | Date | Thời điểm đăng ký |
 
-#### `Product`
-| Cột | Kiểu | Mô tả |
+#### `products`
+| Field | Kiểu | Mô tả |
 |---|---|---|
-| ProductID | INT PK AUTO_INCREMENT | Khóa chính |
-| SellerID | INT FK → User | Người bán |
-| Type | ENUM('Fresh','Dried') | Hải sản tươi / khô |
-| Name | VARCHAR(150) | Tên sản phẩm |
-| Description | TEXT | Mô tả |
-| Price | INT | Giá (VND/kg) |
-| SalesType | ENUM('Retail','Wholesale') | Bán lẻ / bán sỉ |
-| TotalWeight | DECIMAL(8,2) | Tổng trọng lượng (kg) |
-| RemainingWeight | DECIMAL(8,2) | Còn lại (kg) |
-| Status | ENUM('Active','Expired','Deleted') | Trạng thái bài đăng |
-| CatchTime | DATETIME | *(Tươi)* Thời điểm đánh bắt/cập bến |
-| Lat, Lng | DECIMAL(10,7) | *(Tươi)* Tọa độ GPS |
-| Origin | VARCHAR(100) | *(Khô)* Xuất xứ |
-| ExpiryDate | DATE | *(Khô)* Hạn sử dụng |
-| BumpedAt | DATETIME | Thời điểm đẩy bài đăng gần nhất |
-| CreatedAt | DATETIME | Thời điểm tạo |
+| `_id` | ObjectId | Khóa chính |
+| `sellerId` | ObjectId → User | Người bán |
+| `type` | `'Fresh'` \| `'Dried'` | Hải sản tươi / khô |
+| `name` | String | Tên sản phẩm |
+| `description` | String | Mô tả |
+| `price` | Number | Giá (VND/kg) |
+| `salesType` | `'Retail'` \| `'Wholesale'` | Bán lẻ / bán sỉ |
+| `totalWeight` | Number | Tổng trọng lượng (kg) |
+| `remainingWeight` | Number | Còn lại (kg) |
+| `status` | `'Active'` \| `'Expired'` \| `'Deleted'` | Trạng thái bài đăng |
+| `catchTime` | Date | *(Tươi)* Thời điểm đánh bắt/cập bến |
+| `location.lat` | Number | *(Tươi)* Vĩ độ GPS |
+| `location.lng` | Number | *(Tươi)* Kinh độ GPS |
+| `origin` | String | *(Khô)* Xuất xứ |
+| `expiryDate` | Date | *(Khô)* Hạn sử dụng |
+| `images` | Array\<{url, publicId}\> | Danh sách ảnh Cloudinary |
+| `bumpedAt` | Date | Thời điểm đẩy bài đăng gần nhất |
+| `createdAt` | Date | Thời điểm tạo |
 
-#### `ProductImage`
-| Cột | Kiểu | Mô tả |
+#### `messages`
+| Field | Kiểu | Mô tả |
 |---|---|---|
-| ImageID | INT PK | Khóa chính |
-| ProductID | INT FK | Bài đăng chứa ảnh |
-| CloudinaryURL | VARCHAR(500) | URL ảnh đã upload |
-| PublicID | VARCHAR(300) | Cloudinary public_id (để xóa) |
-| SortOrder | TINYINT | Thứ tự hiển thị |
+| `productId` | ObjectId → Product | Cuộc chat gắn với bài đăng |
+| `senderId` | ObjectId → User | Người gửi |
+| `receiverId` | ObjectId → User | Người nhận |
+| `content` | String | Nội dung tin nhắn |
+| `isRead` | Boolean | Đã đọc chưa |
+| `sentAt` | Date | Thời điểm gửi |
 
-#### `Message`
-| Cột | Kiểu | Mô tả |
+#### `reviews`
+| Field | Kiểu | Mô tả |
 |---|---|---|
-| MessageID | INT PK | Khóa chính |
-| ProductID | INT FK | Cuộc chat gắn với bài đăng nào |
-| SenderID | INT FK → User | Người gửi |
-| ReceiverID | INT FK → User | Người nhận |
-| Content | TEXT | Nội dung tin nhắn |
-| IsRead | TINYINT(1) | Đã đọc chưa |
-| SentAt | DATETIME | Thời điểm gửi |
+| `productId` | ObjectId → Product | Sản phẩm được đánh giá |
+| `reviewerId` | ObjectId → User | Người viết đánh giá |
+| `sellerId` | ObjectId → User | Người bán được đánh giá |
+| `rating` | Number (1–5) | Số sao |
+| `comment` | String | Nội dung đánh giá |
+| `imageURL` | String | Ảnh đính kèm (Cloudinary) |
 
-#### `Review`
-| Cột | Kiểu | Mô tả |
-|---|---|---|
-| ReviewID | INT PK | Khóa chính |
-| ProductID | INT FK | Sản phẩm được đánh giá |
-| ReviewerID | INT FK → User | Người viết đánh giá |
-| SellerID | INT FK → User | Người bán được đánh giá |
-| Rating | TINYINT CHECK(1–5) | Số sao |
-| Comment | TEXT | Nội dung đánh giá |
-| ImageURL | VARCHAR(500) | Ảnh đính kèm đánh giá |
-| CreatedAt | DATETIME | Thời điểm đánh giá |
-
-> **Constraint:** `UNIQUE(ReviewerID, ProductID)` — mỗi người chỉ được đánh giá một sản phẩm một lần.
-
-#### `Follow`
-| Cột | Kiểu | Mô tả |
-|---|---|---|
-| FollowID | INT PK | Khóa chính |
-| FollowerID | INT FK → User | Người theo dõi |
-| SellerID | INT FK → User | Người bán được theo dõi |
-| CreatedAt | DATETIME | Thời điểm follow |
-
-> **Constraint:** `UNIQUE(FollowerID, SellerID)` — tránh follow trùng lặp.
-
-### Indexes Quan Trọng
-
-```sql
--- Tìm kiếm theo loại & trạng thái (thường dùng nhất)
-INDEX idx_product_type_status ON Product(Type, Status)
-
--- Sắp xếp theo BumpedAt (tính năng đẩy bài)
-INDEX idx_product_bumpedat ON Product(BumpedAt)
-INDEX idx_product_status_type_bumped ON Product(Status, Type, BumpedAt)
-
--- Full-text search tên & mô tả sản phẩm
-FULLTEXT INDEX idx_product_fulltext ON Product(Name, Description)
-
--- Tra cứu đánh giá theo người bán
-INDEX idx_review_seller ON Review(SellerID)
-```
+> **Constraint:** `UNIQUE(reviewerId, productId)` — mỗi người chỉ đánh giá một sản phẩm một lần.
 
 ---
 
@@ -353,6 +336,7 @@ INDEX idx_review_seller ON Review(SellerID)
 |---|---|---|---|---|
 | POST | `/register` | Đăng ký tài khoản mới | ❌ | 5 req/giờ/IP |
 | POST | `/login` | Đăng nhập, set HttpOnly Cookie | ❌ | 10 req/15ph/IP |
+| POST | `/google` | Đăng nhập/đăng ký qua Google OAuth | ❌ | — |
 | POST | `/logout` | Đăng xuất, xóa cookie | ✅ | — |
 | GET | `/me` | Lấy thông tin tài khoản hiện tại | ✅ | — |
 | PUT | `/profile` | Cập nhật tên, ảnh đại diện | ✅ | — |
@@ -377,6 +361,13 @@ INDEX idx_review_seller ON Review(SellerID)
 }
 ```
 
+**POST `/google`**
+```json
+{
+  "id_token": "<Google JWT trả về từ GIS>"
+}
+```
+
 **PUT `/profile`** — `multipart/form-data`
 ```
 name: string (tùy chọn)
@@ -385,11 +376,12 @@ avatar: File (JPEG/PNG/WEBP, tối đa 5MB)
 
 ---
 
-### 6.2 User — `/api/users`
+### 6.2 OTP — `/api/otp`
 
 | Method | Path | Mô tả | Auth |
 |---|---|---|---|
-| GET | `/:id` | Lấy profile công khai của người dùng | ❌ |
+| POST | `/send` | Gửi OTP về số điện thoại | ❌ |
+| POST | `/verify` | Xác minh OTP | ❌ |
 
 ---
 
@@ -419,40 +411,9 @@ avatar: File (JPEG/PNG/WEBP, tối đa 5MB)
 | `page` | number | Trang (phân trang) |
 | `limit` | number | Số bài/trang |
 
-#### Request Body — `POST /api/products` — `multipart/form-data`
-
-```
-type: "Fresh" | "Dried"
-name: string
-description: string
-price: number (VND/kg)
-salesType: "Retail" | "Wholesale"
-totalWeight: number (kg)
-
-# Nếu type = "Fresh":
-catchTime: string (ISO 8601)
-lat: number
-lng: number
-
-# Nếu type = "Dried":
-origin: string
-expiryDate: string (YYYY-MM-DD)
-
-images[]: File[] (tối đa 5 ảnh, JPEG/PNG/WEBP, mỗi ảnh ≤ 5MB)
-```
-
 ---
 
-### 6.4 Images — `/api/images`
-
-| Method | Path | Mô tả | Auth |
-|---|---|---|---|
-| POST | `/upload` | Upload ảnh lên Cloudinary | ✅ |
-| DELETE | `/:id` | Xóa ảnh (tự động xóa trên Cloudinary) | ✅ |
-
----
-
-### 6.5 Messages — `/api/messages`
+### 6.4 Messages — `/api/messages`
 
 | Method | Path | Mô tả | Auth |
 |---|---|---|---|
@@ -465,26 +426,16 @@ images[]: File[] (tối đa 5 ảnh, JPEG/PNG/WEBP, mỗi ảnh ≤ 5MB)
 
 ---
 
-### 6.6 Reviews — `/api/reviews`
+### 6.5 Reviews — `/api/reviews`
 
 | Method | Path | Mô tả | Auth |
 |---|---|---|---|
 | POST | `/` | Đăng đánh giá người bán (kèm ảnh tùy chọn) | ✅ |
 | GET | `/seller/:sellerId` | Lấy tất cả đánh giá của một người bán | ❌ |
 
-#### Request Body — `POST /api/reviews` — `multipart/form-data`
-
-```
-productId: number
-sellerId: number
-rating: number (1–5)
-comment: string
-image: File (tùy chọn, JPEG/PNG/WEBP, ≤ 5MB)
-```
-
 ---
 
-### 6.7 Notifications — `/api/notifications`
+### 6.6 Notifications — `/api/notifications`
 
 | Method | Path | Mô tả | Auth |
 |---|---|---|---|
@@ -494,7 +445,7 @@ image: File (tùy chọn, JPEG/PNG/WEBP, ≤ 5MB)
 
 ---
 
-### 6.8 Follow — `/api/follows`
+### 6.7 Follow — `/api/follows`
 
 | Method | Path | Mô tả | Auth |
 |---|---|---|---|
@@ -504,7 +455,7 @@ image: File (tùy chọn, JPEG/PNG/WEBP, ≤ 5MB)
 
 ---
 
-### 6.9 Favorites — `/api/favorites`
+### 6.8 Favorites — `/api/favorites`
 
 | Method | Path | Mô tả | Auth |
 |---|---|---|---|
@@ -514,32 +465,32 @@ image: File (tùy chọn, JPEG/PNG/WEBP, ≤ 5MB)
 
 ---
 
-### 6.10 Reports — `/api/reports`
+### 6.9 Reports — `/api/reports`
 
 | Method | Path | Mô tả | Auth |
 |---|---|---|---|
 | POST | `/:productId` | Tạo báo cáo vi phạm | ✅ |
-| GET | `/` | Xem danh sách báo cáo | ✅ + Admin only |
-| PATCH | `/:id` | Xử lý báo cáo (resolve/dismiss) | ✅ + Admin only |
+| GET | `/` | Xem danh sách báo cáo | ✅ Admin only |
+| PATCH | `/:id` | Xử lý báo cáo (resolve/dismiss) | ✅ Admin only |
 
 ---
 
-### 6.11 Admin — `/api/admin`
+### 6.10 Admin — `/api/admin`
 
-> **Yêu cầu:** `Role = 'Admin'` — toàn bộ các endpoint dưới đây đều bị chặn nếu không phải Admin.
+> **Yêu cầu:** `role = 'Admin'` — toàn bộ các endpoint dưới đây đều bị chặn nếu không phải Admin.
 
 | Method | Path | Mô tả |
 |---|---|---|
 | GET | `/stats` | Thống kê tổng quan (users, products, reports...) |
 | GET | `/users` | Danh sách tất cả người dùng |
 | PATCH | `/users/:id/toggle` | Kích hoạt / vô hiệu hóa tài khoản |
-| PATCH | `/users/:id/verify` | Cấp huy hiệu xác minh (Verified) cho người bán |
+| PATCH | `/users/:id/verify` | Cấp huy hiệu xác minh cho người bán |
 | GET | `/listings` | Danh sách tất cả bài đăng |
 | DELETE | `/listings/:id` | Xóa bài đăng vi phạm |
 
 ---
 
-### 6.12 Real-time — Socket.IO Events
+### 6.11 Real-time — Socket.IO Events
 
 **Namespace:** `/` (default)  
 **Auth:** Cookie `token` tự động gửi khi kết nối
@@ -548,8 +499,8 @@ image: File (tùy chọn, JPEG/PNG/WEBP, ≤ 5MB)
 
 | Event | Payload | Mô tả |
 |---|---|---|
-| `join_room` | `{ productId: number }` | Tham gia phòng chat của sản phẩm |
-| `leave_room` | `{ productId: number }` | Rời khỏi phòng chat |
+| `join_room` | `{ productId: string }` | Tham gia phòng chat của sản phẩm |
+| `leave_room` | `{ productId: string }` | Rời khỏi phòng chat |
 | `send_message` | `{ productId, receiverId, content }` | Gửi tin nhắn |
 
 #### Server → Client
@@ -570,11 +521,12 @@ JWT token được lưu trong cookie với cờ `HttpOnly` và `SameSite=Strict`
 
 ### 7.2 Double-Submit Cookie CSRF
 
-Khi server trả về response, nó set thêm một cookie `csrf_token` (không HttpOnly, có thể đọc bởi JS). Với mọi request mutation, frontend đọc cookie đó và đính kèm vào header `X-CSRF-Token`. Backend so sánh giá trị header với cookie — nếu không khớp trả về `403 Forbidden`. Cơ chế này bảo vệ chống Cross-Site Request Forgery vì trang web độc hại không thể đọc cookie từ domain khác.
+Khi server trả về response, nó set thêm một cookie `csrf_token` (không HttpOnly, có thể đọc bởi JS). Với mọi request mutation, frontend đọc cookie đó và đính kèm vào header `X-CSRF-Token`. Backend so sánh giá trị header với cookie — nếu không khớp trả về `403 Forbidden`.
 
 **Các endpoint miễn CSRF** (public, chỉ GET hoặc không cần auth):
 - `POST /api/auth/login`
 - `POST /api/auth/register`
+- `POST /api/auth/google`
 - `GET /api/health`
 - Tất cả GET requests
 
@@ -594,9 +546,9 @@ Multer middleware kiểm tra chặt chẽ:
 - Dung lượng tối đa: 5MB mỗi ảnh
 - Số lượng tối đa: 5 ảnh mỗi request
 
-### 7.5 MongoDB ODM Security
+### 7.5 Google OAuth (ID Token Verification)
 
-Hệ thống sử dụng Mongoose ODM để tương tác với MongoDB. Toàn bộ các truy vấn được định nghĩa qua schema chặt chẽ, loại bỏ hoàn toàn nguy cơ NoSQL Injection nhờ tính năng casting tự động của Mongoose.
+Khi người dùng đăng nhập bằng Google, `id_token` được gửi lên server. Backend xác minh token này với Google API trước khi cấp JWT nội bộ. Điều này ngăn chặn token giả mạo.
 
 ### 7.6 Helmet Security Headers
 
@@ -605,21 +557,23 @@ Helmet tự động thiết lập các HTTP security headers:
 - `X-Frame-Options: DENY`
 - `Strict-Transport-Security`
 - `X-XSS-Protection`
-- v.v.
 
 ---
 
-## 8. Cài Đặt & Chạy (Local)
+## 8. Cài Đặt & Chạy Local
 
 ### Yêu Cầu Hệ Thống
 
-- Node.js v20 trở lên
-- MongoDB Community Server 7.0 trở lên
-- npm v9+
+- **Node.js** v20 trở lên
+- **MongoDB** Community Server 7.0 trở lên
+- **Redis** Server 7 trở lên (hoặc dùng Docker)
+- **npm** v9+
+
+### Bước 1 — Clone Repository
 
 ```bash
-# MongoDB tự động khởi tạo database khi có dữ liệu mới.
-# Không cần import schema thủ công.
+git clone <repo-url>
+cd shop_sea_fixed
 ```
 
 ### Bước 2 — Cấu hình Backend
@@ -627,19 +581,18 @@ Helmet tự động thiết lập các HTTP security headers:
 ```bash
 cd backend
 cp .env.example .env
-# Chỉnh sửa .env với thông tin database và Cloudinary của bạn
+# Chỉnh sửa .env với thông tin thực của bạn (xem mục 11)
 npm install
 npm run dev
 # Backend chạy tại http://localhost:5000
-# Migrations tự động chạy khi khởi động
 ```
 
 ### Bước 3 — Cấu hình Frontend
 
 ```bash
-cd ../client/my-app
+cd client/my-app
 cp .env.example .env
-# Chỉnh sửa VITE_SOCKET_URL=http://localhost:5000
+# Chỉnh sửa VITE_GOOGLE_CLIENT_ID nếu dùng Google OAuth
 npm install
 npm run dev
 # Frontend chạy tại http://localhost:3000
@@ -654,33 +607,36 @@ npm start  # Chạy từ dist/app.js
 
 # Frontend
 cd client/my-app && npm run build
-# Output tại dist/ — serve bằng nginx hoặc bất kỳ static server nào
+# Output tại dist/ — serve bằng nginx hoặc static server
 ```
 
 ---
 
 ## 9. Triển Khai Docker
 
-Docker Compose tự động hóa toàn bộ môi trường phát triển với 3 container.
+Docker Compose tự động hóa toàn bộ môi trường với 4 container.
 
 ### Khởi Động
 
 ```bash
 # Từ thư mục gốc (nơi có docker-compose.yml)
-docker-compose up --build
+# Lần đầu hoặc khi có thay đổi code:
+docker compose up --build -d
+
+# Chạy lại không cần build:
+docker compose up -d
 ```
 
 ### Các Container
 
 | Container | Image | Port | Chú thích |
 |---|---|---|---|
-| `seafood_mongo` | mongo:latest | 27017 | MongoDB database container |
-| `seafood_redis` | redis:7-alpine | 6379 | Redis caching container |
-| `seafood_backend` | Node.js build | 5000 | Backend chạy Express + Socket.IO |
-| `seafood_frontend` | Node.js build | 3000 | Frontend React chạy dev server |
+| `seafood_mongo` | `mongo:latest` | 27017 | MongoDB database |
+| `seafood_redis` | `redis:7-alpine` | 6379 | Redis cache |
+| `seafood_backend` | Node.js build | 5000 | Express + Socket.IO |
+| `seafood_frontend` | Node.js build | 3000 | React dev server |
 
-MongoDB container tự khởi động nhanh chóng.
-Backend và các dịch vụ khác phụ thuộc trực tiếp vào trạng thái hoạt động của MongoDB và Redis để chạy trơn tru.
+> **Lưu ý:** Trong môi trường Docker, backend nhận `MONGO_URI=mongodb://db:27017/seafood_db` và `REDIS_HOST=redis` — dùng tên service thay vì `localhost`.
 
 ### Persistent Storage
 
@@ -689,11 +645,18 @@ volumes:
   mongo_data:  # Dữ liệu MongoDB không bị mất khi restart container
 ```
 
+### Xem Logs
+
+```bash
+docker compose logs -f backend     # Log backend real-time
+docker compose logs -f frontend    # Log frontend real-time
+```
+
 ### Dừng & Dọn Dẹp
 
 ```bash
-docker-compose down          # Dừng container, giữ dữ liệu
-docker-compose down -v       # Dừng container, XÓA volumes (reset DB)
+docker compose down          # Dừng container, giữ dữ liệu
+docker compose down -v       # Dừng container, XÓA volumes (reset DB)
 ```
 
 ---
@@ -702,7 +665,7 @@ docker-compose down -v       # Dừng container, XÓA volumes (reset DB)
 
 ### 10.1 Tìm Kiếm GPS (Haversine)
 
-Khi người dùng cung cấp tọa độ (`lat`, `lng`) và bán kính (`radius`), hệ thống tính khoảng cách giữa người dùng và từng bài đăng hải sản tươi bằng **công thức Haversine**. Chỉ những bài đăng nằm trong bán kính được trả về. Kết quả sắp xếp theo `BumpedAt` DESC (bài đẩy lên đầu).
+Khi người dùng cung cấp tọa độ (`lat`, `lng`) và bán kính (`radius`), hệ thống tính khoảng cách giữa người dùng và từng bài đăng hải sản tươi bằng **công thức Haversine**. Chỉ những bài đăng nằm trong bán kính được trả về. Kết quả sắp xếp theo `bumpedAt` DESC.
 
 ```
 d = 2R × arcsin(√(sin²(Δlat/2) + cos(lat₁)×cos(lat₂)×sin²(Δlng/2)))
@@ -710,25 +673,33 @@ d = 2R × arcsin(√(sin²(Δlat/2) + cos(lat₁)×cos(lat₂)×sin²(Δlng/2)))
 
 ### 10.2 Bump (Đẩy Bài Đăng)
 
-Người bán có thể "bump" bài đăng của mình lên đầu danh sách. Hệ thống cập nhật `BumpedAt = NOW()`. Cooldown 24h được enforce ở backend: nếu `NOW() - BumpedAt < 24h`, server trả về lỗi.
+Người bán có thể "bump" bài đăng của mình lên đầu danh sách. Hệ thống cập nhật `bumpedAt = NOW()`. Cooldown 24h được enforce ở backend: nếu `NOW() - bumpedAt < 24h`, server trả về lỗi.
 
 ### 10.3 Cron Job Tự Động Hết Hạn
 
-`node-cron` chạy định kỳ kiểm tra và cập nhật `Status = 'Expired'` cho các bài đăng hải sản tươi có `CatchTime` quá 48 giờ (hoặc logic tương tự được cấu hình trong `cron.ts`).
+`node-cron` chạy định kỳ kiểm tra và cập nhật `status = 'Expired'` cho các bài đăng hải sản tươi có `catchTime` quá 48 giờ (hoặc logic tương tự được cấu hình trong `cron.ts`).
 
-### 10.4 Real-time Chat
+### 10.4 Real-time Chat (Socket.IO)
 
 Chat được tổ chức theo **phòng** (`productId`). Khi người dùng mở trang chi tiết sản phẩm, client tự động join room tương ứng. Tin nhắn gửi qua `send_message` event và được broadcast đến tất cả thành viên trong room qua `receive_message`.
 
 Xác thực Socket.IO: server đọc cookie `token` từ handshake request, xác minh JWT, gắn thông tin user vào socket.
 
-### 10.5 Notification Service
+### 10.5 Google Sign-in (One Tap & Button)
+
+Frontend tích hợp **Google Identity Services** (GIS):
+- **One Tap**: tự động hiện popup chọn tài khoản Google đang đăng nhập trên máy
+- **Sign In with Google Button**: nút đăng nhập chuẩn của Google
+
+Khi người dùng chọn tài khoản, GIS trả về `id_token`, frontend gửi token này lên `POST /api/auth/google`. Backend xác minh với Google → tạo/tìm user trong DB → trả về JWT cookie như luồng login thông thường.
+
+### 10.6 Notification Service
 
 `notification.service.ts` tạo notification records trong DB và emit Socket.IO event `new_notification` đến room cá nhân (`user_<id>`) của người nhận. Đảm bảo người dùng nhận thông báo real-time ngay cả khi đang ở trang khác.
 
-### 10.6 Lazy Loading & Performance
+### 10.7 Lazy Loading & Performance
 
-Frontend dùng `React.lazy()` + `Suspense` để tách bundle: mỗi page chỉ được tải khi người dùng thực sự truy cập, giảm thời gian tải trang ban đầu.
+Frontend dùng `React.lazy()` + `Suspense` để tách bundle: mỗi page chỉ được tải khi người dùng thực sự truy cập, giảm thời gian tải trang ban đầu. Bootstrap 5 được import qua CDN để tận dụng browser cache.
 
 ---
 
@@ -737,30 +708,69 @@ Frontend dùng `React.lazy()` + `Suspense` để tách bundle: mỗi page chỉ 
 ### Backend (`backend/.env`)
 
 ```env
-# Server
+# ─── Database & Redis ────────────────────────
+MONGO_URI=mongodb://localhost:27017/seafood_db
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# ─── Auth ────────────────────────────────────
+JWT_SECRET=<chuỗi bí mật ngẫu nhiên dài ≥ 32 ký tự>
+JWT_EXPIRES_IN=7d
+OTP_SECRET=<chuỗi bí mật OTP dài ≥ 32 ký tự>
+
+# ─── Server ──────────────────────────────────
 PORT=5000
 CLIENT_URL=http://localhost:3000
 
-# Database
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASS=root123
-DB_NAME=seafood_db
-
-# Authentication
-JWT_SECRET=<chuỗi bí mật ngẫu nhiên dài ≥ 32 ký tự>
-JWT_EXPIRES_IN=7d
-
-# Cloudinary (https://cloudinary.com/console)
+# ─── Cloudinary (https://cloudinary.com/console) ─
 CLOUDINARY_CLOUD_NAME=<cloud name>
 CLOUDINARY_API_KEY=<api key>
 CLOUDINARY_API_SECRET=<api secret>
+
+# ─── ESMS SMS Gateway (https://esms.vn) ──────
+ESMS_API_KEY=<lấy tại esms.vn>
+ESMS_SECRET_KEY=<lấy tại esms.vn>
+ESMS_SMS_TYPE=4         # 4 = SMS thường, 2 = Brandname
+ESMS_BRANDNAME=HaiSan   # Chỉ cần khi SMS_TYPE=2
 ```
 
 ### Frontend (`client/my-app/.env`)
 
 ```env
+# Socket.IO server URL
 VITE_SOCKET_URL=http://localhost:5000
+
+# Google OAuth Client ID (lấy tại https://console.cloud.google.com)
+VITE_GOOGLE_CLIENT_ID=<your-google-client-id>.apps.googleusercontent.com
+
+# Khi chạy Docker: trỏ API proxy về container backend
+# VITE_API_TARGET=http://backend:5000
 ```
 
+> **Lưu ý về Docker:** Khi chạy qua `docker compose`, biến `VITE_API_TARGET=http://backend:5000` được set tự động trong `docker-compose.yml` để Vite proxy `/api` requests tới container backend nội bộ.
+
+---
+
+## 12. Hướng Dẫn Đóng Góp
+
+```bash
+# 1. Fork & clone
+git clone <your-fork>
+
+# 2. Tạo branch từ develop
+git checkout -b feature/ten-tinh-nang
+
+# 3. Commit theo Conventional Commits
+git commit -m "feat: thêm tính năng X"
+git commit -m "fix: sửa lỗi Y"
+git commit -m "docs: cập nhật README"
+
+# 4. Push & mở Pull Request
+git push origin feature/ten-tinh-nang
+```
+
+---
+
+<p align="center">
+  Made with ❤️ by the HảiSản.vn Team · Phase 3 · 2026
+</p>

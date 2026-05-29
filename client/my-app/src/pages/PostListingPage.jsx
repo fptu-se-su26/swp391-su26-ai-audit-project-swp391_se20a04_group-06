@@ -15,6 +15,22 @@ const CATEGORIES = [
 export function PostListingPage({ user }) {
   const navigate = useNavigate();
   const [type, setType] = useState("Fresh");
+  const [postCount, setPostCount] = useState({ count: 0, max: 5, isPremium: false, loading: true });
+
+  React.useEffect(() => {
+    api("/products/today-count")
+      .then((data) => {
+        setPostCount({
+          count: data.count,
+          max: data.max,
+          isPremium: data.isPremium,
+          loading: false,
+        });
+      })
+      .catch(() => {
+        setPostCount((p) => ({ ...p, loading: false }));
+      });
+  }, []);
   const [category, setCategory] = useState("Fish"); // Giá trị phân loại mặc định
   const [salesType, setSalesType] = useState("Retail");
   const [name, setName] = useState("");
@@ -235,6 +251,84 @@ export function PostListingPage({ user }) {
           📝 Đăng tin bán hải sản mới
         </h1>
       </div>
+
+      {/* ⚠️ CẢNH BÁO GIỚI HẠN ĐĂNG BÀI */}
+      {!postCount.loading && !postCount.isPremium && (
+        <div
+          style={{
+            background: postCount.count >= postCount.max ? "#FEE2E2" : "#EFF6FF",
+            border: `1.5px solid ${postCount.count >= postCount.max ? "#EF4444" : "#3B82F6"}`,
+            borderRadius: 16,
+            padding: "16px 20px",
+            marginBottom: 24,
+            boxShadow: "0 4px 6px -1px rgba(0,0,0,0.02)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 20 }}>{postCount.count >= postCount.max ? "🛑" : "💡"}</span>
+            <div style={{ fontWeight: 800, fontSize: 13.5, color: postCount.count >= postCount.max ? "#991B1B" : "#1E3A8A" }}>
+              {postCount.count >= postCount.max
+                ? "BẠN ĐẠT GIỚI HẠN ĐĂNG TIN HÔM NAY!"
+                : `HẠN MỨC ĐĂNG TIN HÔM NAY: ${postCount.count} / ${postCount.max} BÀI`}
+            </div>
+          </div>
+          <p style={{ fontSize: 13, color: postCount.count >= postCount.max ? "#7F1D1D" : "#1E40AF", margin: 0, lineHeight: 1.5, fontWeight: 500 }}>
+            {postCount.count >= postCount.max
+              ? "Tài khoản thường chỉ được đăng tối đa 5 bài mỗi ngày để hạn chế spam. Bạn đã dùng hết lượt đăng hôm nay. Hãy nâng cấp Premium để đăng không giới hạn!"
+              : `Bạn đang là thành viên thường, được phép đăng tối đa 5 bài viết mỗi ngày. Hãy nâng cấp lên Premium để mở khoá tính năng đăng bán không giới hạn!`}
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate("/profile")}
+            style={{
+              alignSelf: "flex-start",
+              background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
+              color: "#fff",
+              border: "none",
+              padding: "8px 18px",
+              borderRadius: 8,
+              cursor: "pointer",
+              fontWeight: 700,
+              fontSize: 12,
+              fontFamily: "inherit",
+              boxShadow: "0 2px 8px rgba(217, 119, 6, 0.25)",
+              marginTop: 4,
+            }}
+          >
+            🌟 Nâng cấp Premium chỉ 100đ →
+          </button>
+        </div>
+      )}
+
+      {/* Hiển thị banner Premium đối với thành viên Premium */}
+      {!postCount.loading && postCount.isPremium && (
+        <div
+          style={{
+            background: "linear-gradient(135deg, #FFFDF5 0%, #FFF9E6 100%)",
+            border: "1.5px solid #F59E0B",
+            borderRadius: 16,
+            padding: "16px 20px",
+            marginBottom: 24,
+            boxShadow: "0 4px 6px -1px rgba(245, 158, 11, 0.1)",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <span style={{ fontSize: 24 }}>👑</span>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 13.5, color: "#92400E" }}>
+              BẠN ĐANG LÀ THÀNH VIÊN PREMIUM!
+            </div>
+            <p style={{ fontSize: 12.5, color: "#B45309", margin: "2px 0 0 0", lineHeight: 1.4, fontWeight: 500 }}>
+              Đặc quyền đăng bán tin hải sản không giới hạn số lượng bài viết mỗi ngày đã sẵn sàng hoạt động.
+            </p>
+          </div>
+        </div>
+      )}
 
       <section
         style={{
@@ -792,13 +886,15 @@ export function PostListingPage({ user }) {
       )}
 
       <button
-        onClick={submit}
+        onClick={postCount.count >= postCount.max && !postCount.isPremium ? () => navigate("/profile") : submit}
         disabled={loading}
         style={{
           width: "100%",
           padding: 14,
           background: loading
             ? C.muted
+            : postCount.count >= postCount.max && !postCount.isPremium
+            ? "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)"
             : `linear-gradient(135deg, ${C.coral} 0%, #D94E21 100%)`,
           color: "#fff",
           border: "none",
@@ -807,11 +903,19 @@ export function PostListingPage({ user }) {
           fontSize: 16,
           fontWeight: 700,
           fontFamily: "inherit",
-          boxShadow: loading ? "none" : "0 4px 14px rgba(232, 100, 58, 0.3)",
+          boxShadow: loading
+            ? "none"
+            : postCount.count >= postCount.max && !postCount.isPremium
+            ? "0 4px 14px rgba(217, 119, 6, 0.3)"
+            : "0 4px 14px rgba(232, 100, 58, 0.3)",
           transition: "all 0.25s ease",
         }}
       >
-        {loading ? "⏳ Đang đăng bài bán..." : "🚀 Đăng mẻ hàng ngay"}
+        {loading
+          ? "⏳ Đang đăng bài bán..."
+          : postCount.count >= postCount.max && !postCount.isPremium
+          ? "🌟 Nâng cấp Premium để mở khoá Đăng bài"
+          : "🚀 Đăng mẻ hàng ngay"}
       </button>
     </div>
   );

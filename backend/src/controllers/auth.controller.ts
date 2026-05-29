@@ -436,6 +436,7 @@ export async function googleAuth(req: Request, res: Response) {
       role: updatedUser.role,
       isVerified: updatedUser.isVerified,
       avatarUrl: updatedUser.avatarUrl,
+      isPremium: !!updatedUser.isPremium,
     };
 
     const accessToken = authService.signToken(authUserResult.userId, authUserResult.role);

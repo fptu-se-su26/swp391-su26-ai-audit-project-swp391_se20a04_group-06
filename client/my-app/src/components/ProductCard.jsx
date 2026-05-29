@@ -196,6 +196,20 @@ export const ProductCard = memo(
               </span>
               <span>{product.sellerName?.split(" ").pop()}</span>
               {product.sellerIsVerified && <VerifiedBadge />}
+              {product.sellerIsPremium ? (
+                <span
+                  title="Thành viên Premium uy tín"
+                  style={{
+                    fontSize: 12,
+                    marginLeft: 2,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    cursor: "help"
+                  }}
+                >
+                  👑
+                </span>
+              ) : null}
             </button>
 
             {product.type === "Fresh" && product.catchTime && (

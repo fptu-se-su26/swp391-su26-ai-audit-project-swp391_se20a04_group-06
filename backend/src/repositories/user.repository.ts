@@ -14,6 +14,7 @@ export const userRepository = {
       isActive: u.isActive,
       isVerified: u.isVerified,
       avatar: u.avatar,
+      isPremium: u.isPremium,
     };
   },
 
@@ -29,6 +30,7 @@ export const userRepository = {
       isActive: u.isActive,
       isVerified: u.isVerified,
       avatarUrl: u.avatar,
+      isPremium: u.isPremium,
     };
   },
 

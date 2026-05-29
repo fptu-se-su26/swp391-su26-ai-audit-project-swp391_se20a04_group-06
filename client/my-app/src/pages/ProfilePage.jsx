@@ -216,6 +216,28 @@ export function ProfilePage() {
     }
   }, [initialUser]);
 
+  // Tự động thăm dò trạng thái Premium mỗi 5 giây nếu chưa nâng cấp
+  useEffect(() => {
+    const finalUserId = initialUser?.id || initialUser?.userId;
+    if (initialUser && !initialUser.isPremium && finalUserId) {
+      const interval = setInterval(async () => {
+        try {
+          const res = await api("/auth/me");
+          if (res && res.isPremium) {
+            setUser(res);
+            toast.success("🎉 NÂNG CẤP THÀNH CÔNG! Tài khoản của bạn đã được kích hoạt PREMIUM!");
+          }
+        } catch (e) {}
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [initialUser, setUser, toast]);
+
+  const handleCopy = (text, msg) => {
+    navigator.clipboard.writeText(text);
+    toast.success(msg || "Đã sao chép vào bộ nhớ tạm!");
+  };
+
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -438,6 +460,138 @@ export function ProfilePage() {
 
         {/* Forms */}
         <div className="col-12 col-md-8 col-lg-9 d-flex flex-column gap-4">
+          {/* 👑 KHU VỰC NÂNG CẤP PREMIUM */}
+          <div
+            className="card border-0 p-4 position-relative overflow-hidden"
+            style={{
+              background: initialUser?.isPremium
+                ? "linear-gradient(135deg, #FFFDF5 0%, #FFF9E6 100%)"
+                : "linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)",
+              borderRadius: 20,
+              border: initialUser?.isPremium
+                ? "2px solid #F59E0B"
+                : `1.5px solid ${C.border}`,
+              boxShadow: initialUser?.isPremium
+                ? "0 10px 25px -5px rgba(245, 158, 11, 0.15), 0 8px 10px -6px rgba(245, 158, 11, 0.1)"
+                : "0 4px 6px -1px rgba(0,0,0,0.01)",
+              transition: "all 0.3s ease",
+            }}
+          >
+            {initialUser?.isPremium ? (
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                  <span style={{ fontSize: 24 }}>👑</span>
+                  <h3 style={{ fontSize: 18, fontWeight: 900, color: "#92400E", margin: 0 }}>
+                    TÀI KHOẢN PREMIUM ĐÃ KÍCH HOẠT
+                  </h3>
+                </div>
+                <p style={{ fontSize: 13, color: "#B45309", lineHeight: 1.5, margin: "0 0 16px 0", fontWeight: 500 }}>
+                  Tuyệt vời! Bạn đang sở hữu những đặc quyền cao cấp nhất tại HảiSản.vn. Tài khoản của bạn được đánh dấu biểu tượng Premium uy tín.
+                </p>
+                <div style={{ background: "rgba(245, 158, 11, 0.08)", padding: 16, borderRadius: 12, border: "1px dashed rgba(245, 158, 11, 0.3)" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#92400E", marginBottom: 8, textTransform: "uppercase" }}>
+                    Đặc quyền Premium của bạn:
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "#78350F", display: "grid", gap: 6 }}>
+                    <li>🚀 <strong>Đăng tin không giới hạn</strong> bài viết mỗi ngày (Tài khoản thường chỉ 5 bài).</li>
+                    <li>💎 <strong>Huy hiệu Premium</strong> hiển thị bên cạnh tên trên trang cá nhân và mọi tin đăng.</li>
+                    <li>📈 <strong>Độ hiển thị ưu tiên</strong> cao hơn giúp tiếp cận hàng nghìn khách hàng nhanh hơn.</li>
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                  <span style={{ fontSize: 24 }}>🌟</span>
+                  <h3 style={{ fontSize: 18, fontWeight: 900, color: C.ocean, margin: 0 }}>
+                    NÂNG CẤP PREMIUM — ĐĂNG TIN KHÔNG GIỚI HẠN
+                  </h3>
+                </div>
+                <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.5, margin: "0 0 16px 0", fontWeight: 500 }}>
+                  Chỉ với <strong>2.000đ</strong>, nâng cấp tài khoản của bạn lên Premium để đăng không giới hạn bài viết trên ngày (tài khoản thường chỉ được đăng 5 bài/ngày) và nhận được các đặc quyền ưu tiên nổi bật.
+                </p>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20, marginTop: 16 }}>
+                  {/* Cột 1: Mã QR VietQR */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#F8FAFC", padding: 16, borderRadius: 16, border: "1px solid #E2E8F0" }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: C.muted, marginBottom: 10, textAlign: "center" }}>
+                      QUÉT MÃ QR BẰNG APP NGÂN HÀNG
+                    </div>
+                    <img
+                      src={`https://img.vietqr.io/image/MB-0362614906-compact.png?amount=2000&addInfo=SF%20${initialUser?.id || initialUser?.userId}&accountName=HAISAN%20VN`}
+                      alt="VietQR code"
+                      style={{
+                        width: 190,
+                        height: 190,
+                        borderRadius: 12,
+                        border: "3px solid #F59E0B",
+                        boxShadow: "0 4px 12px rgba(245, 158, 11, 0.15)",
+                        background: "#fff",
+                      }}
+                    />
+                    <div style={{ fontSize: 11, color: "#D97706", fontWeight: 700, marginTop: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                      <span className="spinner-border spinner-border-sm" style={{ width: 12, height: 12 }}></span>
+                      Đang đợi thanh toán...
+                    </div>
+                  </div>
+
+                  {/* Cột 2: Thông tin chuyển khoản */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: C.muted, textTransform: "uppercase" }}>
+                      Hoặc chuyển khoản thủ công
+                    </div>
+                    
+                    <div style={{ background: "#F1F5F9", padding: 12, borderRadius: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div>
+                        <div style={{ fontSize: 10, color: C.muted, fontWeight: 700 }}>NGÂN HÀNG NHẬN</div>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: C.dark }}>MB Bank (Ngân hàng Quân Đội)</div>
+                      </div>
+
+                      <div style={{ borderTop: "1px solid #E2E8F0", paddingTop: 6 }}>
+                        <div style={{ fontSize: 10, color: C.muted, fontWeight: 700 }}>SỐ TÀI KHOẢN</div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: C.dark, fontFamily: "monospace" }}>0362614906</span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy("0362614906", "Đã sao chép số tài khoản!")}
+                            style={{ padding: "2px 8px", fontSize: 10, fontWeight: 700, color: C.ocean, border: `1px solid ${C.border}`, borderRadius: 6, background: "#fff", cursor: "pointer" }}
+                          >
+                            Copy
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style={{ borderTop: "1px solid #E2E8F0", paddingTop: 6 }}>
+                        <div style={{ fontSize: 10, color: C.muted, fontWeight: 700 }}>SỐ TIỀN CẦN NẠP</div>
+                        <div style={{ fontSize: 13, fontWeight: 900, color: "#D97706" }}>2.000đ</div>
+                      </div>
+
+                      <div style={{ borderTop: "1px solid #E2E8F0", paddingTop: 6 }}>
+                        <div style={{ fontSize: 10, color: C.muted, fontWeight: 700 }}>NỘI DUNG CHUYỂN KHOẢN (MEMO)</div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#FEF3C7", padding: "4px 8px", borderRadius: 6, border: "1px solid #FDE68A" }}>
+                          <span style={{ fontSize: 11, fontWeight: 900, color: "#B45309", fontFamily: "monospace" }}>
+                            SF {initialUser?.id || initialUser?.userId}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(`SF ${initialUser?.id || initialUser?.userId}`, "Đã sao chép nội dung chuyển khoản!")}
+                            style={{ padding: "2px 6px", fontSize: 9, fontWeight: 800, color: "#92400E", border: "1px solid #FDE68A", borderRadius: 4, background: "#FFFBEB", cursor: "pointer" }}
+                          >
+                            Copy
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ fontSize: 10.5, color: "#C53030", fontWeight: 700, lineHeight: 1.4 }}>
+                      ⚠️ Lưu ý: Nội dung chuyển khoản phải viết đúng chính xác mã trên để hệ thống tự động nhận diện và kích hoạt ngay lập tức!
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Thông tin tài khoản */}
           <div
             className="card border-0 p-4"

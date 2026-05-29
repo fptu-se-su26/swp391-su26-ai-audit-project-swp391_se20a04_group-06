@@ -10,6 +10,7 @@ export interface IUser extends Document {
   avatar: string | null;
   favorites: Types.ObjectId[];
   following: Types.ObjectId[];
+  isPremium: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,6 +26,7 @@ const userSchema = new Schema<IUser>(
     avatar: { type: String, default: null },
     favorites: [{ type: Schema.Types.ObjectId, ref: "Product" }],
     following: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    isPremium: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

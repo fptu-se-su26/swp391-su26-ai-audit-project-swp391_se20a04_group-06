@@ -90,10 +90,39 @@ export async function deleteProduct(req: Request, res: Response) {
   }
 }
 
+import { User } from "../models/User";
+
 export async function getMyProducts(req: Request, res: Response) {
   try {
     const products = await productRepository.findByOwner(req.user.userId);
     return res.json(products);
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+
+export async function getTodayCount(req: Request, res: Response) {
+  try {
+    const userId = req.user.userId;
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const count = await Product.countDocuments({
+      sellerId: userId,
+      createdAt: { $gte: startOfDay, $lte: endOfDay },
+      status: { $ne: "Deleted" },
+    });
+
+    return res.json({
+      count,
+      max: 5,
+      isPremium: !!user.isPremium,
+    });
   } catch (err) {
     return sendServerError(res, err);
   }

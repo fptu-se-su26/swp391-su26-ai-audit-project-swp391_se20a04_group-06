@@ -72,7 +72,7 @@ export const productService = {
 
     const total = await Product.countDocuments(filter);
     const rows = await Product.find(filter, projection)
-      .populate("sellerId", "name isVerified")
+      .populate("sellerId", "name isVerified isPremium")
       .sort(sortOption)
       .skip(skip)
       .limit(limit);
@@ -82,6 +82,7 @@ export const productService = {
       sellerId: p.sellerId?._id || null,
       sellerName: p.sellerId?.name || "Một ngư dân",
       sellerIsVerified: p.sellerId?.isVerified ? 1 : 0,
+      sellerIsPremium: p.sellerId?.isPremium ? 1 : 0,
       type: p.type,
       category: p.category,
       name: p.name,
@@ -129,7 +130,7 @@ export const productService = {
       id,
       { $inc: { viewCount: 1 } },
       { new: true },
-    ).populate("sellerId", "name isVerified");
+    ).populate("sellerId", "name isVerified isPremium");
 
     if (!p) throw new HttpError(404, "Không tìm thấy sản phẩm");
 
@@ -138,6 +139,7 @@ export const productService = {
       sellerId: p.sellerId?._id,
       sellerName: p.sellerId?.name || "Một ngư dân",
       sellerIsVerified: p.sellerId?.isVerified ? 1 : 0,
+      sellerIsPremium: p.sellerId?.isPremium ? 1 : 0,
       type: p.type,
       category: p.category,
       name: p.name,
@@ -188,6 +190,30 @@ export const productService = {
       origin,
       expiryDate,
     } = body;
+
+    // Enforce 5 posts limit per day for normal accounts
+    const user = await User.findById(userId);
+    if (!user) throw new HttpError(404, "Không tìm thấy người dùng");
+
+    if (!user.isPremium && user.role !== "Admin") {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const countToday = await Product.countDocuments({
+        sellerId: userId,
+        createdAt: { $gte: startOfDay, $lte: endOfDay },
+        status: { $ne: "Deleted" },
+      });
+
+      if (countToday >= 5) {
+        throw new HttpError(
+          403,
+          "Tài khoản thường chỉ được phép đăng tối đa 5 bài viết mỗi ngày. Vui lòng nâng cấp lên Premium để đăng không giới hạn!"
+        );
+      }
+    }
 
     const cleanDesc = description
       ? description.trim().replace(/<[^>]*>/g, "").slice(0, 2000)

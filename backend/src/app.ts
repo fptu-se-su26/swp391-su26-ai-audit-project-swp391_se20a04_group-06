@@ -24,6 +24,7 @@ import reviewRoutes from "./routes/review.routes";
 import notificationRoutes from "./routes/notification.routes";
 import favoriteRoutes from "./routes/favorite.routes";
 import reportRoutes from "./routes/report.routes";
+import paymentRoutes from "./routes/payment.routes";
 
 const app = express();
 const server = http.createServer(app);
@@ -63,6 +64,7 @@ app.use("/api", (req, res, next) => {
     "/auth/reset-password",
     "/auth/refresh",
     "/auth/google",
+    "/payment/webhook",
   ];
 
   const cleanPath = req.path.replace(/\/$/, "");
@@ -90,6 +92,7 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/payment", paymentRoutes);
 
 app.use((_req, res) =>
   res.status(404).json({ message: "Không tìm thấy endpoint này" }),

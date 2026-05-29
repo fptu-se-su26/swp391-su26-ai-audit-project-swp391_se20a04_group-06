@@ -15,6 +15,7 @@ export interface AuthUserResult {
   role: string;
   isVerified: boolean;
   avatarUrl: string | null;
+  isPremium: boolean;
 }
 
 export const authService = {
@@ -38,6 +39,7 @@ export const authService = {
       role: "User",
       isVerified: false,
       avatarUrl: null,
+      isPremium: false,
     };
   },
 
@@ -62,6 +64,7 @@ export const authService = {
       role: user.role,
       isVerified: user.isVerified,
       avatarUrl: user.avatar,
+      isPremium: !!user.isPremium,
     };
   },
 

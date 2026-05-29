@@ -16,6 +16,7 @@ export async function getUserPublicProfile(req: Request, res: Response) {
       name: user.name,
       email: user.email,
       isVerified: user.isVerified ? 1 : 0,
+      isPremium: !!user.isPremium,
       createdAt: user.createdAt,
     });
   } catch (err) {

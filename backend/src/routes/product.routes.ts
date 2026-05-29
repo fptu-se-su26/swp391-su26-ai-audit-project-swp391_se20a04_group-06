@@ -11,6 +11,7 @@ import {
   getMyProducts,
   bumpProduct,
   getProductPriceHistory,
+  getTodayCount,
 } from "../controllers/product.controller";
 import { authenticate } from "../middlewares/auth";
 
@@ -82,6 +83,7 @@ const priceHistoryLimiter = rateLimit({
 // ─── Routes ───────────────────────────────────────────────────
 router.get("/", getProducts);
 router.get("/my", authenticate, getMyProducts);
+router.get("/today-count", authenticate, getTodayCount);
 router.get("/:id", getProductById);
 router.get("/:id/price-history", priceHistoryLimiter, getProductPriceHistory);
 

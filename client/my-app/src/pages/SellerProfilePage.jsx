@@ -149,6 +149,19 @@ export function SellerProfilePage({ seller }) {
               >
                 {sellerName}
                 {seller?.isVerified && <VerifiedBadge size="md" showLabel />}
+                {seller?.isPremium && (
+                  <span
+                    title="Thành viên Premium uy tín"
+                    style={{
+                      fontSize: 18,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      cursor: "help"
+                    }}
+                  >
+                    👑
+                  </span>
+                )}
               </h1>
               {sellerRating !== null && (
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

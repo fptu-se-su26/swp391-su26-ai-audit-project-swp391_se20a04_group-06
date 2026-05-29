@@ -32,7 +32,7 @@ import { Navbar } from "./layout/Navbar";
 import { ChatBox } from "./components/ChatBox";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useViewTransitionNavigate } from "./hooks/useViewTransitionNavigate";
-import { disconnectSocket } from "./services/socket";
+import { disconnectSocket, getSocket } from "./services/socket";
 import { api } from "./services/api";
 import { useLocation } from "react-router-dom";
 import { Link } from "react-router-dom"; // đảm bảo đã import
@@ -171,13 +171,41 @@ function AppShell() {
       setUnread(0);
       return;
     }
-    const fetch = () =>
+    // BUG FIX: đổi tên `fetch` → `fetchUnread` tránh shadow global fetch API
+    const fetchUnread = () =>
       api("/messages/unread-count")
         .then((d) => setUnread(d.count))
         .catch(() => {});
-    fetch();
-    const id = setInterval(fetch, 30_000);
+    fetchUnread();
+    const id = setInterval(fetchUnread, 30_000);
     return () => clearInterval(id);
+  }, [user]);
+
+  // BUG FIX: Lắng nghe socket `new_message` để cập nhật unread count real-time thay vì
+  // chờ poll 30 giây tiếp theo. Trước đây socket.ts emit `notification` type "new_message"
+  // nhưng client không handle → badge tin nhắn lag tối đa 30 giây sau mỗi tin nhận được.
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    let cleanupSocketListener = null;
+
+    getSocket()
+      .then((socket) => {
+        if (!active) return;
+        const handler = (data) => {
+          if (data.type === "new_message") {
+            setUnread((prev) => prev + 1);
+          }
+        };
+        socket.on("notification", handler);
+        cleanupSocketListener = () => socket.off("notification", handler);
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+      cleanupSocketListener?.();
+    };
   }, [user]);
 
   // Logout handler: gọi logout từ AuthContext rồi navigate

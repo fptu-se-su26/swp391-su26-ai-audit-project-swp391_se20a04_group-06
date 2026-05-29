@@ -1,3 +1,4 @@
+/// <reference path="../types/streamifier.d.ts" />
 import multer from 'multer';
 import { Request, Response, NextFunction } from 'express';
 import streamifier from 'streamifier';

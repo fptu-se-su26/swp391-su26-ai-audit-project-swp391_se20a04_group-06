@@ -14,7 +14,7 @@ export async function getUserPublicProfile(req: Request, res: Response) {
     return res.json({
       id: user._id.toString(),
       name: user.name,
-      phone: user.phone,
+      email: user.email,
       isVerified: user.isVerified ? 1 : 0,
       createdAt: user.createdAt,
     });

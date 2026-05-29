@@ -1,15 +1,15 @@
-import { Schema, model, Document } from "mongoose";
+import { Schema, model, Document, Types } from "mongoose";
 
 export interface IUser extends Document {
   name: string;
-  phone: string;
+  email: string;
   passwordHash: string;
   role: "User" | "Admin";
   isActive: boolean;
   isVerified: boolean;
   avatar: string | null;
-  favorites: Schema.Types.ObjectId[];
-  following: Schema.Types.ObjectId[];
+  favorites: Types.ObjectId[];
+  following: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,7 +17,7 @@ export interface IUser extends Document {
 const userSchema = new Schema<IUser>(
   {
     name: { type: String, required: true, trim: true },
-    phone: { type: String, required: true, unique: true, index: true },
+    email: { type: String, required: true, unique: true, index: true, trim: true, lowercase: true },
     passwordHash: { type: String, required: true },
     role: { type: String, enum: ["User", "Admin"], default: "User" },
     isActive: { type: Boolean, default: true },

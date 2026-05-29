@@ -62,6 +62,7 @@ app.use("/api", (req, res, next) => {
     "/auth/verify-otp",
     "/auth/reset-password",
     "/auth/refresh",
+    "/auth/google",
   ];
 
   const cleanPath = req.path.replace(/\/$/, "");

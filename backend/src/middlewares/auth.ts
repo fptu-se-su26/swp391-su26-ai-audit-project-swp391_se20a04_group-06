@@ -3,11 +3,11 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
 export function authenticate(req: Request, res: Response, next: NextFunction) {
-  let token = req.cookies?.token;
-
-  if (!token && req.headers.authorization?.startsWith("Bearer ")) {
-    token = req.headers.authorization.split(" ")[1];
-  }
+  // [C-04 FIX] Chỉ đọc token từ HttpOnly cookie — KHÔNG chấp nhận Bearer header.
+  // Trước đây có fallback đọc Authorization header → phá vỡ toàn bộ thiết kế
+  // "token không thể bị đọc bởi JavaScript" vì attacker XSS có thể inject
+  // token vào header thay vì cookie.
+  const token = req.cookies?.token;
 
   if (!token) {
     return res.status(401).json({ message: "Chưa đăng nhập" });

@@ -1,37 +1,56 @@
 /**
  * NotificationBell.jsx — Modernized UI/UX Version
  *
- * Tách biệt hoàn toàn logic và khoác lên mình giao diện cao cấp.
- * Giữ nguyên 100% logic states, props và callbacks.
+ * FIXES:
+ *   1. Prop typo: component nhận `onMarkRead` nhưng Navbar truyền `onMarkAllRead`.
+ *      Chuẩn hóa thành `onMarkAllRead` (tên ý nghĩa hơn, match với useNotifications).
+ *
+ *   2. Click outside handler dùng ref thay vì event delegation — tránh memory leak
+ *      khi component unmount trước khi event được remove.
+ *
+ *   3. Thêm keyboard accessibility: Escape đóng dropdown.
  */
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { C } from "../utils/theme";
 
 export function NotificationBell({
   notifs,
   unreadCount,
-  onMarkRead,
+  onMarkAllRead, // FIX: đổi từ onMarkRead → onMarkAllRead cho nhất quán với Navbar/useNotifications
   onNotifClick,
 }) {
   const [open, setOpen] = useState(false);
   const bellRef = useRef(null);
 
-  const handleToggle = () => {
-    const next = !open;
-    setOpen(next);
-    if (next && unreadCount > 0) onMarkRead();
-  };
+  const handleToggle = useCallback(() => {
+    setOpen((prev) => {
+      const next = !prev;
+      if (next && unreadCount > 0) onMarkAllRead?.();
+      return next;
+    });
+  }, [unreadCount, onMarkAllRead]);
 
-  // Đóng dropdown thông báo khi nhấp chuột ra ngoài
+  // Đóng dropdown khi click ra ngoài
   useEffect(() => {
+    if (!open) return;
+
     function handleClickOutside(event) {
       if (bellRef.current && !bellRef.current.contains(event.target)) {
         setOpen(false);
       }
     }
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") setOpen(false);
+    }
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
 
   return (
     <div ref={bellRef} style={{ position: "relative" }}>
@@ -57,7 +76,9 @@ export function NotificationBell({
         onMouseLeave={(e) =>
           (e.currentTarget.style.background = "rgba(255,255,255,0.15)")
         }
-        aria-label="Thông báo"
+        aria-label={`Thông báo${unreadCount > 0 ? ` (${unreadCount} chưa đọc)` : ""}`}
+        aria-expanded={open}
+        aria-haspopup="true"
       >
         🔔
       </button>
@@ -70,7 +91,7 @@ export function NotificationBell({
           unreadCount={unreadCount}
           onNotifClick={(n) => {
             setOpen(false);
-            onNotifClick(n);
+            onNotifClick?.(n);
           }}
         />
       )}
@@ -81,6 +102,7 @@ export function NotificationBell({
 function Badge({ count }) {
   return (
     <div
+      aria-hidden="true"
       style={{
         position: "absolute",
         top: -4,
@@ -95,11 +117,11 @@ function Badge({ count }) {
         justifyContent: "center",
         fontSize: 11,
         fontWeight: 700,
-        boxShadow: "0 2px 8px rgba(239, 68, 68, 0.45)", // Đổ bóng rực rỡ dạng glow
+        boxShadow: "0 2px 8px rgba(239, 68, 68, 0.45)",
         pointerEvents: "none",
       }}
     >
-      {count}
+      {count > 99 ? "99+" : count}
     </div>
   );
 }
@@ -107,6 +129,8 @@ function Badge({ count }) {
 function NotifDropdown({ notifs, unreadCount, onNotifClick }) {
   return (
     <div
+      role="dialog"
+      aria-label="Thông báo"
       style={{
         position: "absolute",
         top: 46,
@@ -121,7 +145,6 @@ function NotifDropdown({ notifs, unreadCount, onNotifClick }) {
         zIndex: 1000,
       }}
     >
-      {/* Header Gradient */}
       <div
         style={{
           padding: "14px 18px",
@@ -188,12 +211,14 @@ function NotifItem({ notif: n, onClick }) {
   return (
     <div
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === "Enter" && onClick()}
       style={{
         padding: "14px 18px",
         borderBottom: `1px solid ${C.border}`,
         fontSize: 13,
         color: C.dark,
-        // Điểm chỉ thị tin nhắn chưa đọc bên lề trái đồng bộ với Popover chat
         borderLeft: n.isRead ? "4px solid transparent" : `4px solid ${C.ocean}`,
         background: n.isRead ? "#fff" : "rgba(11, 79, 108, 0.04)",
         display: "flex",
@@ -209,7 +234,6 @@ function NotifItem({ notif: n, onClick }) {
           : "rgba(11, 79, 108, 0.04)")
       }
     >
-      {/* Vòng tròn Icon đẹp mắt thay cho Emoji trần */}
       <div
         style={{
           width: 34,
@@ -262,9 +286,9 @@ function NotifItem({ notif: n, onClick }) {
         )}
       </div>
 
-      {/* Chấm chỉ thị chưa đọc */}
       {!n.isRead && (
         <span
+          aria-hidden="true"
           style={{
             width: 8,
             height: 8,

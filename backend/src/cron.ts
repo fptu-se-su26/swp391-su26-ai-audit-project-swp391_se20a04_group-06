@@ -10,11 +10,15 @@ export function startCronJobs() {
   const expireTask = async () => {
     try {
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
       const result = await Product.updateMany(
         {
           type: 'Fresh',
           status: 'Active',
-          catchTime: { $lte: yesterday }
+          $or: [
+            { catchTime: { $lte: twoDaysAgo } },
+            { createdAt: { $lte: yesterday } }
+          ]
         },
         { $set: { status: 'Expired' } }
       );

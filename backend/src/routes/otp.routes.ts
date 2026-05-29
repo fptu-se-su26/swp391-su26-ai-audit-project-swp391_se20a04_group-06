@@ -9,7 +9,7 @@ import {
 const router = Router();
 
 // Rate limiter bổ sung cho toàn bộ flow reset
-// (Rate limit chi tiết từng phone đã xử lý trong otpService)
+// (Rate limit chi tiết từng email đã xử lý trong otpService)
 const resetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,

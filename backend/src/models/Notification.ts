@@ -1,12 +1,12 @@
-import { Schema, model, Document } from "mongoose";
+import { Schema, model, Document, Types } from "mongoose";
 
 export interface INotification extends Document {
-  userId: Schema.Types.ObjectId;
+  userId: Types.ObjectId;
   type: string;
   content: string;
   isRead: boolean;
-  productId?: Schema.Types.ObjectId;
-  reviewId?: Schema.Types.ObjectId;
+  productId?: Types.ObjectId;
+  reviewId?: Types.ObjectId;
   createdAt: Date;
 }
 

@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { C } from "../utils/theme";
 import { getSocket } from "../services/socket";
 import { api } from "../services/api";
-import { MessageIcon, XIcon, CheckCircleIcon } from "./icons/index"; // 🌟 Sửa đường dẫn rõ ràng
+import { MessageIcon, XIcon, CheckCircleIcon } from "./icons/index";
 import { useToast } from "../context/ToastContext";
 
 export function ChatBox({ product, onClose, user, fullHeight = false }) {
@@ -22,7 +22,7 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
   const currentUserId = user?.id || user?.userId;
 
   useEffect(() => {
-    if (!user || !currentUserId) return; // 🌟 Chặn sớm nếu chưa load xong user
+    if (!currentUserId) return;
     setMsgs([]);
     setLoading(true);
     api(`/messages/${product.id}`)
@@ -44,10 +44,10 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [product.id, user, currentUserId]);
+  }, [product.id, currentUserId]);
 
   useEffect(() => {
-    if (!user || !currentUserId) return; // 🌟 Chặn sớm tránh lỗi null pointer
+    if (!currentUserId) return;
     let cancelled = false;
 
     getSocket().then((socket) => {
@@ -87,7 +87,7 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
         socketRef.current.emit("leave_room", product.id);
       }
     };
-  }, [product.id, user, currentUserId]);
+  }, [product.id, currentUserId]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });

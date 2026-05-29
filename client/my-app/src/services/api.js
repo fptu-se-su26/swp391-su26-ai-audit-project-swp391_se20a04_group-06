@@ -14,8 +14,8 @@ function subscribeTokenRefresh(cb) {
   refreshSubscribers.push(cb);
 }
 
-function onRefreshed() {
-  refreshSubscribers.forEach((cb) => cb());
+function onRefreshed(err) {
+  refreshSubscribers.forEach((cb) => cb(err));
   refreshSubscribers = [];
 }
 
@@ -40,6 +40,7 @@ export async function api(path, options = {}) {
   // Xử lý khi Access Token hết hạn (401)
   if (
     res.status === 401 &&
+    !options._isRetry &&
     path !== "/auth/me" &&
     path !== "/auth/login" &&
     path !== "/auth/register"
@@ -56,9 +57,10 @@ export async function api(path, options = {}) {
 
         if (refreshRes.ok) {
           isRefreshing = false;
-          onRefreshed();
+          onRefreshed(null);
         } else {
           isRefreshing = false;
+          onRefreshed(new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."));
           // Không thể gia hạn phiên -> Yêu cầu đăng nhập lại
           window.location.href = "/dang-nhap";
           throw new Error(
@@ -67,19 +69,28 @@ export async function api(path, options = {}) {
         }
       } catch (err) {
         isRefreshing = false;
+        onRefreshed(err);
         throw err;
       }
     }
 
     // Cho các request gọi song song xếp hàng chờ refresh hoàn tất rồi thực thi lại
-    return new Promise((resolve) => {
-      subscribeTokenRefresh(async () => {
+    return new Promise((resolve, reject) => {
+      subscribeTokenRefresh(async (err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
         // Cập nhật lại csrf token mới nếu có thay đổi
         const updatedCsrf = getCookie("csrfToken");
         if (updatedCsrf && !isFormData) {
           config.headers["x-csrf-token"] = updatedCsrf;
         }
-        resolve(await api(path, options));
+        try {
+          resolve(await api(path, { ...options, _isRetry: true }));
+        } catch (e) {
+          reject(e);
+        }
       });
     });
   }

@@ -1,16 +1,204 @@
-/**
- * AdminPage.jsx — Premium UI/UX Redesigned Version
- *
- * Nâng cấp toàn diện giao diện quản trị Admin.
- * Giữ nguyên 100% logic states, APIs và các hàm hỗ trợ.
- */
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { C } from "../utils/theme";
 import { api } from "../services/api";
 import { fmt } from "../utils/format";
-import { AdminUserRow, useVerifyUser } from "./AdminPage_verify_patch";
+import { VerifiedBadge } from "../components/VerifiedBadge";
+import { useToast } from "../context/ToastContext";
 
-/* ─── Mini bar chart nâng cấp với Linear Gradients ─── */
+/* ─── Hộp thoại xác nhận tùy chỉnh ConfirmDialog ─── */
+function ConfirmDialog({ message, onConfirm, onCancel }) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.4)",
+        zIndex: 99998,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        animation: "fadeIn 0.15s ease",
+      }}
+      onClick={onCancel}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: C.white,
+          borderRadius: 16,
+          padding: "28px 32px",
+          maxWidth: 360,
+          width: "90%",
+          boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+          textAlign: "center",
+        }}
+      >
+        <div style={{ fontSize: 40, marginBottom: 12 }}>🗑️</div>
+        <p
+          style={{
+            fontSize: 15,
+            fontWeight: 600,
+            color: C.dark,
+            marginBottom: 20,
+          }}
+        >
+          {message}
+        </p>
+        <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+          <button
+            onClick={onCancel}
+            style={{
+              flex: 1,
+              padding: "10px 0",
+              borderRadius: 10,
+              border: `1px solid ${C.border}`,
+              background: C.white,
+              color: C.muted,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              fontSize: 14,
+            }}
+          >
+            Huỷ
+          </button>
+          <button
+            onClick={onConfirm}
+            style={{
+              flex: 1,
+              padding: "10px 0",
+              borderRadius: 10,
+              border: "none",
+              background: "#DC2626",
+              color: "#fff",
+              fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              fontSize: 14,
+            }}
+          >
+            Xoá
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── HÀM HOOK XÁC MINH NGƯỜI DÙNG MERGED CHUẨN VITE HMR ─── */
+function useVerifyUser(users, setUsers) {
+  const toast = useToast();
+  const [verifyingId, setVerifyingId] = useState(null);
+
+  const toggleVerify = async (userId) => {
+    setVerifyingId(userId);
+    try {
+      const res = await api(`/admin/users/${userId}/verify`, {
+        method: "PATCH",
+      });
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === userId ? { ...u, isVerified: res.isVerified } : u,
+        ),
+      );
+      toast.success(res.message || "Xác minh người bán thành công!");
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setVerifyingId(null);
+    }
+  };
+
+  return { toggleVerify, verifyingId };
+}
+
+/* ─── COMPONENT HÀNG NGƯỜI DÙNG TRONG BẢNG MERGED CHUẨN VITE HMR ─── */
+function AdminUserRow({
+  user,
+  onToggleActive,
+  onToggleVerify,
+  verifyingId,
+  togglingId,
+}) {
+  return (
+    <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+      <td style={{ padding: "10px 12px", fontSize: 13 }}>
+        <div style={{ fontWeight: 600 }}>{user.name}</div>
+        <div style={{ fontSize: 11, color: C.muted }}>{user.email}</div>
+      </td>
+      <td style={{ padding: "10px 12px", fontSize: 13 }}>
+        <span
+          style={{
+            background: user.role === "Admin" ? "#7C3AED" : C.ocean,
+            color: "#fff",
+            padding: "2px 8px",
+            borderRadius: 10,
+            fontSize: 11,
+            fontWeight: 700,
+          }}
+        >
+          {user.role}
+        </span>
+      </td>
+      <td style={{ padding: "10px 12px", fontSize: 13, textAlign: "center" }}>
+        {user.postCount}
+      </td>
+      <td style={{ padding: "10px 12px", fontSize: 13 }}>
+        {user.isVerified && <VerifiedBadge showLabel />}
+      </td>
+      <td style={{ padding: "10px 12px" }}>
+        <div style={{ display: "flex", gap: 4 }}>
+          <button
+            onClick={() => onToggleActive(user.id)}
+            disabled={togglingId === user.id}
+            style={{
+              background: user.isActive ? "#EF4444" : "#22C55E",
+              color: "#fff",
+              border: "none",
+              padding: "4px 10px",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontSize: 12,
+              fontWeight: 700,
+              fontFamily: "inherit",
+            }}
+          >
+            {togglingId === user.id
+              ? "..."
+              : user.isActive
+                ? "Khoá"
+                : "Mở khoá"}
+          </button>
+
+          {user.role !== "Admin" && (
+            <button
+              onClick={() => onToggleVerify(user.id)}
+              disabled={verifyingId === user.id}
+              style={{
+                background: user.isVerified ? "#64748B" : "#0EA5E9",
+                color: "#fff",
+                border: "none",
+                padding: "4px 10px",
+                borderRadius: 6,
+                cursor: "pointer",
+                fontSize: 12,
+                fontWeight: 700,
+                fontFamily: "inherit",
+              }}
+            >
+              {verifyingId === user.id
+                ? "..."
+                : user.isVerified
+                  ? "✗ Thu hồi"
+                  : "✓ Xác minh"}
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 function BarChart({ data, color }) {
   const W = 340,
     H = 130,
@@ -24,13 +212,11 @@ function BarChart({ data, color }) {
   const step = cW / data.length;
   const bW = step * 0.55;
 
-  /* Đường kẻ ngang */
   const gridLines = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(max * f));
   const gradientId = `bar-gradient-${color.replace("#", "")}`;
 
   return (
     <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
-      {/* Định nghĩa dải màu Gradient cho cột biểu đồ */}
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="1" />
@@ -38,7 +224,6 @@ function BarChart({ data, color }) {
         </linearGradient>
       </defs>
 
-      {/* Grid lines */}
       {gridLines.map((v, gi) => {
         const y = padT + cH - (v / max) * cH;
         return (
@@ -66,7 +251,6 @@ function BarChart({ data, color }) {
         );
       })}
 
-      {/* Bars */}
       {data.map((d, i) => {
         const bH = Math.max((d.count / max) * cH, d.count > 0 ? 4 : 0);
         const x = padL + i * step + (step - bW) / 2;
@@ -79,7 +263,7 @@ function BarChart({ data, color }) {
               width={bW}
               height={bH}
               fill={`url(#${gradientId})`}
-              rx={4} // Bo tròn cột biểu đồ mềm mại hơn
+              rx={4}
               style={{ transition: "all 0.3s ease" }}
             />
             {d.count > 0 && (
@@ -108,7 +292,6 @@ function BarChart({ data, color }) {
         );
       })}
 
-      {/* Trục Y */}
       <line
         x1={padL}
         x2={padL}
@@ -121,7 +304,6 @@ function BarChart({ data, color }) {
   );
 }
 
-/* ─── Pill badge thiết kế lại mềm dịu ─── */
 function Pill({ bg, color, children }) {
   return (
     <span
@@ -141,7 +323,6 @@ function Pill({ bg, color, children }) {
   );
 }
 
-/* ─── Star rating hiển thị ─── */
 function Stars({ value }) {
   const num = parseFloat(value) || 0;
   return (
@@ -163,7 +344,6 @@ function Stars({ value }) {
   );
 }
 
-/* ─── Stat card nâng cấp phong cách vạch chỉ thị lề trái ─── */
 function StatCard({ value, label, sub, color, icon }) {
   return (
     <div
@@ -171,10 +351,9 @@ function StatCard({ value, label, sub, color, icon }) {
         background: C.white,
         borderRadius: 16,
         border: `1px solid ${C.border}`,
-        borderLeft: `4px solid ${color}`, // Vạch chỉ thị màu lề trái chuyên nghiệp
+        borderLeft: `4px solid ${color}`,
         padding: "18px 20px",
-        boxShadow:
-          "0 4px 6px -1px rgba(0,0,0,0.01), 0 2px 4px -1px rgba(0,0,0,0.01)",
+        boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
@@ -207,17 +386,19 @@ function StatCard({ value, label, sub, color, icon }) {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════
-   AdminPage Main Component
-═══════════════════════════════════════════════════════════ */
 export function AdminPage() {
+  const toast = useToast();
   const [tab, setTab] = useState("stats");
   const [reports, setReports] = useState([]);
   const [reportStatus, setReportStatus] = useState("Pending");
   const [reportsLoading, setReportsLoading] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const loadReports = (status) => {
-    setReportsLoading(true);
+    // 🌟 KHẮC PHỤC CASCADING RENDER: Đưa việc cập nhật trạng thái loading ra ngoài chu kỳ render đồng bộ bằng microtask
+    Promise.resolve().then(() => {
+      setReportsLoading(true);
+    });
     api(`/reports?status=${status}`)
       .then((data) => setReports(data))
       .catch(() => {})
@@ -239,15 +420,16 @@ export function AdminPage() {
         body: JSON.stringify({ action, adminNote }),
       });
       setReports((prev) => prev.filter((r) => r.id !== reportId));
-      alert(
+      toast.success(
         action === "resolve"
-          ? "✅ Đã ẩn bài và xử lý báo cáo"
-          : "✅ Đã bỏ qua báo cáo",
+          ? "Đã ẩn bài viết vi phạm và xử lý báo cáo thành công!"
+          : "Đã từ chối phản hồi báo cáo này.",
       );
     } catch (e) {
-      alert(e.message);
+      toast.error(e.message);
     }
   };
+
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [listings, setListings] = useState([]);
@@ -262,8 +444,6 @@ export function AdminPage() {
     ])
       .then(([s, u, l]) => {
         setStats(s);
-
-        // Kiểm tra u và l có phải là mảng không, nếu bọc trong .data thì lấy .data
         const safeUsers = Array.isArray(u)
           ? u
           : u && Array.isArray(u.data)
@@ -274,11 +454,10 @@ export function AdminPage() {
           : l && Array.isArray(l.data)
             ? l.data
             : [];
-
         setUsers(safeUsers);
         setListings(safeListings);
       })
-      .catch((e) => alert("Admin error: " + e.message))
+      .catch((e) => toast.error("Admin error: " + e.message))
       .finally(() => setLoading(false));
   }, []);
 
@@ -291,20 +470,24 @@ export function AdminPage() {
       setUsers((prev) =>
         prev.map((u) => (u.id === id ? { ...u, isActive: res.isActive } : u)),
       );
+      toast.success(
+        "Đã thay đổi trạng thái hoạt động của tài khoản thành công!",
+      );
     } catch (e) {
-      alert(e.message);
+      toast.error(e.message);
     } finally {
       setTogglingId(null);
     }
   };
 
-  const deleteProduct = async (id) => {
-    if (!confirm("Xoá bài đăng này?")) return;
+  const doDeleteProduct = async (id) => {
+    setConfirmDelete(null);
     try {
       await api(`/admin/listings/${id}`, { method: "DELETE" });
       setListings((prev) => prev.filter((p) => p.id !== id));
+      toast.success("Đã gỡ bỏ bài đăng hải sản vĩnh viễn.");
     } catch (e) {
-      alert(e.message);
+      toast.error(e.message);
     }
   };
 
@@ -341,92 +524,100 @@ export function AdminPage() {
     : null;
 
   return (
-    <div
-      style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px 80px" }}
-    >
+    <div className="container py-5" style={{ maxWidth: 1200 }}>
+      {confirmDelete && (
+        <ConfirmDialog
+          message="Gỡ bài viết này vĩnh viễn? Quyết định này không thể khôi phục."
+          onConfirm={() => doDeleteProduct(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+
       <h1
+        className="fw-bold mb-4"
         style={{
           fontSize: 24,
-          fontWeight: 800,
           color: C.dark,
-          marginBottom: 24,
         }}
       >
         ⚙️ Trang Quản Trị Hệ Thống Admin
       </h1>
 
-      {/* ── Stat cards Grid ── */}
       {stats && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
-            gap: 16,
-            marginBottom: 32,
-          }}
-        >
-          <StatCard
-            value={safeStats.totalUsers}
-            icon="👥"
-            label="Người dùng"
-            color={C.ocean}
-          />
-          <StatCard
-            value={totalActive}
-            icon="📋"
-            label="Tin rao active"
-            color={C.ok}
-          />
-          <StatCard
-            value={safeStats.activeFresh}
-            icon="🌊"
-            label="Hải sản tươi"
-            color={C.coral}
-          />
-          <StatCard
-            value={safeStats.activeDried}
-            icon="🔥"
-            label="Hải sản khô"
-            color={C.warn}
-          />
-          <StatCard
-            value={safeStats.totalReviews}
-            icon="⭐"
-            label="Tổng đánh giá"
-            sub={`Trung bình: ${safeStats.avgRating}/5`}
-            color="#f59e0b"
-          />
-          <StatCard
-            value={safeStats.totalFollows}
-            icon="🔔"
-            label="Lượt theo dõi"
-            color="#8b5cf6"
-          />
-          <StatCard
-            value={safeStats.totalMessages}
-            icon="💬"
-            label="Lượt nhắn tin"
-            color="#3b82f6"
-          />
-          <StatCard
-            value={safeStats.expiredTotal}
-            icon="⏰"
-            label="Bài đã hết hạn"
-            color="#ef4444"
-          />
+        <div className="row g-3 mb-4">
+          <div className="col-6 col-sm-4 col-md-3 col-lg-3">
+            <StatCard
+              value={safeStats.totalUsers}
+              icon="👥"
+              label="Người dùng"
+              color={C.ocean}
+            />
+          </div>
+          <div className="col-6 col-sm-4 col-md-3 col-lg-3">
+            <StatCard
+              value={totalActive}
+              icon="📋"
+              label="Tin rao active"
+              color={C.ok}
+            />
+          </div>
+          <div className="col-6 col-sm-4 col-md-3 col-lg-3">
+            <StatCard
+              value={safeStats.activeFresh}
+              icon="🌊"
+              label="Hải sản tươi"
+              color={C.coral}
+            />
+          </div>
+          <div className="col-6 col-sm-4 col-md-3 col-lg-3">
+            <StatCard
+              value={safeStats.activeDried}
+              icon="🔥"
+              label="Hải sản khô"
+              color={C.warn}
+            />
+          </div>
+          <div className="col-6 col-sm-4 col-md-3 col-lg-3">
+            <StatCard
+              value={safeStats.totalReviews}
+              icon="⭐"
+              label="Tổng đánh giá"
+              sub={`Trung bình: ${safeStats.avgRating}/5`}
+              color="#f59e0b"
+            />
+          </div>
+          <div className="col-6 col-sm-4 col-md-3 col-lg-3">
+            <StatCard
+              value={safeStats.totalFollows}
+              icon="🔔"
+              label="Lượt theo dõi"
+              color="#8b5cf6"
+            />
+          </div>
+          <div className="col-6 col-sm-4 col-md-3 col-lg-3">
+            <StatCard
+              value={safeStats.totalMessages}
+              icon="💬"
+              label="Lượt nhắn tin"
+              color="#3b82f6"
+            />
+          </div>
+          <div className="col-6 col-sm-4 col-md-3 col-lg-3">
+            <StatCard
+              value={safeStats.expiredTotal}
+              icon="⏰"
+              label="Bài đã hết hạn"
+              color="#ef4444"
+            />
+          </div>
         </div>
       )}
 
-      {/* ── Tabs Chuyên Nghiệp ── */}
       <div
+        className="d-inline-flex gap-1 p-1 mb-4"
         style={{
-          display: "flex",
-          gap: 4,
           background: "#E2E8F0",
           borderRadius: 12,
-          padding: 4,
-          width: "fit-content",
-          marginBottom: 24,
         }}
       >
         {[
@@ -438,12 +629,10 @@ export function AdminPage() {
           <button
             key={k}
             onClick={() => setTab(k)}
+            className="btn fw-bold border-0 px-3 py-2"
             style={{
-              padding: "10px 22px",
               borderRadius: 10,
-              border: "none",
               cursor: "pointer",
-              fontWeight: 700,
               fontSize: 13,
               fontFamily: "inherit",
               background: tab === k ? C.white : "transparent",
@@ -457,285 +646,114 @@ export function AdminPage() {
         ))}
       </div>
 
-      {/* ══════════════════════ TAB THỐNG KÊ ══════════════════════ */}
       {tab === "stats" && stats && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          {/* Hàng 1: 2 biểu đồ cột */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
-              gap: 24,
-            }}
-          >
-            {/* Biểu đồ bài đăng 7 ngày */}
-            <div
-              style={{
-                background: C.white,
-                borderRadius: 16,
-                border: `1px solid ${C.border}`,
-                padding: "24px",
-                boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
-              }}
-            >
+        <div className="d-flex flex-column gap-4">
+          <div className="row g-4">
+            <div className="col-12 col-lg-6">
               <div
+                className="card border-0 p-4"
                 style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: C.dark,
-                  marginBottom: 4,
+                  background: C.white,
+                  borderRadius: 16,
+                  border: `1px solid ${C.border}`,
+                  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
                 }}
               >
-                📋 Tin đăng mới — 7 ngày gần nhất
+                <div
+                  className="fw-bold mb-1"
+                  style={{
+                    fontSize: 14,
+                    color: C.dark,
+                  }}
+                >
+                  📋 Tin đăng mới — 7 ngày gần nhất
+                </div>
+                <div className="text-muted mb-3" style={{ fontSize: 11 }}>
+                  Tổng cộng:{" "}
+                  <strong>
+                    {safeStats.postsPerDay.reduce((s, d) => s + d.count, 0)}
+                  </strong>{" "}
+                  bài đăng mới trong tuần
+                </div>
+                <BarChart data={safeStats.postsPerDay} color={C.coral} />
               </div>
-              <div style={{ fontSize: 11, color: C.muted, marginBottom: 16 }}>
-                Tổng cộng:{" "}
-                <strong>
-                  {safeStats.postsPerDay.reduce((s, d) => s + d.count, 0)}
-                </strong>{" "}
-                bài đăng mới trong tuần
-              </div>
-              <BarChart data={safeStats.postsPerDay} color={C.coral} />
             </div>
 
-            {/* Biểu đồ người dùng 7 ngày */}
-            <div
-              style={{
-                background: C.white,
-                borderRadius: 16,
-                border: `1px solid ${C.border}`,
-                padding: "24px",
-                boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
-              }}
-            >
+            <div className="col-12 col-lg-6">
               <div
+                className="card border-0 p-4"
                 style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: C.dark,
-                  marginBottom: 4,
+                  background: C.white,
+                  borderRadius: 16,
+                  border: `1px solid ${C.border}`,
+                  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
                 }}
               >
-                👥 Đăng ký mới — 7 ngày gần nhất
+                <div
+                  className="fw-bold mb-1"
+                  style={{
+                    fontSize: 14,
+                    color: C.dark,
+                  }}
+                >
+                  👥 Đăng ký mới — 7 ngày gần nhất
+                </div>
+                <div className="text-muted mb-3" style={{ fontSize: 11 }}>
+                  Tổng cộng:{" "}
+                  <strong>
+                    {safeStats.usersPerDay.reduce((s, d) => s + d.count, 0)}
+                  </strong>{" "}
+                  tài khoản mới trong tuần
+                </div>
+                <BarChart data={safeStats.usersPerDay} color={C.ocean} />
               </div>
-              <div style={{ fontSize: 11, color: C.muted, marginBottom: 16 }}>
-                Tổng cộng:{" "}
-                <strong>
-                  {safeStats.usersPerDay.reduce((s, d) => s + d.count, 0)}
-                </strong>{" "}
-                tài khoản mới trong tuần
-              </div>
-              <BarChart data={safeStats.usersPerDay} color={C.ocean} />
             </div>
           </div>
 
-          {/* Hàng 2: Phân bố loại + Top người bán */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
-              gap: 24,
-            }}
-          >
-            {/* Phân bố Fresh / Dried */}
-            <div
-              style={{
-                background: C.white,
-                borderRadius: 16,
-                border: `1px solid ${C.border}`,
-                padding: "24px",
-                boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
-              }}
-            >
+          <div className="row g-4">
+            <div className="col-12 col-lg-6">
               <div
+                className="card border-0 p-4"
                 style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: C.dark,
-                  marginBottom: 20,
+                  background: C.white,
+                  borderRadius: 16,
+                  border: `1px solid ${C.border}`,
+                  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
                 }}
               >
-                🐟 Phân bố loại sản phẩm hoạt động
-              </div>
-              {[
-                ["Hải sản tươi sống", safeStats.activeFresh, C.coral, "🌊"],
-                ["Hải sản khô đóng gói", safeStats.activeDried, C.warn, "🔥"],
-              ].map(([lbl, n, col, ico]) => {
-                const pct =
-                  totalActive > 0 ? Math.round((n / totalActive) * 100) : 0;
-                return (
-                  <div key={lbl} style={{ marginBottom: 20 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        fontSize: 13,
-                        marginBottom: 8,
-                      }}
-                    >
-                      <span style={{ color: C.text, fontWeight: 700 }}>
-                        {ico} {lbl}
-                      </span>
-                      <span style={{ color: C.muted, fontWeight: 600 }}>
-                        {n} bài ({pct}%)
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        height: 10,
-                        background: "#F1F5F9",
-                        borderRadius: 10,
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: "100%",
-                          width: `${pct}%`,
-                          background: col,
-                          borderRadius: 10,
-                          transition: "width 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-
-              <div
-                style={{
-                  marginTop: 24,
-                  paddingTop: 18,
-                  borderTop: `1px solid ${C.border}`,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 10,
-                }}
-              >
-                {[
-                  ["Tổng bài đang rao bán", totalActive, C.dark],
-                  [
-                    "Bài đã quá hạn (24h tươi)",
-                    safeStats.expiredTotal,
-                    "#ef4444",
-                  ],
-                  [
-                    "Tổng số tin nhắn liên lạc",
-                    safeStats.totalMessages,
-                    C.muted,
-                  ],
-                  [
-                    "Tổng lượt theo dõi ngư dân",
-                    safeStats.totalFollows,
-                    "#8b5cf6",
-                  ],
-                ].map(([lbl, val, col]) => (
-                  <div
-                    key={lbl}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      fontSize: 13,
-                    }}
-                  >
-                    <span style={{ color: C.muted, fontWeight: 500 }}>
-                      {lbl}
-                    </span>
-                    <strong style={{ color: col, fontWeight: 700 }}>
-                      {val}
-                    </strong>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Top 5 người bán uy tín */}
-            <div
-              style={{
-                background: C.white,
-                borderRadius: 16,
-                border: `1px solid ${C.border}`,
-                padding: "24px",
-                boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: C.dark,
-                  marginBottom: 18,
-                }}
-              >
-                🏆 Top 5 người bán tích cực nhất
-              </div>
-
-              {safeStats.topSellers.length === 0 && (
                 <div
-                  style={{ color: C.muted, fontSize: 13, padding: "20px 0" }}
+                  className="fw-bold mb-3"
+                  style={{
+                    fontSize: 14,
+                    color: C.dark,
+                  }}
                 >
-                  Chưa có dữ liệu hoạt động.
+                  🐟 Phân bố loại sản phẩm hoạt động
                 </div>
-              )}
-
-              {safeStats.topSellers.map((seller, idx) => {
-                const maxPosts = safeStats.topSellers[0]?.postCount || 1;
-                const barPct =
-                  seller.postCount > 0
-                    ? Math.round((seller.postCount / maxPosts) * 100)
-                    : 0;
-                const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"];
-                return (
-                  <div key={seller.id} style={{ marginBottom: 16 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginBottom: 6,
-                      }}
-                    >
+                {[
+                  ["Hải sản tươi sống", safeStats.activeFresh, C.coral, "🌊"],
+                  ["Hải sản khô đóng gói", safeStats.activeDried, C.warn, "🔥"],
+                ].map(([lbl, n, col, ico]) => {
+                  const pct =
+                    totalActive > 0 ? Math.round((n / totalActive) * 100) : 0;
+                  return (
+                    <div key={lbl} className="mb-3">
                       <div
+                        className="d-flex justify-content-between mb-2"
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
+                          fontSize: 13,
                         }}
                       >
-                        <span style={{ fontSize: 16 }}>{medals[idx]}</span>
-                        <span
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: C.dark,
-                          }}
-                        >
-                          {seller.name}
+                        <span className="fw-bold" style={{ color: C.text }}>
+                          {ico} {lbl}
+                        </span>
+                        <span className="fw-semibold text-muted">
+                          {n} bài ({pct}%)
                         </span>
                       </div>
                       <div
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                        }}
-                      >
-                        <Stars value={seller.avgRating} />
-                        <Pill bg="#FDE8E0" color="#C0401A">
-                          {seller.postCount} bài
-                        </Pill>
-                      </div>
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                      }}
-                    >
-                      <div
-                        style={{
-                          flex: 1,
-                          height: 6,
+                          height: 10,
                           background: "#F1F5F9",
                           borderRadius: 10,
                         }}
@@ -743,118 +761,161 @@ export function AdminPage() {
                         <div
                           style={{
                             height: "100%",
-                            width: `${barPct}%`,
-                            background: idx === 0 ? "#f59e0b" : C.ocean,
+                            width: `${pct}%`,
+                            background: col,
                             borderRadius: 10,
-                            transition:
-                              "width 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
+                            transition: "width 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
                           }}
                         />
                       </div>
-                      <span
-                        style={{
-                          fontSize: 11,
-                          color: C.muted,
-                          whiteSpace: "nowrap",
-                          fontWeight: 500,
-                        }}
-                      >
-                        🔔 {seller.followers} followers
-                      </span>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+                  );
+                })}
 
-          {/* Hàng 3: Tổng kết đánh giá */}
-          <div
-            style={{
-              background: C.white,
-              borderRadius: 16,
-              border: `1px solid ${C.border}`,
-              padding: "24px",
-              boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
-            }}
-          >
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                color: C.dark,
-                marginBottom: 16,
-              }}
-            >
-              ⭐ Thống kê phản hồi &amp; Đánh giá từ người mua
-            </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 40,
-                flexWrap: "wrap",
-              }}
-            >
-              <div style={{ textAlign: "center", minWidth: 120 }}>
                 <div
+                  className="d-flex flex-column gap-2 mt-4 pt-3 border-top"
                   style={{
-                    fontSize: 44,
-                    fontWeight: 900,
-                    color: "#f59e0b",
-                    lineHeight: 1,
+                    borderColor: `${C.border} !important`,
                   }}
                 >
-                  {safeStats.avgRating}
-                </div>
-                <div style={{ margin: "6px 0" }}>
-                  <Stars value={safeStats.avgRating} />
-                </div>
-                <div style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}>
-                  Điểm hài lòng trung bình
+                  {[
+                    ["Tổng bài đang rao bán", totalActive, C.dark],
+                    [
+                      "Bài đã quá hạn (24h tươi)",
+                      safeStats.expiredTotal,
+                      "#ef4444",
+                    ],
+                    [
+                      "Tổng số tin nhắn liên lạc",
+                      safeStats.totalMessages,
+                      C.muted,
+                    ],
+                    [
+                      "Tổng lượt theo dõi ngư dân",
+                      safeStats.totalFollows,
+                      "#8b5cf6",
+                    ],
+                  ].map(([lbl, val, col]) => (
+                    <div
+                      key={lbl}
+                      className="d-flex justify-content-between"
+                      style={{
+                        fontSize: 13,
+                      }}
+                    >
+                      <span className="fw-medium text-muted">
+                        {lbl}
+                      </span>
+                      <strong className="fw-bold" style={{ color: col }}>
+                        {val}
+                      </strong>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div style={{ flex: 1, minWidth: 260 }}>
-                <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5 }}>
-                  Dữ liệu được thống kê dựa trên tổng số{" "}
-                  <strong style={{ color: C.dark }}>
-                    {safeStats.totalReviews}
-                  </strong>{" "}
-                  lượt đánh giá giao dịch thực tế từ người dùng toàn hệ thống.
-                </div>
+            </div>
+
+            <div className="col-12 col-lg-6">
+              <div
+                className="card border-0 p-4"
+                style={{
+                  background: C.white,
+                  borderRadius: 16,
+                  border: `1px solid ${C.border}`,
+                  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
+                }}
+              >
                 <div
+                  className="fw-bold mb-3"
                   style={{
-                    marginTop: 12,
-                    display: "flex",
-                    gap: 8,
-                    flexWrap: "wrap",
+                    fontSize: 14,
+                    color: C.dark,
                   }}
                 >
-                  <Pill bg="#EAF5EE" color="#166534">
-                    {safeStats.totalReviews} reviews đã ghi nhận
-                  </Pill>
-                  <Pill
-                    bg={safeStats.avgRating >= 4 ? "#dcfce7" : "#fef9c3"}
-                    color={safeStats.avgRating >= 4 ? "#166534" : "#854d0e"}
-                  >
-                    {safeStats.avgRating >= 4.5
-                      ? "🌟 Xuất sắc"
-                      : safeStats.avgRating >= 4
-                        ? "👍 Uy tín tốt"
-                        : safeStats.avgRating >= 3
-                          ? "😐 Bình thường"
-                          : "⚠️ Cần rà soát"}
-                  </Pill>
+                  🏆 Top 5 người bán tích cực nhất
                 </div>
+                {safeStats.topSellers.length === 0 && (
+                  <div className="text-muted py-3" style={{ fontSize: 13 }}>
+                    Chưa có dữ liệu hoạt động.
+                  </div>
+                )}
+                {safeStats.topSellers.map((seller, idx) => {
+                  const maxPosts = safeStats.topSellers[0]?.postCount || 1;
+                  const barPct =
+                    seller.postCount > 0
+                      ? Math.round((seller.postCount / maxPosts) * 100)
+                      : 0;
+                  const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"];
+                  return (
+                    <div key={seller.id} className="mb-3">
+                      <div
+                        className="d-flex align-items-center justify-content-between mb-2"
+                      >
+                        <div
+                          className="d-flex align-items-center gap-2"
+                        >
+                          <span style={{ fontSize: 16 }}>{medals[idx]}</span>
+                          <span
+                            className="fw-bold text-dark"
+                            style={{
+                              fontSize: 13,
+                            }}
+                          >
+                            {seller.name}
+                          </span>
+                        </div>
+                        <div
+                          className="d-flex align-items-center gap-2"
+                        >
+                          <Stars value={seller.avgRating} />
+                          <Pill bg="#FDE8E0" color="#C0401A">
+                            {seller.postCount} bài
+                          </Pill>
+                        </div>
+                      </div>
+                      <div
+                        className="d-flex align-items-center gap-2"
+                      >
+                        <div
+                          className="flex-grow-1"
+                          style={{
+                            height: 6,
+                            background: "#F1F5F9",
+                            borderRadius: 10,
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: "100%",
+                              width: `${barPct}%`,
+                              background: idx === 0 ? "#f59e0b" : C.ocean,
+                              borderRadius: 10,
+                              transition:
+                                "width 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
+                            }}
+                          />
+                        </div>
+                        <span
+                          className="text-muted text-nowrap fw-medium"
+                          style={{
+                            fontSize: 11,
+                          }}
+                        >
+                          {seller.followers} followers
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ══════════════════════ TAB NGƯỜI DÙNG ══════════════════════ */}
       {tab === "users" && (
         <div
+          className="card border-0"
           style={{
             background: C.white,
             borderRadius: 16,
@@ -863,34 +924,28 @@ export function AdminPage() {
             boxShadow: "0 10px 25px -5px rgba(0,0,0,0.02)",
           }}
         >
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div className="table-responsive">
+            <table className="table table-hover align-middle mb-0" style={{ borderCollapse: "collapse" }}>
               <thead>
                 <tr
+                  className="table-light"
                   style={{
-                    background: "#F8FAFC",
                     borderBottom: `1px solid ${C.border}`,
                   }}
                 >
                   {[
-                    "#ID",
-                    "Họ và tên",
-                    "Số điện thoại",
-                    "Tin đã đăng",
+                    "Người dùng",
                     "Vai trò",
-                    "Trạng thái",
-                    "Xác minh danh tính",
+                    "Tin đã đăng",
+                    "Danh tính",
                     "Hành động",
                   ].map((h) => (
                     <th
                       key={h}
+                      className="text-uppercase fw-bold text-secondary"
                       style={{
                         padding: "16px 20px",
-                        textAlign: "left",
                         fontSize: 11,
-                        fontWeight: 700,
-                        color: "#4B5563",
-                        textTransform: "uppercase",
                         letterSpacing: "0.05em",
                       }}
                     >
@@ -916,9 +971,9 @@ export function AdminPage() {
         </div>
       )}
 
-      {/* ══════════════════════ TAB BÀI ĐĂNG ══════════════════════ */}
       {tab === "listings" && (
         <div
+          className="card border-0"
           style={{
             background: C.white,
             borderRadius: 16,
@@ -927,12 +982,12 @@ export function AdminPage() {
             boxShadow: "0 10px 25px -5px rgba(0,0,0,0.02)",
           }}
         >
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div className="table-responsive">
+            <table className="table table-hover align-middle mb-0" style={{ borderCollapse: "collapse" }}>
               <thead>
                 <tr
+                  className="table-light"
                   style={{
-                    background: "#F8FAFC",
                     borderBottom: `1px solid ${C.border}`,
                   }}
                 >
@@ -947,13 +1002,10 @@ export function AdminPage() {
                   ].map((h) => (
                     <th
                       key={h}
+                      className="text-uppercase fw-bold text-secondary"
                       style={{
                         padding: "16px 20px",
-                        textAlign: "left",
                         fontSize: 11,
-                        fontWeight: 700,
-                        color: "#4B5563",
-                        textTransform: "uppercase",
                         letterSpacing: "0.05em",
                       }}
                     >
@@ -968,14 +1020,7 @@ export function AdminPage() {
                     key={p.id}
                     style={{
                       borderBottom: `1px solid ${C.border}`,
-                      transition: "background 0.2s",
                     }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background = "#F8FAFC")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "transparent")
-                    }
                   >
                     <td
                       style={{
@@ -1027,30 +1072,30 @@ export function AdminPage() {
                       )}
                     </td>
                     <td
+                      className="fw-medium"
                       style={{
                         padding: "16px 20px",
                         fontSize: 13,
-                        fontWeight: 500,
                         color: C.text,
                       }}
                     >
                       {p.sellerName}
                     </td>
                     <td
+                      className="fw-bold"
                       style={{
                         padding: "16px 20px",
                         fontSize: 14,
-                        fontWeight: 800,
                         color: C.coral,
                       }}
                     >
                       {fmt(p.price)}
                     </td>
                     <td
+                      className="fw-bold"
                       style={{
                         padding: "16px 20px",
                         fontSize: 13,
-                        fontWeight: 600,
                         color: C.dark,
                       }}
                     >
@@ -1058,25 +1103,15 @@ export function AdminPage() {
                     </td>
                     <td style={{ padding: "16px 20px" }}>
                       <button
-                        onClick={() => deleteProduct(p.id)}
+                        onClick={() => setConfirmDelete(p.id)}
+                        className="btn btn-danger fw-bold border-0 text-danger"
                         style={{
                           background: "#fee2e2",
-                          color: "#991b1b",
-                          border: "none",
                           padding: "8px 14px",
                           borderRadius: 8,
-                          cursor: "pointer",
                           fontSize: 12,
-                          fontWeight: 700,
                           fontFamily: "inherit",
-                          transition: "all 0.2s",
                         }}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.background = "#fecaca")
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.background = "#fee2e2")
-                        }
                       >
                         🗑️ Xoá bài
                       </button>
@@ -1089,189 +1124,111 @@ export function AdminPage() {
         </div>
       )}
 
-      {/* ══════════════════════ TAB BÁO CÁO ══════════════════════ */}
       {tab === "reports" && (
         <div>
-          {/* Status filters */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+          <div className="d-flex gap-2 mb-4">
             {["Pending", "Resolved", "Dismissed"].map((s) => (
               <button
                 key={s}
                 onClick={() => setReportStatus(s)}
+                className="btn fw-bold px-3 py-2 border-0"
                 style={{
-                  padding: "10px 18px",
                   borderRadius: 10,
-                  border: "none",
-                  cursor: "pointer",
                   fontSize: 13,
-                  fontWeight: 700,
                   fontFamily: "inherit",
                   background: reportStatus === s ? C.ocean : "#F1F5F9",
                   color: reportStatus === s ? "#fff" : "#475569",
-                  transition: "all 0.2s",
                 }}
               >
                 {s === "Pending"
-                  ? "⏳ Đang chờ xử lý"
+                  ? "⏳ Đang chờ"
                   : s === "Resolved"
-                    ? "✅ Đã gỡ bỏ bài"
-                    : "❌ Đã từ chối báo cáo"}
+                    ? "✅ Đã gỡ"
+                    : "❌ Đã từ chối"}
               </button>
             ))}
           </div>
 
           {reportsLoading ? (
-            <div
-              style={{
-                textAlign: "center",
-                padding: 40,
-                color: "#9CA3AF",
-                fontWeight: 500,
-              }}
-            >
-              Đang truy xuất các báo cáo liên quan...
+            <div className="text-center py-4 text-muted">
+              Đang truy xuất báo cáo...
             </div>
           ) : reports.length === 0 ? (
             <div
+              className="card border-0 text-center p-5"
               style={{
-                textAlign: "center",
-                padding: "80px 20px",
-                color: "#9CA3AF",
                 background: C.white,
                 borderRadius: 16,
                 border: `1px solid ${C.border}`,
               }}
             >
               <div style={{ fontSize: 56, marginBottom: 12 }}>🎉</div>
-              <div style={{ fontWeight: 700, color: C.dark }}>
-                Không có báo cáo nào tồn đọng
-              </div>
-              <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>
-                Hệ thống hoạt động rất sạch sẽ và an toàn.
+              <div className="fw-bold text-dark">
+                Không có báo cáo vi phạm nào
               </div>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div className="d-flex flex-column gap-3">
               {reports.map((r) => (
                 <div
                   key={r.id}
+                  className="card border-0 p-4 d-flex flex-row flex-wrap align-items-start justify-content-between gap-3"
                   style={{
-                    background: "#fff",
                     borderRadius: 16,
                     border: "1px solid #e5e7eb",
-                    padding: "20px 24px",
-                    display: "flex",
-                    gap: 20,
-                    alignItems: "flex-start",
-                    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
                   }}
                 >
-                  <div style={{ flex: 1 }}>
+                  <div className="flex-grow-1">
                     <div
+                      className="fw-bold text-danger mb-2"
                       style={{
-                        fontWeight: 800,
                         fontSize: 15,
-                        marginBottom: 8,
-                        color: "#991B1B",
                       }}
                     >
                       🚩 Lý do: {r.reason}
                     </div>
                     <div
-                      style={{
-                        fontSize: 13,
-                        color: C.dark,
-                        marginBottom: 4,
-                        fontWeight: 600,
-                      }}
+                      className="text-dark"
+                      style={{ fontSize: 13 }}
                     >
                       Sản phẩm vi phạm:{" "}
                       <strong style={{ color: C.ocean }}>
                         {r.productName}
-                      </strong>{" "}
-                      (ID tin: #{r.productId})
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: C.muted,
-                        marginBottom: 4,
-                        fontWeight: 500,
-                      }}
-                    >
-                      Người bán:{" "}
-                      <strong style={{ color: C.dark }}>{r.sellerName}</strong>{" "}
-                      | Người báo cáo:{" "}
-                      <strong style={{ color: C.dark }}>
-                        {r.reporterName}
                       </strong>
                     </div>
                     <div
-                      style={{
-                        fontSize: 11,
-                        color: "#9CA3AF",
-                        marginTop: 8,
-                        fontWeight: 500,
-                      }}
+                      className="text-muted mt-2"
+                      style={{ fontSize: 11 }}
                     >
-                      🕒 Báo cáo gửi lúc:{" "}
+                      🕒 Gửi lúc:{" "}
                       {new Date(r.createdAt).toLocaleString("vi-VN")}
                     </div>
                   </div>
                   {reportStatus === "Pending" && (
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 8,
-                        flexShrink: 0,
-                        alignSelf: "center",
-                      }}
-                    >
+                    <div className="d-flex gap-2">
                       <button
                         onClick={() => handleReport(r.id, "resolve")}
+                        className="btn btn-danger fw-bold border-0 text-danger"
                         style={{
                           background: "#FEE2E2",
-                          color: "#991B1B",
-                          border: "none",
                           padding: "10px 16px",
                           borderRadius: 8,
-                          cursor: "pointer",
                           fontSize: 13,
-                          fontWeight: 700,
-                          fontFamily: "inherit",
-                          transition: "all 0.2s",
                         }}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.background = "#fecaca")
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.background = "#FEE2E2")
-                        }
                       >
-                        🗑️ Ẩn tin vi phạm
+                        🗑️ Ẩn tin
                       </button>
                       <button
                         onClick={() => handleReport(r.id, "dismiss")}
+                        className="btn btn-secondary fw-bold border-0 text-secondary"
                         style={{
                           background: "#F1F5F9",
-                          color: "#475569",
-                          border: "none",
                           padding: "10px 16px",
                           borderRadius: 8,
-                          cursor: "pointer",
                           fontSize: 13,
-                          fontWeight: 700,
-                          fontFamily: "inherit",
-                          transition: "all 0.2s",
                         }}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.background = "#e2e8f0")
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.background = "#F1F5F9")
-                        }
                       >
-                        Bỏ qua báo cáo
+                        Bỏ qua
                       </button>
                     </div>
                   )}

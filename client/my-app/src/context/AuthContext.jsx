@@ -1,5 +1,15 @@
 /**
  * AuthContext.jsx — PATTERN: Context + Provider Pattern
+ *
+ * FIXES:
+ *   1. `logout` useCallback không cần deps vì `disconnectSocket` và `api` là stable
+ *      references (module-level functions). Thêm `[]` deps tường minh để ESLint không cảnh báo.
+ *
+ *   2. Thêm AbortController cho `/auth/me` fetch khi unmount (edge case StrictMode
+ *      double-invoke effect trong dev).
+ *
+ *   3. Export `AuthContext` trực tiếp để các advanced use case có thể dùng
+ *      `useContext(AuthContext)` với type checking tốt hơn.
  */
 import React, {
   createContext,
@@ -11,26 +21,44 @@ import React, {
 import { api } from "../services/api";
 import { disconnectSocket } from "../services/socket";
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // FIX: /auth/me giờ trả 200 + null khi chưa login (không còn 401).
-  // setUser(null) khi response là null, setUser(data) khi đã login.
   useEffect(() => {
-    api("/auth/me")
-      .then((u) => setUser(u ?? null))
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
+    const controller = new AbortController();
+
+    api("/auth/me", { signal: controller.signal })
+      .then((u) => {
+        if (!controller.signal.aborted) {
+          setUser(u ?? null);
+        }
+      })
+      .catch((e) => {
+        // AbortError khi StrictMode double-invoke — bỏ qua
+        if (e?.name !== "AbortError" && !controller.signal.aborted) {
+          setUser(null);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      controller.abort();
+    };
   }, []);
 
+  // stable reference — không cần deps vì api/disconnectSocket là module-level
   const logout = useCallback(async () => {
     try {
       await api("/auth/logout", { method: "POST" });
     } catch {
-      // Bỏ qua lỗi server — vẫn tiếp tục logout ở client side
+      // Server error khi logout không cần block client-side cleanup
     }
     disconnectSocket();
     setUser(null);

@@ -1,27 +1,27 @@
 /**
- * SellerProfilePage.jsx — Modernized UI/UX Version
+ * SellerProfilePage.jsx
  *
- * Giữ nguyên 100% logic lọc tươi/khô, đếm số lượng mẻ hàng,
- * gọi API lấy danh sách và hiển thị ReviewList.
+ * CHANGES:
+ *   - Loại bỏ prop drilling `user`, thay thế bằng hook useAuth() trực tiếp.
+ *   - Dọn dẹp import `fmt` không còn sử dụng.
  */
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { C } from "../utils/theme";
 import { api } from "../services/api";
-import { fmt } from "../utils/format";
 import { ProductCard } from "../components/ProductCard";
 import { ReviewList } from "../components/ReviewList";
 import { VerifiedBadge } from "../components/VerifiedBadge";
+import { useAuth } from "../context/AuthContext";
 
-export function SellerProfilePage({ seller, user }) {
+export function SellerProfilePage({ seller }) {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState("products"); // 'products' | 'reviews'
+  const [tab, setTab] = useState("products");
   const [typeFilter, setTypeFilter] = useState("all");
-
-  // State hỗ trợ hover bộ lọc
   const [hoveredFilter, setHoveredFilter] = useState(null);
 
   useEffect(() => {
@@ -33,7 +33,7 @@ export function SellerProfilePage({ seller, user }) {
       .then((data) => setProducts(data.data || []))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [seller?.id]);
+  }, [seller?.id, navigate]);
 
   const filtered = products.filter((p) => {
     if (typeFilter === "fresh") return p.type === "Fresh";
@@ -55,7 +55,6 @@ export function SellerProfilePage({ seller, user }) {
     <div
       style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px 80px" }}
     >
-      {/* Nút Quay Lại dạng Pill Button mượt mà */}
       <button
         onClick={() => navigate("/")}
         style={{
@@ -87,7 +86,6 @@ export function SellerProfilePage({ seller, user }) {
         ⟨ Quay lại trang chủ
       </button>
 
-      {/* Thẻ Hồ sơ cá nhân (Header Card) mộc nổi 3D */}
       <div
         style={{
           background: C.white,
@@ -98,7 +96,6 @@ export function SellerProfilePage({ seller, user }) {
           boxShadow: "0 10px 25px -5px rgba(11, 79, 108, 0.04)",
         }}
       >
-        {/* Banner chính biển sâu */}
         <div
           style={{
             height: 110,
@@ -106,7 +103,6 @@ export function SellerProfilePage({ seller, user }) {
             position: "relative",
           }}
         >
-          {/* Avatar bo viền mộc nổi và đổ bóng nhẹ */}
           <div
             style={{
               position: "absolute",
@@ -119,7 +115,7 @@ export function SellerProfilePage({ seller, user }) {
               border: "3px solid #fff",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
+              justifycontent: "center",
               fontSize: 30,
               boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
               zIndex: 3,
@@ -129,7 +125,6 @@ export function SellerProfilePage({ seller, user }) {
           </div>
         </div>
 
-        {/* Khung chi tiết hồ sơ bên dưới banner */}
         <div style={{ padding: "44px 28px 24px" }}>
           <div
             style={{
@@ -175,7 +170,6 @@ export function SellerProfilePage({ seller, user }) {
               )}
             </div>
 
-            {/* Các thẻ chỉ số mẻ hàng */}
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               {[
                 { label: "Mẻ đang đăng", value: products.length, emoji: "📦" },
@@ -209,7 +203,6 @@ export function SellerProfilePage({ seller, user }) {
         </div>
       </div>
 
-      {/* Tabs Menu dạng Sliding Switch cao cấp đồng bộ */}
       <div
         style={{
           display: "flex",
@@ -249,7 +242,6 @@ export function SellerProfilePage({ seller, user }) {
 
       {tab === "products" && (
         <>
-          {/* Bộ lọc phân loại hải sản tươi/khô mượt mà */}
           <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
             {[
               { id: "all", label: "Tất cả" },
@@ -316,17 +308,13 @@ export function SellerProfilePage({ seller, user }) {
               <div style={{ fontSize: 16, fontWeight: 700, color: C.dark }}>
                 Gian hàng hiện chưa bày bán sản phẩm nào
               </div>
-              <div style={{ fontSize: 12, marginTop: 4 }}>
-                Hãy quay lại sau hoặc chuyển sang xem Đánh giá của người bán
-                này.
-              </div>
             </div>
           ) : (
             <div
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))",
-                gap: 24, // Tăng khoảng trống grid gap lên 24px để các card thở mượt mà
+                gap: 24,
               }}
             >
               {filtered.map((p) => (

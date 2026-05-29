@@ -77,10 +77,10 @@
                            │
           ┌────────────────┼────────────────┐
           ▼                ▼                ▼
-   ┌─────────────┐  ┌────────────┐  ┌─────────────┐
-   │  MySQL 8.0  │  │ Cloudinary │  │  Node-Cron  │
-   │  (Database) │  │  (Images)  │  │  (Scheduler)│
-   └─────────────┘  └────────────┘  └─────────────┘
+    ┌─────────────┐  ┌────────────┐  ┌─────────────┐
+    │   MongoDB   │  │ Cloudinary │  │  Node-Cron  │
+    │  (Database) │  │  (Images)  │  │  (Scheduler)│
+    └─────────────┘  └────────────┘  └─────────────┘
 ```
 
 ### Luồng Xác Thực (Auth Flow)
@@ -107,7 +107,7 @@
 | Node.js | v20+ | Runtime |
 | TypeScript | ^5.5 | Ngôn ngữ lập trình |
 | Express | ^4.19 | HTTP Framework |
-| mysql2 | ^3.10 | Kết nối MySQL (Connection Pool) |
+| mongoose | ^9.6 | Thư viện ODM kết nối MongoDB |
 | socket.io | ^4.7 | Real-time WebSocket |
 | jsonwebtoken | ^9.0 | Tạo & xác minh JWT |
 | bcryptjs | ^2.4 | Hash mật khẩu |
@@ -132,7 +132,7 @@
 
 | Công nghệ | Mục đích |
 |---|---|
-| MySQL 8.0 | Cơ sở dữ liệu quan hệ |
+| MongoDB | Cơ sở dữ liệu tài liệu |
 | Cloudinary | CDN lưu trữ & xử lý ảnh |
 | Docker + Docker Compose | Container hóa môi trường phát triển |
 
@@ -168,8 +168,8 @@ shop_sea_fixed/
 │   │   ├── helpers/
 │   │   │   └── response.helper.ts  # Chuẩn hóa response format
 │   │   ├── app.ts                # Entry point, khởi tạo Express & Middleware
-│   │   ├── db.ts                 # Connection Pool MySQL
-│   │   ├── db.migrations.ts      # Auto-migration khi khởi động
+│   │   ├── db.ts                 # Kết nối MongoDB thông qua Mongoose
+│   │   ├── db.migrations.ts      # Tự động cấu hình index bởi Mongoose (Deprecated)
 │   │   ├── socket.ts             # Socket.IO server (chat + notifications)
 │   │   └── cron.ts               # Cron job tự động hết hạn sản phẩm
 │   ├── sql/
@@ -594,9 +594,9 @@ Multer middleware kiểm tra chặt chẽ:
 - Dung lượng tối đa: 5MB mỗi ảnh
 - Số lượng tối đa: 5 ảnh mỗi request
 
-### 7.5 SQL Parameterization
+### 7.5 MongoDB ODM Security
 
-Toàn bộ câu lệnh SQL sử dụng prepared statements của `mysql2` với placeholder `?`, ngăn chặn hoàn toàn tấn công SQL Injection.
+Hệ thống sử dụng Mongoose ODM để tương tác với MongoDB. Toàn bộ các truy vấn được định nghĩa qua schema chặt chẽ, loại bỏ hoàn toàn nguy cơ NoSQL Injection nhờ tính năng casting tự động của Mongoose.
 
 ### 7.6 Helmet Security Headers
 
@@ -614,17 +614,12 @@ Helmet tự động thiết lập các HTTP security headers:
 ### Yêu Cầu Hệ Thống
 
 - Node.js v20 trở lên
-- MySQL Server 8.0
+- MongoDB Community Server 7.0 trở lên
 - npm v9+
 
-### Bước 1 — Chuẩn bị Database
-
 ```bash
-# Tạo database và import schema
-mysql -u root -p < backend/sql/schema.sql
-
-# (Tùy chọn) Import dữ liệu mẫu
-mysql -u root -p seafood_db < backend/sql/seed.sql
+# MongoDB tự động khởi tạo database khi có dữ liệu mới.
+# Không cần import schema thủ công.
 ```
 
 ### Bước 2 — Cấu hình Backend
@@ -679,25 +674,19 @@ docker-compose up --build
 
 | Container | Image | Port | Chú thích |
 |---|---|---|---|
-| `seafood_db` | mysql:8.0 | 3306 | Có health check trước khi backend khởi động |
-| `seafood_backend` | Node.js build | 5000 | Chờ DB healthy, tự động `npm run dev` |
-| `seafood_frontend` | Node.js build | 3000 | Chờ backend sẵn sàng |
+| `seafood_mongo` | mongo:latest | 27017 | MongoDB database container |
+| `seafood_redis` | redis:7-alpine | 6379 | Redis caching container |
+| `seafood_backend` | Node.js build | 5000 | Backend chạy Express + Socket.IO |
+| `seafood_frontend` | Node.js build | 3000 | Frontend React chạy dev server |
 
-### Health Check
-
-Database container được kiểm tra bằng `mysqladmin ping` với:
-- `interval: 10s`
-- `timeout: 5s`
-- `retries: 10`
-- `start_period: 60s`
-
-Backend chỉ khởi động khi `db` có trạng thái `healthy` — tránh lỗi kết nối database khi container MySQL chưa sẵn sàng.
+MongoDB container tự khởi động nhanh chóng.
+Backend và các dịch vụ khác phụ thuộc trực tiếp vào trạng thái hoạt động của MongoDB và Redis để chạy trơn tru.
 
 ### Persistent Storage
 
 ```yaml
 volumes:
-  mysql_data:  # Dữ liệu MySQL không bị mất khi restart container
+  mongo_data:  # Dữ liệu MongoDB không bị mất khi restart container
 ```
 
 ### Dừng & Dọn Dẹp

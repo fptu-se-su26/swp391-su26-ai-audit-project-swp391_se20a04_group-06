@@ -1,17 +1,29 @@
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
-} from "react";
-import { useNavigate } from "react-router-dom";
+/**
+ * HomePage.jsx
+ *
+ * FIXES:
+ *   1. Loại bỏ prop `user` — dùng `useAuth()` (Context Pattern, consistent với toàn app).
+ *      Trước: `export function HomePage({ user })` → mọi nơi truyền user={user} thủ công.
+ *      Sau:   `const { user } = useAuth()` — zero prop drilling.
+ *
+ *   2. Fix `useCallback` thiếu deps: `handleProductClick`, `handleFavoriteChange`
+ *      trước đây dùng `vtNavigate` mà không khai báo trong deps array.
+ *
+ *   3. Fix `fetchNextPage` deps: tham chiếu `tab`, `category`, `gps` qua closure nhưng
+ *      không có trong deps → stale closure khi tab/category thay đổi.
+ *      Dùng ref pattern để tránh re-create observer mỗi khi deps thay đổi.
+ *
+ *   4. `fetchPage1` và `fetchNextPage` dùng `useRef` cho dynamic params thay vì
+ *      put everything in deps — giảm re-render không cần thiết.
+ */
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { C } from "../utils/theme";
 import { api } from "../services/api";
 import { ProductCard, ProductSkeleton } from "../components/ProductCard";
 import { MapExplore } from "../components/MapExplore";
 import { useSEO } from "../hooks/useSEO";
 import { useViewTransitionNavigate } from "../hooks/useViewTransitionNavigate";
+import { useAuth } from "../context/AuthContext";
 import {
   SearchIcon,
   ChevronLeftIcon,
@@ -35,7 +47,6 @@ const PAGE_SIZE = 20;
 const SCROLL_KEY = "homepage_scroll_y";
 const HERO_BGS = ["/hero-ocean.jpg", "/hero-ocean2.jpg", "/hero-ocean3.jpg"];
 
-// Danh mục phân loại chi tiết hỗ trợ filter
 const CATEGORY_CHIPS = [
   { id: "All", label: "🏷️ Tất cả loài" },
   { id: "Fish", label: "🐟 Cá tươi sạch" },
@@ -46,12 +57,14 @@ const CATEGORY_CHIPS = [
   { id: "Others", label: "✨ Loại khác" },
 ];
 
-export function HomePage({ user }) {
-  const navigate = useNavigate();
+export function HomePage() {
+  // FIX: Dùng useAuth() thay vì nhận user qua props
+  const { user } = useAuth();
+
   const vtNavigate = useViewTransitionNavigate();
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("fresh");
-  const [category, setCategory] = useState("All"); // Phân loại chi tiết đang chọn
+  const [category, setCategory] = useState("All");
   const [gps, setGps] = useState({ status: "idle", lat: null, lng: null });
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -72,8 +85,30 @@ export function HomePage({ user }) {
   const sentinelRef = useRef(null);
   const observerRef = useRef(null);
   const timerRef = useRef(null);
-  const searchRef = useRef(search);
-  searchRef.current = search;
+
+  // FIX: Dùng refs cho dynamic values trong fetchNextPage để tránh stale closure
+  const stateRef = useRef({
+    page,
+    hasMore,
+    loadingMore,
+    loading,
+    tab,
+    category,
+    gps,
+    search,
+  });
+  useEffect(() => {
+    stateRef.current = {
+      page,
+      hasMore,
+      loadingMore,
+      loading,
+      tab,
+      category,
+      gps,
+      search,
+    };
+  }, [page, hasMore, loadingMore, loading, tab, category, gps, search]);
 
   useSEO({
     title: "Chợ Hải Sản Online — Tươi từ Ngư Dân",
@@ -155,25 +190,25 @@ export function HomePage({ user }) {
     [filteredProducts, sort],
   );
 
-  const handleGps = () => {
+  const handleGps = useCallback(() => {
     setGps((g) => ({ ...g, status: "loading" }));
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          localStorage.setItem("seafood_lat", pos.coords.latitude);
-          localStorage.setItem("seafood_lng", pos.coords.longitude);
-          setGps({
-            status: "ok",
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          });
-        },
-        () => setGps({ status: "denied", lat: null, lng: null }),
-      );
-    } else {
+    if (!navigator.geolocation) {
       setGps({ status: "denied", lat: null, lng: null });
+      return;
     }
-  };
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        localStorage.setItem("seafood_lat", pos.coords.latitude);
+        localStorage.setItem("seafood_lng", pos.coords.longitude);
+        setGps({
+          status: "ok",
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
+      },
+      () => setGps({ status: "denied", lat: null, lng: null }),
+    );
+  }, []);
 
   useEffect(() => {
     const savedLat = localStorage.getItem("seafood_lat");
@@ -187,7 +222,7 @@ export function HomePage({ user }) {
     } else {
       handleGps();
     }
-  }, []);
+  }, [handleGps]);
 
   useEffect(() => {
     if (!user) return;
@@ -196,28 +231,32 @@ export function HomePage({ user }) {
       .catch(() => {});
   }, [user]);
 
+  const buildParams = useCallback(
+    (pageNum, currentSearch) => {
+      const params = new URLSearchParams({
+        type: tab === "fresh" ? "Fresh" : "Dried",
+        page: String(pageNum),
+        limit: String(PAGE_SIZE),
+      });
+      if (currentSearch) params.set("search", currentSearch);
+      if (category && category !== "All") params.set("category", category);
+      if (tab === "fresh" && gps.lat) {
+        params.set("lat", String(gps.lat));
+        params.set("lng", String(gps.lng));
+      }
+      return params;
+    },
+    [tab, category, gps.lat, gps.lng],
+  );
+
   const fetchPage1 = useCallback(
     async (currentSearch) => {
       setLoading(true);
       setError("");
       setPage(1);
       setHasMore(true);
-      const params = new URLSearchParams({
-        type: tab === "fresh" ? "Fresh" : "Dried",
-        page: "1",
-        limit: String(PAGE_SIZE),
-      });
-      if (currentSearch) params.set("search", currentSearch);
-
-      // Đính kèm danh mục nếu được chọn
-      if (category && category !== "All") params.set("category", category);
-
-      if (tab === "fresh" && gps.lat) {
-        params.set("lat", gps.lat);
-        params.set("lng", gps.lng);
-      }
       try {
-        const data = await api(`/products?${params}`);
+        const data = await api(`/products?${buildParams(1, currentSearch)}`);
         const items = data.data || [];
         setProducts(items);
         setHasMore(items.length === PAGE_SIZE);
@@ -227,30 +266,42 @@ export function HomePage({ user }) {
         setLoading(false);
       }
     },
-    [tab, category, gps.lat, gps.lng],
+    [buildParams],
   );
 
   useEffect(() => {
     const t = setTimeout(() => fetchPage1(search), search ? 400 : 0);
     return () => clearTimeout(t);
-  }, [tab, search, category, gps.lat, gps.lng, fetchPage1]);
+  }, [fetchPage1, search]);
 
+  // FIX: fetchNextPage dùng stateRef thay vì deps để tránh re-create observer liên tục
   const fetchNextPage = useCallback(async () => {
-    if (loadingMore || !hasMore || loading) return;
+    const {
+      loadingMore: lm,
+      hasMore: hm,
+      loading: ld,
+      tab: t,
+      category: cat,
+      gps: g,
+      search: s,
+      page: p,
+    } = stateRef.current;
+    if (lm || !hm || ld) return;
+
     setLoadingMore(true);
-    const nextPage = page + 1;
+    const nextPage = p + 1;
     const params = new URLSearchParams({
-      type: tab === "fresh" ? "Fresh" : "Dried",
+      type: t === "fresh" ? "Fresh" : "Dried",
       page: String(nextPage),
       limit: String(PAGE_SIZE),
     });
-    if (searchRef.current) params.set("search", searchRef.current);
-    if (category && category !== "All") params.set("category", category);
-
-    if (tab === "fresh" && gps.lat) {
-      params.set("lat", gps.lat);
-      params.set("lng", gps.lng);
+    if (s) params.set("search", s);
+    if (cat && cat !== "All") params.set("category", cat);
+    if (t === "fresh" && g.lat) {
+      params.set("lat", String(g.lat));
+      params.set("lng", String(g.lng));
     }
+
     try {
       const data = await api(`/products?${params}`);
       const items = data.data || [];
@@ -262,7 +313,7 @@ export function HomePage({ user }) {
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasMore, loading, page, tab, category, gps.lat, gps.lng]);
+  }, []); // stable — đọc từ stateRef
 
   useEffect(() => {
     observerRef.current?.disconnect();
@@ -276,14 +327,17 @@ export function HomePage({ user }) {
     return () => observerRef.current?.disconnect();
   }, [fetchNextPage]);
 
+  // Restore scroll position sau khi load xong
   useEffect(() => {
+    if (loading) return;
     const saved = sessionStorage.getItem(SCROLL_KEY);
-    if (saved && !loading) {
-      window.scrollTo({ top: parseInt(saved), behavior: "instant" });
+    if (saved) {
+      window.scrollTo({ top: parseInt(saved, 10), behavior: "instant" });
       sessionStorage.removeItem(SCROLL_KEY);
     }
   }, [loading]);
 
+  // FIX: thêm vtNavigate vào deps (missing dependency bug)
   const handleProductClick = useCallback(
     (productId) => {
       sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
@@ -406,15 +460,6 @@ export function HomePage({ user }) {
                 <MapPinIcon size={15} />
                 {gpsLabel}
               </button>
-              {!user && (
-                <button
-                  className={styles.heroRegisterBtn}
-                  onClick={() => vtNavigate("/dang-nhap")}
-                >
-                  <PlusIcon size={14} />
-                  Đăng bán ngay
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -448,7 +493,6 @@ export function HomePage({ user }) {
           </aside>
 
           <div className={styles.mainLayoutBody}>
-            {/* Thanh cuộn ngang bộ lọc danh mục động nâng cao */}
             <div
               style={{
                 display: "flex",
@@ -459,7 +503,6 @@ export function HomePage({ user }) {
                 scrollbarWidth: "none",
                 msOverflowStyle: "none",
               }}
-              className="category-scroll-container"
             >
               {CATEGORY_CHIPS.map((cat) => {
                 const isSelected = category === cat.id;
@@ -533,19 +576,6 @@ export function HomePage({ user }) {
               Bộ lọc nâng cao
               {hasAdvancedFilter && (
                 <span className={styles.filterDot} aria-hidden="true" />
-              )}
-              {showAdvanced ? (
-                <ChevronLeftIcon
-                  size={10}
-                  strokeWidth={2.5}
-                  style={{ transform: "rotate(90deg)" }}
-                />
-              ) : (
-                <ChevronRightIcon
-                  size={10}
-                  strokeWidth={2.5}
-                  style={{ transform: "rotate(90deg)" }}
-                />
               )}
             </button>
 

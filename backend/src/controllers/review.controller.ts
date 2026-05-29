@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { Review } from "../models/Review";
 import { User } from "../models/User";
 import { Product } from "../models/Product";
+import { Message } from "../models/Message";
 import { uploadToCloudinary } from "../middlewares/upload";
 import { sendServerError } from "../helpers/response.helper";
 import { notifySellerNewReview } from "../services/notification.service";
@@ -24,6 +25,21 @@ export async function addReview(req: Request, res: Response) {
       .json({ message: "Bạn không thể tự đánh giá chính mình" });
 
   try {
+    // [H-05 FIX] Chỉ cho phép đánh giá nếu người mua đã nhắn tin liên hệ người bán về sản phẩm này
+    const hasInteracted = await Message.exists({
+      productId,
+      $or: [
+        { senderId: reviewerId, receiverId: sellerId },
+        { senderId: sellerId, receiverId: reviewerId }
+      ]
+    });
+
+    if (!hasInteracted) {
+      return res
+        .status(403)
+        .json({ message: "Chỉ những người đã liên hệ người bán về sản phẩm này mới được đánh giá" });
+    }
+
     const existing = await Review.findOne({ reviewerId, productId });
     if (existing)
       return res
@@ -36,12 +52,17 @@ export async function addReview(req: Request, res: Response) {
       finalImageUrl = url;
     }
 
+    // [L-06 FIX] Làm sạch comment (trim, loại bỏ thẻ HTML để chống XSS, giới hạn độ dài)
+    const cleanComment = comment
+      ? comment.trim().replace(/<[^>]*>/g, "").slice(0, 500)
+      : null;
+
     const newReview = new Review({
       productId,
       reviewerId,
       sellerId,
       rating: numRating,
-      comment: comment || null,
+      comment: cleanComment,
       imageUrl: finalImageUrl,
     });
 

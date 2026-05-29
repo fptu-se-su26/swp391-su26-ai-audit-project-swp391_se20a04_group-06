@@ -2,53 +2,53 @@ import { User } from "../models/User";
 import mongoose from "mongoose";
 
 export const userRepository = {
-  async findByPhone(phone: string) {
-    const u = await User.findOne({ phone });
+  async findByEmail(email: string) {
+    const u = await User.findOne({ email });
     if (!u) return null;
     return {
-      UserID: u._id.toString(),
-      Name: u.name,
-      Phone: u.phone,
-      PasswordHash: u.passwordHash,
-      Role: u.role,
-      IsActive: u.isActive ? 1 : 0,
-      IsVerified: u.isVerified ? 1 : 0,
-      Avatar: u.avatar,
+      userId: u._id.toString(),
+      name: u.name,
+      email: u.email,
+      passwordHash: u.passwordHash,
+      role: u.role,
+      isActive: u.isActive,
+      isVerified: u.isVerified,
+      avatar: u.avatar,
     };
   },
 
-  async findById(userId: any) {
+  async findById(userId: string) {
     if (!mongoose.Types.ObjectId.isValid(userId)) return null;
     const u = await User.findById(userId);
     if (!u) return null;
     return {
-      id: u._id,
+      id: u._id.toString(),
       name: u.name,
-      phone: u.phone,
+      email: u.email,
       role: u.role,
-      isActive: u.isActive ? 1 : 0,
-      isVerified: u.isVerified ? 1 : 0,
+      isActive: u.isActive,
+      isVerified: u.isVerified,
       avatarUrl: u.avatar,
     };
   },
 
-  async phoneExistsForOther(
-    phone: string,
+  async emailExistsForOther(
+    email: string,
     excludeUserId: any,
   ): Promise<boolean> {
     if (!mongoose.Types.ObjectId.isValid(excludeUserId)) return false;
-    const u = await User.findOne({ phone, _id: { $ne: excludeUserId } });
+    const u = await User.findOne({ email, _id: { $ne: excludeUserId } });
     return !!u;
   },
 
   async create(
     name: string,
-    phone: string,
+    email: string,
     passwordHash: string,
   ): Promise<string> {
     const u = new User({
       name,
-      phone,
+      email,
       passwordHash,
     });
     await u.save();
@@ -63,12 +63,12 @@ export const userRepository = {
 
   async updateProfile(
     userId: any,
-    fields: { name?: string; phone?: string; avatar?: string },
+    fields: { name?: string; email?: string; avatar?: string },
   ): Promise<void> {
     if (!mongoose.Types.ObjectId.isValid(userId)) return;
     const updates: any = {};
     if (fields.name !== undefined) updates.name = fields.name;
-    if (fields.phone !== undefined) updates.phone = fields.phone;
+    if (fields.email !== undefined) updates.email = fields.email;
     if (fields.avatar !== undefined) updates.avatar = fields.avatar;
 
     await User.findByIdAndUpdate(userId, { $set: updates });

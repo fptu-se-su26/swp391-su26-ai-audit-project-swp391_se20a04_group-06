@@ -23,15 +23,16 @@ export async function toggleFollow(req: Request, res: Response) {
     const isFollowing = user.following.some((id) => id.toString() === sellerId);
 
     if (isFollowing) {
-      await User.findByIdAndUpdate(userId, {
-        $pull: { following: sellerObjId },
-      });
+      // Tối ưu hóa: Cắt giảm lượt truy vấn cơ sở dữ liệu dư thừa
+      user.following = user.following.filter(
+        (id) => id.toString() !== sellerId,
+      );
+      await user.save();
       return res.json({ message: "Đã hủy theo dõi", isFollowing: false });
     }
 
-    await User.findByIdAndUpdate(userId, {
-      $addToSet: { following: sellerObjId },
-    });
+    user.following.push(sellerObjId as any);
+    await user.save();
     return res.json({ message: "Đã theo dõi thành công", isFollowing: true });
   } catch (err) {
     return sendServerError(res, err);

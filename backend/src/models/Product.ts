@@ -1,4 +1,4 @@
-import { Schema, model, Document } from "mongoose";
+import { Schema, model, Document, Types } from "mongoose";
 
 export interface IPriceHistory {
   oldPrice: number;
@@ -7,7 +7,7 @@ export interface IPriceHistory {
 }
 
 export interface IProduct extends Document {
-  sellerId: Schema.Types.ObjectId;
+  sellerId: Types.ObjectId;
   type: "Fresh" | "Dried";
   category: "Fish" | "Shrimp" | "Squid" | "Crab" | "Shellfish" | "Others";
   name: string;
@@ -64,9 +64,15 @@ const productSchema = new Schema<IProduct>(
     },
 
     // Tích hợp GeoJSON định vị gốc của MongoDB
+    // 💡 CHÚ Ý QUAN TRỌNG CHO LẬP TRÌNH VIÊN:
+    // Tuyệt đối không được thêm `default: "Point"` ở trường `type` bên dưới.
+    // Nếu thêm giá trị mặc định này, khi người dùng đăng bán sản phẩm KHÔNG có tọa độ (ví dụ sản phẩm khô "Dried"),
+    // Mongoose vẫn tự tạo đối tượng `location` chứa `{ type: "Point" }` nhưng thiếu mảng tọa độ `coordinates`.
+    // Khi lưu vào DB, chỉ mục địa lý 2dsphere của MongoDB sẽ báo lỗi 500 (Can't extract geo keys / Point must be an array).
+    // Bỏ `default` đi sẽ giúp Mongoose không tự tạo đối tượng rỗng này, giúp sản phẩm lưu thành công và chỉ mục vẫn hoạt động tốt!
     location: {
-      type: { type: String, enum: ["Point"], default: "Point" },
-      coordinates: { type: [Number] }, // [Kinh độ, Vĩ độ]
+      type: { type: String, enum: ["Point"] },
+      coordinates: { type: [Number] }, // Mảng lưu trữ: [Kinh độ (lng), Vĩ độ (lat)] theo chuẩn bắt buộc của GeoJSON
     },
 
     catchTime: { type: Date },

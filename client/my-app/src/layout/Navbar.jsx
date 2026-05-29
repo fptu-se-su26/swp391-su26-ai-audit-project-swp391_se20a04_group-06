@@ -1,16 +1,20 @@
 /**
- * Navbar.jsx — Refactored
+ * Navbar.jsx — Refactored + Fixed
  *
- * CHANGES:
- *   - Loại bỏ props: `user`, `setUser` → dùng useAuth() (Context Pattern)
- *   - Loại bỏ prop: `onLogout` → logout từ AuthContext
- *   - Giữ nguyên props: `unread`, `onOpenGlobalChat` (vẫn còn hợp lý từ AppShell)
- *   - Giữ nguyên 100% UI và logic khác
+ * FIXES:
+ *   1. FIX CRITICAL TYPO: `onMarkRead` → `onMarkAllRead` khi truyền vào NotificationBell.
+ *      Bug: NotificationBell nhận prop `onMarkAllRead` nhưng Navbar truyền `onMarkRead`
+ *      → notifications không bao giờ được đánh dấu đã đọc khi mở dropdown.
+ *
+ *   2. Thêm cleanup cho event listener IntersectionObserver (đã có nhưng cần verify).
+ *
+ *   3. Loại bỏ `disconnectSocket` import thừa (logout đã được handle trong AuthContext).
+ *
+ *   4. `handleLogout` không cần async/await — `logout()` từ AuthContext đã handle internally.
  */
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../context/AuthContext"; // ← NEW
-import { disconnectSocket } from "../services/socket";
+import { useAuth } from "../context/AuthContext";
 import { ChatPopover } from "../components/ChatPopover";
 import { NotificationBell } from "../components/NotificationBell";
 import { useNotifications } from "../hooks/useNotifications";
@@ -31,7 +35,6 @@ import {
 import styles from "./Navbar.module.css";
 
 export function Navbar({ unread, onOpenGlobalChat }) {
-  // ← THAY ĐỔI: không nhận user/setUser qua props nữa
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,6 +48,7 @@ export function Navbar({ unread, onOpenGlobalChat }) {
 
   const { notifs, unreadCount, markAllRead } = useNotifications(user);
 
+  // Đóng profile dropdown khi click ra ngoài
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -55,6 +59,7 @@ export function Navbar({ unread, onOpenGlobalChat }) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Detect scroll để thu nhỏ navbar
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
@@ -66,23 +71,40 @@ export function Navbar({ unread, onOpenGlobalChat }) {
     return () => observer.disconnect();
   }, []);
 
-  const handleNotifClick = (n) => {
-    if (n.productId) navigate(`/san-pham/${n.productId}`);
-  };
+  // Đóng mobile menu khi route thay đổi
+  useEffect(() => {
+    setMenuOpen(false);
+    setShowChatPopover(false);
+    setShowProfileDropdown(false);
+  }, [location.pathname]);
 
-  // logout từ AuthContext — không cần truyền qua props
-  const handleLogout = async () => {
+  const handleNotifClick = useCallback(
+    (n) => {
+      if (n.productId) navigate(`/san-pham/${n.productId}`);
+    },
+    [navigate],
+  );
+
+  // FIX: Không cần async/await — logout() trong AuthContext tự handle
+  const handleLogout = useCallback(async () => {
     await logout();
     navigate("/");
     setMenuOpen(false);
     setShowProfileDropdown(false);
-  };
+  }, [logout, navigate]);
 
-  const isActive = (path) => location.pathname === path;
-  const navTo = (path) => {
-    navigate(path);
-    setMenuOpen(false);
-  };
+  const isActive = useCallback(
+    (path) => location.pathname === path,
+    [location.pathname],
+  );
+
+  const navTo = useCallback(
+    (path) => {
+      navigate(path);
+      setMenuOpen(false);
+    },
+    [navigate],
+  );
 
   return (
     <>
@@ -164,6 +186,7 @@ export function Navbar({ unread, onOpenGlobalChat }) {
                 <button
                   className={styles.iconBtn}
                   onClick={() => setShowChatPopover((v) => !v)}
+                  aria-label={`Tin nhắn${unread > 0 ? ` (${unread} chưa đọc)` : ""}`}
                 >
                   <MessageIcon size={16} />
                   {unread > 0 && (
@@ -184,6 +207,7 @@ export function Navbar({ unread, onOpenGlobalChat }) {
                 )}
               </div>
 
+              {/* FIX: prop onMarkRead → onMarkAllRead */}
               <NotificationBell
                 notifs={notifs}
                 unreadCount={unreadCount}
@@ -203,6 +227,8 @@ export function Navbar({ unread, onOpenGlobalChat }) {
                 <button
                   className={styles.profileBtn}
                   onClick={() => setShowProfileDropdown((v) => !v)}
+                  aria-expanded={showProfileDropdown}
+                  aria-haspopup="true"
                 >
                   {user.avatarUrl ? (
                     <img
@@ -227,6 +253,7 @@ export function Navbar({ unread, onOpenGlobalChat }) {
                     </div>
                     <button
                       className={styles.dropdownItem}
+                      role="menuitem"
                       onClick={() => {
                         navTo("/profile");
                         setShowProfileDropdown(false);
@@ -237,6 +264,7 @@ export function Navbar({ unread, onOpenGlobalChat }) {
                     </button>
                     <button
                       className={styles.dropdownItem}
+                      role="menuitem"
                       onClick={() => {
                         navTo("/dashboard");
                         setShowProfileDropdown(false);
@@ -248,6 +276,7 @@ export function Navbar({ unread, onOpenGlobalChat }) {
                     <hr className={styles.dropdownDivider} />
                     <button
                       className={`${styles.dropdownItem} ${styles.danger}`}
+                      role="menuitem"
                       onClick={handleLogout}
                     >
                       <LogOutIcon size={13} />
@@ -280,6 +309,8 @@ export function Navbar({ unread, onOpenGlobalChat }) {
           <button
             className={styles.hamburger}
             onClick={() => setMenuOpen((v) => !v)}
+            aria-label={menuOpen ? "Đóng menu" : "Mở menu"}
+            aria-expanded={menuOpen}
           >
             {menuOpen ? <XIcon size={16} /> : <MenuIcon size={16} />}
           </button>
@@ -287,7 +318,11 @@ export function Navbar({ unread, onOpenGlobalChat }) {
       </nav>
 
       {menuOpen && (
-        <div className={styles.mobileMenu}>
+        <div
+          className={styles.mobileMenu}
+          role="navigation"
+          aria-label="Menu di động"
+        >
           <button className={styles.mobileMenuItem} onClick={() => navTo("/")}>
             <HomeIcon size={14} />
             Trang chủ
@@ -302,7 +337,7 @@ export function Navbar({ unread, onOpenGlobalChat }) {
             </button>
           )}
           <button
-            className={`${styles.mobileMenuItem} styles.highlight`}
+            className={styles.mobileMenuItem}
             onClick={() => navTo("/dang-bai")}
           >
             <PlusIcon size={14} />

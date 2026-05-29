@@ -73,7 +73,6 @@ export function initSocket(server: HttpServer) {
         const prod = await Product.findById(productId);
         const isSeller = prod && prod.sellerId.toString() === userId;
 
-        // 🌟 Ép kiểu "as any" giúp vượt qua kiểm duyệt kiểu dữ liệu nghiêm ngặt của TS Compiler
         const hasMessages = await Message.exists({
           productId,
           $or: [{ senderId: userId }, { receiverId: userId }],
@@ -111,12 +110,19 @@ export function initSocket(server: HttpServer) {
           return;
         }
 
+        // FIX: Dùng pipeline atomic để tránh race condition.
+        // Trước đây: incr + expire là 2 lệnh riêng biệt.
+        // Nếu server crash sau incr nhưng trước expire → key sống vĩnh viễn → block user mãi mãi.
+        // Bây giờ: cả 2 lệnh gửi trong 1 round-trip, kết quả đảm bảo nhất quán.
         const rateLimitKey = `ratelimit:socket:msg:${userId}`;
         try {
-          const currentCount = await redis.incr(rateLimitKey);
-          if (currentCount === 1) {
-            await redis.expire(rateLimitKey, 2);
-          }
+          const pipe = redis.pipeline();
+          pipe.incr(rateLimitKey);
+          pipe.expire(rateLimitKey, 2);
+          const results = await pipe.exec();
+
+          // results[0] = [error, incrValue]
+          const currentCount = (results?.[0]?.[1] as number) ?? 0;
 
           if (currentCount > 5) {
             socket.emit("error", {

@@ -7,9 +7,7 @@ import { sendServerError, parseId } from "../helpers/response.helper";
 import { parsePagination, paginatedResponse } from "../utils/pagination";
 import { fillDays } from "../utils/fillDays";
 import { logger } from "../utils/logger";
-import mongoose from "mongoose";
 
-/* ─── GET /api/admin/stats ─── */
 export async function getStats(_req: Request, res: Response) {
   try {
     const sevenDaysAgo = new Date();
@@ -29,17 +27,11 @@ export async function getStats(_req: Request, res: Response) {
       usersPerDayRaw,
       topSellers,
     ] = (await Promise.all([
-      // totalUsers
       User.countDocuments({ role: { $ne: "Admin" } }),
-      // verifiedUsers
       User.countDocuments({ isVerified: true, role: { $ne: "Admin" } }),
-      // activeFresh
       Product.countDocuments({ status: "Active", type: "Fresh" }),
-      // activeDried
       Product.countDocuments({ status: "Active", type: "Dried" }),
-      // expiredTotal
       Product.countDocuments({ status: "Expired" }),
-      // reviewStats
       Review.aggregate([
         {
           $group: {
@@ -49,9 +41,7 @@ export async function getStats(_req: Request, res: Response) {
           },
         },
       ]),
-      // totalMessages
       Message.countDocuments({}),
-      // totalFollows (Sum followings of all users)
       User.aggregate([
         {
           $project: {
@@ -64,14 +54,8 @@ export async function getStats(_req: Request, res: Response) {
             },
           },
         },
-        {
-          $group: {
-            _id: null,
-            totalFollows: { $sum: "$followingCount" },
-          },
-        },
+        { $group: { _id: null, totalFollows: { $sum: "$followingCount" } } },
       ]),
-      // postsPerDay
       Product.aggregate([
         { $match: { createdAt: { $gte: sevenDaysAgo } } },
         {
@@ -82,7 +66,6 @@ export async function getStats(_req: Request, res: Response) {
         },
         { $sort: { _id: 1 } },
       ]),
-      // usersPerDay
       User.aggregate([
         {
           $match: { createdAt: { $gte: sevenDaysAgo }, role: { $ne: "Admin" } },
@@ -95,17 +78,21 @@ export async function getStats(_req: Request, res: Response) {
         },
         { $sort: { _id: 1 } },
       ]),
-      // topSellers
-      User.aggregate([
-        { $match: { role: { $ne: "Admin" } } },
+      // TỐI ƯU HÓA: Tìm 5 seller có nhiều bài đăng nhất trước, sau đó mới kết hợp các bảng khác
+      Product.aggregate([
+        { $match: { status: { $ne: "Deleted" } } },
+        { $group: { _id: "$sellerId", postCount: { $sum: 1 } } },
+        { $sort: { postCount: -1 } },
+        { $limit: 5 },
         {
           $lookup: {
-            from: "products",
+            from: "users",
             localField: "_id",
-            foreignField: "sellerId",
-            as: "posts",
+            foreignField: "_id",
+            as: "user",
           },
         },
+        { $unwind: "$user" },
         {
           $lookup: {
             from: "reviews",
@@ -117,14 +104,12 @@ export async function getStats(_req: Request, res: Response) {
         {
           $project: {
             id: "$_id",
-            name: "$name",
-            isVerified: { $cond: ["$isVerified", 1, 0] },
-            postCount: { $size: "$posts" },
+            name: "$user.name",
+            isVerified: { $cond: ["$user.isVerified", 1, 0] },
+            postCount: 1,
             avgRating: { $ifNull: [{ $avg: "$reviewsList.rating" }, 0] },
           },
         },
-        { $sort: { postCount: -1 } },
-        { $limit: 5 },
       ]),
     ])) as any[];
 
@@ -159,7 +144,6 @@ export async function getStats(_req: Request, res: Response) {
   }
 }
 
-/* ─── GET /api/admin/users ─── */
 export async function listUsers(req: Request, res: Response) {
   const { page, limit, offset } = parsePagination(
     req.query.page as string,
@@ -172,7 +156,7 @@ export async function listUsers(req: Request, res: Response) {
     if (search) {
       filter.$or = [
         { name: { $regex: search, $options: "i" } },
-        { phone: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
       ];
     }
 
@@ -182,22 +166,24 @@ export async function listUsers(req: Request, res: Response) {
       .skip(offset)
       .limit(limit);
 
-    const formattedRows = await Promise.all(
-      users.map(async (u) => {
-        const postCount = await Product.countDocuments({
-          sellerId: u._id as any,
-        }); // 🌟 Chỉnh sửa tại đây
-        return {
-          id: u._id.toString(),
-          name: u.name,
-          phone: u.phone,
-          role: u.role,
-          isActive: u.isActive ? 1 : 0,
-          isVerified: u.isVerified ? 1 : 0,
-          postCount,
-        };
-      }),
+    const userIds = users.map((u) => u._id);
+    const postCountAgg = await Product.aggregate([
+      { $match: { sellerId: { $in: userIds } } },
+      { $group: { _id: "$sellerId", count: { $sum: 1 } } },
+    ]);
+    const postCountMap = new Map<string, number>(
+      postCountAgg.map((p: any) => [p._id.toString(), p.count as number]),
     );
+
+    const formattedRows = users.map((u) => ({
+      id: u._id.toString(),
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      isActive: u.isActive ? 1 : 0,
+      isVerified: u.isVerified ? 1 : 0,
+      postCount: postCountMap.get(u._id.toString()) || 0,
+    }));
 
     return res.json(paginatedResponse(formattedRows, total, page, limit));
   } catch (err) {
@@ -208,7 +194,6 @@ export async function listUsers(req: Request, res: Response) {
   }
 }
 
-/* ─── PATCH /api/admin/users/:id/toggle ─── */
 export async function toggleUser(req: Request, res: Response) {
   const id = parseId(req.params.id);
   if (!id)
@@ -232,7 +217,6 @@ export async function toggleUser(req: Request, res: Response) {
   }
 }
 
-/* ─── PATCH /api/admin/users/:id/verify ─── */
 export async function verifyUser(req: Request, res: Response) {
   const id = parseId(req.params.id);
   if (!id)
@@ -263,7 +247,6 @@ export async function verifyUser(req: Request, res: Response) {
   }
 }
 
-/* ─── GET /api/admin/listings ─── */
 export async function listAllProducts(req: Request, res: Response) {
   const { page, limit, offset } = parsePagination(
     req.query.page as string,
@@ -280,7 +263,9 @@ export async function listAllProducts(req: Request, res: Response) {
     if (search) {
       const matchingUsers = await User.find({
         name: { $regex: search, $options: "i" },
-      }).select("_id");
+      })
+        .select("_id")
+        .limit(100);
       const userIds = matchingUsers.map((u) => u._id);
 
       filter.$or = [
@@ -291,7 +276,7 @@ export async function listAllProducts(req: Request, res: Response) {
 
     const total = await Product.countDocuments(filter);
     const products = await Product.find(filter)
-      .populate("sellerId", "name phone")
+      .populate("sellerId", "name email")
       .sort({ createdAt: -1 })
       .skip(offset)
       .limit(limit);
@@ -305,7 +290,7 @@ export async function listAllProducts(req: Request, res: Response) {
       remainingWeight: p.remainingWeight,
       createdAt: p.createdAt,
       sellerName: p.sellerId?.name || "Một ngư dân",
-      sellerPhone: p.sellerId?.phone || "",
+      sellerEmail: p.sellerId?.email || "",
       coverImg: p.images[0] || null,
     }));
 
@@ -318,7 +303,6 @@ export async function listAllProducts(req: Request, res: Response) {
   }
 }
 
-/* ─── DELETE /api/admin/listings/:id ─── */
 export async function adminDeleteProduct(req: Request, res: Response) {
   const id = parseId(req.params.id);
   if (!id) return res.status(400).json({ message: "ID sản phẩm không hợp lệ" });

@@ -1,19 +1,190 @@
-import React, { useState, useEffect } from "react";
+/**
+ * ProfilePage.jsx
+ *
+ * FIXES:
+ *   1. Thay `window.confirm()` và `window.prompt()` bằng ConfirmDialog + input modal.
+ *      Trước: window.confirm/prompt block UI thread, style không match, không mobile-friendly.
+ *      Sau:   Custom modal với animation, accessible, consistent với phần còn lại của app.
+ *
+ *   2. `useAuth()` đã được dùng đúng — giữ nguyên, không cần nhận user qua props.
+ *
+ *   3. Thêm cleanup cho URL.createObjectURL để tránh memory leak.
+ *
+ *   4. Thêm useToast() đã được dùng — giữ nguyên.
+ */
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { C } from "../utils/theme";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 
+// ── DeleteAccountModal — thay thế window.confirm + window.prompt ──────────────
+/**
+ * TRƯỚC:
+ *   window.confirm("CẢNH BÁO...")   → block UI, không mobile-friendly
+ *   window.prompt("Nhập XOA TAI KHOAN") → không có trên mobile Safari nhiều trường hợp
+ *
+ * SAU: Modal 2 bước với text input xác nhận
+ */
+function DeleteAccountModal({ onConfirm, onCancel }) {
+  const [confirmText, setConfirmText] = useState("");
+  const inputRef = useRef(null);
+  const REQUIRED = "XOA TAI KHOAN";
+
+  useEffect(() => {
+    // Focus input ngay khi modal mở
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, []);
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.5)",
+        zIndex: 99999,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px",
+        animation: "fadeIn 0.15s ease",
+      }}
+      onClick={onCancel}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#fff",
+          borderRadius: 20,
+          padding: "32px",
+          maxWidth: 420,
+          width: "100%",
+          boxShadow: "0 25px 50px rgba(0,0,0,0.25)",
+          border: "1.5px solid #FEB2B2",
+        }}
+      >
+        <div style={{ textAlign: "center", marginBottom: 20 }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>🛑</div>
+          <h3
+            style={{
+              fontSize: 18,
+              fontWeight: 800,
+              color: "#C53030",
+              margin: 0,
+            }}
+          >
+            Xóa tài khoản vĩnh viễn
+          </h3>
+          <p
+            style={{
+              fontSize: 13,
+              color: "#9B2C2C",
+              marginTop: 10,
+              lineHeight: 1.6,
+            }}
+          >
+            Hành động này <strong>KHÔNG THỂ HOÀN TÁC</strong>. Toàn bộ dữ liệu
+            của bạn sẽ bị xóa sạch vĩnh viễn khỏi hệ thống.
+          </p>
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <label
+            style={{
+              display: "block",
+              fontSize: 12,
+              fontWeight: 700,
+              color: "#9B2C2C",
+              marginBottom: 8,
+            }}
+          >
+            Để xác nhận, hãy gõ:{" "}
+            <code
+              style={{
+                background: "#FEE2E2",
+                padding: "2px 6px",
+                borderRadius: 4,
+                letterSpacing: "0.05em",
+              }}
+            >
+              {REQUIRED}
+            </code>
+          </label>
+          <input
+            ref={inputRef}
+            type="text"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder={REQUIRED}
+            style={{
+              width: "100%",
+              padding: "12px 14px",
+              border: `2px solid ${confirmText === REQUIRED ? "#C53030" : "#E2E8F0"}`,
+              borderRadius: 10,
+              fontSize: 14,
+              outline: "none",
+              fontFamily: "monospace",
+              boxSizing: "border-box",
+              letterSpacing: "0.05em",
+              transition: "border-color 0.2s",
+            }}
+          />
+        </div>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={onCancel}
+            style={{
+              flex: 1,
+              padding: "12px 0",
+              borderRadius: 10,
+              border: "1px solid #E2E8F0",
+              background: "#fff",
+              color: "#718096",
+              fontWeight: 600,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              fontSize: 14,
+            }}
+          >
+            Hủy
+          </button>
+          <button
+            onClick={() => confirmText === REQUIRED && onConfirm()}
+            disabled={confirmText !== REQUIRED}
+            style={{
+              flex: 1,
+              padding: "12px 0",
+              borderRadius: 10,
+              border: "none",
+              background: confirmText === REQUIRED ? "#E53E3E" : "#E2E8F0",
+              color: confirmText === REQUIRED ? "#fff" : "#A0AEC0",
+              fontWeight: 700,
+              cursor: confirmText === REQUIRED ? "pointer" : "not-allowed",
+              fontFamily: "inherit",
+              fontSize: 14,
+              transition: "all 0.2s",
+            }}
+          >
+            Xóa vĩnh viễn
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ProfilePage() {
   const toast = useToast();
-  const { user: initialUser, setUser, logout } = useAuth(); // 🌟 Lấy trực tiếp từ useAuth() thay vì nhận props
+  const { user: initialUser, setUser, logout } = useAuth();
   const navigate = useNavigate();
-  const [focusedField, setFocusedField] = useState(null);
 
-  // 🌟 Chống lỗi Uncontrolled Input bằng fallback rỗng
+  const [focusedField, setFocusedField] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false); // FIX: thay window.confirm/prompt
+
   const [name, setName] = useState(initialUser?.name || "");
-  const [phone, setPhone] = useState(initialUser?.phone || "");
+  const [email, setEmail] = useState(initialUser?.email || "");
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(
     initialUser?.avatarUrl || "",
@@ -28,10 +199,19 @@ export function ProfilePage() {
 
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Cleanup object URL khi unmount hoặc avatarFile thay đổi
+  const prevPreviewUrl = useRef(null);
+  useEffect(() => {
+    if (prevPreviewUrl.current && prevPreviewUrl.current.startsWith("blob:")) {
+      URL.revokeObjectURL(prevPreviewUrl.current);
+    }
+    prevPreviewUrl.current = avatarPreview;
+  }, [avatarPreview]);
+
   useEffect(() => {
     if (initialUser) {
       setName(initialUser.name || "");
-      setPhone(initialUser.phone || "");
+      setEmail(initialUser.email || "");
       setAvatarPreview(initialUser.avatarUrl || "");
     }
   }, [initialUser]);
@@ -47,28 +227,24 @@ export function ProfilePage() {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setProfileErr("");
-    if (phone && !/^0\d{9}$/.test(phone)) {
-      setProfileErr("Số điện thoại phải là 10 chữ số và bắt đầu bằng 0");
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && !EMAIL_REGEX.test(email)) {
+      setProfileErr("Email không hợp lệ");
       return;
     }
     setProfileLoading(true);
 
     const fd = new FormData();
     fd.append("name", name);
-    fd.append("phone", phone);
-    if (avatarFile) {
-      fd.append("avatar", avatarFile);
-    }
+    fd.append("email", email);
+    if (avatarFile) fd.append("avatar", avatarFile);
 
     try {
-      const res = await api("/auth/profile", {
-        method: "PUT",
-        body: fd,
-      });
+      const res = await api("/auth/profile", { method: "PUT", body: fd });
       setUser({
         ...initialUser,
         name: res.name,
-        phone: res.phone,
+        email: res.email,
         avatarUrl: res.avatarUrl,
       });
       toast.success("Cập nhật thông tin tài khoản thành công!");
@@ -88,7 +264,6 @@ export function ProfilePage() {
       return;
     }
     setPwLoading(true);
-
     try {
       await api("/auth/change-password", {
         method: "POST",
@@ -104,36 +279,17 @@ export function ProfilePage() {
     }
   };
 
+  // FIX: Thay window.confirm/prompt bằng modal
   const handleDeleteAccount = async () => {
-    const confirm1 = window.confirm(
-      "🛑 CẢNH BÁO QUAN TRỌNG: Bạn có chắc chắn muốn XÓA VĨNH VIỄN tài khoản của mình? " +
-        "Hành động này hoàn toàn KHÔNG THỂ HOÀN TÁC!",
-    );
-    if (!confirm1) return;
-
-    const confirm2 = window.prompt(
-      "Để xác nhận hành động này, vui lòng nhập chính xác cụm từ 'XOA TAI KHOAN' (viết hoa không dấu) vào ô bên dưới:",
-    );
-    if (confirm2 !== "XOA TAI KHOAN") {
-      toast.warn(
-        "Xác nhận không đúng. Hành động xóa tài khoản đã được hủy bỏ.",
-      );
-      return;
-    }
-
     setDeleteLoading(true);
+    setShowDeleteModal(false);
     try {
-      const res = await api("/auth/account", {
-        method: "DELETE",
-      });
-      toast.success(
-        res.message ||
-          "Tài khoản của bạn đã được xóa sạch hoàn toàn khỏi hệ thống.",
-      );
+      const res = await api("/auth/account", { method: "DELETE" });
+      toast.success(res.message || "Tài khoản đã được xóa vĩnh viễn.");
       await logout();
       navigate("/");
     } catch (err) {
-      toast.error("Lỗi khi yêu cầu xóa tài khoản: " + err.message);
+      toast.error("Lỗi khi xóa tài khoản: " + err.message);
     } finally {
       setDeleteLoading(false);
     }
@@ -165,9 +321,18 @@ export function ProfilePage() {
   };
 
   return (
-    <div style={{ maxWidth: 840, margin: "0 auto", padding: "32px 24px 80px" }}>
+    <div className="container py-5" style={{ maxWidth: 840 }}>
+      {/* FIX: Modal xóa tài khoản thay thế window.confirm + window.prompt */}
+      {showDeleteModal && (
+        <DeleteAccountModal
+          onConfirm={handleDeleteAccount}
+          onCancel={() => setShowDeleteModal(false)}
+        />
+      )}
+
       <button
         onClick={() => navigate(-1)}
+        className="btn d-inline-flex align-items-center gap-2 mb-4"
         style={{
           background: C.white,
           border: `1px solid ${C.border}`,
@@ -175,137 +340,117 @@ export function ProfilePage() {
           cursor: "pointer",
           fontWeight: 700,
           fontSize: 13,
-          marginBottom: 24,
           padding: "8px 16px",
           borderRadius: 10,
           fontFamily: "inherit",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
           boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
           transition: "all 0.2s ease",
         }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = "#F1F5F9";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = C.white;
-        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "#F1F5F9")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = C.white)}
       >
         ⟨ Quay lại
       </button>
 
       <h1
+        className="fw-bold mb-4"
         style={{
           fontSize: 24,
-          fontWeight: 800,
           color: C.dark,
-          marginBottom: 28,
         }}
       >
         ⚙️ Thiết Lập Hồ Sơ Cá Nhân
       </h1>
 
-      <div
-        className="profile-grid"
-        style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 32 }}
-      >
-        <div
-          style={{
-            background: C.white,
-            borderRadius: 16,
-            border: `1px solid ${C.border}`,
-            padding: "24px 20px",
-            textAlign: "center",
-            height: "fit-content",
-            boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
-          }}
-        >
+      <div className="row g-4">
+        {/* Avatar sidebar */}
+        <div className="col-12 col-md-4 col-lg-3">
           <div
-            style={{
-              position: "relative",
-              width: 110,
-              height: 110,
-              margin: "0 auto 16px",
-            }}
-          >
-            {avatarPreview ? (
-              <img
-                src={avatarPreview}
-                alt="avatar"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  borderRadius: "50%",
-                  objectFit: "cover",
-                  border: `3px solid ${C.ocean}`,
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  borderRadius: "50%",
-                  background: `linear-gradient(135deg, ${C.ocean} 0%, ${C.oceanL} 100%)`,
-                  color: "#fff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: 800,
-                  fontSize: 36,
-                  boxShadow: "0 4px 10px rgba(11, 79, 108, 0.15)",
-                }}
-              >
-                {initialUser?.name?.charAt(0).toUpperCase()}
-              </div>
-            )}
-          </div>
-
-          <label
-            style={{
-              display: "inline-block",
-              background: C.white,
-              color: C.ocean,
-              border: `1px solid ${C.ocean}`,
-              padding: "8px 16px",
-              borderRadius: 8,
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: "pointer",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = C.oceanP)}
-            onMouseLeave={(e) => (e.currentTarget.style.background = C.white)}
-          >
-            Tải ảnh đại diện mới
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarChange}
-              style={{ display: "none" }}
-            />
-          </label>
-          <div style={{ fontSize: 11, color: C.muted, marginTop: 8 }}>
-            Ảnh vuông, JPG, PNG tối đa 5MB
-          </div>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          <div
+            className="card border-0 p-4 text-center"
             style={{
               background: C.white,
               borderRadius: 16,
-              border: `1px solid ${C.border}`,
-              padding: 28,
+              border: `1.5px solid ${C.border}`,
+              height: "fit-content",
+              boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
+            }}
+          >
+            <div
+              className="position-relative mx-auto mb-3"
+              style={{
+                width: 110,
+                height: 110,
+              }}
+            >
+              {avatarPreview ? (
+                <img
+                  src={avatarPreview}
+                  alt="avatar"
+                  className="rounded-circle"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    border: `3px solid ${C.ocean}`,
+                  }}
+                />
+              ) : (
+                <div
+                  className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold mx-auto"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    background: `linear-gradient(135deg, ${C.ocean} 0%, ${C.oceanL} 100%)`,
+                    fontSize: 36,
+                    boxShadow: "0 4px 10px rgba(11, 79, 108, 0.15)",
+                  }}
+                >
+                  {initialUser?.name?.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+
+            <label
+              className="btn btn-outline-primary fw-bold py-2 px-3 text-nowrap w-100 mb-2"
+              style={{
+                borderColor: C.ocean,
+                color: C.ocean,
+                fontSize: 12,
+                borderRadius: 8,
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = C.oceanP)}
+              onMouseLeave={(e) => (e.currentTarget.style.background = C.white)}
+            >
+              Tải ảnh đại diện mới
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                style={{ display: "none" }}
+              />
+            </label>
+            <div style={{ fontSize: 11, color: C.muted }}>
+              Ảnh vuông, JPG, PNG tối đa 5MB
+            </div>
+          </div>
+        </div>
+
+        {/* Forms */}
+        <div className="col-12 col-md-8 col-lg-9 d-flex flex-column gap-4">
+          {/* Thông tin tài khoản */}
+          <div
+            className="card border-0 p-4"
+            style={{
+              background: C.white,
+              borderRadius: 16,
+              border: `1.5px solid ${C.border}`,
               boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
             }}
           >
             <h3
+              className="fw-bold mb-4 fs-6"
               style={{
-                margin: "0 0 20px",
-                fontSize: 15,
-                fontWeight: 800,
                 color: C.dark,
               }}
             >
@@ -313,12 +458,13 @@ export function ProfilePage() {
             </h3>
             <form
               onSubmit={handleUpdateProfile}
-              style={{ display: "flex", flexDirection: "column", gap: 16 }}
+              className="d-flex flex-column gap-3"
             >
-              <div>
+              <div className="d-flex flex-column gap-1">
                 <label style={labelStyle}>Họ và tên hiển thị</label>
                 <input
                   type="text"
+                  className="form-control"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   onFocus={() => setFocusedField("name")}
@@ -327,28 +473,27 @@ export function ProfilePage() {
                   required
                 />
               </div>
-
-              <div>
-                <label style={labelStyle}>Số điện thoại liên hệ</label>
+              <div className="d-flex flex-column gap-1">
+                <label style={labelStyle}>Email liên hệ</label>
                 <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  onFocus={() => setFocusedField("phone")}
+                  type="email"
+                  className="form-control"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onFocus={() => setFocusedField("email")}
                   onBlur={() => setFocusedField(null)}
-                  style={getInputStyle("phone")}
+                  style={getInputStyle("email")}
                   required
                 />
               </div>
-
               {profileErr && (
                 <div
+                  className="alert alert-danger border-danger py-2 px-3 m-0"
                   style={{
                     color: "#991B1B",
                     fontSize: 13,
                     background: "#FEE2E2",
                     borderLeft: `4px solid #EF4444`,
-                    padding: "10px 14px",
                     borderRadius: 8,
                     fontWeight: 600,
                   }}
@@ -356,21 +501,19 @@ export function ProfilePage() {
                   ⚠️ {profileErr}
                 </div>
               )}
-
               <button
                 type="submit"
                 disabled={profileLoading}
+                className="btn fw-bold py-2 px-4 text-white"
                 style={{
                   background: `linear-gradient(135deg, ${C.ocean} 0%, ${C.oceanL} 100%)`,
-                  color: "#fff",
                   border: "none",
-                  padding: "12px 24px",
                   borderRadius: 10,
                   fontSize: 14,
-                  fontWeight: 700,
-                  cursor: "pointer",
+                  cursor: profileLoading ? "not-allowed" : "pointer",
                   width: "fit-content",
                   boxShadow: "0 4px 12px rgba(11, 79, 108, 0.2)",
+                  opacity: profileLoading ? 0.7 : 1,
                 }}
               >
                 {profileLoading ? "Đang lưu..." : "Lưu thay đổi hồ sơ"}
@@ -378,20 +521,19 @@ export function ProfilePage() {
             </form>
           </div>
 
+          {/* Đổi mật khẩu */}
           <div
+            className="card border-0 p-4"
             style={{
               background: C.white,
               borderRadius: 16,
-              border: `1px solid ${C.border}`,
-              padding: 28,
+              border: `1.5px solid ${C.border}`,
               boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
             }}
           >
             <h3
+              className="fw-bold mb-4 fs-6"
               style={{
-                margin: "0 0 20px",
-                fontSize: 15,
-                fontWeight: 800,
                 color: C.dark,
               }}
             >
@@ -399,12 +541,13 @@ export function ProfilePage() {
             </h3>
             <form
               onSubmit={handleChangePassword}
-              style={{ display: "flex", flexDirection: "column", gap: 16 }}
+              className="d-flex flex-column gap-3"
             >
-              <div>
+              <div className="d-flex flex-column gap-1">
                 <label style={labelStyle}>Mật khẩu hiện tại</label>
                 <input
                   type="password"
+                  className="form-control"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   onFocus={() => setFocusedField("currentPw")}
@@ -413,11 +556,11 @@ export function ProfilePage() {
                   required
                 />
               </div>
-
-              <div>
+              <div className="d-flex flex-column gap-1">
                 <label style={labelStyle}>Mật khẩu mới</label>
                 <input
                   type="password"
+                  className="form-control"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   onFocus={() => setFocusedField("newPw")}
@@ -427,15 +570,14 @@ export function ProfilePage() {
                   required
                 />
               </div>
-
               {pwErr && (
                 <div
+                  className="alert alert-danger border-danger py-2 px-3 m-0"
                   style={{
                     color: "#991B1B",
                     fontSize: 13,
                     background: "#FEE2E2",
                     borderLeft: `4px solid #EF4444`,
-                    padding: "10px 14px",
                     borderRadius: 8,
                     fontWeight: 600,
                   }}
@@ -443,21 +585,19 @@ export function ProfilePage() {
                   ⚠️ {pwErr}
                 </div>
               )}
-
               <button
                 type="submit"
                 disabled={pwLoading}
+                className="btn fw-bold py-2 px-4 text-white"
                 style={{
                   background: `linear-gradient(135deg, ${C.coral} 0%, #D94E21 100%)`,
-                  color: "#fff",
                   border: "none",
-                  padding: "12px 24px",
                   borderRadius: 10,
                   fontSize: 14,
-                  fontWeight: 700,
-                  cursor: "pointer",
+                  cursor: pwLoading ? "not-allowed" : "pointer",
                   width: "fit-content",
                   boxShadow: "0 4px 12px rgba(232, 100, 58, 0.2)",
+                  opacity: pwLoading ? 0.7 : 1,
                 }}
               >
                 {pwLoading ? "Đang đổi..." : "Cập nhật mật khẩu"}
@@ -465,55 +605,52 @@ export function ProfilePage() {
             </form>
           </div>
 
+          {/* Danger Zone */}
           <div
+            className="alert alert-danger border-danger p-4 m-0"
             style={{
-              background: "#FFF5F5",
               borderRadius: 16,
               border: "1.5px solid #FEB2B2",
-              padding: 28,
               boxShadow: "0 4px 6px -1px rgba(220, 38, 38, 0.03)",
+              background: "#FFF5F5",
             }}
           >
             <h3
+              className="fw-bold mb-2 fs-6 text-danger"
               style={{
-                margin: "0 0 10px",
-                fontSize: 15,
-                fontWeight: 800,
-                color: "#C53030",
+                color: "#C53030 !important",
               }}
             >
               🛑 Vùng nguy hiểm (Danger Zone)
             </h3>
             <p
+              className="mb-3"
               style={{
                 fontSize: 13,
                 color: "#9B2C2C",
-                marginBottom: 16,
                 lineHeight: 1.6,
                 fontWeight: 500,
               }}
             >
-              Bằng việc xóa tài khoản, toàn bộ dữ liệu cá nhân của bạn, mẻ hải
-              sản đang bán, lượt đánh giá và lịch sử trò chuyện sẽ bị dọn dẹp và
-              xóa sạch vĩnh viễn khỏi toàn bộ hệ thống tuân thủ nghiêm ngặt điều
-              khoản bảo mật quyền riêng tư GDPR. Hành động này không thể khôi
-              phục lại dưới bất kỳ hình thức nào.
+              Toàn bộ dữ liệu cá nhân, mẻ hải sản đang bán, lượt đánh giá và
+              lịch sử trò chuyện sẽ bị xóa vĩnh viễn. Hành động này không thể
+              khôi phục dưới bất kỳ hình thức nào.
             </p>
+            {/* FIX: Dùng modal thay vì window.confirm + window.prompt */}
             <button
               type="button"
-              onClick={handleDeleteAccount}
+              onClick={() => setShowDeleteModal(true)}
               disabled={deleteLoading}
+              className="btn fw-bold py-2 px-4 text-white"
               style={{
                 background: "#E53E3E",
-                color: "#fff",
                 border: "none",
-                padding: "12px 24px",
                 borderRadius: 10,
                 fontSize: 13,
-                fontWeight: 700,
                 cursor: deleteLoading ? "not-allowed" : "pointer",
                 boxShadow: "0 4px 12px rgba(229, 62, 62, 0.25)",
                 transition: "background 0.2s",
+                opacity: deleteLoading ? 0.7 : 1,
               }}
               onMouseEnter={(e) => {
                 if (!deleteLoading)
@@ -525,20 +662,12 @@ export function ProfilePage() {
               }}
             >
               {deleteLoading
-                ? "⏳ Đang dọn dẹp hệ thống..."
+                ? "⏳ Đang xóa tài khoản..."
                 : "Xóa tài khoản vĩnh viễn (GDPR)"}
             </button>
           </div>
         </div>
       </div>
-
-      <style>{`
-        @media (max-width: 640px) {
-          .profile-grid {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

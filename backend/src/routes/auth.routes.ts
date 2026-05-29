@@ -8,10 +8,11 @@ import {
   refreshToken,
   updateProfile,
   changePassword,
-  deleteAccount, // ← Import
+  deleteAccount,
+  googleAuth,
 } from "../controllers/auth.controller";
 import { authenticate } from "../middlewares/auth";
-import { upload } from "../middlewares/upload";
+import { upload, handleUploadError } from "../middlewares/upload";
 import { getUserPublicProfile } from "../controllers/user.controller";
 
 const router = Router();
@@ -39,11 +40,12 @@ const registerLimiter = rateLimit({
 
 router.post("/register", registerLimiter, register);
 router.post("/login", loginLimiter, login);
+router.post("/google", googleAuth);
 router.post("/logout", logout);
 router.post("/refresh", refreshToken);
 router.get("/me", me);
 
-router.put("/profile", authenticate, upload.single("avatar"), updateProfile);
+router.put("/profile", authenticate, upload.single("avatar"), handleUploadError, updateProfile);
 router.post("/change-password", authenticate, changePassword);
 
 // 🌟 Định tuyến GDPR: Người dùng tự xóa thông tin tài khoản vĩnh viễn

@@ -99,28 +99,28 @@ const S = {
 
 // ── Step indicator ────────────────────────────────────────────
 function StepBar({ step }) {
-  const steps = ["Số điện thoại", "Xác minh OTP", "Mật khẩu mới"];
+  const steps = ["Địa chỉ Email", "Xác minh OTP", "Mật khẩu mới"];
   return (
-    <div style={{ display: "flex", gap: 6, marginBottom: 28 }}>
+    <div className="d-flex gap-2 mb-4">
       {steps.map((label, i) => {
         const active = i === step;
         const done = i < step;
         return (
-          <div key={label} style={{ flex: 1, textAlign: "center" }}>
+          <div key={label} className="flex-fill text-center">
             <div
+              className="mb-1"
               style={{
                 height: 4,
                 borderRadius: 2,
                 background: done || active ? "#E8643A" : "var(--border)",
-                marginBottom: 4,
                 transition: "background .3s",
               }}
             />
             <span
+              className={`d-block fw-bold ${active ? "" : "text-muted"}`}
               style={{
                 fontSize: 11,
                 color: active ? "#E8643A" : "var(--muted)",
-                fontWeight: active ? 600 : 400,
               }}
             >
               {label}
@@ -173,14 +173,7 @@ function OtpInput({ value, onChange, disabled }) {
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: 8,
-        justifyContent: "center",
-        margin: "20px 0",
-      }}
-    >
+    <div className="d-flex gap-2 justify-content-center my-4">
       {digits.map((d, i) => (
         <input
           key={i}
@@ -194,14 +187,13 @@ function OtpInput({ value, onChange, disabled }) {
           onKeyDown={(e) => handleKeyDown(i, e)}
           onPaste={i === 0 ? handlePaste : undefined}
           onFocus={(e) => e.target.select()}
+          className="form-control border-2 text-center fw-bold p-0"
           style={{
-            width: 46,
-            height: 54,
-            textAlign: "center",
+            width: 42,
+            height: 50,
             fontSize: 22,
-            fontWeight: 700,
             borderRadius: 10,
-            border: `2px solid ${d.trim() ? "#E8643A" : "var(--border)"}`,
+            borderColor: d.trim() ? "#E8643A" : "var(--border)",
             background: "var(--bg)",
             color: "var(--dark)",
             outline: "none",
@@ -234,7 +226,7 @@ export function ForgotPasswordPage() {
   const navigate = useNavigate();
 
   const [step, setStep] = useState(0);
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [resetToken, setResetToken] = useState("");
   const [newPass, setNewPass] = useState("");
@@ -247,19 +239,20 @@ export function ForgotPasswordPage() {
   // ── Step 1: Gửi OTP ────────────────────────────────────────
   const handleSendOtp = async (e) => {
     e.preventDefault();
-    if (!/^0\d{9}$/.test(phone)) {
-      toast.error("Số điện thoại phải là 10 số, bắt đầu bằng 0.");
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!EMAIL_REGEX.test(email)) {
+      toast.error("Email không hợp lệ.");
       return;
     }
     setLoading(true);
     try {
       const res = await api("/auth/forgot-password", {
         method: "POST",
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ email }),
       });
       countdown.reset(res.ttl ?? 300);
       setStep(1);
-      toast.success("OTP đã gửi đến số điện thoại của bạn!");
+      toast.success("OTP đã gửi đến hòm thư email của bạn!");
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -278,7 +271,7 @@ export function ForgotPasswordPage() {
     try {
       const res = await api("/auth/verify-otp", {
         method: "POST",
-        body: JSON.stringify({ phone, otp }),
+        body: JSON.stringify({ email, otp }),
       });
       setResetToken(res.resetToken);
       setStep(2);
@@ -297,7 +290,7 @@ export function ForgotPasswordPage() {
     try {
       const res = await api("/auth/forgot-password", {
         method: "POST",
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ email }),
       });
       countdown.reset(res.ttl ?? 300);
       setOtp("");
@@ -336,33 +329,83 @@ export function ForgotPasswordPage() {
   };
 
   return (
-    <div style={S.page}>
-      <div style={S.card}>
-        <div style={S.logo}>🐟</div>
+    <div
+      className="container-fluid min-vh-100 d-flex align-items-center justify-content-center p-3 p-sm-4"
+      style={{
+        background: "var(--bg)",
+      }}
+    >
+      <div
+        className="card border-0 p-4 p-sm-5 w-100"
+        style={{
+          background: "var(--white)",
+          borderRadius: 20,
+          border: "1.5px solid var(--border)",
+          maxWidth: 440,
+          boxShadow: "var(--shadow-lg)",
+        }}
+      >
+        <div className="text-center mb-3 fs-3">🐟</div>
 
         <StepBar step={step} />
 
-        {/* ── Step 0: Nhập SĐT ───────────────────────────── */}
+        {/* ── Step 0: Nhập Email ───────────────────────────── */}
         {step === 0 && (
-          <form onSubmit={handleSendOtp}>
-            <h1 style={S.title}>Quên mật khẩu</h1>
-            <p style={S.sub}>Nhập số điện thoại đăng ký để nhận mã OTP.</p>
+          <form onSubmit={handleSendOtp} className="d-flex flex-column gap-3">
+            <div className="text-center">
+              <h1 className="fw-bold m-0" style={{ fontSize: 20, color: "var(--dark)" }}>Quên mật khẩu</h1>
+              <p className="text-muted m-0 mt-2" style={{ fontSize: 13, lineHeight: 1.6 }}>Nhập địa chỉ email đăng ký để nhận mã OTP.</p>
+            </div>
 
-            <label style={S.label}>Số điện thoại</label>
-            <input
-              style={S.input}
-              type="tel"
-              placeholder="0912 345 678"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.trim())}
-              autoFocus
-              maxLength={10}
-            />
+            <div className="d-flex flex-column gap-1">
+              <label
+                className="fw-bold"
+                style={{
+                  fontSize: 11,
+                  color: "var(--muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Địa chỉ Email
+              </label>
+              <input
+                className="form-control border-0"
+                style={{
+                  ...S.input,
+                  background: "var(--bg)",
+                  border: "1.5px solid var(--border)",
+                }}
+                type="email"
+                placeholder="nguyenvana@gmail.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value.trim())}
+                autoFocus
+              />
+            </div>
 
-            <button type="submit" style={S.btn(loading || !phone)}>
+            <button
+              type="submit"
+              disabled={loading || !email}
+              className="btn w-100 fw-bold py-2 mt-2"
+              style={{
+                borderRadius: 12,
+                background: (loading || !email)
+                  ? "var(--border)"
+                  : "linear-gradient(135deg, #E8643A 0%, #D94E21 100%)",
+                color: (loading || !email) ? "var(--muted)" : "#fff",
+                fontSize: 15,
+                transition: "opacity .2s",
+              }}
+            >
               {loading ? "Đang gửi..." : "Gửi mã OTP →"}
             </button>
-            <Link to="/dang-nhap" style={S.backLink}>
+            
+            <Link
+              to="/dang-nhap"
+              className="text-decoration-none text-center text-muted fw-semibold mt-2"
+              style={{ fontSize: 13 }}
+            >
               ← Quay lại đăng nhập
             </Link>
           </form>
@@ -370,24 +413,20 @@ export function ForgotPasswordPage() {
 
         {/* ── Step 1: Xác minh OTP ────────────────────────── */}
         {step === 1 && (
-          <form onSubmit={handleVerifyOtp}>
-            <h1 style={S.title}>Nhập mã OTP</h1>
-            <p style={S.sub}>
-              Mã 6 chữ số đã gửi đến
-              <br />
-              <strong style={{ color: "var(--dark)" }}>{phone}</strong>
-            </p>
+          <form onSubmit={handleVerifyOtp} className="d-flex flex-column gap-3">
+            <div className="text-center">
+              <h1 className="fw-bold m-0" style={{ fontSize: 20, color: "var(--dark)" }}>Nhập mã OTP</h1>
+              <p className="text-muted m-0 mt-2" style={{ fontSize: 13, lineHeight: 1.6 }}>
+                Mã 6 chữ số đã gửi đến
+                <br />
+                <strong style={{ color: "var(--dark)" }}>{email}</strong>
+              </p>
+            </div>
 
             <OtpInput value={otp} onChange={setOtp} disabled={loading} />
 
             {/* Đếm ngược + gửi lại */}
-            <div
-              style={{
-                textAlign: "center",
-                fontSize: 13,
-                color: "var(--muted)",
-              }}
-            >
+            <div className="text-center text-muted" style={{ fontSize: 13 }}>
               {countdown.remaining > 0 ? (
                 <>
                   Mã hết hạn sau{" "}
@@ -400,15 +439,12 @@ export function ForgotPasswordPage() {
                   type="button"
                   onClick={handleResend}
                   disabled={loading}
+                  className="btn btn-link p-0 text-decoration-none"
                   style={{
-                    background: "none",
-                    border: "none",
                     color: "#E8643A",
                     fontWeight: 600,
-                    cursor: "pointer",
                     fontSize: 13,
                     fontFamily: "inherit",
-                    padding: 0,
                   }}
                 >
                   Gửi lại mã OTP
@@ -416,95 +452,136 @@ export function ForgotPasswordPage() {
               )}
             </div>
 
-            <button type="submit" style={S.btn(loading || otp.length < 6)}>
+            <button
+              type="submit"
+              disabled={loading || otp.length < 6}
+              className="btn w-100 fw-bold py-2 mt-2"
+              style={{
+                borderRadius: 12,
+                background: (loading || otp.length < 6)
+                  ? "var(--border)"
+                  : "linear-gradient(135deg, #E8643A 0%, #D94E21 100%)",
+                color: (loading || otp.length < 6) ? "var(--muted)" : "#fff",
+                fontSize: 15,
+                transition: "opacity .2s",
+              }}
+            >
               {loading ? "Đang xác minh..." : "Xác minh →"}
             </button>
+
             <button
               type="button"
               onClick={() => {
                 setStep(0);
                 setOtp("");
               }}
+              className="btn btn-link p-0 text-decoration-none text-center text-muted fw-semibold mt-2"
               style={{
-                ...S.backLink,
-                background: "none",
-                border: "none",
-                cursor: "pointer",
+                fontSize: 13,
                 fontFamily: "inherit",
               }}
             >
-              ← Đổi số điện thoại
+              ← Đổi địa chỉ email
             </button>
           </form>
         )}
 
         {/* ── Step 2: Mật khẩu mới ────────────────────────── */}
         {step === 2 && (
-          <form onSubmit={handleResetPassword}>
-            <h1 style={S.title}>Mật khẩu mới</h1>
-            <p style={S.sub}>Đặt mật khẩu mới cho tài khoản của bạn.</p>
-
-            <label style={S.label}>Mật khẩu mới</label>
-            <div style={{ position: "relative", marginBottom: 14 }}>
-              <input
-                style={{ ...S.input, paddingRight: 44 }}
-                type={showPass ? "text" : "password"}
-                placeholder="Ít nhất 6 ký tự"
-                value={newPass}
-                onChange={(e) => setNewPass(e.target.value)}
-                autoFocus
-              />
-              <button
-                type="button"
-                onClick={() => setShowPass((v) => !v)}
-                style={{
-                  position: "absolute",
-                  right: 12,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "var(--muted)",
-                  fontSize: 16,
-                }}
-              >
-                {showPass ? "🙈" : "👁️"}
-              </button>
+          <form onSubmit={handleResetPassword} className="d-flex flex-column gap-3">
+            <div className="text-center">
+              <h1 className="fw-bold m-0" style={{ fontSize: 20, color: "var(--dark)" }}>Mật khẩu mới</h1>
+              <p className="text-muted m-0 mt-2" style={{ fontSize: 13, lineHeight: 1.6 }}>Đặt mật khẩu mới cho tài khoản của bạn.</p>
             </div>
 
-            <label style={S.label}>Xác nhận mật khẩu</label>
-            <input
-              style={{
-                ...S.input,
-                borderColor:
-                  confirmPass && confirmPass !== newPass
-                    ? "#DC2626"
-                    : undefined,
-              }}
-              type={showPass ? "text" : "password"}
-              placeholder="Nhập lại mật khẩu"
-              value={confirmPass}
-              onChange={(e) => setConfirmPass(e.target.value)}
-            />
-            {confirmPass && confirmPass !== newPass && (
-              <p
+            <div className="d-flex flex-column gap-1">
+              <label
+                className="fw-bold"
                 style={{
-                  fontSize: 12,
-                  color: "#DC2626",
-                  marginTop: 4,
-                  marginBottom: 0,
+                  fontSize: 11,
+                  color: "var(--muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
                 }}
               >
-                Mật khẩu không khớp
-              </p>
-            )}
+                Mật khẩu mới
+              </label>
+              <div className="position-relative">
+                <input
+                  className="form-control border-0"
+                  style={{
+                    ...S.input,
+                    background: "var(--bg)",
+                    border: "1.5px solid var(--border)",
+                    paddingRight: 44,
+                  }}
+                  type={showPass ? "text" : "password"}
+                  placeholder="Ít nhất 6 ký tự"
+                  value={newPass}
+                  onChange={(e) => setNewPass(e.target.value)}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPass((v) => !v)}
+                  className="btn border-0 p-0 position-absolute"
+                  style={{
+                    right: 12,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "var(--muted)",
+                    fontSize: 16,
+                  }}
+                >
+                  {showPass ? "🙈" : "👁️"}
+                </button>
+              </div>
+            </div>
+
+            <div className="d-flex flex-column gap-1">
+              <label
+                className="fw-bold"
+                style={{
+                  fontSize: 11,
+                  color: "var(--muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Xác nhận mật khẩu
+              </label>
+              <input
+                className="form-control border-0"
+                style={{
+                  ...S.input,
+                  background: "var(--bg)",
+                  border: `1.5px solid ${confirmPass && confirmPass !== newPass ? "#DC2626" : "var(--border)"}`,
+                }}
+                type={showPass ? "text" : "password"}
+                placeholder="Nhập lại mật khẩu"
+                value={confirmPass}
+                onChange={(e) => setConfirmPass(e.target.value)}
+              />
+              {confirmPass && confirmPass !== newPass && (
+                <p className="text-danger m-0 mt-1" style={{ fontSize: 12 }}>
+                  Mật khẩu không khớp
+                </p>
+              )}
+            </div>
 
             <button
               type="submit"
-              style={S.btn(
-                loading || newPass.length < 6 || newPass !== confirmPass,
-              )}
+              disabled={loading || newPass.length < 6 || newPass !== confirmPass}
+              className="btn w-100 fw-bold py-2 mt-2"
+              style={{
+                borderRadius: 12,
+                background: (loading || newPass.length < 6 || newPass !== confirmPass)
+                  ? "var(--border)"
+                  : "linear-gradient(135deg, #E8643A 0%, #D94E21 100%)",
+                color: (loading || newPass.length < 6 || newPass !== confirmPass) ? "var(--muted)" : "#fff",
+                fontSize: 15,
+                transition: "opacity .2s",
+              }}
             >
               {loading ? "Đang cập nhật..." : "Xác nhận đặt lại mật khẩu ✓"}
             </button>

@@ -62,13 +62,16 @@ export async function toggleFavorite(req: Request, res: Response) {
     );
 
     if (isFavorited) {
-      await User.findByIdAndUpdate(userId, { $pull: { favorites: prodObjId } });
+      // Tối ưu hóa: Thay vì gọi thêm findByIdAndUpdate bên ngoài, lưu trực tiếp tài liệu hiện có
+      user.favorites = user.favorites.filter(
+        (id) => id.toString() !== productId,
+      );
+      await user.save();
       return res.json({ favorited: false });
     }
 
-    await User.findByIdAndUpdate(userId, {
-      $addToSet: { favorites: prodObjId },
-    });
+    user.favorites.push(prodObjId as any);
+    await user.save();
     return res.json({ favorited: true });
   } catch (err) {
     return sendServerError(res, err);

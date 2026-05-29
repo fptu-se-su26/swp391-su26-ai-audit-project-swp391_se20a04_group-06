@@ -22,11 +22,13 @@ export async function getMessages(req: Request, res: Response) {
       .populate("senderId", "name")
       .sort({ createdAt: 1 });
 
-    // 🌟 Ép kiểu 'as any' toàn bộ đối tượng điều kiện truy vấn để sửa lỗi overload matches
-    await Message.updateMany(
-      { productId, receiverId: userId, isRead: false } as any,
-      { $set: { isRead: true } },
-    );
+    const messageIds = messages.map((m) => m._id);
+    if (messageIds.length > 0) {
+      await Message.updateMany(
+        { _id: { $in: messageIds }, receiverId: userId, isRead: false } as any,
+        { $set: { isRead: true } },
+      );
+    }
 
     const formattedRows = messages.map((m: any) => ({
       id: m._id.toString(),
@@ -79,7 +81,6 @@ export async function sendMessage(req: Request, res: Response) {
   }
 }
 
-// 🌟 API Upload ảnh trong cuộc hội thoại Chat
 export async function uploadChatImage(req: Request, res: Response) {
   if (!req.file)
     return res.status(400).json({ message: "Chưa chọn file ảnh gửi kèm" });
@@ -95,7 +96,6 @@ export async function uploadChatImage(req: Request, res: Response) {
 export async function unreadCount(req: Request, res: Response) {
   const { userId } = req.user;
   try {
-    // 🌟 Ép kiểu 'as any' cho bộ lọc tìm kiếm để khắc phục lỗi gạch đỏ receiverId
     const count = await Message.countDocuments({
       receiverId: userId,
       isRead: false,
@@ -109,8 +109,13 @@ export async function unreadCount(req: Request, res: Response) {
 export async function getConversations(req: Request, res: Response) {
   const { userId } = req.user;
   try {
+    // [M-05 PERFORMANCE NOTE]
+    // Pipeline này sử dụng mô hình $sort -> $group -> $sort để trích xuất tin nhắn cuối cùng của mỗi cuộc hội thoại.
+    // Mặc dù chính xác về mặt kết quả, việc thực hiện $sort trên toàn bộ tin nhắn liên quan trước khi group có thể 
+    // làm suy giảm hiệu năng khi số lượng bản ghi tin nhắn lớn (hàng triệu bản ghi).
+    // KHUYẾN NGHỊ: Xem xét phi chuẩn hóa (denormalize) các trường `lastMessage`, `unreadCount` vào một collection 
+    // `Conversations` riêng biệt và cập nhật real-time để loại bỏ bước aggregation nặng nề này.
     const conversations = await Message.aggregate([
-      // 1. Lọc các tin nhắn liên quan đến userId
       {
         $match: {
           $or: [
@@ -119,9 +124,7 @@ export async function getConversations(req: Request, res: Response) {
           ],
         },
       },
-      // 2. Sắp xếp giảm dần theo thời gian
       { $sort: { createdAt: -1 } },
-      // 3. Nhóm theo cặp (productId, otherUserId)
       {
         $group: {
           _id: {
@@ -137,8 +140,9 @@ export async function getConversations(req: Request, res: Response) {
           lastMessage: { $first: "$content" },
           lastMessageImageUrl: { $first: "$imageUrl" },
           lastSentAt: { $first: "$createdAt" },
-          unreadMsgs: {
-            $push: {
+          // TỐI ƯU HÓA: Sử dụng toán tử $sum hiệu suất cao thay vì $push
+          unreadCount: {
+            $sum: {
               $cond: [
                 {
                   $and: [
@@ -149,13 +153,12 @@ export async function getConversations(req: Request, res: Response) {
                   ],
                 },
                 1,
-                "$$REMOVE",
+                0,
               ],
             },
           },
         },
       },
-      // 4. Lookup Product details
       {
         $lookup: {
           from: "products",
@@ -164,7 +167,6 @@ export async function getConversations(req: Request, res: Response) {
           as: "product",
         },
       },
-      // 5. Lookup User details (other user)
       {
         $lookup: {
           from: "users",
@@ -175,7 +177,6 @@ export async function getConversations(req: Request, res: Response) {
       },
       { $unwind: { path: "$product", preserveNullAndEmptyArrays: true } },
       { $unwind: { path: "$otherUser", preserveNullAndEmptyArrays: true } },
-      // Sắp xếp các cuộc hội thoại theo tin nhắn cuối cùng mới nhất
       { $sort: { lastSentAt: -1 } },
     ]);
 
@@ -188,7 +189,7 @@ export async function getConversations(req: Request, res: Response) {
       lastMessage: conv.lastMessage,
       lastMessageImageUrl: conv.lastMessageImageUrl,
       lastSentAt: conv.lastSentAt,
-      unread: conv.unreadMsgs ? conv.unreadMsgs.length : 0,
+      unread: conv.unreadCount || 0,
     }));
 
     return res.json(formattedRows);

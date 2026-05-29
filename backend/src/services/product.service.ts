@@ -1,27 +1,19 @@
 import { Product, IProduct } from "../models/Product";
 import { User } from "../models/User";
 import { redis } from "../config/redis";
-import { haversineKm, MAX_FRESH_DISTANCE_KM } from "../utils/haversine";
+import { MAX_FRESH_DISTANCE_KM } from "../utils/haversine";
 import { parsePagination, paginatedResponse } from "../utils/pagination";
 import { notifyFollowersNewProduct } from "./notification.service";
 import { logger } from "../utils/logger";
-
-class HttpError extends Error {
-  constructor(
-    public readonly status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+import mongoose from "mongoose";
+import { HttpError } from "../errors/HttpError";
 
 export const productService = {
   async list(query: Record<string, string | undefined>) {
-    let listVersion = await redis.get("product:list:version");
-    if (!listVersion) {
-      listVersion = "1";
-      await redis.set("product:list:version", "1");
-    }
+    const queryType = query.type;
+    const freshVer = await redis.get("product:list:version:Fresh") || "1";
+    const driedVer = await redis.get("product:list:version:Dried") || "1";
+    const listVersion = queryType === "Fresh" ? freshVer : queryType === "Dried" ? driedVer : `${freshVer}_${driedVer}`;
 
     const cacheKey = `product:list:v${listVersion}:${JSON.stringify(query)}`;
     const cachedData = await redis.get(cacheKey);
@@ -37,11 +29,17 @@ export const productService = {
       lng,
       page: rawPage,
       limit: rawLimit,
+      sellerId,
     } = query;
     const { page, limit } = parsePagination(rawPage, rawLimit);
     const skip = (page - 1) * limit;
 
     const filter: any = { status: "Active" };
+
+    // BUG FIX: sellerId bị bỏ qua trước đây → SellerProfilePage luôn lấy TẤT CẢ sản phẩm
+    if (sellerId && mongoose.Types.ObjectId.isValid(sellerId)) {
+      filter.sellerId = new mongoose.Types.ObjectId(sellerId);
+    }
 
     if (type === "Fresh" || type === "Dried") {
       filter.type = type;
@@ -50,34 +48,35 @@ export const productService = {
       filter.category = category;
     }
 
+    let sortOption: any = { bumpedAt: -1, createdAt: -1 };
+    let projection: any = {};
+
     if (search && search.trim()) {
       filter.$text = { $search: search.trim() };
+      // Ưu tiên hiển thị mẻ hàng khớp với từ khóa tìm kiếm nhất
+      projection = { score: { $meta: "textScore" } };
+      sortOption = { score: { $meta: "textScore" } };
     }
 
-    // 🌟 Thay thế $nearSphere bằng $geoWithin + $centerSphere để tương thích hoàn toàn với countDocuments()
     if (type === "Fresh" && lat && lng) {
       const latVal = parseFloat(lat);
       const lngVal = parseFloat(lng);
       if (!isNaN(latVal) && !isNaN(lngVal)) {
         filter.location = {
           $geoWithin: {
-            $centerSphere: [
-              [lngVal, latVal], // [Kinh độ, Vĩ độ] - chuẩn GeoJSON bắt buộc
-              MAX_FRESH_DISTANCE_KM / 6378.1, // Chuyển đổi bán kính km sang đơn vị radian (Bán kính Trái Đất ~6378.1 km)
-            ],
+            $centerSphere: [[lngVal, latVal], MAX_FRESH_DISTANCE_KM / 6378.1],
           },
         };
       }
     }
 
-    // Truy vấn dữ liệu đồng thời populate (JOIN) thông tin User
     const total = await Product.countDocuments(filter);
-    const rows = await Product.find(filter)
+    const rows = await Product.find(filter, projection)
       .populate("sellerId", "name isVerified")
+      .sort(sortOption)
       .skip(skip)
       .limit(limit);
 
-    // Ánh xạ lại dữ liệu sang cấu trúc cũ bảo toàn tính tương thích cho Frontend
     const formattedRows = rows.map((p: any) => ({
       id: p._id,
       sellerId: p.sellerId?._id || null,
@@ -93,8 +92,13 @@ export const productService = {
       remainingWeight: p.remainingWeight,
       status: p.status,
       catchTime: p.catchTime,
-      lat: p.location?.coordinates[1] || null,
-      lng: p.location?.coordinates[0] || null,
+      // 💡 GIẢI THÍCH CHO TEAM (Optional Chaining cho Mảng):
+      // Sử dụng optional chaining dạng `?.[chỉ_mục]` bên dưới là cực kỳ quan trọng để đảm bảo an toàn.
+      // Với sản phẩm không có tọa độ GPS (như hải sản khô "Dried"), `location` hoặc `coordinates` sẽ là undefined.
+      // Nếu truy cập trực tiếp `coordinates[1]`, JavaScript sẽ báo lỗi nghiêm trọng "TypeError: Cannot read properties of undefined" và làm treo API.
+      // Dùng cú pháp `?.[1]` và `?.[0]` giúp Node.js tự động trả về giá trị an toàn (null) nếu mảng không tồn tại mà không bao giờ bị crash!
+      lat: p.location?.coordinates?.[1] || null,
+      lng: p.location?.coordinates?.[0] || null,
       origin: p.origin,
       expiryDate: p.expiryDate,
       createdAt: p.createdAt,
@@ -113,18 +117,21 @@ export const productService = {
   async getById(id: string) {
     const detailCacheKey = `product:detail:${id}`;
     const cachedDetail = await redis.get(detailCacheKey);
+
     if (cachedDetail) {
+      // NOTE: Tăng viewCount bất đồng bộ dưới DB để tránh block request chính.
+      // Trả về dữ liệu chi tiết từ cache (viewCount có thể stale nhẹ nhưng latency tối ưu).
       Product.findByIdAndUpdate(id, { $inc: { viewCount: 1 } }).catch(() => {});
       return JSON.parse(cachedDetail);
     }
 
-    const p: any = await Product.findById(id).populate(
-      "sellerId",
-      "name isVerified",
-    );
-    if (!p) throw new HttpError(404, "Không tìm thấy sản phẩm");
+    const p: any = await Product.findByIdAndUpdate(
+      id,
+      { $inc: { viewCount: 1 } },
+      { new: true },
+    ).populate("sellerId", "name isVerified");
 
-    Product.findByIdAndUpdate(id, { $inc: { viewCount: 1 } }).catch(() => {});
+    if (!p) throw new HttpError(404, "Không tìm thấy sản phẩm");
 
     const finalDetail = {
       id: p._id,
@@ -141,8 +148,13 @@ export const productService = {
       remainingWeight: p.remainingWeight,
       status: p.status,
       catchTime: p.catchTime,
-      lat: p.location?.coordinates[1] || null,
-      lng: p.location?.coordinates[0] || null,
+      // 💡 GIẢI THÍCH CHO TEAM (Optional Chaining cho Mảng):
+      // Sử dụng optional chaining dạng `?.[chỉ_mục]` bên dưới là cực kỳ quan trọng để đảm bảo an toàn.
+      // Với sản phẩm không có tọa độ GPS (như hải sản khô "Dried"), `location` hoặc `coordinates` sẽ là undefined.
+      // Nếu truy cập trực tiếp `coordinates[1]`, JavaScript sẽ báo lỗi nghiêm trọng "TypeError: Cannot read properties of undefined" và làm treo API.
+      // Dùng cú pháp `?.[1]` và `?.[0]` giúp Node.js tự động trả về giá trị an toàn (null) nếu mảng không tồn tại mà không bao giờ bị crash!
+      lat: p.location?.coordinates?.[1] || null,
+      lng: p.location?.coordinates?.[0] || null,
       origin: p.origin,
       expiryDate: p.expiryDate,
       createdAt: p.createdAt,
@@ -177,16 +189,22 @@ export const productService = {
       expiryDate,
     } = body;
 
+    const cleanDesc = description
+      ? description.trim().replace(/<[^>]*>/g, "").slice(0, 2000)
+      : null;
+
     const newProduct = new Product({
       sellerId: userId,
       type,
       category,
       name: name.trim(),
-      description,
-      price: parseInt(price, 10),
+      description: cleanDesc,
+      price: typeof price === "number" ? price : parseInt(price, 10),
       salesType: salesType ?? "Retail",
-      totalWeight: parseFloat(totalWeight),
-      remainingWeight: parseFloat(totalWeight),
+      totalWeight:
+        typeof totalWeight === "number" ? totalWeight : parseFloat(totalWeight),
+      remainingWeight:
+        typeof totalWeight === "number" ? totalWeight : parseFloat(totalWeight),
       catchTime,
       origin,
       expiryDate,
@@ -194,15 +212,34 @@ export const productService = {
         ? {
             location: {
               type: "Point",
-              coordinates: [parseFloat(lng), parseFloat(lat)],
+              coordinates: [
+                typeof lng === "number" ? lng : parseFloat(lng),
+                typeof lat === "number" ? lat : parseFloat(lat),
+              ],
             },
           }
         : {}),
     });
 
     await newProduct.save();
+    await redis.incr(`product:list:version:${newProduct.type}`);
 
-    await redis.incr("product:list:version");
+    User.findById(userId)
+      .select("name")
+      .lean()
+      .then((seller: any) =>
+        notifyFollowersNewProduct(
+          userId,
+          seller?.name || "Một ngư dân",
+          newProduct._id.toString(),
+          newProduct.name,
+        ),
+      )
+      .catch((err: any) =>
+        logger.error(
+          `[Notify] notifyFollowersNewProduct failed: ${err.message}`,
+        ),
+      );
 
     return { productId: newProduct._id.toString() };
   },
@@ -223,7 +260,9 @@ export const productService = {
 
     if (body.name !== undefined) updateFields.name = body.name.trim();
     if (body.description !== undefined)
-      updateFields.description = body.description;
+      updateFields.description = body.description
+        ? body.description.trim().replace(/<[^>]*>/g, "").slice(0, 2000)
+        : null;
     if (body.origin !== undefined) updateFields.origin = body.origin;
     if (body.type !== undefined) updateFields.type = body.type;
     if (body.category !== undefined) updateFields.category = body.category;
@@ -259,7 +298,7 @@ export const productService = {
           },
         },
       });
-      logger.info(`Price change logged in MongoDB for ProductID=${id}`);
+      logger.info(`Price change logged for ProductID=${id}`);
     }
 
     if (
@@ -281,7 +320,7 @@ export const productService = {
     await Product.findByIdAndUpdate(id, { $set: updateFields });
 
     await redis.del(`product:detail:${id}`);
-    await redis.incr("product:list:version");
+    await redis.incr(`product:list:version:${currentProduct.type}`);
   },
 
   async delete(id: string, userId: string, role: string): Promise<void> {
@@ -293,7 +332,7 @@ export const productService = {
     await Product.findByIdAndUpdate(id, { $set: { status: "Deleted" } });
 
     await redis.del(`product:detail:${id}`);
-    await redis.incr("product:list:version");
+    await redis.incr(`product:list:version:${currentProduct.type}`);
   },
 
   async bump(id: string, userId: string): Promise<void> {
@@ -313,6 +352,6 @@ export const productService = {
     await Product.findByIdAndUpdate(id, { $set: { bumpedAt: new Date() } });
 
     await redis.del(`product:detail:${id}`);
-    await redis.incr("product:list:version");
+    await redis.incr(`product:list:version:${currentProduct.type}`);
   },
 };

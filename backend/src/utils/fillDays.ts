@@ -3,9 +3,6 @@ export interface DayData {
   count: number;
 }
 
-/**
- * Điền đủ 7 ngày liên tiếp kể từ hôm nay, điền 0 cho ngày không có dữ liệu.
- */
 export function fillDays(rows: DayData[]): { label: string; count: number }[] {
   const map: Record<string, number> = {};
   rows.forEach((r) => {
@@ -17,7 +14,13 @@ export function fillDays(rows: DayData[]): { label: string; count: number }[] {
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
+
+    // TỐI ƯU HÓA: Định dạng ngày cục bộ theo múi giờ máy chủ hoạt động, tránh sai lệch từ toISOString()
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const dateVal = String(d.getDate()).padStart(2, "0");
+    const key = `${year}-${month}-${dateVal}`;
+
     result.push({
       label: `${d.getDate()}/${d.getMonth() + 1}`,
       count: map[key] || 0,

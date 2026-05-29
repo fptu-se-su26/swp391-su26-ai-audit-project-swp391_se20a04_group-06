@@ -29,8 +29,18 @@ export async function createReport(req: Request, res: Response) {
 }
 
 export async function getReports(req: Request, res: Response) {
-  const { status = 'Pending' } = req.query as Record<string, string>;
+  const queryStatus = (req.query.status as string) || 'Pending';
+  if (!['Pending', 'Resolved', 'Dismissed'].includes(queryStatus)) {
+    return res.status(400).json({ message: 'Trạng thái báo cáo không hợp lệ' });
+  }
+  const status = queryStatus as 'Pending' | 'Resolved' | 'Dismissed';
+
+  const page = Math.max(1, parseInt(req.query.page as string) || 1);
+  const limit = Math.max(1, Math.min(100, parseInt(req.query.limit as string) || 20));
+  const skip = (page - 1) * limit;
+
   try {
+    const total = await Report.countDocuments({ status });
     const reports = await Report.find({ status })
       .populate("reporterId", "name")
       .populate({
@@ -42,7 +52,8 @@ export async function getReports(req: Request, res: Response) {
         }
       })
       .sort({ createdAt: -1 })
-      .limit(100);
+      .skip(skip)
+      .limit(limit);
 
     const formattedRows = reports.map((r: any) => ({
       id: r._id.toString(),
@@ -57,6 +68,10 @@ export async function getReports(req: Request, res: Response) {
       sellerName: r.productId?.sellerId?.name || "Một ngư dân"
     }));
 
+    res.setHeader('X-Total-Count', total.toString());
+    res.setHeader('X-Page', page.toString());
+    res.setHeader('X-Limit', limit.toString());
+
     return res.json(formattedRows);
   } catch (err) {
     return sendServerError(res, err);
@@ -69,6 +84,10 @@ export async function handleReport(req: Request, res: Response) {
 
   if (!reportId || !action)
     return res.status(400).json({ message: 'Thiếu thông tin' });
+
+  if (!['resolve', 'dismiss'].includes(action)) {
+    return res.status(400).json({ message: "Hành động báo cáo không hợp lệ" });
+  }
 
   const newStatus = action === 'resolve' ? 'Resolved' : 'Dismissed';
   try {

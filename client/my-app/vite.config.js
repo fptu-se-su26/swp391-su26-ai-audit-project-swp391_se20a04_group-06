@@ -8,14 +8,18 @@ const isDocker =
 const backendTarget =
   process.env.VITE_API_TARGET ||
   (isDocker
-    ? "http://seafood_backend:5000" // Khi chạy trong Docker thì gọi qua tên service
-    : "http://localhost:5000"); // Khi chạy ngoài Docker (npm run dev máy local) thì gọi localhost
+    ? "http://seafood_backend:5000"
+    : "http://localhost:5000");
 
 export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
     host: "0.0.0.0",
+
+    // THÊM ĐOẠN NÀY
+    allowedHosts: true,
+
     proxy: {
       "/api": {
         target: backendTarget,

@@ -36,7 +36,12 @@ export function useNotifications(user) {
   useEffect(() => {
     if (!user) return;
     let active = true;
-    getSocket() // không cần token, dùng cookie
+    // BUG FIX: trước đây `return () => socket.off(...)` bên trong .then() bị bỏ qua hoàn toàn
+    // (return value của Promise callback không phải là cleanup function của useEffect).
+    // Hậu quả: mỗi lần re-render thêm một listener mới mà không bao giờ bị gỡ → memory leak + gọi N lần.
+    let cleanupSocketListener = null;
+
+    getSocket()
       .then((socket) => {
         if (!active) return;
         const handler = (data) => {
@@ -56,11 +61,13 @@ export function useNotifications(user) {
           }
         };
         socket.on("notification", handler);
-        return () => socket.off("notification", handler);
+        cleanupSocketListener = () => socket.off("notification", handler);
       })
       .catch(() => {});
+
     return () => {
       active = false;
+      cleanupSocketListener?.(); // gỡ listener đúng cách
     };
   }, [user]);
 

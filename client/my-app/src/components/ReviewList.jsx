@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { api } from "../services/api";
 import { C } from "../utils/theme";
+import { useToast } from "../context/ToastContext"; // ← NEW
 
 export function ReviewList({ sellerId, user, productId, scrollToReviewId }) {
+  const toast = useToast(); // ← NEW
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -30,7 +32,6 @@ export function ReviewList({ sellerId, user, productId, scrollToReviewId }) {
   };
 
   useEffect(() => {
-    // FIX: guard tránh gọi API với sellerId = undefined
     if (!sellerId) {
       setLoading(false);
       return;
@@ -72,14 +73,14 @@ export function ReviewList({ sellerId, user, productId, scrollToReviewId }) {
 
     api("/reviews", { method: "POST", body: fd })
       .then(() => {
-        alert("Cảm ơn bạn đã đánh giá!");
+        toast.success("Cảm ơn bạn đã gửi đánh giá thực tế!"); // Thừa hưởng cấu trúc Toast cao cấp mới
         setShowModal(false);
         setComment("");
         setImageFile(null);
         setRating(5);
         fetchReviews();
       })
-      .catch((err) => alert(err.message))
+      .catch((err) => toast.error(err.message))
       .finally(() => setSubmitting(false));
   };
 
@@ -104,7 +105,6 @@ export function ReviewList({ sellerId, user, productId, scrollToReviewId }) {
         <h3 style={{ margin: 0, fontSize: 16, color: C.dark }}>
           ⭐ Đánh giá người bán ({reviewsList.length})
         </h3>
-        {/* FIX: dùng user.userId thay vì user.id cho nhất quán với auth payload */}
         {user && user.userId !== sellerId && (
           <button
             onClick={() => setShowModal(true)}

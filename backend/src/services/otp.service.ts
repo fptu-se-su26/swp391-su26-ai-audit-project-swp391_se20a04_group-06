@@ -68,9 +68,16 @@ async function sendOtpEmail(email: string, otp: string): Promise<void> {
   await transporter.sendMail(mailOptions);
 }
 
+// Cập nhật hàm hashOtp để tránh sập app khi thiếu ENV
 function hashOtp(otp: string): string {
-  const secret = (process.env.OTP_SECRET || process.env.JWT_SECRET) as string;
-  return crypto.createHmac("sha256", secret).update(otp).digest("hex");
+  const secret = process.env.OTP_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    logger.warn("[OTP] Cảnh báo: Không tìm thấy OTP_SECRET hay JWT_SECRET. Đang sử dụng fallback key mặc định.");
+  }
+  return crypto
+    .createHmac("sha256", secret || "fallback_default_secret_key_secure")
+    .update(otp)
+    .digest("hex");
 }
 
 function makeError(message: string, status: number): Error {
@@ -129,32 +136,41 @@ export const otpService = {
     }
   },
 
+
+
   async verifyOtp(email: string, otp: string): Promise<string> {
     const cleanEmail = email.toLowerCase().trim();
-    const fails = await redis.get(KEY_VERIFY_FAILS(cleanEmail));
-    if (fails && parseInt(fails, 10) >= MAX_VERIFY_ATTEMPTS) {
+    const cleanOtp = String(otp).trim(); // Ép kiểu string để tránh lỗi crash tại hàm hashOtp
+
+    // 1. Kiểm tra OTP có tồn tại không trước khi làm bất cứ việc gì khác
+    const stored = await redis.get(KEY_OTP(cleanEmail));
+    if (!stored) {
+      throw makeError("Mã OTP đã hết hạn. Vui lòng yêu cầu gửi lại.", 400);
+    }
+
+    // 2. Tăng số lần thử một cách ATOMIC ngay lập tức để chống tấn công Race Condition
+    const fails = await redis.incr(KEY_VERIFY_FAILS(cleanEmail));
+
+    // Nếu đây là lần thử sai/xác thực đầu tiên, set TTL cho key này khớp với thời gian còn lại của OTP
+    if (fails === 1) {
+      const otpTtl = await redis.ttl(KEY_OTP(cleanEmail));
+      await redis.expire(
+        KEY_VERIFY_FAILS(cleanEmail),
+        otpTtl > 0 ? otpTtl : OTP_TTL_SEC
+      );
+    }
+
+    // 3. Nếu số lần thử đã vượt quá giới hạn, chặn ngay lập tức
+    if (fails > MAX_VERIFY_ATTEMPTS) {
       throw makeError(
         `Bạn đã nhập sai OTP quá ${MAX_VERIFY_ATTEMPTS} lần. Vui lòng yêu cầu mã mới.`,
         429,
       );
     }
 
-    const stored = await redis.get(KEY_OTP(cleanEmail));
-    if (!stored) {
-      throw makeError("Mã OTP đã hết hạn. Vui lòng yêu cầu gửi lại.", 400);
-    }
-
-    if (hashOtp(otp) !== stored) {
-      const otpTtl = await redis.ttl(KEY_OTP(cleanEmail));
-      const pipe = redis.pipeline();
-      pipe.incr(KEY_VERIFY_FAILS(cleanEmail));
-      pipe.expire(
-        KEY_VERIFY_FAILS(cleanEmail),
-        otpTtl > 0 ? otpTtl : OTP_TTL_SEC,
-      );
-      await pipe.exec();
-
-      const remaining = MAX_VERIFY_ATTEMPTS - parseInt(fails ?? "0") - 1;
+    // 4. Kiểm tra tính chính xác của OTP
+    if (hashOtp(cleanOtp) !== stored) {
+      const remaining = MAX_VERIFY_ATTEMPTS - fails;
       throw makeError(
         remaining > 0
           ? `Mã OTP không đúng. Còn ${remaining} lần thử.`
@@ -163,17 +179,19 @@ export const otpService = {
       );
     }
 
-    // OTP hợp lệ: xóa OTP và failure counter
+    // 5. Xác thực thành công: dọn dẹp các key liên quan trong Redis
     const pipe = redis.pipeline();
     pipe.del(KEY_OTP(cleanEmail));
     pipe.del(KEY_VERIFY_FAILS(cleanEmail));
     await pipe.exec();
 
+    // Tạo token đặt lại mật khẩu tạm thời
     const resetToken = crypto.randomBytes(32).toString("hex");
     await redis.set(KEY_RESET(resetToken), cleanEmail, "EX", RESET_TOKEN_TTL);
 
     return resetToken;
   },
+
 
   async getEmailByResetToken(resetToken: string): Promise<string> {
     const email = await redis.get(KEY_RESET(resetToken));

@@ -198,519 +198,6 @@ scratch/stress_test.js
 <files>
 This section contains the contents of the repository's files.
 
-<file path="client/my-app/src/components/VideoCallOverlay.jsx">
-import React, { useEffect, useRef } from "react";
-import { createPortal } from "react-dom"; // Import Portal để đưa giao diện ra ngoài body
-import { C } from "../utils/theme";
-
-export function VideoCallOverlay({ callState, localStream, remoteStream, onAccept, onReject, partnerName }) {
-    const localVideoRef = useRef(null);
-    const remoteVideoRef = useRef(null);
-
-    // Xử lý nạp và bắt buộc phát lại Video Local của mình
-    useEffect(() => {
-        const videoElement = localVideoRef.current;
-        if (videoElement && localStream) {
-            videoElement.srcObject = localStream;
-            // Ép phát lại phòng trường hợp trình duyệt di động tạm dừng
-            videoElement.play().catch((err) => {
-                console.warn("[WebRTC] Trình duyệt chặn autoplay local video, thử lại...", err);
-            });
-        }
-    }, [localStream]);
-
-    // Xử lý nạp và bắt buộc phát lại Video Remote của đối phương (QUAN TRỌNG)
-    useEffect(() => {
-        const videoElement = remoteVideoRef.current;
-        if (videoElement && remoteStream) {
-            videoElement.srcObject = remoteStream;
-
-            // Thực hiện gọi lệnh .play() chủ động
-            videoElement.play()
-                .then(() => {
-                    console.log("[WebRTC] Đã phát luồng video của đối phương thành công!");
-                })
-                .catch((err) => {
-                    console.warn("[WebRTC] Autoplay bị chặn bởi chính sách trình duyệt, kích hoạt cơ chế dự phòng...", err);
-
-                    // Cơ chế dự phòng: Thử phát lại sau 300ms
-                    setTimeout(() => {
-                        videoElement.play().catch(() => { });
-                    }, 300);
-                });
-        }
-    }, [remoteStream]);
-
-    // Khai báo cấu trúc JSX cho overlay cuộc gọi
-    const overlayJsx = (
-        <div style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15, 23, 42, 0.98)", // Màu nền tối sang trọng
-            zIndex: 999999, // z-index siêu lớn để đè lên mọi popover khác
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#fff",
-            fontFamily: "inherit"
-        }}>
-            {/* ── Trạng thái: Đang đổ chuông gọi đi ── */}
-            {callState === "calling" && (
-                <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 64, animation: "pulse 1.5s infinite", marginBottom: 16 }}>📞</div>
-                    <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 8px 0" }}>Đang gọi video...</h2>
-                    <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, margin: 0 }}>Vui lòng chờ {partnerName} bắt máy</p>
-                    <button
-                        onClick={onReject}
-                        style={{
-                            marginTop: 36,
-                            padding: "14px 32px",
-                            background: "#EF4444",
-                            border: "none",
-                            borderRadius: 14,
-                            color: "#fff",
-                            fontWeight: 700,
-                            fontSize: 14,
-                            cursor: "pointer",
-                            boxShadow: "0 4px 14px rgba(239, 68, 68, 0.45)"
-                        }}
-                    >
-                        Hủy cuộc gọi
-                    </button>
-                </div>
-            )}
-
-            {/* ── Trạng thái: Có cuộc gọi đến ── */}
-            {callState === "incoming" && (
-                <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 64, animation: "bounce 1s infinite", marginBottom: 16 }}>🔔</div>
-                    <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 8px 0" }}>Cuộc gọi video đến</h2>
-                    <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, margin: 0 }}><strong>{partnerName}</strong> đang gọi cho bạn</p>
-                    <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 36 }}>
-                        <button
-                            onClick={onAccept}
-                            style={{
-                                padding: "14px 36px",
-                                background: "#10B981",
-                                border: "none",
-                                borderRadius: 14,
-                                color: "#fff",
-                                fontWeight: 700,
-                                fontSize: 14,
-                                cursor: "pointer",
-                                boxShadow: "0 4px 14px rgba(16, 185, 129, 0.45)"
-                            }}
-                        >
-                            Trả lời
-                        </button>
-                        <button
-                            onClick={onReject}
-                            style={{
-                                padding: "14px 36px",
-                                background: "#EF4444",
-                                border: "none",
-                                borderRadius: 14,
-                                color: "#fff",
-                                fontWeight: 700,
-                                fontSize: 14,
-                                cursor: "pointer",
-                                boxShadow: "0 4px 14px rgba(239, 68, 68, 0.45)"
-                            }}
-                        >
-                            Từ chối
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* ── Trạng thái: Cuộc gọi đã kết nối ── */}
-            {callState === "connected" && (
-                <div style={{ position: "relative", width: "100vw", height: "100vh", display: "flex", justifyContent: "center", alignItems: "center" }}>
-
-                    {/* Màn hình lớn hiển thị camera của đối phương */}
-                    <video
-                        ref={remoteVideoRef}
-                        autoPlay
-                        playsInline
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-
-                    {/* Màn hình nhỏ hiển thị camera của chính mình */}
-                    <video
-                        ref={localVideoRef}
-                        autoPlay
-                        playsInline
-                        muted // Tắt tiếng máy mình để tránh dội âm lặp ngược lại micro
-                        style={{
-                            position: "absolute",
-                            top: 24,
-                            right: 24,
-                            width: 120,
-                            height: 160,
-                            objectFit: "cover",
-                            borderRadius: 12,
-                            border: "2px solid #fff",
-                            boxShadow: "0 4px 20px rgba(0,0,0,0.4)"
-                        }}
-                    />
-
-                    {/* Thanh nút gác máy cuộc gọi */}
-                    <div style={{ position: "absolute", bottom: 44, left: "50%", transform: "translateX(-50%)" }}>
-                        <button
-                            onClick={onReject}
-                            style={{
-                                padding: "14px 32px",
-                                background: "#EF4444",
-                                border: "none",
-                                borderRadius: 99,
-                                color: "#fff",
-                                fontWeight: 700,
-                                fontSize: 15,
-                                cursor: "pointer",
-                                boxShadow: "0 4px 14px rgba(239, 68, 68, 0.45)",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8
-                            }}
-                        >
-                            <span>🛑</span> Kết thúc cuộc gọi
-                        </button>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-
-    // Render trực tiếp ra ngoài thẻ <body> sử dụng Portal
-    return createPortal(overlayJsx, document.body);
-}
-</file>
-
-<file path="client/my-app/src/context/VideoCallContext.jsx">
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
-import { useAuth } from "./AuthContext";
-import { useToast } from "./ToastContext";
-import { getSocket } from "../services/socket";
-import { VideoCallOverlay } from "../components/VideoCallOverlay";
-
-const VideoCallContext = createContext(null);
-
-const rtcConfig = {
-    iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" }
-    ]
-};
-
-export function VideoCallProvider({ children }) {
-    const { user } = useAuth();
-    const { error, warn, info } = useToast();
-    const currentUserId = user?.id || user?.userId;
-
-    const [callState, setCallState] = useState("idle"); // idle | calling | incoming | connected
-    const [partnerId, setPartnerId] = useState(null);
-    const [partnerName, setPartnerName] = useState("Người dùng");
-    const [localStream, setLocalStream] = useState(null);
-    const [remoteStream, setRemoteStream] = useState(null);
-
-    const socketRef = useRef(null);
-    const peerConnectionRef = useRef(null);
-    const localStreamRef = useRef(null);
-    const tempOfferRef = useRef(null);
-    const iceQueueRef = useRef([]);
-
-    const latestStateRef = useRef({ callState, partnerId, localStream });
-    useEffect(() => {
-        latestStateRef.current = { callState, partnerId, localStream };
-    }, [callState, partnerId, localStream]);
-
-    // Giải phóng toàn bộ thiết bị cuộc gọi
-    const cleanUpCall = useCallback(() => {
-        console.log("[WebRTC] Đang tiến hành dọn dẹp giải phóng thiết bị...");
-
-        if (localStreamRef.current) {
-            localStreamRef.current.getTracks().forEach((track) => {
-                track.stop();
-            });
-            localStreamRef.current = null;
-        }
-
-        if (peerConnectionRef.current) {
-            try {
-                peerConnectionRef.current.close();
-            } catch (e) {
-                console.warn("Lỗi đóng kết nối RTC:", e);
-            }
-        }
-
-        peerConnectionRef.current = null;
-        tempOfferRef.current = null;
-        iceQueueRef.current = [];
-
-        setLocalStream(null);
-        setRemoteStream(null);
-        setPartnerId(null);
-        setPartnerName("Người dùng");
-        setCallState("idle");
-    }, []);
-
-    // Tự động gác máy khi đăng xuất tài khoản đột ngột
-    useEffect(() => {
-        if (!currentUserId) {
-            cleanUpCall();
-        }
-    }, [currentUserId, cleanUpCall]);
-
-    // Thiết lập kết nối Socket lắng nghe cuộc gọi toàn màn hình
-    useEffect(() => {
-        if (!currentUserId) return;
-        let isMounted = true;
-
-        const handleIncomingCall = ({ from, offer, callerName }) => {
-            if (!isMounted) return;
-            console.log("[Socket Call] Nhận cuộc gọi đến từ:", callerName);
-            setCallState("incoming");
-            setPartnerId(from);
-            setPartnerName(callerName || "Ngư dân bản địa");
-            tempOfferRef.current = offer;
-        };
-
-        const handleCallAccepted = async ({ answer }) => {
-            if (!isMounted) return;
-            console.log("[Socket Call] Đối phương đã chấp nhận bắt máy:", answer);
-            try {
-                const pc = peerConnectionRef.current;
-                if (pc) {
-                    await pc.setRemoteDescription(answer);
-                    setCallState("connected");
-
-                    console.log(`[WebRTC] Đang đồng bộ ${iceQueueRef.current.length} ứng viên mạng từ hàng đợi...`);
-                    for (const candidate of iceQueueRef.current) {
-                        await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch((e) => {
-                            console.warn("Lỗi đồng bộ candidate sớm:", e);
-                        });
-                    }
-                    iceQueueRef.current = [];
-                }
-            } catch (err) {
-                console.error("Lỗi thiết lập đàm thoại:", err);
-                error("Lỗi đồng bộ kết nối đàm thoại.");
-                cleanUpCall();
-            }
-        };
-
-        const handleNewIceCandidate = async ({ candidate }) => {
-            if (!isMounted) return;
-            const pc = peerConnectionRef.current;
-            if (pc && pc.remoteDescription) {
-                try {
-                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
-                } catch (err) {
-                    console.warn("Lỗi gán ICE candidate trực tiếp:", err);
-                }
-            } else {
-                iceQueueRef.current.push(candidate);
-            }
-        };
-
-        const handleCallEndedByPartner = () => {
-            if (!isMounted) return;
-            info("Cuộc gọi đã kết thúc.");
-            cleanUpCall();
-        };
-
-        getSocket()
-            .then((socket) => {
-                if (!isMounted) return;
-                socketRef.current = socket;
-
-                socket.on("incoming_call", handleIncomingCall);
-                socket.on("call_accepted", handleCallAccepted);
-                socket.on("ice_candidate", handleNewIceCandidate);
-                socket.on("call_ended", handleCallEndedByPartner);
-            })
-            .catch((err) => console.error("Kết nối Socket Call lỗi:", err));
-
-        return () => {
-            isMounted = false;
-            if (socketRef.current) {
-                socketRef.current.off("incoming_call", handleIncomingCall);
-                socketRef.current.off("call_accepted", handleCallAccepted);
-                socketRef.current.off("ice_candidate", handleNewIceCandidate);
-                socketRef.current.off("call_ended", handleCallEndedByPartner);
-            }
-        };
-    }, [currentUserId, cleanUpCall, error, info]);
-
-    const createPeerConnection = useCallback((targetId) => {
-        const pc = new RTCPeerConnection(rtcConfig);
-
-        pc.onicecandidate = (event) => {
-            if (event.candidate && socketRef.current) {
-                socketRef.current.emit("ice_candidate", {
-                    to: targetId,
-                    candidate: event.candidate.toJSON()
-                });
-            }
-        };
-
-        pc.ontrack = (event) => {
-            if (event.streams && event.streams[0]) {
-                // Luôn bọc trong một MediaStream mới để ép React kích hoạt re-render
-                setRemoteStream(new MediaStream(event.streams[0]));
-            } else {
-                setRemoteStream((prevStream) => {
-                    const stream = prevStream ? prevStream : new MediaStream();
-                    stream.addTrack(event.track);
-                    return new MediaStream(stream);
-                });
-            }
-        };
-
-        pc.onconnectionstatechange = () => {
-            if (pc.connectionState === "disconnected" || pc.connectionState === "failed" || pc.connectionState === "closed") {
-                warn("Kết nối cuộc gọi đã bị ngắt.");
-                cleanUpCall();
-            }
-        };
-
-        peerConnectionRef.current = pc;
-        return pc;
-    }, [cleanUpCall, warn]);
-
-    const startCall = async (targetUserId, targetUserName) => {
-        try {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                throw new Error("Trình duyệt yêu cầu HTTPS bảo mật để sử dụng máy ảnh & micro.");
-            }
-
-            setCallState("calling");
-            setPartnerId(targetUserId);
-            setPartnerName(targetUserName || "Người dùng");
-
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            setLocalStream(stream);
-            localStreamRef.current = stream;
-
-            const pc = createPeerConnection(targetUserId);
-            stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-
-            const offerToSend = {
-                type: offer.type,
-                sdp: offer.sdp
-            };
-
-            socketRef.current.emit("call_user", {
-                to: targetUserId,
-                offer: offerToSend,
-                callerName: user?.name || "Một người dùng"
-            });
-        } catch (err) {
-            console.error("Khởi động cuộc gọi lỗi:", err);
-            error(err.message || "Không thể truy cập camera của bạn.");
-            cleanUpCall();
-        }
-    };
-
-    const acceptCall = async () => {
-        const { partnerId: currentPartnerId } = latestStateRef.current;
-        try {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                throw new Error("Trình duyệt yêu cầu HTTPS bảo mật để sử dụng máy ảnh & micro.");
-            }
-
-            const offer = tempOfferRef.current;
-            if (!offer) {
-                throw new Error("Không tìm thấy cấu hình cuộc gọi đến.");
-            }
-
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            setLocalStream(stream);
-            localStreamRef.current = stream;
-
-            const pc = createPeerConnection(currentPartnerId);
-            stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-
-            await pc.setRemoteDescription(offer);
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-
-            const answerToSend = {
-                type: answer.type,
-                sdp: answer.sdp
-            };
-
-            socketRef.current.emit("answer_call", { to: currentPartnerId, answer: answerToSend });
-            setCallState("connected");
-
-            for (const candidate of iceQueueRef.current) {
-                await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch((e) => {
-                    console.warn("Lỗi đồng bộ candidate sớm:", e);
-                });
-            }
-            iceQueueRef.current = [];
-
-        } catch (err) {
-            console.error("Chấp nhận cuộc gọi video lỗi:", err);
-            error(err.message || "Lỗi đồng bộ kết nối camera.");
-            cleanUpCall();
-        }
-    };
-
-    const endCall = () => {
-        const { partnerId: currentPartnerId } = latestStateRef.current;
-        if (socketRef.current && currentPartnerId) {
-            socketRef.current.emit("end_call", { to: currentPartnerId });
-        }
-        cleanUpCall();
-    };
-
-    return (
-        <VideoCallContext.Provider value={{ callState, partnerId, partnerName, startCall, acceptCall, endCall }}>
-            {children}
-            {callState !== "idle" && (
-                <VideoCallOverlay
-                    callState={callState}
-                    localStream={localStream}
-                    remoteStream={remoteStream}
-                    onAccept={acceptCall}
-                    onReject={endCall}
-                    partnerName={partnerName}
-                />
-            )}
-        </VideoCallContext.Provider>
-    );
-}
-
-export function useVideoCall() {
-    const ctx = useContext(VideoCallContext);
-    if (!ctx) throw new Error("useVideoCall phải được sử dụng bên trong VideoCallProvider");
-    return ctx;
-}
-</file>
-
-<file path="client/my-app/src/hooks/useVideoCall.js">
-/**
- * useVideoCall.js
- * 
- * ĐỂ ĐƯA CHỨC NĂNG GỌI VIDEO RA TOÀN BỘ MÀN HÌNH (HomePage, Dashboard, Profile...):
- * Chúng ta đã đóng gói toàn bộ trạng thái WebRTC và Camera vào VideoCallProvider toàn cục.
- * 
- * File này đóng vai trò là một "Cổng kết nối" (Re-export) giúp kết nối 
- * các trang trong dự án (như ChatBox.jsx) sử dụng chung một luồng đàm thoại Global duy nhất,
- * giúp khắc phục triệt để lỗi xung đột đen màn hình 1 phía.
- */
-import { useVideoCall as useGlobalVideoCall } from "../context/VideoCallContext";
-
-export function useVideoCall() {
-    return useGlobalVideoCall();
-}
-</file>
-
 <file path=".github/ISSUE_TEMPLATE/bug.md">
 ---
 name: Bug Report
@@ -2494,6 +1981,239 @@ export function VerifiedBadge({ size = "sm", showLabel = false, style = {} }) {
  */
 </file>
 
+<file path="client/my-app/src/components/VideoCallOverlay.jsx">
+import React, { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+
+export function VideoCallOverlay({
+    callState,
+    localStream,
+    remoteStream,
+    onAccept,
+    onReject,
+    partnerName,
+}) {
+    const localVideoRef = useRef(null);
+    const remoteVideoRef = useRef(null);
+
+    // ─── FIX: Thêm `callState` vào deps ──────────────────────────────────────
+    //
+    // Vấn đề cũ: setLocalStream() chạy trước khi callState = "connected",
+    //   lúc đó <video> chưa mount → localVideoRef.current = null → srcObject không được gán.
+    //   Khi callState chuyển sang "connected" và <video> mount, localStream
+    //   không thay đổi → useEffect([localStream]) không chạy lại → màn hình đen.
+    //
+    // Cách sửa: Luôn render <video> trong DOM (dùng display:none/block thay vì unmount)
+    //   + thêm callState vào deps để effect chạy lại khi state chuyển sang "connected".
+
+    useEffect(() => {
+        const el = localVideoRef.current;
+        if (el && localStream) {
+            if (el.srcObject !== localStream) {
+                el.srcObject = localStream;
+            }
+            el.play().catch(() => { });
+        }
+    }, [localStream, callState]); // ← callState là key fix
+
+    useEffect(() => {
+        const el = remoteVideoRef.current;
+        if (el && remoteStream) {
+            if (el.srcObject !== remoteStream) {
+                el.srcObject = remoteStream;
+            }
+            el.play().catch(() => {
+                setTimeout(() => el.play().catch(() => { }), 300);
+            });
+        }
+    }, [remoteStream, callState]); // ← callState là key fix
+
+    const overlay = (
+        <div
+            style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(15, 23, 42, 0.98)",
+                zIndex: 999999,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                fontFamily: "inherit",
+            }}
+        >
+            {/* ─────────────────────────────────────────────────────────────────────
+          VIDEO ELEMENTS — Luôn ở trong DOM, chỉ thay đổi display.
+          Đây là điều kiện bắt buộc để refs luôn hợp lệ khi streams được gán.
+      ───────────────────────────────────────────────────────────────────── */}
+
+            {/* Remote (full screen) — chỉ hiện khi connected */}
+            <video
+                ref={remoteVideoRef}
+                autoPlay
+                playsInline
+                style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: callState === "connected" ? "block" : "none",
+                }}
+            />
+
+            {/* Local (PiP) — hiện từ lúc "calling" để caller thấy camera mình */}
+            <video
+                ref={localVideoRef}
+                autoPlay
+                playsInline
+                muted
+                style={{
+                    position: "absolute",
+                    // Khi connected: PiP góc phải
+                    // Khi calling:   preview nhỏ giữa màn hình
+                    ...(callState === "connected"
+                        ? { top: 24, right: 24, width: 120, height: 160 }
+                        : { bottom: 120, right: 24, width: 100, height: 140 }),
+                    objectFit: "cover",
+                    borderRadius: 12,
+                    border: "2px solid rgba(255,255,255,0.8)",
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+                    zIndex: 10,
+                    display: callState === "calling" || callState === "connected" ? "block" : "none",
+                }}
+            />
+
+            {/* ── Đang gọi đi ── */}
+            {callState === "calling" && (
+                <div style={{ textAlign: "center", zIndex: 5 }}>
+                    <div
+                        style={{ fontSize: 64, animation: "pulse 1.5s infinite", marginBottom: 16 }}
+                    >
+                        📞
+                    </div>
+                    <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 8px 0" }}>
+                        Đang gọi video...
+                    </h2>
+                    <p
+                        style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, margin: "0 0 4px" }}
+                    >
+                        Vui lòng chờ <strong>{partnerName}</strong> bắt máy
+                    </p>
+                    <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 12, margin: 0 }}>
+                        Camera của bạn đang bật ở góc phải
+                    </p>
+                    <button
+                        onClick={onReject}
+                        style={btnStyle("#EF4444", "0 4px 14px rgba(239,68,68,0.45)", { marginTop: 36 })}
+                    >
+                        Hủy cuộc gọi
+                    </button>
+                </div>
+            )}
+
+            {/* ── Cuộc gọi đến ── */}
+            {callState === "incoming" && (
+                <div style={{ textAlign: "center", zIndex: 5 }}>
+                    <div
+                        style={{ fontSize: 64, animation: "bounce 1s infinite", marginBottom: 16 }}
+                    >
+                        🔔
+                    </div>
+                    <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 8px 0" }}>
+                        Cuộc gọi video đến
+                    </h2>
+                    <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, margin: 0 }}>
+                        <strong>{partnerName}</strong> đang gọi cho bạn
+                    </p>
+                    <div
+                        style={{
+                            display: "flex",
+                            gap: 16,
+                            justifyContent: "center",
+                            marginTop: 36,
+                        }}
+                    >
+                        <button
+                            onClick={onAccept}
+                            style={btnStyle("#10B981", "0 4px 14px rgba(16,185,129,0.45)")}
+                        >
+                            ✅ Trả lời
+                        </button>
+                        <button
+                            onClick={onReject}
+                            style={btnStyle("#EF4444", "0 4px 14px rgba(239,68,68,0.45)")}
+                        >
+                            ❌ Từ chối
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Đã kết nối — chỉ render nút kết thúc ── */}
+            {callState === "connected" && (
+                <div
+                    style={{
+                        position: "absolute",
+                        bottom: 44,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        zIndex: 20,
+                    }}
+                >
+                    <button
+                        onClick={onReject}
+                        style={btnStyle(
+                            "#EF4444",
+                            "0 4px 14px rgba(239,68,68,0.45)",
+                            {
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                borderRadius: 99,
+                                padding: "14px 32px",
+                            }
+                        )}
+                    >
+                        <span>🛑</span> Kết thúc cuộc gọi
+                    </button>
+                </div>
+            )}
+
+            <style>{`
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.15); opacity: 0.7; }
+        }
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-12px); }
+        }
+      `}</style>
+        </div>
+    );
+
+    return createPortal(overlay, document.body);
+}
+
+// ── Utility style builder ──────────────────────────────────────────────────
+function btnStyle(bg, shadow, extra = {}) {
+    return {
+        padding: "14px 36px",
+        background: bg,
+        border: "none",
+        borderRadius: 14,
+        color: "#fff",
+        fontWeight: 700,
+        fontSize: 14,
+        cursor: "pointer",
+        boxShadow: shadow,
+        ...extra,
+    };
+}
+</file>
+
 <file path="client/my-app/src/context/ToastContext.jsx">
 /**
  * ToastContext.jsx
@@ -2646,6 +2366,312 @@ export function useToast() {
     warn: (msg) => addToast(msg, "warn"),
     info: (msg) => addToast(msg, "info"),
   };
+}
+</file>
+
+<file path="client/my-app/src/context/VideoCallContext.jsx">
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
+import { useAuth } from "./AuthContext";
+import { useToast } from "./ToastContext";
+import { getSocket } from "../services/socket";
+import { VideoCallOverlay } from "../components/VideoCallOverlay";
+
+const VideoCallContext = createContext(null);
+
+const rtcConfig = {
+    iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" }
+    ]
+};
+
+export function VideoCallProvider({ children }) {
+    const { user } = useAuth();
+    const { error, warn, info } = useToast();
+    const currentUserId = user?.id || user?.userId;
+
+    const [callState, setCallState] = useState("idle"); // idle | calling | incoming | connected
+    const [partnerId, setPartnerId] = useState(null);
+    const [partnerName, setPartnerName] = useState("Người dùng");
+    const [localStream, setLocalStream] = useState(null);
+    const [remoteStream, setRemoteStream] = useState(null);
+
+    const socketRef = useRef(null);
+    const peerConnectionRef = useRef(null);
+    const localStreamRef = useRef(null);
+    const tempOfferRef = useRef(null);
+    const iceQueueRef = useRef([]);
+
+    const latestStateRef = useRef({ callState, partnerId, localStream });
+    useEffect(() => {
+        latestStateRef.current = { callState, partnerId, localStream };
+    }, [callState, partnerId, localStream]);
+
+    // Giải phóng toàn bộ thiết bị cuộc gọi
+    const cleanUpCall = useCallback(() => {
+        console.log("[WebRTC] Đang tiến hành dọn dẹp giải phóng thiết bị...");
+
+        if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach((track) => {
+                track.stop();
+            });
+            localStreamRef.current = null;
+        }
+
+        if (peerConnectionRef.current) {
+            try {
+                peerConnectionRef.current.close();
+            } catch (e) {
+                console.warn("Lỗi đóng kết nối RTC:", e);
+            }
+        }
+
+        peerConnectionRef.current = null;
+        tempOfferRef.current = null;
+        iceQueueRef.current = [];
+
+        setLocalStream(null);
+        setRemoteStream(null);
+        setPartnerId(null);
+        setPartnerName("Người dùng");
+        setCallState("idle");
+    }, []);
+
+    // Tự động gác máy khi đăng xuất tài khoản đột ngột
+    useEffect(() => {
+        if (!currentUserId) {
+            cleanUpCall();
+        }
+    }, [currentUserId, cleanUpCall]);
+
+    // Thiết lập kết nối Socket lắng nghe cuộc gọi toàn màn hình
+    useEffect(() => {
+        if (!currentUserId) return;
+        let isMounted = true;
+
+        const handleIncomingCall = ({ from, offer, callerName }) => {
+            if (!isMounted) return;
+            console.log("[Socket Call] Nhận cuộc gọi đến từ:", callerName);
+            setCallState("incoming");
+            setPartnerId(from);
+            setPartnerName(callerName || "Ngư dân bản địa");
+            tempOfferRef.current = offer;
+        };
+
+        const handleCallAccepted = async ({ answer }) => {
+            if (!isMounted) return;
+            console.log("[Socket Call] Đối phương đã chấp nhận bắt máy:", answer);
+            try {
+                const pc = peerConnectionRef.current;
+                if (pc) {
+                    await pc.setRemoteDescription(answer);
+                    setCallState("connected");
+
+                    console.log(`[WebRTC] Đang đồng bộ ${iceQueueRef.current.length} ứng viên mạng từ hàng đợi...`);
+                    for (const candidate of iceQueueRef.current) {
+                        await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch((e) => {
+                            console.warn("Lỗi đồng bộ candidate sớm:", e);
+                        });
+                    }
+                    iceQueueRef.current = [];
+                }
+            } catch (err) {
+                console.error("Lỗi thiết lập đàm thoại:", err);
+                error("Lỗi đồng bộ kết nối đàm thoại.");
+                cleanUpCall();
+            }
+        };
+
+        const handleNewIceCandidate = async ({ candidate }) => {
+            if (!isMounted) return;
+            const pc = peerConnectionRef.current;
+            if (pc && pc.remoteDescription) {
+                try {
+                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (err) {
+                    console.warn("Lỗi gán ICE candidate trực tiếp:", err);
+                }
+            } else {
+                iceQueueRef.current.push(candidate);
+            }
+        };
+
+        const handleCallEndedByPartner = () => {
+            if (!isMounted) return;
+            info("Cuộc gọi đã kết thúc.");
+            cleanUpCall();
+        };
+
+        getSocket()
+            .then((socket) => {
+                if (!isMounted) return;
+                socketRef.current = socket;
+
+                socket.on("incoming_call", handleIncomingCall);
+                socket.on("call_accepted", handleCallAccepted);
+                socket.on("ice_candidate", handleNewIceCandidate);
+                socket.on("call_ended", handleCallEndedByPartner);
+            })
+            .catch((err) => console.error("Kết nối Socket Call lỗi:", err));
+
+        return () => {
+            isMounted = false;
+            if (socketRef.current) {
+                socketRef.current.off("incoming_call", handleIncomingCall);
+                socketRef.current.off("call_accepted", handleCallAccepted);
+                socketRef.current.off("ice_candidate", handleNewIceCandidate);
+                socketRef.current.off("call_ended", handleCallEndedByPartner);
+            }
+        };
+    }, [currentUserId, cleanUpCall, error, info]);
+
+    const createPeerConnection = useCallback((targetId) => {
+        const pc = new RTCPeerConnection(rtcConfig);
+
+        pc.onicecandidate = (event) => {
+            if (event.candidate && socketRef.current) {
+                socketRef.current.emit("ice_candidate", {
+                    to: targetId,
+                    candidate: event.candidate.toJSON()
+                });
+            }
+        };
+
+        pc.ontrack = (event) => {
+            if (event.streams && event.streams[0]) {
+                // Luôn bọc trong một MediaStream mới để ép React kích hoạt re-render
+                setRemoteStream(new MediaStream(event.streams[0]));
+            } else {
+                setRemoteStream((prevStream) => {
+                    const stream = prevStream ? prevStream : new MediaStream();
+                    stream.addTrack(event.track);
+                    return new MediaStream(stream);
+                });
+            }
+        };
+
+        pc.onconnectionstatechange = () => {
+            if (pc.connectionState === "disconnected" || pc.connectionState === "failed" || pc.connectionState === "closed") {
+                warn("Kết nối cuộc gọi đã bị ngắt.");
+                cleanUpCall();
+            }
+        };
+
+        peerConnectionRef.current = pc;
+        return pc;
+    }, [cleanUpCall, warn]);
+
+    const startCall = async (targetUserId, targetUserName) => {
+        try {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error("Trình duyệt yêu cầu HTTPS bảo mật để sử dụng máy ảnh & micro.");
+            }
+
+            setCallState("calling");
+            setPartnerId(targetUserId);
+            setPartnerName(targetUserName || "Người dùng");
+
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            setLocalStream(stream);
+            localStreamRef.current = stream;
+
+            const pc = createPeerConnection(targetUserId);
+            stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            const offerToSend = {
+                type: offer.type,
+                sdp: offer.sdp
+            };
+
+            socketRef.current.emit("call_user", {
+                to: targetUserId,
+                offer: offerToSend,
+                callerName: user?.name || "Một người dùng"
+            });
+        } catch (err) {
+            console.error("Khởi động cuộc gọi lỗi:", err);
+            error(err.message || "Không thể truy cập camera của bạn.");
+            cleanUpCall();
+        }
+    };
+
+    const acceptCall = async () => {
+        const { partnerId: currentPartnerId } = latestStateRef.current;
+        try {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error("Trình duyệt yêu cầu HTTPS bảo mật để sử dụng máy ảnh & micro.");
+            }
+
+            const offer = tempOfferRef.current;
+            if (!offer) {
+                throw new Error("Không tìm thấy cấu hình cuộc gọi đến.");
+            }
+
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            setLocalStream(stream);
+            localStreamRef.current = stream;
+
+            const pc = createPeerConnection(currentPartnerId);
+            stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+            await pc.setRemoteDescription(offer);
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+
+            const answerToSend = {
+                type: answer.type,
+                sdp: answer.sdp
+            };
+
+            socketRef.current.emit("answer_call", { to: currentPartnerId, answer: answerToSend });
+            setCallState("connected");
+
+            for (const candidate of iceQueueRef.current) {
+                await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch((e) => {
+                    console.warn("Lỗi đồng bộ candidate sớm:", e);
+                });
+            }
+            iceQueueRef.current = [];
+
+        } catch (err) {
+            console.error("Chấp nhận cuộc gọi video lỗi:", err);
+            error(err.message || "Lỗi đồng bộ kết nối camera.");
+            cleanUpCall();
+        }
+    };
+
+    const endCall = () => {
+        const { partnerId: currentPartnerId } = latestStateRef.current;
+        if (socketRef.current && currentPartnerId) {
+            socketRef.current.emit("end_call", { to: currentPartnerId });
+        }
+        cleanUpCall();
+    };
+
+    return (
+        <VideoCallContext.Provider value={{ callState, partnerId, partnerName, startCall, acceptCall, endCall }}>
+            {children}
+            {callState !== "idle" && (
+                <VideoCallOverlay
+                    callState={callState}
+                    localStream={localStream}
+                    remoteStream={remoteStream}
+                    onAccept={acceptCall}
+                    onReject={endCall}
+                    partnerName={partnerName}
+                />
+            )}
+        </VideoCallContext.Provider>
+    );
+}
+
+export function useVideoCall() {
+    const ctx = useContext(VideoCallContext);
+    if (!ctx) throw new Error("useVideoCall phải được sử dụng bên trong VideoCallProvider");
+    return ctx;
 }
 </file>
 
@@ -2818,6 +2844,24 @@ export function useSEO({ title, description, image, url, product, seller } = {})
       document.title = SITE_NAME;
     };
   }, [title, description, image, url, product, seller]);
+}
+</file>
+
+<file path="client/my-app/src/hooks/useVideoCall.js">
+/**
+ * useVideoCall.js
+ * 
+ * ĐỂ ĐƯA CHỨC NĂNG GỌI VIDEO RA TOÀN BỘ MÀN HÌNH (HomePage, Dashboard, Profile...):
+ * Chúng ta đã đóng gói toàn bộ trạng thái WebRTC và Camera vào VideoCallProvider toàn cục.
+ * 
+ * File này đóng vai trò là một "Cổng kết nối" (Re-export) giúp kết nối 
+ * các trang trong dự án (như ChatBox.jsx) sử dụng chung một luồng đàm thoại Global duy nhất,
+ * giúp khắc phục triệt để lỗi xung đột đen màn hình 1 phía.
+ */
+import { useVideoCall as useGlobalVideoCall } from "../context/VideoCallContext";
+
+export function useVideoCall() {
+    return useGlobalVideoCall();
 }
 </file>
 
@@ -10395,9 +10439,16 @@ async function sendOtpEmail(email: string, otp: string): Promise<void> {
   await transporter.sendMail(mailOptions);
 }
 
+// Cập nhật hàm hashOtp để tránh sập app khi thiếu ENV
 function hashOtp(otp: string): string {
-  const secret = (process.env.OTP_SECRET || process.env.JWT_SECRET) as string;
-  return crypto.createHmac("sha256", secret).update(otp).digest("hex");
+  const secret = process.env.OTP_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    logger.warn("[OTP] Cảnh báo: Không tìm thấy OTP_SECRET hay JWT_SECRET. Đang sử dụng fallback key mặc định.");
+  }
+  return crypto
+    .createHmac("sha256", secret || "fallback_default_secret_key_secure")
+    .update(otp)
+    .digest("hex");
 }
 
 function makeError(message: string, status: number): Error {
@@ -10456,32 +10507,41 @@ export const otpService = {
     }
   },
 
+
+
   async verifyOtp(email: string, otp: string): Promise<string> {
     const cleanEmail = email.toLowerCase().trim();
-    const fails = await redis.get(KEY_VERIFY_FAILS(cleanEmail));
-    if (fails && parseInt(fails, 10) >= MAX_VERIFY_ATTEMPTS) {
+    const cleanOtp = String(otp).trim(); // Ép kiểu string để tránh lỗi crash tại hàm hashOtp
+
+    // 1. Kiểm tra OTP có tồn tại không trước khi làm bất cứ việc gì khác
+    const stored = await redis.get(KEY_OTP(cleanEmail));
+    if (!stored) {
+      throw makeError("Mã OTP đã hết hạn. Vui lòng yêu cầu gửi lại.", 400);
+    }
+
+    // 2. Tăng số lần thử một cách ATOMIC ngay lập tức để chống tấn công Race Condition
+    const fails = await redis.incr(KEY_VERIFY_FAILS(cleanEmail));
+
+    // Nếu đây là lần thử sai/xác thực đầu tiên, set TTL cho key này khớp với thời gian còn lại của OTP
+    if (fails === 1) {
+      const otpTtl = await redis.ttl(KEY_OTP(cleanEmail));
+      await redis.expire(
+        KEY_VERIFY_FAILS(cleanEmail),
+        otpTtl > 0 ? otpTtl : OTP_TTL_SEC
+      );
+    }
+
+    // 3. Nếu số lần thử đã vượt quá giới hạn, chặn ngay lập tức
+    if (fails > MAX_VERIFY_ATTEMPTS) {
       throw makeError(
         `Bạn đã nhập sai OTP quá ${MAX_VERIFY_ATTEMPTS} lần. Vui lòng yêu cầu mã mới.`,
         429,
       );
     }
 
-    const stored = await redis.get(KEY_OTP(cleanEmail));
-    if (!stored) {
-      throw makeError("Mã OTP đã hết hạn. Vui lòng yêu cầu gửi lại.", 400);
-    }
-
-    if (hashOtp(otp) !== stored) {
-      const otpTtl = await redis.ttl(KEY_OTP(cleanEmail));
-      const pipe = redis.pipeline();
-      pipe.incr(KEY_VERIFY_FAILS(cleanEmail));
-      pipe.expire(
-        KEY_VERIFY_FAILS(cleanEmail),
-        otpTtl > 0 ? otpTtl : OTP_TTL_SEC,
-      );
-      await pipe.exec();
-
-      const remaining = MAX_VERIFY_ATTEMPTS - parseInt(fails ?? "0") - 1;
+    // 4. Kiểm tra tính chính xác của OTP
+    if (hashOtp(cleanOtp) !== stored) {
+      const remaining = MAX_VERIFY_ATTEMPTS - fails;
       throw makeError(
         remaining > 0
           ? `Mã OTP không đúng. Còn ${remaining} lần thử.`
@@ -10490,17 +10550,19 @@ export const otpService = {
       );
     }
 
-    // OTP hợp lệ: xóa OTP và failure counter
+    // 5. Xác thực thành công: dọn dẹp các key liên quan trong Redis
     const pipe = redis.pipeline();
     pipe.del(KEY_OTP(cleanEmail));
     pipe.del(KEY_VERIFY_FAILS(cleanEmail));
     await pipe.exec();
 
+    // Tạo token đặt lại mật khẩu tạm thời
     const resetToken = crypto.randomBytes(32).toString("hex");
     await redis.set(KEY_RESET(resetToken), cleanEmail, "EX", RESET_TOKEN_TTL);
 
     return resetToken;
   },
+
 
   async getEmailByResetToken(resetToken: string): Promise<string> {
     const email = await redis.get(KEY_RESET(resetToken));
@@ -13727,34 +13789,6 @@ export default defineConfig({
 });
 </file>
 
-<file path="backend/.env">
-MONGO_URI=mongodb://127.0.0.1:27017/seafood_db
-
-# ─── Auth ────────────────────────────────────
-JWT_SECRET=haiSanVn_super_secret_2024
-JWT_EXPIRES_IN=7d
-OTP_SECRET=otp_secret_key_32_characters_random_number_123
-
-# ─── Server ──────────────────────────────────
-PORT=5000
-CLIENT_URL=https://secluding-dimly-steep.ngrok-free.dev/
-
-# ─── Cloudinary ──────────────────────────────
-CLOUDINARY_CLOUD_NAME=drjmbtafn
-CLOUDINARY_API_KEY=833871645525131
-CLOUDINARY_API_SECRET=HezOkvV6fsWcjkoFs9X6CWubLrQ
-
-ESMS_API_KEY=<lấy tại esms.vn>
-ESMS_SECRET_KEY=<lấy tại esms.vn>
-ESMS_SMS_TYPE=4          # 4 = SMS thường, 2 = Brandname
-ESMS_BRANDNAME=HaiSan    # Chỉ cần khi SMS_TYPE=2
-
-
-# ─── Email (Gmail SMTP) ───────────────────────
-EMAIL_USER=daudaubut@gmail.com
-EMAIL_PASS=uezd tktc qysj jlpo
-</file>
-
 <file path="backend/package.json">
 {
   "name": "seafood-backend",
@@ -14791,10 +14825,20 @@ export const productService = {
     const driedVer = await redis.get("product:list:version:Dried") || "1";
     const listVersion = queryType === "Fresh" ? freshVer : queryType === "Dried" ? driedVer : `${freshVer}_${driedVer}`;
 
-    const cacheKey = `product:list:v${listVersion}:${JSON.stringify(query)}`;
-    const cachedData = await redis.get(cacheKey);
-    if (cachedData) {
-      return JSON.parse(cachedData);
+    // 1. TỐI ƯU CACHE KEY: Tránh Cache Pollution do GPS và Search
+    const normalizedQuery: any = { ...query };
+    if (normalizedQuery.lat) normalizedQuery.lat = parseFloat(normalizedQuery.lat).toFixed(3); // Làm tròn ~110m
+    if (normalizedQuery.lng) normalizedQuery.lng = parseFloat(normalizedQuery.lng).toFixed(3);
+
+    const cacheKey = `product:list:v${listVersion}:${JSON.stringify(normalizedQuery)}`;
+
+    // Chỉ đọc cache nếu KHÔNG có từ khóa tìm kiếm (vì tìm kiếm có độ tùy biến rất lớn)
+    const isSearching = !!(query.search && query.search.trim());
+    if (!isSearching) {
+      const cachedData = await redis.get(cacheKey);
+      if (cachedData) {
+        return JSON.parse(cachedData);
+      }
     }
 
     const {
@@ -14812,7 +14856,6 @@ export const productService = {
 
     const filter: any = { status: "Active" };
 
-    // BUG FIX: sellerId bị bỏ qua trước đây → SellerProfilePage luôn lấy TẤT CẢ sản phẩm
     if (sellerId && mongoose.Types.ObjectId.isValid(sellerId)) {
       filter.sellerId = new mongoose.Types.ObjectId(sellerId);
     }
@@ -14829,7 +14872,6 @@ export const productService = {
 
     if (search && search.trim()) {
       filter.$text = { $search: search.trim() };
-      // Ưu tiên hiển thị mẻ hàng khớp với từ khóa tìm kiếm nhất
       projection = { score: { $meta: "textScore" } };
       sortOption = { score: { $meta: "textScore" } };
     }
@@ -14869,11 +14911,6 @@ export const productService = {
       remainingWeight: p.remainingWeight,
       status: p.status,
       catchTime: p.catchTime,
-      // 💡 GIẢI THÍCH CHO TEAM (Optional Chaining cho Mảng):
-      // Sử dụng optional chaining dạng `?.[chỉ_mục]` bên dưới là cực kỳ quan trọng để đảm bảo an toàn.
-      // Với sản phẩm không có tọa độ GPS (như hải sản khô "Dried"), `location` hoặc `coordinates` sẽ là undefined.
-      // Nếu truy cập trực tiếp `coordinates[1]`, JavaScript sẽ báo lỗi nghiêm trọng "TypeError: Cannot read properties of undefined" và làm treo API.
-      // Dùng cú pháp `?.[1]` và `?.[0]` giúp Node.js tự động trả về giá trị an toàn (null) nếu mảng không tồn tại mà không bao giờ bị crash!
       lat: p.location?.coordinates?.[1] || null,
       lng: p.location?.coordinates?.[0] || null,
       origin: p.origin,
@@ -14881,24 +14918,31 @@ export const productService = {
       createdAt: p.createdAt,
       viewCount: p.viewCount,
       bumpedAt: p.bumpedAt,
-      coverImg: p.images[0] || null,
-      imgCount: p.images.length,
+      // FIX LỖI: Sử dụng Optional Chaining cho mảng images để tránh API bị sập khi images là undefined
+      coverImg: p.images?.[0] || null,
+      imgCount: p.images?.length || 0,
     }));
 
     const finalResponse = paginatedResponse(formattedRows, total, page, limit);
 
-    await redis.set(cacheKey, JSON.stringify(finalResponse), "EX", 600);
+    // Không lưu cache nếu đang tìm kiếm để tránh tràn bộ nhớ Redis
+    if (!isSearching) {
+      await redis.set(cacheKey, JSON.stringify(finalResponse), "EX", 600);
+    }
+
     return finalResponse;
   },
 
   async getById(id: string) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError(400, "ID sản phẩm không hợp lệ");
+    }
+
     const detailCacheKey = `product:detail:${id}`;
     const cachedDetail = await redis.get(detailCacheKey);
 
     if (cachedDetail) {
-      // NOTE: Tăng viewCount bất đồng bộ dưới DB để tránh block request chính.
-      // Trả về dữ liệu chi tiết từ cache (viewCount có thể stale nhẹ nhưng latency tối ưu).
-      Product.findByIdAndUpdate(id, { $inc: { viewCount: 1 } }).catch(() => {});
+      Product.findByIdAndUpdate(id, { $inc: { viewCount: 1 } }).catch(() => { });
       return JSON.parse(cachedDetail);
     }
 
@@ -14926,11 +14970,6 @@ export const productService = {
       remainingWeight: p.remainingWeight,
       status: p.status,
       catchTime: p.catchTime,
-      // 💡 GIẢI THÍCH CHO TEAM (Optional Chaining cho Mảng):
-      // Sử dụng optional chaining dạng `?.[chỉ_mục]` bên dưới là cực kỳ quan trọng để đảm bảo an toàn.
-      // Với sản phẩm không có tọa độ GPS (như hải sản khô "Dried"), `location` hoặc `coordinates` sẽ là undefined.
-      // Nếu truy cập trực tiếp `coordinates[1]`, JavaScript sẽ báo lỗi nghiêm trọng "TypeError: Cannot read properties of undefined" và làm treo API.
-      // Dùng cú pháp `?.[1]` và `?.[0]` giúp Node.js tự động trả về giá trị an toàn (null) nếu mảng không tồn tại mà không bao giờ bị crash!
       lat: p.location?.coordinates?.[1] || null,
       lng: p.location?.coordinates?.[0] || null,
       origin: p.origin,
@@ -14938,7 +14977,7 @@ export const productService = {
       createdAt: p.createdAt,
       viewCount: p.viewCount,
       bumpedAt: p.bumpedAt,
-      images: p.images.map((img: string, idx: number) => ({
+      images: (p.images || []).map((img: string, idx: number) => ({
         id: idx,
         url: img,
       })),
@@ -14965,17 +15004,19 @@ export const productService = {
       lng,
       origin,
       expiryDate,
+      images, // Nhận thêm images từ body (nếu có)
     } = body;
 
-    // Enforce 5 posts limit per day for normal accounts
     const user = await User.findById(userId);
     if (!user) throw new HttpError(404, "Không tìm thấy người dùng");
 
     if (!user.isPremium && user.role !== "Admin") {
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date();
-      endOfDay.setHours(23, 59, 59, 999);
+      // FIX LỆCH MÚI GIỜ: Chuyển đổi về 0h ngày hôm nay theo giờ Việt Nam (UTC+7)
+      const nowVN = new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
+      nowVN.setUTCHours(0, 0, 0, 0);
+      const startOfDay = new Date(nowVN.getTime() - 7 * 60 * 60 * 1000);
+
+      const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000 - 1);
 
       const countToday = await Product.countDocuments({
         sellerId: userId,
@@ -14995,31 +15036,37 @@ export const productService = {
       ? description.trim().replace(/<[^>]*>/g, "").slice(0, 2000)
       : null;
 
+    const parsedPrice = typeof price === "number" ? price : parseInt(price, 10);
+    const parsedWeight = typeof totalWeight === "number" ? totalWeight : parseFloat(totalWeight);
+
+    if (isNaN(parsedPrice) || isNaN(parsedWeight)) {
+      throw new HttpError(400, "Thông tin giá cả hoặc khối lượng không hợp lệ");
+    }
+
     const newProduct = new Product({
       sellerId: userId,
       type,
       category,
       name: name.trim(),
       description: cleanDesc,
-      price: typeof price === "number" ? price : parseInt(price, 10),
+      price: parsedPrice,
       salesType: salesType ?? "Retail",
-      totalWeight:
-        typeof totalWeight === "number" ? totalWeight : parseFloat(totalWeight),
-      remainingWeight:
-        typeof totalWeight === "number" ? totalWeight : parseFloat(totalWeight),
+      totalWeight: parsedWeight,
+      remainingWeight: parsedWeight,
       catchTime,
       origin,
       expiryDate,
+      images: Array.isArray(images) ? images : [],
       ...(lat && lng
         ? {
-            location: {
-              type: "Point",
-              coordinates: [
-                typeof lng === "number" ? lng : parseFloat(lng),
-                typeof lat === "number" ? lat : parseFloat(lat),
-              ],
-            },
-          }
+          location: {
+            type: "Point",
+            coordinates: [
+              typeof lng === "number" ? lng : parseFloat(lng),
+              typeof lat === "number" ? lat : parseFloat(lat),
+            ],
+          },
+        }
         : {}),
     });
 
@@ -15052,12 +15099,21 @@ export const productService = {
     role: string,
     body: Record<string, any>,
   ): Promise<void> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError(400, "ID sản phẩm không hợp lệ");
+    }
+
     const currentProduct = await Product.findById(id);
     if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
     if (role !== "Admin" && currentProduct.sellerId.toString() !== userId)
       throw new HttpError(403, "Bạn không có quyền chỉnh sửa bài đăng này");
 
-    const newPrice = body.price ? parseInt(body.price, 10) : undefined;
+    // FIX LỖI 0-VALUE: So sánh trực tiếp với undefined
+    const newPrice = body.price !== undefined ? parseInt(body.price, 10) : undefined;
+    if (newPrice !== undefined && isNaN(newPrice)) {
+      throw new HttpError(400, "Giá sản phẩm mới không hợp lệ");
+    }
+
     const updateFields: any = {};
 
     if (body.name !== undefined) updateFields.name = body.name.trim();
@@ -15070,9 +15126,10 @@ export const productService = {
     if (body.category !== undefined) updateFields.category = body.category;
     if (body.salesType !== undefined) updateFields.salesType = body.salesType;
     if (body.status !== undefined) updateFields.status = body.status;
+    if (body.images !== undefined && Array.isArray(body.images)) updateFields.images = body.images;
 
-    if (body.price !== undefined) {
-      updateFields.price = parseInt(body.price, 10);
+    if (newPrice !== undefined) {
+      updateFields.price = newPrice;
     }
     if (body.totalWeight !== undefined) {
       updateFields.totalWeight = parseFloat(body.totalWeight);
@@ -15088,19 +15145,6 @@ export const productService = {
       updateFields.expiryDate = body.expiryDate
         ? new Date(body.expiryDate)
         : null;
-    }
-
-    if (newPrice !== undefined && newPrice !== currentProduct.price) {
-      await Product.findByIdAndUpdate(id, {
-        $push: {
-          priceHistory: {
-            oldPrice: currentProduct.price,
-            newPrice: newPrice,
-            changedAt: new Date(),
-          },
-        },
-      });
-      logger.info(`Price change logged for ProductID=${id}`);
     }
 
     if (
@@ -15119,13 +15163,31 @@ export const productService = {
       }
     }
 
-    await Product.findByIdAndUpdate(id, { $set: updateFields });
+    // TỐI ƯU HOÁ: Gộp toán tử $set và $push vào 1 lượt ghi cơ sở dữ liệu duy nhất
+    const updateQuery: any = { $set: updateFields };
+
+    if (newPrice !== undefined && newPrice !== currentProduct.price) {
+      updateQuery.$push = {
+        priceHistory: {
+          oldPrice: currentProduct.price,
+          newPrice: newPrice,
+          changedAt: new Date(),
+        },
+      };
+      logger.info(`Price change logged for ProductID=${id}`);
+    }
+
+    await Product.findByIdAndUpdate(id, updateQuery);
 
     await redis.del(`product:detail:${id}`);
     await redis.incr(`product:list:version:${currentProduct.type}`);
   },
 
   async delete(id: string, userId: string, role: string): Promise<void> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError(400, "ID sản phẩm không hợp lệ");
+    }
+
     const currentProduct = await Product.findById(id);
     if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
     if (role !== "Admin" && currentProduct.sellerId.toString() !== userId)
@@ -15138,6 +15200,10 @@ export const productService = {
   },
 
   async bump(id: string, userId: string): Promise<void> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError(400, "ID sản phẩm không hợp lệ");
+    }
+
     const currentProduct = await Product.findById(id);
     if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
     if (currentProduct.sellerId.toString() !== userId)
@@ -17994,6 +18060,34 @@ export async function api(path, options = {}) {
 }
 </file>
 
+<file path="backend/.env">
+MONGO_URI=mongodb://127.0.0.1:27017/seafood_db
+
+# ─── Auth ────────────────────────────────────
+JWT_SECRET=haiSanVn_super_secret_2024
+JWT_EXPIRES_IN=7d
+OTP_SECRET=otp_secret_key_32_characters_random_number_123
+
+# ─── Server ──────────────────────────────────
+PORT=5000
+CLIENT_URL=https://secluding-dimly-steep.ngrok-free.dev/
+
+# ─── Cloudinary ──────────────────────────────
+CLOUDINARY_CLOUD_NAME=drjmbtafn
+CLOUDINARY_API_KEY=833871645525131
+CLOUDINARY_API_SECRET=HezOkvV6fsWcjkoFs9X6CWubLrQ
+
+ESMS_API_KEY=<lấy tại esms.vn>
+ESMS_SECRET_KEY=<lấy tại esms.vn>
+ESMS_SMS_TYPE=4          # 4 = SMS thường, 2 = Brandname
+ESMS_BRANDNAME=HaiSan    # Chỉ cần khi SMS_TYPE=2
+
+
+# ─── Email (Gmail SMTP) ───────────────────────
+EMAIL_USER=daudaubut@gmail.com
+EMAIL_PASS=uezd tktc qysj jlpo
+</file>
+
 <file path="backend/src/controllers/admin.controller.ts">
 import { Request, Response } from "express";
 import { User } from "../models/User";
@@ -18572,659 +18666,6 @@ export async function getReviewsBySeller(req: Request, res: Response) {
   } catch (err) {
     return sendServerError(res, err);
   }
-}
-</file>
-
-<file path="backend/src/socket.ts">
-import "dotenv/config";
-import { Server as HttpServer } from "http";
-import { Server as IOServer, Socket } from "socket.io";
-import { createAdapter } from "@socket.io/redis-adapter";
-import jwt from "jsonwebtoken";
-import cookie from "cookie";
-import { Message } from "./models/Message";
-import { Product } from "./models/Product";
-import { redis } from "./config/redis";
-import { logger } from "./utils/logger";
-
-interface AuthPayload {
-  userId: string;
-  role: string;
-}
-
-let ioInstance: IOServer;
-
-function getTokenFromCookie(headers: any): string | null {
-  const cookieHeader = headers.cookie;
-  if (!cookieHeader) return null;
-  const parsed = cookie.parse(cookieHeader);
-  return parsed.token || null;
-}
-
-export function initSocket(server: HttpServer) {
-  const io = new IOServer(server, {
-    cors: {
-      origin: process.env.CLIENT_URL || "http://localhost:3000",
-      methods: ["GET", "POST"],
-      credentials: true,
-    },
-  });
-
-  try {
-    const pubClient = redis.duplicate();
-    const subClient = redis.duplicate();
-
-    pubClient.connect().catch(() => { });
-    subClient.connect().catch(() => { });
-
-    io.adapter(createAdapter(pubClient, subClient));
-    logger.info("Socket.IO Redis Adapter configured successfully");
-  } catch (err: any) {
-    logger.error(`Failed to configure Socket.IO Redis Adapter: ${err.message}`);
-  }
-
-  io.use((socket: Socket, next) => {
-    const token = getTokenFromCookie(socket.handshake.headers);
-    if (!token) {
-      return next(
-        new Error("Chưa đăng nhập (không tìm thấy token trong cookie)"),
-      );
-    }
-    try {
-      const payload = jwt.verify(
-        token,
-        process.env.JWT_SECRET as string,
-      ) as AuthPayload;
-      (socket as any).user = payload;
-      next();
-    } catch (err) {
-      return next(new Error("Token không hợp lệ hoặc đã hết hạn"));
-    }
-  });
-
-  io.on("connection", (socket: Socket) => {
-    const { userId } = (socket as any).user as AuthPayload;
-
-    socket.on("join_room", async (productId: string) => {
-      if (!productId) return;
-      try {
-        const prod = await Product.findById(productId);
-        const isSeller = prod && prod.sellerId.toString() === userId;
-
-        const hasMessages = await Message.exists({
-          productId,
-          $or: [{ senderId: userId }, { receiverId: userId }],
-        } as any);
-
-        if (isSeller || hasMessages) {
-          socket.join(`product_${productId}`);
-        }
-      } catch (err: any) {
-        logger.error(`Socket join_room error: ${err.message}`);
-      }
-    });
-
-    socket.on("leave_room", (productId: string) => {
-      socket.leave(`product_${productId}`);
-    });
-
-    socket.on(
-      "send_message",
-      async (data: {
-        productId: string;
-        receiverId: string;
-        content?: string;
-        imageUrl?: string;
-      }) => {
-        const { productId, receiverId, content, imageUrl } = data;
-        if (!productId || !receiverId) return;
-
-        if (!content?.trim() && !imageUrl) return;
-
-        if (receiverId === userId) {
-          socket.emit("error", {
-            message: "Không thể tự gửi tin nhắn cho chính mình",
-          });
-          return;
-        }
-
-        const rateLimitKey = `ratelimit:socket:msg:${userId}`;
-        try {
-          const pipe = redis.pipeline();
-          pipe.incr(rateLimitKey);
-          pipe.expire(rateLimitKey, 2);
-          const results = await pipe.exec();
-
-          const currentCount = (results?.[0]?.[1] as number) ?? 0;
-
-          if (currentCount > 5) {
-            socket.emit("error", {
-              message:
-                "Bạn gửi tin quá nhanh. Vui lòng làm chậm lại hành động của mình.",
-            });
-            return;
-          }
-        } catch (err: any) {
-          logger.error(`Rate limiter Redis error: ${err.message}`);
-        }
-
-        try {
-          const newMsg = new Message({
-            productId,
-            senderId: userId,
-            receiverId,
-            content: content ? content.trim() : null,
-            imageUrl: imageUrl || null,
-          });
-
-          await newMsg.save();
-
-          const messageResponse = {
-            id: newMsg._id.toString(),
-            productId,
-            senderId: userId,
-            receiverId,
-            content: newMsg.content,
-            imageUrl: newMsg.imageUrl,
-            sentAt: newMsg.createdAt,
-            isRead: false,
-          };
-
-          io.to(`user_${userId}`).emit("new_message", messageResponse);
-          io.to(`user_${receiverId}`).emit("new_message", messageResponse);
-
-          io.to(`user_${receiverId}`).emit("notification", {
-            type: "new_message",
-            productId,
-            senderId: userId,
-            preview: imageUrl ? "📷 [Hình ảnh]" : content!.trim().slice(0, 40),
-          });
-        } catch (err: any) {
-          logger.error(`Socket send_message saving error: ${err.message}`);
-          socket.emit("error", { message: "Gửi tin thất bại" });
-        }
-      },
-    );
-
-    /* ─── VIDEO CALL EVENTS (MỚI) ─── */
-
-    // 1. Gửi yêu cầu gọi (Truyền kèm callerName sang cho Callee)
-    socket.on("call_user", (data: { to: string; offer: any; callerName?: string }) => {
-      const { to, offer, callerName } = data;
-      logger.info(`[Socket Call] User ${userId} (${callerName || "Không tên"}) is calling User ${to}`);
-      socket.to(`user_${to}`).emit("incoming_call", {
-        from: userId,
-        offer,
-        callerName: callerName || "Một người dùng"
-      });
-    });
-
-    // 2. Chấp nhận cuộc gọi
-    socket.on("answer_call", (data: { to: string; answer: any }) => {
-      const { to, answer } = data;
-      logger.info(`[Socket Call] User ${userId} accepted call from User ${to}`);
-      socket.to(`user_${to}`).emit("call_accepted", {
-        answer
-      });
-    });
-
-    // 3. Trao đổi cấu hình mạng ICE Candidates
-    socket.on("ice_candidate", (data: { to: string; candidate: any }) => {
-      const { to, candidate } = data;
-      socket.to(`user_${to}`).emit("ice_candidate", {
-        candidate
-      });
-    });
-
-    // 4. Kết thúc/Từ chối cuộc gọi
-    socket.on("end_call", (data: { to: string }) => {
-      const { to } = data;
-      logger.info(`[Socket Call] Call ended between User ${userId} and User ${to}`);
-      socket.to(`user_${to}`).emit("call_ended");
-    });
-
-    socket.join(`user_${userId}`);
-  });
-
-  ioInstance = io;
-  return io;
-}
-
-export function getIO() {
-  if (!ioInstance) throw new Error("Socket.io chưa được khởi tạo");
-  return ioInstance;
-}
-</file>
-
-<file path="client/my-app/src/components/ChatBox.jsx">
-import { useState, useEffect, useRef } from "react";
-import { C } from "../utils/theme";
-import { getSocket } from "../services/socket";
-import { api } from "../services/api";
-import { MessageIcon, XIcon, CheckCircleIcon } from "./icons/index";
-import { useToast } from "../context/ToastContext";
-import { useVideoCall } from "../context/VideoCallContext"; // ← SỬA ĐƯỜNG DẪN IMPORT SANG CONTEXT
-
-export function ChatBox({ product, onClose, user, fullHeight = false }) {
-  const toast = useToast();
-  const [msgs, setMsgs] = useState([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [socketReady, setSocketReady] = useState(false);
-  const [isInputFocused, setIsInputFocused] = useState(false);
-  const [uploading, setUploading] = useState(false);
-
-  const endRef = useRef(null);
-  const socketRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const otherUserRef = useRef(null);
-
-  const currentUserId = user?.id || user?.userId;
-
-  // LẤY TRỰC TIẾP HÀM BẮT ĐẦU CUỘC GỌI TỪ GLOBAL PROVIDER
-  const { startCall } = useVideoCall();
-
-  useEffect(() => {
-    if (!currentUserId) return;
-    setMsgs([]);
-    setLoading(true);
-    api(`/messages/${product.id}`)
-      .then((data) => {
-        const mapped = data.map((m) => ({
-          id: m.id,
-          senderId: m.senderId,
-          content: m.content,
-          imageUrl: m.imageUrl,
-          time: new Date(m.sentAt).toLocaleTimeString("vi", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          isMine: m.senderId === currentUserId,
-        }));
-        setMsgs(mapped);
-        const other = data.find((m) => m.senderId !== currentUserId);
-        if (other) otherUserRef.current = other.senderId;
-      })
-      .catch(() => { })
-      .finally(() => setLoading(false));
-  }, [product.id, currentUserId]);
-
-  useEffect(() => {
-    if (!currentUserId) return;
-    let cancelled = false;
-
-    getSocket().then((socket) => {
-      if (cancelled) return;
-      socketRef.current = socket;
-      socket.emit("join_room", product.id);
-      socket.on("new_message", handleNewMessage);
-      setSocketReady(true);
-    });
-
-    function handleNewMessage(msg) {
-      if (msg.productId !== product.id) return;
-      if (msg.senderId !== currentUserId) otherUserRef.current = msg.senderId;
-      setMsgs((prev) => {
-        if (prev.some((m) => m.id === msg.id)) return prev;
-        return [
-          ...prev,
-          {
-            id: msg.id,
-            senderId: msg.senderId,
-            content: msg.content,
-            imageUrl: msg.imageUrl,
-            time: new Date(msg.sentAt).toLocaleTimeString("vi", {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-            isMine: msg.senderId === currentUserId,
-          },
-        ];
-      });
-    }
-
-    return () => {
-      cancelled = true;
-      if (socketRef.current) {
-        socketRef.current.off("new_message", handleNewMessage);
-        socketRef.current.emit("leave_room", product.id);
-      }
-    };
-  }, [product.id, currentUserId]);
-
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [msgs]);
-
-  const getReceiverId = () => {
-    const sellerId = product.sellerId;
-    return currentUserId === sellerId ? otherUserRef.current : sellerId;
-  };
-
-  const send = (txtContent = "", imgUrl = null) => {
-    const finalContent = txtContent.trim();
-    if (!finalContent && !imgUrl) return;
-
-    const receiverId = getReceiverId();
-    if (!receiverId) {
-      toast.warn("Chưa có người nhận. Hãy chờ người mua nhắn trước.");
-      return;
-    }
-
-    if (socketRef.current?.connected) {
-      socketRef.current.emit("send_message", {
-        productId: product.id,
-        receiverId,
-        content: finalContent || null,
-        imageUrl: imgUrl,
-      });
-    } else {
-      api("/messages", {
-        method: "POST",
-        body: JSON.stringify({
-          productId: product.id,
-          receiverId,
-          content: finalContent || null,
-          imageUrl: imgUrl,
-        }),
-      })
-        .then((res) => {
-          setMsgs((prev) => [
-            ...prev,
-            {
-              id: res.id,
-              senderId: currentUserId,
-              content: finalContent || null,
-              imageUrl: imgUrl,
-              time: new Date().toLocaleTimeString("vi", {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-              isMine: true,
-            },
-          ]);
-        })
-        .catch((e) => toast.error(e.message));
-    }
-    setInput("");
-  };
-
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setUploading(true);
-    const fd = new FormData();
-    fd.append("image", file);
-
-    try {
-      const res = await api("/messages/upload-image", {
-        method: "POST",
-        body: fd,
-      });
-      send("", res.imageUrl);
-    } catch (err) {
-      toast.error("Gửi ảnh thất bại: " + err.message);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  // Kích hoạt cuộc gọi qua Global Provider
-  const handleInitiateCall = () => {
-    const targetId = getReceiverId();
-    if (!targetId) {
-      toast.warn("Không tìm thấy đối phương hoạt động để thực hiện cuộc gọi.");
-      return;
-    }
-    // Gửi đi tín hiệu gọi kèm tên đối phương hiển thị ở đầu bên kia
-    startCall(targetId, product.sellerName);
-  };
-
-  const chatHeight = fullHeight ? 420 : 250;
-
-  return (
-    <div
-      style={{
-        border: "1.5px solid #eaeaea",
-        borderRadius: 12,
-        overflow: "hidden",
-        background: C.white,
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          background: "#0f172a",
-          color: "#fff",
-          padding: "12px 16px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <div>
-          <div
-            style={{
-              fontWeight: 700,
-              fontSize: 13,
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-            }}
-          >
-            <MessageIcon size={14} />
-            <span>{product.sellerName}</span>
-            {product.sellerIsVerified && (
-              <CheckCircleIcon size={12} style={{ color: "#38bdf8" }} />
-            )}
-          </div>
-          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
-            Sản phẩm: {product.name}
-          </div>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          {/* NÚT GỌI VIDEO CALL */}
-          <button
-            onClick={handleInitiateCall}
-            style={{
-              background: "none",
-              border: "none",
-              color: "#38bdf8",
-              cursor: "pointer",
-              fontSize: 14,
-              padding: "4px",
-              display: "flex",
-              alignItems: "center"
-            }}
-            title="Gọi video cho đối phương"
-          >
-            📞
-          </button>
-
-          {onClose && (
-            <button
-              onClick={onClose}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#94a3b8",
-                cursor: "pointer",
-                padding: "4px"
-              }}
-            >
-              <XIcon size={16} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div
-        style={{
-          height: chatHeight,
-          overflowY: "auto",
-          padding: "16px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
-          background: "#f8fafc",
-        }}
-      >
-        {loading ? (
-          <div
-            style={{
-              textAlign: "center",
-              color: "#94a3b8",
-              fontSize: 12,
-              marginTop: 40,
-            }}
-          >
-            Đang tải tin nhắn...
-          </div>
-        ) : msgs.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              color: "#94a3b8",
-              fontSize: 12,
-              marginTop: 40,
-            }}
-          >
-            Gửi tin nhắn để bắt đầu cuộc trò chuyện.
-          </div>
-        ) : (
-          msgs.map((m) => (
-            <div
-              key={m.id}
-              style={{
-                display: "flex",
-                justifyContent: m.isMine ? "flex-end" : "flex-start",
-              }}
-            >
-              <div
-                style={{
-                  maxWidth: "75%",
-                  background: m.isMine ? "#0f172a" : "#fff",
-                  color: m.isMine ? "#fff" : "#1e293b",
-                  padding: "8px 12px",
-                  borderRadius: m.isMine
-                    ? "8px 8px 0px 8px"
-                    : "8px 8px 8px 0px",
-                  fontSize: 13,
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-                  border: m.isMine ? "none" : "1px solid #f1f5f9",
-                }}
-              >
-                {m.content && (
-                  <div style={{ wordBreak: "break-word" }}>{m.content}</div>
-                )}
-
-                {m.imageUrl && (
-                  <img
-                    src={m.imageUrl}
-                    alt="Ảnh hải sản đính kèm"
-                    style={{
-                      maxWidth: "100%",
-                      borderRadius: 8,
-                      marginTop: m.content ? 6 : 0,
-                      maxHeight: 180,
-                      objectFit: "cover",
-                      display: "block",
-                    }}
-                  />
-                )}
-
-                <div
-                  style={{
-                    fontSize: 9,
-                    color: m.isMine ? "rgba(255,255,255,0.6)" : "#94a3b8",
-                    marginTop: 4,
-                    textAlign: "right",
-                  }}
-                >
-                  {m.time}
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-        <div ref={endRef} />
-      </div>
-
-      <div
-        style={{
-          padding: "12px",
-          display: "flex",
-          gap: 8,
-          borderTop: "1px solid #f1f5f9",
-          background: C.white,
-          alignItems: "center",
-        }}
-      >
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          type="button"
-          style={{
-            background: "#f1f5f9",
-            border: "none",
-            borderRadius: 6,
-            width: 36,
-            height: 36,
-            cursor: "pointer",
-            fontSize: 16,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-          title="Gửi hình ảnh thực tế"
-        >
-          {uploading ? "⏳" : "📷"}
-        </button>
-        <input
-          type="file"
-          accept="image/*"
-          ref={fileInputRef}
-          onChange={handleImageUpload}
-          style={{ display: "none" }}
-        />
-
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && send(input)}
-          onFocus={() => setIsInputFocused(true)}
-          onBlur={() => setIsInputFocused(false)}
-          placeholder="Nhập tin nhắn..."
-          style={{
-            flex: 1,
-            border: `1.5px solid ${isInputFocused ? "#0f172a" : "#cbd5e1"}`,
-            borderRadius: 6,
-            padding: "8px 12px",
-            fontSize: 13,
-            outline: "none",
-            transition: "all 0.15s ease",
-          }}
-        />
-        <button
-          onClick={() => send(input)}
-          style={{
-            background: "#0f172a",
-            color: "#fff",
-            border: "none",
-            borderRadius: 6,
-            padding: "8px 14px",
-            cursor: "pointer",
-            fontWeight: 700,
-            fontSize: 13,
-          }}
-        >
-          Gửi
-        </button>
-      </div>
-    </div>
-  );
 }
 </file>
 
@@ -19884,365 +19325,655 @@ export const userRouter = Router();
 userRouter.get("/:id", getUserPublicProfile);
 </file>
 
-<file path="client/my-app/src/App.jsx">
-/**
- * App.jsx — Refactored Entry Point
- *
- * PATTERNS APPLIED:
- *   1. Context + Provider Pattern  → AuthProvider, ToastProvider
- *   2. HOC / Wrapper Pattern       → PrivateRoute, AdminRoute, GuestRoute
- *   3. Custom Hook Pattern         → useApiFetch (thay thế ProductDetailPageRoute,
- *                                    SellerProfilePageRoute tay)
- *   4. DRY                         → LoadingSpinner, PageLoader extracted ra component
- *
- * TRƯỚC: App.jsx có 5 inline ternaries guard route + 2 Route components
- *        trùng pattern fetch → loading → render
- * SAU:   Route khai báo sạch, gọn — đọc như spec của app
- */
-import React, { useState, useEffect, Suspense, lazy } from "react";
-import { VideoCallProvider } from "./context/VideoCallContext"; // ← MỚI
+<file path="backend/src/socket.ts">
+import "dotenv/config";
+import { Server as HttpServer } from "http";
+import { Server as IOServer, Socket } from "socket.io";
+import { createAdapter } from "@socket.io/redis-adapter";
+import jwt from "jsonwebtoken";
+import cookie from "cookie";
+import { Message } from "./models/Message";
+import { Product } from "./models/Product";
+import { redis } from "./config/redis";
+import { logger } from "./utils/logger";
 
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-  useParams,
-} from "react-router-dom";
-import { AuthProvider, useAuth } from "./context/AuthContext";
-import { ToastProvider } from "./context/ToastContext";
-import {
-  PrivateRoute,
-  AdminRoute,
-  GuestRoute,
-} from "./components/PrivateRoute";
-import { useApiFetch } from "./hooks/useApiFetch";
-import { Navbar } from "./layout/Navbar";
-import { ChatBox } from "./components/ChatBox";
-import { ErrorBoundary } from "./components/ErrorBoundary";
-import { useViewTransitionNavigate } from "./hooks/useViewTransitionNavigate";
-import { disconnectSocket, getSocket } from "./services/socket";
-import { api } from "./services/api";
-import { useLocation } from "react-router-dom";
-import { Link } from "react-router-dom"; // đảm bảo đã import
-
-// ── Code-splitting ──────────────────────────────────────────
-const HomePage = lazy(() =>
-  import("./pages/HomePage").then((m) => ({ default: m.HomePage })),
-);
-const ProductDetailPage = lazy(() =>
-  import("./pages/ProductDetailPage").then((m) => ({
-    default: m.ProductDetailPage,
-  })),
-);
-const ForgotPasswordPage = lazy(() =>
-  import("./pages/ForgotPasswordPage").then((m) => ({
-    default: m.ForgotPasswordPage,
-  })),
-);
-const AuthPage = lazy(() =>
-  import("./pages/AuthPage").then((m) => ({ default: m.AuthPage })),
-);
-const PostListingPage = lazy(() =>
-  import("./pages/PostListingPage").then((m) => ({
-    default: m.PostListingPage,
-  })),
-);
-const DashboardPage = lazy(() =>
-  import("./pages/DashboardPage").then((m) => ({ default: m.DashboardPage })),
-);
-const AdminPage = lazy(() =>
-  import("./pages/AdminPage").then((m) => ({ default: m.AdminPage })),
-);
-const SellerProfilePage = lazy(() =>
-  import("./pages/SellerProfilePage").then((m) => ({
-    default: m.SellerProfilePage,
-  })),
-);
-const ProfilePage = lazy(() =>
-  import("./pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
-);
-
-// ── Shared loading UI ───────────────────────────────────────
-function PageFallback() {
-  return (
-    <div
-      style={{
-        padding: "40px 24px",
-        display: "grid",
-        gap: 20,
-        gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-        maxWidth: 1200,
-        margin: "0 auto",
-      }}
-    >
-      {Array.from({ length: 8 }).map((_, i) => (
-        <div
-          key={i}
-          className="skeleton-shimmer"
-          style={{
-            height: 320,
-            borderRadius: 12,
-            border: "1px solid var(--border)",
-          }}
-        />
-      ))}
-    </div>
-  );
+interface AuthPayload {
+  userId: string;
+  role: string;
 }
 
-/**
- * PageLoader — Spinner nhỏ dùng chung cho các route wrapper
- * (trước đây bị copy-paste 2 lần trong ProductDetailPageRoute và SellerProfilePageRoute)
- */
-function PageLoader({ label }) {
-  return (
-    <div
-      style={{
-        padding: "80px 24px",
-        textAlign: "center",
-        color: "var(--muted)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 12,
-      }}
-    >
-      <div
-        className="skeleton-shimmer"
-        style={{ width: 40, height: 40, borderRadius: "50%" }}
-      />
-      <span style={{ fontSize: 13, fontWeight: 500 }}>{label}</span>
-    </div>
-  );
+let ioInstance: IOServer;
+
+function getTokenFromCookie(headers: any): string | null {
+  const cookieHeader = headers.cookie;
+  if (!cookieHeader) return null;
+  const parsed = cookie.parse(cookieHeader);
+  return parsed.token || null;
 }
 
-// ── Route wrappers (sử dụng useApiFetch thay vì copy-paste) ─
-/**
- * TRƯỚC: 30 dòng lặp lại hoàn toàn cho mỗi route
- * SAU: useApiFetch + 10 dòng render
- */
-function ProductDetailPageRoute() {
-  const { productId } = useParams();
-  const { data: product, loading } = useApiFetch(`/products/${productId}`, [
-    productId,
-  ]);
-  const { user } = useAuth();
+export function initSocket(server: HttpServer) {
+  const io = new IOServer(server, {
+    cors: {
+      origin: process.env.CLIENT_URL || "http://localhost:3000",
+      methods: ["GET", "POST"],
+      credentials: true,
+    },
+  });
 
-  if (loading) return <PageLoader label="ĐANG TẢI THÔNG TIN SẢN PHẨM…" />;
-  if (!product) return <Navigate to="/" replace />;
-  return <ProductDetailPage product={product} user={user} />;
-}
+  try {
+    const pubClient = redis.duplicate();
+    const subClient = redis.duplicate();
 
-function SellerProfilePageRoute() {
-  const { sellerId } = useParams();
-  const { data: seller, loading } = useApiFetch(`/users/${sellerId}`, [
-    sellerId,
-  ]);
-  const { user } = useAuth();
+    pubClient.connect().catch(() => { });
+    subClient.connect().catch(() => { });
 
-  if (loading) return <PageLoader label="ĐANG TẢI HỒ SƠ NGƯ DÂN…" />;
-  if (!seller) return <Navigate to="/" replace />;
-  return <SellerProfilePage seller={seller} user={user} />;
-}
+    io.adapter(createAdapter(pubClient, subClient));
+    logger.info("Socket.IO Redis Adapter configured successfully");
+  } catch (err: any) {
+    logger.error(`Failed to configure Socket.IO Redis Adapter: ${err.message}`);
+  }
 
-// ── AppShell — layout + routes ───────────────────────────────
-function AppShell() {
-  const { user, logout } = useAuth();
-  const navigate = useViewTransitionNavigate();
-  const location = useLocation();
-  const [unread, setUnread] = useState(0);
-  const [globalChat, setGlobalChat] = useState(null);
-
-  // Poll unread message count
-  useEffect(() => {
-    if (!user) {
-      setUnread(0);
-      return;
+  io.use((socket: Socket, next) => {
+    const token = getTokenFromCookie(socket.handshake.headers);
+    if (!token) {
+      return next(
+        new Error("Chưa đăng nhập (không tìm thấy token trong cookie)"),
+      );
     }
-    // BUG FIX: đổi tên `fetch` → `fetchUnread` tránh shadow global fetch API
-    const fetchUnread = () =>
-      api("/messages/unread-count")
-        .then((d) => setUnread(d.count))
-        .catch(() => { });
-    fetchUnread();
-    const id = setInterval(fetchUnread, 30_000);
-    return () => clearInterval(id);
-  }, [user]);
+    try {
+      const payload = jwt.verify(
+        token,
+        process.env.JWT_SECRET as string,
+      ) as AuthPayload;
+      (socket as any).user = payload;
+      next();
+    } catch (err) {
+      return next(new Error("Token không hợp lệ hoặc đã hết hạn"));
+    }
+  });
 
-  // BUG FIX: Lắng nghe socket `new_message` để cập nhật unread count real-time thay vì
-  // chờ poll 30 giây tiếp theo. Trước đây socket.ts emit `notification` type "new_message"
-  // nhưng client không handle → badge tin nhắn lag tối đa 30 giây sau mỗi tin nhận được.
-  useEffect(() => {
-    if (!user) return;
-    let active = true;
-    let cleanupSocketListener = null;
+  io.on("connection", (socket: Socket) => {
+    const { userId } = (socket as any).user as AuthPayload;
 
-    getSocket()
-      .then((socket) => {
-        if (!active) return;
-        const handler = (data) => {
-          if (data.type === "new_message") {
-            setUnread((prev) => prev + 1);
+    socket.on("join_room", async (productId: string) => {
+      if (!productId) return;
+      try {
+        const prod = await Product.findById(productId);
+        const isSeller = prod && prod.sellerId.toString() === userId;
+
+        const hasMessages = await Message.exists({
+          productId,
+          $or: [{ senderId: userId }, { receiverId: userId }],
+        } as any);
+
+        if (isSeller || hasMessages) {
+          socket.join(`product_${productId}`);
+        }
+      } catch (err: any) {
+        logger.error(`Socket join_room error: ${err.message}`);
+      }
+    });
+
+    socket.on("leave_room", (productId: string) => {
+      socket.leave(`product_${productId}`);
+    });
+
+    socket.on(
+      "send_message",
+      async (data: {
+        productId: string;
+        receiverId: string;
+        content?: string;
+        imageUrl?: string;
+      }) => {
+        const { productId, receiverId, content, imageUrl } = data;
+        if (!productId || !receiverId) return;
+
+        if (!content?.trim() && !imageUrl) return;
+
+        if (receiverId === userId) {
+          socket.emit("error", {
+            message: "Không thể tự gửi tin nhắn cho chính mình",
+          });
+          return;
+        }
+
+        const rateLimitKey = `ratelimit:socket:msg:${userId}`;
+        try {
+          const pipe = redis.pipeline();
+          pipe.incr(rateLimitKey);
+          pipe.expire(rateLimitKey, 2);
+          const results = await pipe.exec();
+
+          const currentCount = (results?.[0]?.[1] as number) ?? 0;
+
+          if (currentCount > 5) {
+            socket.emit("error", {
+              message:
+                "Bạn gửi tin quá nhanh. Vui lòng làm chậm lại hành động của mình.",
+            });
+            return;
           }
-        };
-        socket.on("notification", handler);
-        cleanupSocketListener = () => socket.off("notification", handler);
+        } catch (err: any) {
+          logger.error(`Rate limiter Redis error: ${err.message}`);
+        }
+
+        try {
+          const newMsg = new Message({
+            productId,
+            senderId: userId,
+            receiverId,
+            content: content ? content.trim() : null,
+            imageUrl: imageUrl || null,
+          });
+
+          await newMsg.save();
+
+          const messageResponse = {
+            id: newMsg._id.toString(),
+            productId,
+            senderId: userId,
+            receiverId,
+            content: newMsg.content,
+            imageUrl: newMsg.imageUrl,
+            sentAt: newMsg.createdAt,
+            isRead: false,
+          };
+
+          io.to(`user_${userId}`).emit("new_message", messageResponse);
+          io.to(`user_${receiverId}`).emit("new_message", messageResponse);
+
+          io.to(`user_${receiverId}`).emit("notification", {
+            type: "new_message",
+            productId,
+            senderId: userId,
+            preview: imageUrl ? "📷 [Hình ảnh]" : content!.trim().slice(0, 40),
+          });
+        } catch (err: any) {
+          logger.error(`Socket send_message saving error: ${err.message}`);
+          socket.emit("error", { message: "Gửi tin thất bại" });
+        }
+      },
+    );
+
+    /* ─── VIDEO CALL EVENTS (MỚI) ─── */
+
+    // 1. Gửi yêu cầu gọi (Truyền kèm callerName sang cho Callee)
+    socket.on("call_user", (data: { to: string; offer: any; callerName?: string }) => {
+      const { to, offer, callerName } = data;
+      logger.info(`[Socket Call] User ${userId} (${callerName || "Không tên"}) is calling User ${to}`);
+      socket.to(`user_${to}`).emit("incoming_call", {
+        from: userId,
+        offer,
+        callerName: callerName || "Một người dùng"
+      });
+    });
+
+    // 2. Chấp nhận cuộc gọi
+    socket.on("answer_call", (data: { to: string; answer: any }) => {
+      const { to, answer } = data;
+      logger.info(`[Socket Call] User ${userId} accepted call from User ${to}`);
+      socket.to(`user_${to}`).emit("call_accepted", {
+        answer
+      });
+    });
+
+    // 3. Trao đổi cấu hình mạng ICE Candidates
+    socket.on("ice_candidate", (data: { to: string; candidate: any }) => {
+      const { to, candidate } = data;
+      socket.to(`user_${to}`).emit("ice_candidate", {
+        candidate
+      });
+    });
+
+    // 4. Kết thúc/Từ chối cuộc gọi
+    socket.on("end_call", (data: { to: string }) => {
+      const { to } = data;
+      logger.info(`[Socket Call] Call ended between User ${userId} and User ${to}`);
+      socket.to(`user_${to}`).emit("call_ended");
+    });
+
+    socket.join(`user_${userId}`);
+  });
+
+  ioInstance = io;
+  return io;
+}
+
+export function getIO() {
+  if (!ioInstance) throw new Error("Socket.io chưa được khởi tạo");
+  return ioInstance;
+}
+</file>
+
+<file path="client/my-app/src/components/ChatBox.jsx">
+import { useState, useEffect, useRef } from "react";
+import { C } from "../utils/theme";
+import { getSocket } from "../services/socket";
+import { api } from "../services/api";
+import { MessageIcon, XIcon, CheckCircleIcon } from "./icons/index";
+import { useToast } from "../context/ToastContext";
+import { useVideoCall } from "../context/VideoCallContext"; // ← SỬA ĐƯỜNG DẪN IMPORT SANG CONTEXT
+
+export function ChatBox({ product, onClose, user, fullHeight = false }) {
+  const toast = useToast();
+  const [msgs, setMsgs] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [socketReady, setSocketReady] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const endRef = useRef(null);
+  const socketRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const otherUserRef = useRef(null);
+
+  const currentUserId = user?.id || user?.userId;
+
+  // LẤY TRỰC TIẾP HÀM BẮT ĐẦU CUỘC GỌI TỪ GLOBAL PROVIDER
+  const { startCall } = useVideoCall();
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    setMsgs([]);
+    setLoading(true);
+    api(`/messages/${product.id}`)
+      .then((data) => {
+        const mapped = data.map((m) => ({
+          id: m.id,
+          senderId: m.senderId,
+          content: m.content,
+          imageUrl: m.imageUrl,
+          time: new Date(m.sentAt).toLocaleTimeString("vi", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          isMine: m.senderId === currentUserId,
+        }));
+        setMsgs(mapped);
+        const other = data.find((m) => m.senderId !== currentUserId);
+        if (other) otherUserRef.current = other.senderId;
       })
-      .catch(() => { });
+      .catch(() => { })
+      .finally(() => setLoading(false));
+  }, [product.id, currentUserId]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    let cancelled = false;
+
+    getSocket().then((socket) => {
+      if (cancelled) return;
+      socketRef.current = socket;
+      socket.emit("join_room", product.id);
+      socket.on("new_message", handleNewMessage);
+      setSocketReady(true);
+    });
+
+    function handleNewMessage(msg) {
+      if (msg.productId !== product.id) return;
+      if (msg.senderId !== currentUserId) otherUserRef.current = msg.senderId;
+      setMsgs((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [
+          ...prev,
+          {
+            id: msg.id,
+            senderId: msg.senderId,
+            content: msg.content,
+            imageUrl: msg.imageUrl,
+            time: new Date(msg.sentAt).toLocaleTimeString("vi", {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            isMine: msg.senderId === currentUserId,
+          },
+        ];
+      });
+    }
 
     return () => {
-      active = false;
-      cleanupSocketListener?.();
+      cancelled = true;
+      if (socketRef.current) {
+        socketRef.current.off("new_message", handleNewMessage);
+        socketRef.current.emit("leave_room", product.id);
+      }
     };
-  }, [user]);
+  }, [product.id, currentUserId]);
 
-  // Logout handler: gọi logout từ AuthContext rồi navigate
-  const handleLogout = async () => {
-    await logout();
-    navigate("/");
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [msgs]);
+
+  const getReceiverId = () => {
+    const sellerId = product.sellerId;
+    return currentUserId === sellerId ? otherUserRef.current : sellerId;
   };
 
-  const isAuthPage = location.pathname === "/dang-nhap";
+  const send = (txtContent = "", imgUrl = null) => {
+    const finalContent = txtContent.trim();
+    if (!finalContent && !imgUrl) return;
+
+    const receiverId = getReceiverId();
+    if (!receiverId) {
+      toast.warn("Chưa có người nhận. Hãy chờ người mua nhắn trước.");
+      return;
+    }
+
+    if (socketRef.current?.connected) {
+      socketRef.current.emit("send_message", {
+        productId: product.id,
+        receiverId,
+        content: finalContent || null,
+        imageUrl: imgUrl,
+      });
+    } else {
+      api("/messages", {
+        method: "POST",
+        body: JSON.stringify({
+          productId: product.id,
+          receiverId,
+          content: finalContent || null,
+          imageUrl: imgUrl,
+        }),
+      })
+        .then((res) => {
+          setMsgs((prev) => [
+            ...prev,
+            {
+              id: res.id,
+              senderId: currentUserId,
+              content: finalContent || null,
+              imageUrl: imgUrl,
+              time: new Date().toLocaleTimeString("vi", {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+              isMine: true,
+            },
+          ]);
+        })
+        .catch((e) => toast.error(e.message));
+    }
+    setInput("");
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    const fd = new FormData();
+    fd.append("image", file);
+
+    try {
+      const res = await api("/messages/upload-image", {
+        method: "POST",
+        body: fd,
+      });
+      send("", res.imageUrl);
+    } catch (err) {
+      toast.error("Gửi ảnh thất bại: " + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Kích hoạt cuộc gọi qua Global Provider
+  const handleInitiateCall = () => {
+    const targetId = getReceiverId();
+    if (!targetId) {
+      toast.warn("Không tìm thấy đối phương hoạt động để thực hiện cuộc gọi.");
+      return;
+    }
+    // Gửi đi tín hiệu gọi kèm tên đối phương hiển thị ở đầu bên kia
+    startCall(targetId, product.sellerName);
+  };
+
+  const chatHeight = fullHeight ? 420 : 250;
 
   return (
     <div
       style={{
-        fontFamily: "var(--font)",
-        background: "var(--bg)",
-        minHeight: "100vh",
+        border: "1.5px solid #eaeaea",
+        borderRadius: 12,
+        overflow: "hidden",
+        background: C.white,
       }}
     >
-      {!isAuthPage && (
-        <Navbar
-          unread={unread}
-          onOpenGlobalChat={setGlobalChat}
-          onLogout={handleLogout}
-        />
-      )}
+      {/* Header */}
+      <div
+        style={{
+          background: "#0f172a",
+          color: "#fff",
+          padding: "12px 16px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontWeight: 700,
+              fontSize: 13,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <MessageIcon size={14} />
+            <span>{product.sellerName}</span>
+            {product.sellerIsVerified && (
+              <CheckCircleIcon size={12} style={{ color: "#38bdf8" }} />
+            )}
+          </div>
+          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
+            Sản phẩm: {product.name}
+          </div>
+        </div>
 
-      <Suspense fallback={<PageFallback />}>
-        <Routes>
-          {/* ── Public routes ─────────────────────────── */}
-          <Route path="/" element={<HomePage />} />
-          <Route
-            path="/san-pham/:productId"
-            element={<ProductDetailPageRoute />}
-          />
-          <Route
-            path="/quen-mat-khau"
-            element={
-              <GuestRoute>
-                <ForgotPasswordPage />
-              </GuestRoute>
-            }
-          />
-          <Route
-            path="/nguoi-ban/:sellerId"
-            element={<SellerProfilePageRoute />}
-          />
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          {/* NÚT GỌI VIDEO CALL */}
+          <button
+            onClick={handleInitiateCall}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#38bdf8",
+              cursor: "pointer",
+              fontSize: 14,
+              padding: "4px",
+              display: "flex",
+              alignItems: "center"
+            }}
+            title="Gọi video cho đối phương"
+          >
+            📞
+          </button>
 
-          {/* ── Guest only (redirect nếu đã login) ────── */}
-          <Route
-            path="/dang-nhap"
-            element={
-              <GuestRoute>
-                <AuthPage />
-              </GuestRoute>
-            }
-          />
+          {onClose && (
+            <button
+              onClick={onClose}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#94a3b8",
+                cursor: "pointer",
+                padding: "4px"
+              }}
+            >
+              <XIcon size={16} />
+            </button>
+          )}
+        </div>
+      </div>
 
-          {/* ── Protected routes ─────────────────────── */}
-          <Route
-            path="/dang-bai"
-            element={
-              <PrivateRoute>
-                <PostListingPage />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <PrivateRoute>
-                <DashboardPage />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <PrivateRoute>
-                <ProfilePage />
-              </PrivateRoute>
-            }
-          />
+      <div
+        style={{
+          height: chatHeight,
+          overflowY: "auto",
+          padding: "16px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+          background: "#f8fafc",
+        }}
+      >
+        {loading ? (
+          <div
+            style={{
+              textAlign: "center",
+              color: "#94a3b8",
+              fontSize: 12,
+              marginTop: 40,
+            }}
+          >
+            Đang tải tin nhắn...
+          </div>
+        ) : msgs.length === 0 ? (
+          <div
+            style={{
+              textAlign: "center",
+              color: "#94a3b8",
+              fontSize: 12,
+              marginTop: 40,
+            }}
+          >
+            Gửi tin nhắn để bắt đầu cuộc trò chuyện.
+          </div>
+        ) : (
+          msgs.map((m) => (
+            <div
+              key={m.id}
+              style={{
+                display: "flex",
+                justifyContent: m.isMine ? "flex-end" : "flex-start",
+              }}
+            >
+              <div
+                style={{
+                  maxWidth: "75%",
+                  background: m.isMine ? "#0f172a" : "#fff",
+                  color: m.isMine ? "#fff" : "#1e293b",
+                  padding: "8px 12px",
+                  borderRadius: m.isMine
+                    ? "8px 8px 0px 8px"
+                    : "8px 8px 8px 0px",
+                  fontSize: 13,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+                  border: m.isMine ? "none" : "1px solid #f1f5f9",
+                }}
+              >
+                {m.content && (
+                  <div style={{ wordBreak: "break-word" }}>{m.content}</div>
+                )}
 
-          {/* ── Admin only ────────────────────────────── */}
-          <Route
-            path="/admin"
-            element={
-              <AdminRoute>
-                <AdminPage />
-              </AdminRoute>
-            }
-          />
+                {m.imageUrl && (
+                  <img
+                    src={m.imageUrl}
+                    alt="Ảnh hải sản đính kèm"
+                    style={{
+                      maxWidth: "100%",
+                      borderRadius: 8,
+                      marginTop: m.content ? 6 : 0,
+                      maxHeight: 180,
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                  />
+                )}
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
+                <div
+                  style={{
+                    fontSize: 9,
+                    color: m.isMine ? "rgba(255,255,255,0.6)" : "#94a3b8",
+                    marginTop: 4,
+                    textAlign: "right",
+                  }}
+                >
+                  {m.time}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+        <div ref={endRef} />
+      </div>
 
-      {/* Floating Chat Box */}
-      {globalChat && (
-        <div
+      <div
+        style={{
+          padding: "12px",
+          display: "flex",
+          gap: 8,
+          borderTop: "1px solid #f1f5f9",
+          background: C.white,
+          alignItems: "center",
+        }}
+      >
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          type="button"
           style={{
-            position: "fixed",
-            bottom: 24,
-            right: 24,
-            width: 320,
-            zIndex: 9999,
-            boxShadow: "var(--shadow-xl)",
-            borderRadius: 12,
-            overflow: "hidden",
-            animation: "slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) both",
+            background: "#f1f5f9",
+            border: "none",
+            borderRadius: 6,
+            width: 36,
+            height: 36,
+            cursor: "pointer",
+            fontSize: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          title="Gửi hình ảnh thực tế"
+        >
+          {uploading ? "⏳" : "📷"}
+        </button>
+        <input
+          type="file"
+          accept="image/*"
+          ref={fileInputRef}
+          onChange={handleImageUpload}
+          style={{ display: "none" }}
+        />
+
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && send(input)}
+          onFocus={() => setIsInputFocused(true)}
+          onBlur={() => setIsInputFocused(false)}
+          placeholder="Nhập tin nhắn..."
+          style={{
+            flex: 1,
+            border: `1.5px solid ${isInputFocused ? "#0f172a" : "#cbd5e1"}`,
+            borderRadius: 6,
+            padding: "8px 12px",
+            fontSize: 13,
+            outline: "none",
+            transition: "all 0.15s ease",
+          }}
+        />
+        <button
+          onClick={() => send(input)}
+          style={{
+            background: "#0f172a",
+            color: "#fff",
+            border: "none",
+            borderRadius: 6,
+            padding: "8px 14px",
+            cursor: "pointer",
+            fontWeight: 700,
+            fontSize: 13,
           }}
         >
-          <ChatBox
-            product={{
-              id: globalChat.productId,
-              name: globalChat.productName,
-              sellerId: globalChat.otherUserId,
-              sellerName: globalChat.otherUserName,
-            }}
-            user={user}
-            onClose={() => setGlobalChat(null)}
-          />
-        </div>
-      )}
+          Gửi
+        </button>
+      </div>
     </div>
-  );
-}
-
-// ── Root ─────────────────────────────────────────────────────
-/**
- * Provider order (ngoài → trong):
- *   BrowserRouter > ErrorBoundary > AuthProvider > ToastProvider > AppShell
- *
- * AuthProvider trước ToastProvider vì AppShell cần cả hai
- */
-export default function App() {
-  return (
-    <BrowserRouter>
-      <ErrorBoundary>
-        <AuthProvider>
-          <ToastProvider>
-            <VideoCallProvider>
-              <AppShell />
-            </VideoCallProvider>
-          </ToastProvider>
-        </AuthProvider>
-      </ErrorBoundary>
-    </BrowserRouter>
   );
 }
 </file>
@@ -23326,6 +23057,369 @@ bootstrap().catch((err) => {
 });
 
 export { app, server };
+</file>
+
+<file path="client/my-app/src/App.jsx">
+/**
+ * App.jsx — Refactored Entry Point
+ *
+ * PATTERNS APPLIED:
+ *   1. Context + Provider Pattern  → AuthProvider, ToastProvider
+ *   2. HOC / Wrapper Pattern       → PrivateRoute, AdminRoute, GuestRoute
+ *   3. Custom Hook Pattern         → useApiFetch (thay thế ProductDetailPageRoute,
+ *                                    SellerProfilePageRoute tay)
+ *   4. DRY                         → LoadingSpinner, PageLoader extracted ra component
+ *
+ * TRƯỚC: App.jsx có 5 inline ternaries guard route + 2 Route components
+ *        trùng pattern fetch → loading → render
+ * SAU:   Route khai báo sạch, gọn — đọc như spec của app
+ */
+import React, { useState, useEffect, Suspense, lazy } from "react";
+import { VideoCallProvider } from "./context/VideoCallContext"; // ← MỚI
+
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useParams,
+} from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { ToastProvider } from "./context/ToastContext";
+import {
+  PrivateRoute,
+  AdminRoute,
+  GuestRoute,
+} from "./components/PrivateRoute";
+import { useApiFetch } from "./hooks/useApiFetch";
+import { Navbar } from "./layout/Navbar";
+import { ChatBox } from "./components/ChatBox";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { useViewTransitionNavigate } from "./hooks/useViewTransitionNavigate";
+import { disconnectSocket, getSocket } from "./services/socket";
+import { api } from "./services/api";
+import { useLocation } from "react-router-dom";
+import { Link } from "react-router-dom"; // đảm bảo đã import
+
+// ── Code-splitting ──────────────────────────────────────────
+const HomePage = lazy(() =>
+  import("./pages/HomePage").then((m) => ({ default: m.HomePage })),
+);
+const ProductDetailPage = lazy(() =>
+  import("./pages/ProductDetailPage").then((m) => ({
+    default: m.ProductDetailPage,
+  })),
+);
+const ForgotPasswordPage = lazy(() =>
+  import("./pages/ForgotPasswordPage").then((m) => ({
+    default: m.ForgotPasswordPage,
+  })),
+);
+const AuthPage = lazy(() =>
+  import("./pages/AuthPage").then((m) => ({ default: m.AuthPage })),
+);
+const PostListingPage = lazy(() =>
+  import("./pages/PostListingPage").then((m) => ({
+    default: m.PostListingPage,
+  })),
+);
+const DashboardPage = lazy(() =>
+  import("./pages/DashboardPage").then((m) => ({ default: m.DashboardPage })),
+);
+const AdminPage = lazy(() =>
+  import("./pages/AdminPage").then((m) => ({ default: m.AdminPage })),
+);
+const SellerProfilePage = lazy(() =>
+  import("./pages/SellerProfilePage").then((m) => ({
+    default: m.SellerProfilePage,
+  })),
+);
+const ProfilePage = lazy(() =>
+  import("./pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
+);
+
+// ── Shared loading UI ───────────────────────────────────────
+function PageFallback() {
+  return (
+    <div
+      style={{
+        padding: "40px 24px",
+        display: "grid",
+        gap: 20,
+        gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+        maxWidth: 1200,
+        margin: "0 auto",
+      }}
+    >
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div
+          key={i}
+          className="skeleton-shimmer"
+          style={{
+            height: 320,
+            borderRadius: 12,
+            border: "1px solid var(--border)",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * PageLoader — Spinner nhỏ dùng chung cho các route wrapper
+ * (trước đây bị copy-paste 2 lần trong ProductDetailPageRoute và SellerProfilePageRoute)
+ */
+function PageLoader({ label }) {
+  return (
+    <div
+      style={{
+        padding: "80px 24px",
+        textAlign: "center",
+        color: "var(--muted)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 12,
+      }}
+    >
+      <div
+        className="skeleton-shimmer"
+        style={{ width: 40, height: 40, borderRadius: "50%" }}
+      />
+      <span style={{ fontSize: 13, fontWeight: 500 }}>{label}</span>
+    </div>
+  );
+}
+
+// ── Route wrappers (sử dụng useApiFetch thay vì copy-paste) ─
+/**
+ * TRƯỚC: 30 dòng lặp lại hoàn toàn cho mỗi route
+ * SAU: useApiFetch + 10 dòng render
+ */
+function ProductDetailPageRoute() {
+  const { productId } = useParams();
+  const { data: product, loading } = useApiFetch(`/products/${productId}`, [
+    productId,
+  ]);
+  const { user } = useAuth();
+
+  if (loading) return <PageLoader label="ĐANG TẢI THÔNG TIN SẢN PHẨM…" />;
+  if (!product) return <Navigate to="/" replace />;
+  return <ProductDetailPage product={product} user={user} />;
+}
+
+function SellerProfilePageRoute() {
+  const { sellerId } = useParams();
+  const { data: seller, loading } = useApiFetch(`/users/${sellerId}`, [
+    sellerId,
+  ]);
+  const { user } = useAuth();
+
+  if (loading) return <PageLoader label="ĐANG TẢI HỒ SƠ NGƯ DÂN…" />;
+  if (!seller) return <Navigate to="/" replace />;
+  return <SellerProfilePage seller={seller} user={user} />;
+}
+
+// ── AppShell — layout + routes ───────────────────────────────
+function AppShell() {
+  const { user, logout } = useAuth();
+  const navigate = useViewTransitionNavigate();
+  const location = useLocation();
+  const [unread, setUnread] = useState(0);
+  const [globalChat, setGlobalChat] = useState(null);
+
+  // Poll unread message count
+  useEffect(() => {
+    if (!user) {
+      setUnread(0);
+      return;
+    }
+    // BUG FIX: đổi tên `fetch` → `fetchUnread` tránh shadow global fetch API
+    const fetchUnread = () =>
+      api("/messages/unread-count")
+        .then((d) => setUnread(d.count))
+        .catch(() => { });
+    fetchUnread();
+    const id = setInterval(fetchUnread, 30_000);
+    return () => clearInterval(id);
+  }, [user]);
+
+  // BUG FIX: Lắng nghe socket `new_message` để cập nhật unread count real-time thay vì
+  // chờ poll 30 giây tiếp theo. Trước đây socket.ts emit `notification` type "new_message"
+  // nhưng client không handle → badge tin nhắn lag tối đa 30 giây sau mỗi tin nhận được.
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    let cleanupSocketListener = null;
+
+    getSocket()
+      .then((socket) => {
+        if (!active) return;
+        const handler = (data) => {
+          if (data.type === "new_message") {
+            setUnread((prev) => prev + 1);
+          }
+        };
+        socket.on("notification", handler);
+        cleanupSocketListener = () => socket.off("notification", handler);
+      })
+      .catch(() => { });
+
+    return () => {
+      active = false;
+      cleanupSocketListener?.();
+    };
+  }, [user]);
+
+  // Logout handler: gọi logout từ AuthContext rồi navigate
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
+  };
+
+  const isAuthPage = location.pathname === "/dang-nhap";
+
+  return (
+    <div
+      style={{
+        fontFamily: "var(--font)",
+        background: "var(--bg)",
+        minHeight: "100vh",
+      }}
+    >
+      {!isAuthPage && (
+        <Navbar
+          unread={unread}
+          onOpenGlobalChat={setGlobalChat}
+          onLogout={handleLogout}
+        />
+      )}
+
+      <Suspense fallback={<PageFallback />}>
+        <Routes>
+          {/* ── Public routes ─────────────────────────── */}
+          <Route path="/" element={<HomePage />} />
+          <Route
+            path="/san-pham/:productId"
+            element={<ProductDetailPageRoute />}
+          />
+          <Route
+            path="/quen-mat-khau"
+            element={
+              <GuestRoute>
+                <ForgotPasswordPage />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/nguoi-ban/:sellerId"
+            element={<SellerProfilePageRoute />}
+          />
+
+          {/* ── Guest only (redirect nếu đã login) ────── */}
+          <Route
+            path="/dang-nhap"
+            element={
+              <GuestRoute>
+                <AuthPage />
+              </GuestRoute>
+            }
+          />
+
+          {/* ── Protected routes ─────────────────────── */}
+          <Route
+            path="/dang-bai"
+            element={
+              <PrivateRoute>
+                <PostListingPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <DashboardPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <PrivateRoute>
+                <ProfilePage />
+              </PrivateRoute>
+            }
+          />
+
+          {/* ── Admin only ────────────────────────────── */}
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <AdminPage />
+              </AdminRoute>
+            }
+          />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+
+      {/* Floating Chat Box */}
+      {globalChat && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            width: 320,
+            zIndex: 9999,
+            boxShadow: "var(--shadow-xl)",
+            borderRadius: 12,
+            overflow: "hidden",
+            animation: "slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) both",
+          }}
+        >
+          <ChatBox
+            product={{
+              id: globalChat.productId,
+              name: globalChat.productName,
+              sellerId: globalChat.otherUserId,
+              sellerName: globalChat.otherUserName,
+            }}
+            user={user}
+            onClose={() => setGlobalChat(null)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Root ─────────────────────────────────────────────────────
+/**
+ * Provider order (ngoài → trong):
+ *   BrowserRouter > ErrorBoundary > AuthProvider > ToastProvider > AppShell
+ *
+ * AuthProvider trước ToastProvider vì AppShell cần cả hai
+ */
+export default function App() {
+  return (
+    <BrowserRouter>
+      <ErrorBoundary>
+        <AuthProvider>
+          <ToastProvider>
+            <VideoCallProvider>
+              <AppShell />
+            </VideoCallProvider>
+          </ToastProvider>
+        </AuthProvider>
+      </ErrorBoundary>
+    </BrowserRouter>
+  );
+}
 </file>
 
 <file path="backend/src/controllers/auth.controller.ts">

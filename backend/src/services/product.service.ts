@@ -15,10 +15,20 @@ export const productService = {
     const driedVer = await redis.get("product:list:version:Dried") || "1";
     const listVersion = queryType === "Fresh" ? freshVer : queryType === "Dried" ? driedVer : `${freshVer}_${driedVer}`;
 
-    const cacheKey = `product:list:v${listVersion}:${JSON.stringify(query)}`;
-    const cachedData = await redis.get(cacheKey);
-    if (cachedData) {
-      return JSON.parse(cachedData);
+    // 1. TỐI ƯU CACHE KEY: Tránh Cache Pollution do GPS và Search
+    const normalizedQuery: any = { ...query };
+    if (normalizedQuery.lat) normalizedQuery.lat = parseFloat(normalizedQuery.lat).toFixed(3); // Làm tròn ~110m
+    if (normalizedQuery.lng) normalizedQuery.lng = parseFloat(normalizedQuery.lng).toFixed(3);
+
+    const cacheKey = `product:list:v${listVersion}:${JSON.stringify(normalizedQuery)}`;
+
+    // Chỉ đọc cache nếu KHÔNG có từ khóa tìm kiếm (vì tìm kiếm có độ tùy biến rất lớn)
+    const isSearching = !!(query.search && query.search.trim());
+    if (!isSearching) {
+      const cachedData = await redis.get(cacheKey);
+      if (cachedData) {
+        return JSON.parse(cachedData);
+      }
     }
 
     const {
@@ -36,7 +46,6 @@ export const productService = {
 
     const filter: any = { status: "Active" };
 
-    // BUG FIX: sellerId bị bỏ qua trước đây → SellerProfilePage luôn lấy TẤT CẢ sản phẩm
     if (sellerId && mongoose.Types.ObjectId.isValid(sellerId)) {
       filter.sellerId = new mongoose.Types.ObjectId(sellerId);
     }
@@ -53,7 +62,6 @@ export const productService = {
 
     if (search && search.trim()) {
       filter.$text = { $search: search.trim() };
-      // Ưu tiên hiển thị mẻ hàng khớp với từ khóa tìm kiếm nhất
       projection = { score: { $meta: "textScore" } };
       sortOption = { score: { $meta: "textScore" } };
     }
@@ -93,11 +101,6 @@ export const productService = {
       remainingWeight: p.remainingWeight,
       status: p.status,
       catchTime: p.catchTime,
-      // 💡 GIẢI THÍCH CHO TEAM (Optional Chaining cho Mảng):
-      // Sử dụng optional chaining dạng `?.[chỉ_mục]` bên dưới là cực kỳ quan trọng để đảm bảo an toàn.
-      // Với sản phẩm không có tọa độ GPS (như hải sản khô "Dried"), `location` hoặc `coordinates` sẽ là undefined.
-      // Nếu truy cập trực tiếp `coordinates[1]`, JavaScript sẽ báo lỗi nghiêm trọng "TypeError: Cannot read properties of undefined" và làm treo API.
-      // Dùng cú pháp `?.[1]` và `?.[0]` giúp Node.js tự động trả về giá trị an toàn (null) nếu mảng không tồn tại mà không bao giờ bị crash!
       lat: p.location?.coordinates?.[1] || null,
       lng: p.location?.coordinates?.[0] || null,
       origin: p.origin,
@@ -105,24 +108,31 @@ export const productService = {
       createdAt: p.createdAt,
       viewCount: p.viewCount,
       bumpedAt: p.bumpedAt,
-      coverImg: p.images[0] || null,
-      imgCount: p.images.length,
+      // FIX LỖI: Sử dụng Optional Chaining cho mảng images để tránh API bị sập khi images là undefined
+      coverImg: p.images?.[0] || null,
+      imgCount: p.images?.length || 0,
     }));
 
     const finalResponse = paginatedResponse(formattedRows, total, page, limit);
 
-    await redis.set(cacheKey, JSON.stringify(finalResponse), "EX", 600);
+    // Không lưu cache nếu đang tìm kiếm để tránh tràn bộ nhớ Redis
+    if (!isSearching) {
+      await redis.set(cacheKey, JSON.stringify(finalResponse), "EX", 600);
+    }
+
     return finalResponse;
   },
 
   async getById(id: string) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError(400, "ID sản phẩm không hợp lệ");
+    }
+
     const detailCacheKey = `product:detail:${id}`;
     const cachedDetail = await redis.get(detailCacheKey);
 
     if (cachedDetail) {
-      // NOTE: Tăng viewCount bất đồng bộ dưới DB để tránh block request chính.
-      // Trả về dữ liệu chi tiết từ cache (viewCount có thể stale nhẹ nhưng latency tối ưu).
-      Product.findByIdAndUpdate(id, { $inc: { viewCount: 1 } }).catch(() => {});
+      Product.findByIdAndUpdate(id, { $inc: { viewCount: 1 } }).catch(() => { });
       return JSON.parse(cachedDetail);
     }
 
@@ -150,11 +160,6 @@ export const productService = {
       remainingWeight: p.remainingWeight,
       status: p.status,
       catchTime: p.catchTime,
-      // 💡 GIẢI THÍCH CHO TEAM (Optional Chaining cho Mảng):
-      // Sử dụng optional chaining dạng `?.[chỉ_mục]` bên dưới là cực kỳ quan trọng để đảm bảo an toàn.
-      // Với sản phẩm không có tọa độ GPS (như hải sản khô "Dried"), `location` hoặc `coordinates` sẽ là undefined.
-      // Nếu truy cập trực tiếp `coordinates[1]`, JavaScript sẽ báo lỗi nghiêm trọng "TypeError: Cannot read properties of undefined" và làm treo API.
-      // Dùng cú pháp `?.[1]` và `?.[0]` giúp Node.js tự động trả về giá trị an toàn (null) nếu mảng không tồn tại mà không bao giờ bị crash!
       lat: p.location?.coordinates?.[1] || null,
       lng: p.location?.coordinates?.[0] || null,
       origin: p.origin,
@@ -162,7 +167,7 @@ export const productService = {
       createdAt: p.createdAt,
       viewCount: p.viewCount,
       bumpedAt: p.bumpedAt,
-      images: p.images.map((img: string, idx: number) => ({
+      images: (p.images || []).map((img: string, idx: number) => ({
         id: idx,
         url: img,
       })),
@@ -189,17 +194,19 @@ export const productService = {
       lng,
       origin,
       expiryDate,
+      images, // Nhận thêm images từ body (nếu có)
     } = body;
 
-    // Enforce 5 posts limit per day for normal accounts
     const user = await User.findById(userId);
     if (!user) throw new HttpError(404, "Không tìm thấy người dùng");
 
     if (!user.isPremium && user.role !== "Admin") {
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date();
-      endOfDay.setHours(23, 59, 59, 999);
+      // FIX LỆCH MÚI GIỜ: Chuyển đổi về 0h ngày hôm nay theo giờ Việt Nam (UTC+7)
+      const nowVN = new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
+      nowVN.setUTCHours(0, 0, 0, 0);
+      const startOfDay = new Date(nowVN.getTime() - 7 * 60 * 60 * 1000);
+
+      const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000 - 1);
 
       const countToday = await Product.countDocuments({
         sellerId: userId,
@@ -219,31 +226,37 @@ export const productService = {
       ? description.trim().replace(/<[^>]*>/g, "").slice(0, 2000)
       : null;
 
+    const parsedPrice = typeof price === "number" ? price : parseInt(price, 10);
+    const parsedWeight = typeof totalWeight === "number" ? totalWeight : parseFloat(totalWeight);
+
+    if (isNaN(parsedPrice) || isNaN(parsedWeight)) {
+      throw new HttpError(400, "Thông tin giá cả hoặc khối lượng không hợp lệ");
+    }
+
     const newProduct = new Product({
       sellerId: userId,
       type,
       category,
       name: name.trim(),
       description: cleanDesc,
-      price: typeof price === "number" ? price : parseInt(price, 10),
+      price: parsedPrice,
       salesType: salesType ?? "Retail",
-      totalWeight:
-        typeof totalWeight === "number" ? totalWeight : parseFloat(totalWeight),
-      remainingWeight:
-        typeof totalWeight === "number" ? totalWeight : parseFloat(totalWeight),
+      totalWeight: parsedWeight,
+      remainingWeight: parsedWeight,
       catchTime,
       origin,
       expiryDate,
+      images: Array.isArray(images) ? images : [],
       ...(lat && lng
         ? {
-            location: {
-              type: "Point",
-              coordinates: [
-                typeof lng === "number" ? lng : parseFloat(lng),
-                typeof lat === "number" ? lat : parseFloat(lat),
-              ],
-            },
-          }
+          location: {
+            type: "Point",
+            coordinates: [
+              typeof lng === "number" ? lng : parseFloat(lng),
+              typeof lat === "number" ? lat : parseFloat(lat),
+            ],
+          },
+        }
         : {}),
     });
 
@@ -276,12 +289,21 @@ export const productService = {
     role: string,
     body: Record<string, any>,
   ): Promise<void> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError(400, "ID sản phẩm không hợp lệ");
+    }
+
     const currentProduct = await Product.findById(id);
     if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
     if (role !== "Admin" && currentProduct.sellerId.toString() !== userId)
       throw new HttpError(403, "Bạn không có quyền chỉnh sửa bài đăng này");
 
-    const newPrice = body.price ? parseInt(body.price, 10) : undefined;
+    // FIX LỖI 0-VALUE: So sánh trực tiếp với undefined
+    const newPrice = body.price !== undefined ? parseInt(body.price, 10) : undefined;
+    if (newPrice !== undefined && isNaN(newPrice)) {
+      throw new HttpError(400, "Giá sản phẩm mới không hợp lệ");
+    }
+
     const updateFields: any = {};
 
     if (body.name !== undefined) updateFields.name = body.name.trim();
@@ -294,9 +316,10 @@ export const productService = {
     if (body.category !== undefined) updateFields.category = body.category;
     if (body.salesType !== undefined) updateFields.salesType = body.salesType;
     if (body.status !== undefined) updateFields.status = body.status;
+    if (body.images !== undefined && Array.isArray(body.images)) updateFields.images = body.images;
 
-    if (body.price !== undefined) {
-      updateFields.price = parseInt(body.price, 10);
+    if (newPrice !== undefined) {
+      updateFields.price = newPrice;
     }
     if (body.totalWeight !== undefined) {
       updateFields.totalWeight = parseFloat(body.totalWeight);
@@ -312,19 +335,6 @@ export const productService = {
       updateFields.expiryDate = body.expiryDate
         ? new Date(body.expiryDate)
         : null;
-    }
-
-    if (newPrice !== undefined && newPrice !== currentProduct.price) {
-      await Product.findByIdAndUpdate(id, {
-        $push: {
-          priceHistory: {
-            oldPrice: currentProduct.price,
-            newPrice: newPrice,
-            changedAt: new Date(),
-          },
-        },
-      });
-      logger.info(`Price change logged for ProductID=${id}`);
     }
 
     if (
@@ -343,13 +353,31 @@ export const productService = {
       }
     }
 
-    await Product.findByIdAndUpdate(id, { $set: updateFields });
+    // TỐI ƯU HOÁ: Gộp toán tử $set và $push vào 1 lượt ghi cơ sở dữ liệu duy nhất
+    const updateQuery: any = { $set: updateFields };
+
+    if (newPrice !== undefined && newPrice !== currentProduct.price) {
+      updateQuery.$push = {
+        priceHistory: {
+          oldPrice: currentProduct.price,
+          newPrice: newPrice,
+          changedAt: new Date(),
+        },
+      };
+      logger.info(`Price change logged for ProductID=${id}`);
+    }
+
+    await Product.findByIdAndUpdate(id, updateQuery);
 
     await redis.del(`product:detail:${id}`);
     await redis.incr(`product:list:version:${currentProduct.type}`);
   },
 
   async delete(id: string, userId: string, role: string): Promise<void> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError(400, "ID sản phẩm không hợp lệ");
+    }
+
     const currentProduct = await Product.findById(id);
     if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
     if (role !== "Admin" && currentProduct.sellerId.toString() !== userId)
@@ -362,6 +390,10 @@ export const productService = {
   },
 
   async bump(id: string, userId: string): Promise<void> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError(400, "ID sản phẩm không hợp lệ");
+    }
+
     const currentProduct = await Product.findById(id);
     if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
     if (currentProduct.sellerId.toString() !== userId)

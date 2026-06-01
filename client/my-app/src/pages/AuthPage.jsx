@@ -388,31 +388,7 @@ export function AuthPage() {
           {/* Google Sign In Container */}
           <div id="google-signin-btn" className="w-100 d-flex justify-content-center mb-1" />
 
-          {/* Mock Google Login Button */}
-          <button
-            type="button"
-            onClick={handleMockGoogleLogin}
-            disabled={loading}
-            className="btn w-100 fw-bold py-2 d-flex align-items-center justify-content-center gap-2"
-            style={{
-              background: "#fff",
-              color: "#4B5563",
-              border: "1.5px solid var(--border)",
-              borderRadius: 8,
-              cursor: loading ? "not-allowed" : "pointer",
-              fontSize: 13,
-              fontFamily: "inherit",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) e.currentTarget.style.background = "#F9FAFB";
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) e.currentTarget.style.background = "#fff";
-            }}
-          >
-            <span>💬 Mock Google Login (Test nhanh)</span>
-          </button>
+
         </form>
 
         <div className="mt-4 text-center" style={{ color: "var(--muted)", fontSize: 11 }}></div>

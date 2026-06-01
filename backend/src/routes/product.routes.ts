@@ -18,7 +18,8 @@ import { authenticate } from "../middlewares/auth";
 const router = Router();
 
 // ─── Shared field definitions ─────────────────────────────────
-// Tách riêng để tái sử dụng cho cả create và update schema.
+// Trong tệp: backend/src/routes/product.routes.ts
+
 const productBodyFields = {
   type: z.enum(["Fresh", "Dried"] as const, {
     error: "Loại hải sản tươi hoặc khô là bắt buộc",
@@ -52,12 +53,16 @@ const productBodyFields = {
   ),
   origin: z.string().optional(),
   expiryDate: z.string().optional(),
+
   // Chỉ dùng khi update
   remainingWeight: z.preprocess(
     (val) => (val !== undefined ? Number(val) : undefined),
     z.number().positive("Khối lượng còn lại phải lớn hơn 0").optional(),
   ),
   status: z.enum(["Active", "Expired", "Deleted"] as const).optional(),
+
+  // 🌟 GIẢI PHÁP: Khai báo mảng URL ảnh cho phép vượt qua bộ lọc của Zod
+  images: z.array(z.string()).optional(),
 };
 
 // ─── POST /api/products — các trường bắt buộc đầy đủ ──────────

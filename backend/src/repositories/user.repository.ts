@@ -65,13 +65,16 @@ export const userRepository = {
 
   async updateProfile(
     userId: any,
-    fields: { name?: string; email?: string; avatar?: string },
+    fields: { name?: string; email?: string; avatar?: string; isVerified?: boolean }, // 👈 Bổ sung isVerified vào kiểu dữ liệu nhận diện
   ): Promise<void> {
     if (!mongoose.Types.ObjectId.isValid(userId)) return;
     const updates: any = {};
     if (fields.name !== undefined) updates.name = fields.name;
     if (fields.email !== undefined) updates.email = fields.email;
     if (fields.avatar !== undefined) updates.avatar = fields.avatar;
+
+    // 🌟 GIẢI PHÁP: Bổ sung gán giá trị isVerified
+    if (fields.isVerified !== undefined) updates.isVerified = fields.isVerified;
 
     await User.findByIdAndUpdate(userId, { $set: updates });
   },

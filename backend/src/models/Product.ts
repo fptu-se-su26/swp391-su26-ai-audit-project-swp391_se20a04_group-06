@@ -97,6 +97,8 @@ const productSchema = new Schema<IProduct>(
 
 // 🌟 Thiết lập chỉ mục địa lý gốc 2dsphere hỗ trợ tìm kiếm khoảng cách cực nhanh
 productSchema.index({ location: "2dsphere" });
+productSchema.index({ status: 1, type: 1, bumpedAt: -1, createdAt: -1 });
+
 
 // Thiết lập chỉ mục tìm kiếm văn bản toàn diện (MATCH...AGAINST replacement)
 productSchema.index({ name: "text", description: "text" });

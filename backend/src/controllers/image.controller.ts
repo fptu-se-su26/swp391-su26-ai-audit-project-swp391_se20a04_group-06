@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Product } from '../models/Product';
 import { uploadToCloudinary, deleteFromCloudinary } from '../middlewares/upload';
 import { sendServerError, parseId } from '../helpers/response.helper';
+import { cloudinary } from '../config/cloudinary';
 
 const MAX_IMAGES = 5;
 
@@ -63,6 +64,34 @@ export async function uploadImages(req: Request, res: Response) {
   }
 }
 
+export async function getUploadSignature(req: Request, res: Response) {
+  try {
+    const timestamp = Math.round(new Date().getTime() / 1000);
+
+    // Cấu hình các tham số bắt buộc phải khớp khi gửi từ Client
+    const params = {
+      timestamp,
+      folder: 'seafood',
+    };
+
+    // Tạo chữ ký số bằng API Secret bí mật của bạn ở Backend
+    const signature = cloudinary.utils.api_sign_request(
+      params,
+      process.env.CLOUDINARY_API_SECRET as string
+    );
+
+    return res.json({
+      signature,
+      timestamp,
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      apiKey: process.env.CLOUDINARY_API_KEY,
+      folder: 'seafood',
+    });
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+
 export async function deleteImage(req: Request, res: Response) {
   const { userId, role } = req.user;
   const imageId = req.params.id; // could be index or part of URL string
@@ -83,7 +112,7 @@ export async function deleteImage(req: Request, res: Response) {
     if (imageUrl) {
       const publicId = extractPublicId(imageUrl);
       if (publicId) {
-        await deleteFromCloudinary(publicId).catch(() => {});
+        await deleteFromCloudinary(publicId).catch(() => { });
       }
       prod.images = prod.images.filter((img) => img !== imageUrl);
       await prod.save();

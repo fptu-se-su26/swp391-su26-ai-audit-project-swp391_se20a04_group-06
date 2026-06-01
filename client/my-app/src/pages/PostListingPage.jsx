@@ -12,10 +12,45 @@ const CATEGORIES = [
   { id: "Others", label: "✨ Phân loại khác" },
 ];
 
+const compressImage = (file) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 1200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH) {
+          height = Math.round((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            resolve(new File([blob], file.name, { type: "image/jpeg" }));
+          },
+          "image/jpeg",
+          0.75
+        );
+      };
+    };
+  });
+};
+
 export function PostListingPage({ user }) {
   const navigate = useNavigate();
   const [type, setType] = useState("Fresh");
-  const [postCount, setPostCount] = useState({ count: 0, max: 5, isPremium: false, loading: true });
+  const [postCount, setPostCount] = useState({ count: 0, max: 10, isPremium: false, loading: true });
 
   React.useEffect(() => {
     api("/products/today-count")
@@ -49,6 +84,7 @@ export function PostListingPage({ user }) {
 
   const [focusedField, setFocusedField] = useState(null);
   const [hoveredType, setHoveredType] = useState(null);
+
 
   const getInputStyle = (fieldName) => ({
     width: "100%",
@@ -86,7 +122,7 @@ export function PostListingPage({ user }) {
               a.city_district || a.county || a.city || a.town,
             ].filter(Boolean);
             if (parts.length > 0) setAddress(parts.join(", "));
-          } catch {}
+          } catch { }
         },
         () => setGps({ status: "denied", lat: null, lng: null }),
       );
@@ -98,20 +134,60 @@ export function PostListingPage({ user }) {
     if (!name || !price || !weight)
       return setErr("Vui lòng điền đầy đủ tên, giá và khối lượng hải sản");
     if (type === "Fresh" && gps.status !== "ok")
-      return setErr(
-        "Bắt buộc phải bật định vị GPS để đăng tin hải sản tươi sống",
-      );
+      return setErr("Bắt buộc phải bật định vị GPS để đăng tin hải sản tươi sống");
 
     setLoading(true);
+
     try {
+      let uploadedImageUrls = [];
+
+      // 🌟 BƯỚC A: Nếu có ảnh, thực hiện nén và tải trực tiếp lên Cloudinary
+      if (images.length > 0) {
+        // 1. Lấy chữ ký số bảo mật từ Backend
+        const sigData = await api("/images/signature");
+
+        // 2. Nén toàn bộ ảnh phía Client
+        const compressedFiles = await Promise.all(images.map(img => compressImage(img)));
+
+        // 3. Tải đồng thời trực tiếp lên máy chủ Cloudinary CDN
+        uploadedImageUrls = await Promise.all(
+          compressedFiles.map(async (file) => {
+            const fd = new FormData();
+            fd.append("file", file);
+            fd.append("api_key", sigData.apiKey);
+            fd.append("timestamp", sigData.timestamp);
+            fd.append("signature", sigData.signature);
+            fd.append("folder", sigData.folder);
+
+            // Gửi trực tiếp lên Cloudinary API
+            const cloudRes = await fetch(
+              `https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`,
+              {
+                method: "POST",
+                body: fd,
+              }
+            );
+
+            if (!cloudRes.ok) {
+              throw new Error("Tải ảnh trực tiếp lên máy chủ CDN thất bại.");
+            }
+
+            const cloudData = await cloudRes.json();
+            return cloudData.secure_url; // Trả về đường dẫn CDN
+          })
+        );
+      }
+
+      // 🌟 BƯỚC B: Gửi duy nhất 1 cuộc gọi tạo bài đăng kèm danh sách ảnh đã tải thành công
       const body = {
         type,
-        category, // Đính kèm phân loại chi tiết vào payload
+        category,
         name,
         description: desc,
         price,
         salesType,
         totalWeight: weight,
+        images: uploadedImageUrls, // Đính kèm mảng URL ảnh trực tiếp
         ...(catchTime ? { catchTime } : {}),
         ...(type === "Fresh"
           ? address
@@ -123,23 +199,15 @@ export function PostListingPage({ user }) {
         ...(expiry ? { expiryDate: expiry } : {}),
         ...(gps.status === "ok" ? { lat: gps.lat, lng: gps.lng } : {}),
       };
-      const res = await api("/products", {
+
+      await api("/products", {
         method: "POST",
         body: JSON.stringify(body),
       });
-      const productId = res.productId;
 
-      if (images.length > 0) {
-        const fd = new FormData();
-        images.forEach((f) => fd.append("images", f));
-        await api(`/products/${productId}/images`, {
-          method: "POST",
-          body: fd,
-        });
-      }
       setDone(true);
     } catch (e) {
-      setErr(e.message);
+      setErr(e.message || "Đăng mẻ hàng thất bại. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -894,8 +962,8 @@ export function PostListingPage({ user }) {
           background: loading
             ? C.muted
             : postCount.count >= postCount.max && !postCount.isPremium
-            ? "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)"
-            : `linear-gradient(135deg, ${C.coral} 0%, #D94E21 100%)`,
+              ? "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)"
+              : `linear-gradient(135deg, ${C.coral} 0%, #D94E21 100%)`,
           color: "#fff",
           border: "none",
           borderRadius: 12,
@@ -906,16 +974,16 @@ export function PostListingPage({ user }) {
           boxShadow: loading
             ? "none"
             : postCount.count >= postCount.max && !postCount.isPremium
-            ? "0 4px 14px rgba(217, 119, 6, 0.3)"
-            : "0 4px 14px rgba(232, 100, 58, 0.3)",
+              ? "0 4px 14px rgba(217, 119, 6, 0.3)"
+              : "0 4px 14px rgba(232, 100, 58, 0.3)",
           transition: "all 0.25s ease",
         }}
       >
         {loading
           ? "⏳ Đang đăng bài bán..."
           : postCount.count >= postCount.max && !postCount.isPremium
-          ? "🌟 Nâng cấp Premium để mở khoá Đăng bài"
-          : "🚀 Đăng mẻ hàng ngay"}
+            ? "🌟 Nâng cấp Premium để mở khoá Đăng bài"
+            : "🚀 Đăng mẻ hàng ngay"}
       </button>
     </div>
   );

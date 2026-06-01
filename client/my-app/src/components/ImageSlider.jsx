@@ -1,5 +1,8 @@
+// Trong tệp: client/my-app/src/components/ImageSlider.jsx
+
 import React, { useState } from 'react';
 import { C } from '../utils/theme';
+
 export function ImageSlider({ product }) {
   const [idx, setIdx] = useState(0);
   const images = product.images || [];
@@ -13,6 +16,11 @@ export function ImageSlider({ product }) {
         borderRadius: 12,
         overflow: "hidden",
         userSelect: "none",
+        background: "#0f172a", // 🌟 CẢI TIẾN: Nền tối "Theater Mode" cao cấp bọc khoảng trống thừa
+        height: 300, // Cố định chiều cao khung slider
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
       }}
     >
       {images[idx] ? (
@@ -20,9 +28,9 @@ export function ImageSlider({ product }) {
           src={images[idx].url}
           alt={product.name}
           style={{
-            width: "100%",
-            height: 300,
-            objectFit: "cover",
+            maxWidth: "100%",
+            maxHeight: "100%",
+            objectFit: "contain", // 🌟 CẢI TIẾN: Đổi sang "contain" để hiển thị trọn vẹn 100% ảnh gốc, không bị cắt xén móp méo
             display: "block",
           }}
         />
@@ -30,7 +38,8 @@ export function ImageSlider({ product }) {
         <div
           style={{
             background: `linear-gradient(135deg, ${bgs[idx % bgs.length]}, ${bgs[(idx + 1) % bgs.length]})`,
-            height: 300,
+            height: "100%",
+            width: "100%",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -44,10 +53,11 @@ export function ImageSlider({ product }) {
           </span>
         </div>
       )}
+
       {n > 1 && (
         <>
           <button
-            onClick={() => setIdx((idx - 1 + n) % n)}
+            onClick={(e) => { e.stopPropagation(); setIdx((idx - 1 + n) % n); }}
             style={{
               position: "absolute",
               left: 12,
@@ -62,12 +72,13 @@ export function ImageSlider({ product }) {
               cursor: "pointer",
               fontSize: 20,
               lineHeight: 1,
+              zIndex: 10, // Đảm bảo nút luôn nổi trên ảnh
             }}
           >
             ‹
           </button>
           <button
-            onClick={() => setIdx((idx + 1) % n)}
+            onClick={(e) => { e.stopPropagation(); setIdx((idx + 1) % n); }}
             style={{
               position: "absolute",
               right: 12,
@@ -82,6 +93,7 @@ export function ImageSlider({ product }) {
               cursor: "pointer",
               fontSize: 20,
               lineHeight: 1,
+              zIndex: 10,
             }}
           >
             ›
@@ -94,12 +106,13 @@ export function ImageSlider({ product }) {
               transform: "translateX(-50%)",
               display: "flex",
               gap: 6,
+              zIndex: 10,
             }}
           >
             {Array.from({ length: n }).map((_, i) => (
               <div
                 key={i}
-                onClick={() => setIdx(i)}
+                onClick={(e) => { e.stopPropagation(); setIdx(i); }}
                 style={{
                   width: 8,
                   height: 8,
@@ -122,6 +135,7 @@ export function ImageSlider({ product }) {
           fontSize: 11,
           padding: "3px 8px",
           borderRadius: 4,
+          zIndex: 10,
         }}
       >
         📸 {n}

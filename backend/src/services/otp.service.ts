@@ -17,6 +17,23 @@ const KEY_VERIFY_FAILS = (email: string) =>
   `otp:verify_fails:${email.toLowerCase().trim()}`;
 const KEY_RESET = (token: string) => `otp:reset_token:${token}`;
 
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+// 🌟 GIẢI PHÁP 2: Chỉ chạy xác minh cấu hình 1 lần duy nhất khi khởi động máy chủ
+if (process.env.EMAIL_USER && process.env.EMAIL_PASS && !process.env.EMAIL_USER.includes("your_email")) {
+  transporter.verify((err) => {
+    if (err) logger.error(`[Email] SMTP configuration error: ${err.message}`);
+    else logger.info("✅ [Email] SMTP Gmail connection is ready");
+  });
+}
+
+
 async function sendOtpEmail(email: string, otp: string): Promise<void> {
   const user = process.env.EMAIL_USER;
   const pass = process.env.EMAIL_PASS;
@@ -29,21 +46,6 @@ async function sendOtpEmail(email: string, otp: string): Promise<void> {
   ) {
     throw new Error("MockMode");
   }
-
-  // Tạo 1 lần, tái sử dụng
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
-  // Thêm verify khi khởi động để phát hiện sai config sớm
-  transporter.verify((err) => {
-    if (err) logger.error(`[Email] SMTP config lỗi: ${err.message}`);
-    else logger.info("[Email] SMTP Gmail sẵn sàng");
-  });
 
   const mailOptions = {
     from: `"HảiSản.vn" <${user}>`,
@@ -65,6 +67,7 @@ async function sendOtpEmail(email: string, otp: string): Promise<void> {
     `,
   };
 
+  // Sử dụng trực tiếp bộ gom kết nối đã khởi tạo
   await transporter.sendMail(mailOptions);
 }
 

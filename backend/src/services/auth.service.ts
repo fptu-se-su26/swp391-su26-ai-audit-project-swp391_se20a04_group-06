@@ -3,6 +3,10 @@ import jwt, { SignOptions } from "jsonwebtoken";
 import { userRepository } from "../repositories/user.repository";
 import { cloudinary } from "../config/cloudinary";
 import { HttpError } from "../errors/HttpError";
+import { User } from "../models/User";
+import { deleteFromCloudinary } from "../middlewares/upload";
+import { extractPublicId } from "../controllers/image.controller";
+import { logger } from "../utils/logger";
 
 /**
  * Auth Service — chứa toàn bộ business logic liên quan đến xác thực.
@@ -88,7 +92,9 @@ export const authService = {
     userId: string,
     data: { name: string; email?: string; fileBuffer?: Buffer },
   ): Promise<{ name: string; email?: string; avatarUrl?: string }> {
-    const updates: { name?: string; email?: string; avatar?: string } = {
+
+    // 🌟 GIẢI PHÁP: Khai báo thêm isVerified?: boolean vào kiểu dữ liệu của updates
+    const updates: { name?: string; email?: string; avatar?: string; isVerified?: boolean } = {
       name: data.name,
     };
 
@@ -96,17 +102,36 @@ export const authService = {
       const cleanEmail = data.email.toLowerCase().trim();
       const taken = await userRepository.emailExistsForOther(
         cleanEmail,
-        userId,
+        userId
       );
-      if (taken)
+      if (taken) {
         throw new HttpError(409, "Email đã được người khác đăng ký");
+      }
+
       updates.email = cleanEmail;
+
+      // Tự động thu hồi danh hiệu đã xác minh nếu không phải Admin đổi email
+      const currentUser = await User.findById(userId).select("role");
+      if (currentUser && currentUser.role !== "Admin") {
+        updates.isVerified = false; // Trình biên dịch sẽ chấp nhận vì isVerified đã được định nghĩa ở trên
+      }
     }
 
+    // Luồng dọn dẹp ảnh cũ trên Cloudinary đã hướng dẫn ở bước trước...
     if (data.fileBuffer) {
+      const currentUser = await User.findById(userId).select("avatar");
+      if (currentUser?.avatar) {
+        const oldPublicId = extractPublicId(currentUser.avatar);
+        if (oldPublicId) {
+          deleteFromCloudinary(oldPublicId).catch((err) =>
+            logger.error(`Failed to delete old avatar on Cloudinary: ${err.message}`)
+          );
+        }
+      }
       updates.avatar = await uploadAvatarToCloudinary(data.fileBuffer);
     }
 
+    // Gọi hàm repository đã cập nhật ở Bước 1
     await userRepository.updateProfile(userId, updates);
 
     return {

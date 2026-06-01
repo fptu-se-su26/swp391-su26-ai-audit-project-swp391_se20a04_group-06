@@ -122,25 +122,47 @@ export async function logout(req: Request, res: Response) {
   const oldRefreshToken = req.cookies?.refreshToken;
   const token = req.cookies?.token;
 
-  if (oldRefreshToken && token) {
+  if (oldRefreshToken) {
+    let userId: string | null = null;
+
+    // 1. Thử giải mã Access Token để lấy nhanh userId trực tiếp
+    if (token) {
+      try {
+        const decoded = jwt.decode(token) as { userId: string } | null;
+        userId = decoded?.userId || null;
+      } catch (err) {
+        // Bỏ qua lỗi giải mã
+      }
+    }
+
     try {
-      // Dùng decode ở đây là OK vì chỉ cần lấy userId để xóa Redis key,
-      // không cần trust payload về mặt authentication.
-      const decoded = jwt.decode(token) as { userId: string } | null;
-      if (decoded?.userId) {
-        await redis.del(`auth:refresh:${decoded.userId}:${oldRefreshToken}`);
-        logger.info(
-          `Tokens revoked in Redis on logout for UserID=${decoded.userId}`,
-        );
+      if (userId) {
+        // Xóa trực tiếp khóa chính xác nếu có userId
+        await redis.del(`auth:refresh:${userId}:${oldRefreshToken}`);
+        logger.info(`Tokens revoked in Redis on logout for UserID=${userId}`);
+      } else {
+        // 🌟 GIẢI PHÁP PHÒNG NGỪA: Tìm và xóa khóa dựa theo mẫu khi bị thiếu Access Token
+        const keys = await redis.keys(`auth:refresh:*:${oldRefreshToken}`);
+        if (keys.length > 0) {
+          await redis.del(...keys);
+          logger.info(`Tokens revoked in Redis via pattern matching on logout`);
+        }
       }
     } catch (err: any) {
-      logger.error(`Token revocation error on logout: ${err.message}`);
+      logger.error(`Token revocation error in Redis on logout: ${err.message}`);
     }
   }
 
+  // 2. Làm sạch toàn bộ Cookie xác thực trên trình duyệt
   res.clearCookie("token", CLEAR_COOKIE_OPTIONS);
   res.clearCookie("refreshToken", CLEAR_COOKIE_OPTIONS);
-  return res.json({ message: "Đã đăng xuất" });
+  // Xóa thêm CSRF cookie với cấu hình SameSite giống lúc khởi tạo
+  res.clearCookie("csrfToken", {
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict'
+  });
+
+  return res.json({ message: "Đã đăng xuất thành công!" });
 }
 
 export async function refreshToken(req: Request, res: Response) {
@@ -267,7 +289,16 @@ export async function deleteAccount(req: Request, res: Response) {
 
     // 3. Xóa cascade tất cả dữ liệu liên quan
     const productIds = products.map((p) => p._id.toString());
+    await User.updateMany({}, { $pull: { following: userId as any } });
+
+    // 🌟 GIẢI PHÁP 2: Dọn sạch ID sản phẩm bị xóa khỏi danh sách "favorites" của tất cả người dùng khác
+    if (productIds.length > 0) {
+      await User.updateMany({}, { $pull: { favorites: { $in: productIds } } });
+    }
     await Product.deleteMany({ sellerId: userId as any });
+    if (productIds.length > 0) {
+      await Report.deleteMany({ productId: { $in: productIds } });
+    }
 
     // [M-04 FIX] Invalidate Redis cache cho các sản phẩm đã xóa
     if (productIds.length > 0) {
@@ -292,6 +323,10 @@ export async function deleteAccount(req: Request, res: Response) {
     // 5. Làm sạch Cookie
     res.clearCookie("token", CLEAR_COOKIE_OPTIONS);
     res.clearCookie("refreshToken", CLEAR_COOKIE_OPTIONS);
+    res.clearCookie("csrfToken", {
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict'
+    });
 
     logger.info(`GDPR: User account deleted permanently: ID=${userId}`);
     return res.json({
@@ -339,25 +374,38 @@ export async function updateProfile(req: Request, res: Response) {
   }
 }
 
+// Trong tệp: backend/src/controllers/auth.controller.ts
+
 export async function changePassword(req: Request, res: Response) {
   const { userId } = req.user;
   const { currentPassword, newPassword } = req.body;
 
   if (!currentPassword || !newPassword)
-    return res
-      .status(400)
-      .json({ message: "Vui lòng nhập mật khẩu hiện tại và mật khẩu mới" });
+    return res.status(400).json({ message: "Vui lòng nhập mật khẩu hiện tại và mật khẩu mới" });
   if (newPassword.length < 6)
     return res.status(400).json({ message: "Mật khẩu mới tối thiểu 6 ký tự" });
   if (currentPassword === newPassword)
-    return res
-      .status(400)
-      .json({ message: "Mật khẩu mới phải khác mật khẩu hiện tại" });
+    return res.status(400).json({ message: "Mật khẩu mới phải khác mật khẩu hiện tại" });
 
   try {
+    // 1. Thực hiện đổi mật khẩu ở tầng Service
     await authService.changePassword(userId, currentPassword, newPassword);
-    logger.info(`Password changed for UserID=${userId}`);
-    return res.json({ message: "Đổi mật khẩu thành công" });
+
+    // 🌟 GIẢI PHÁP BẢO MẬT: Thu hồi toàn bộ Refresh Token của User này trong Redis để cưỡng chế đăng xuất các thiết bị khác
+    const keys = await redis.keys(`auth:refresh:${userId}:*`);
+    if (keys.length > 0) {
+      await redis.del(...keys);
+    }
+
+    logger.info(`Password changed and all active sessions revoked for UserID=${userId}`);
+
+    // 2. Làm sạch Cookie của phiên hiện tại để buộc người dùng đăng nhập lại bằng mật khẩu mới
+    res.clearCookie("token", CLEAR_COOKIE_OPTIONS);
+    res.clearCookie("refreshToken", CLEAR_COOKIE_OPTIONS);
+
+    return res.json({
+      message: "Đổi mật khẩu thành công. Vui lòng đăng nhập lại bằng mật khẩu mới."
+    });
   } catch (err: any) {
     logger.error(`Password change failed: ${err.message}`);
     if (err.status)

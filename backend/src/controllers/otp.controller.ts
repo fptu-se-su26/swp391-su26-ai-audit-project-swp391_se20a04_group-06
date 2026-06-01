@@ -3,6 +3,8 @@ import bcrypt from "bcryptjs";
 import { otpService } from "../services/otp.service";
 import { sendServerError } from "../helpers/response.helper";
 import { User } from "../models/User";
+import { logger } from "../utils/logger";
+import { redis } from "../config/redis";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -10,33 +12,33 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Body: { email }
 // 1. Kiểm tra email có tồn tại trong DB không
 // 2. Gửi OTP
+// Trong tệp: backend/src/controllers/otp.controller.ts
+
 export async function forgotPassword(req: Request, res: Response) {
   const { email } = req.body;
 
   if (!email || !EMAIL_REGEX.test(email)) {
-    return res
-      .status(400)
-      .json({ message: "Email không hợp lệ." });
+    return res.status(400).json({ message: "Email không hợp lệ." });
   }
 
   const cleanEmail = email.toLowerCase().trim();
 
   try {
-    // Kiểm tra email tồn tại — nhưng luôn trả cùng 1 message để tránh user enumeration
     const user = await User.findOne({ email: cleanEmail, isActive: true });
 
+    // 🌟 GIẢI PHÁP: Đồng nhất hoàn toàn JSON phản hồi (Message & TTL) để chống dò quét tài khoản
     if (!user) {
-      // Trả 200 thay vì 404 để tránh lộ thông tin tài khoản
       return res.json({
-        message: "Nếu email tồn tại, OTP sẽ được gửi trong vài giây.",
+        message: "Nếu địa chỉ email tồn tại, mã xác minh OTP sẽ được gửi đến hòm thư của bạn.",
+        ttl: 300, // Trả về TTL giả lập để Frontend hoạt động đồng nhất
       });
     }
 
     await otpService.sendOtp(cleanEmail);
 
     return res.json({
-      message: "Mã OTP đã được gửi đến hòm thư email của bạn.",
-      ttl: 300, // 5 phút (giây) — để frontend đếm ngược
+      message: "Nếu địa chỉ email tồn tại, mã xác minh OTP sẽ được gửi đến hòm thư của bạn.",
+      ttl: 300,
     });
   } catch (err: any) {
     if (err.status)
@@ -76,6 +78,8 @@ export async function verifyOtp(req: Request, res: Response) {
 // ─── POST /api/auth/reset-password ───────────────────────────
 // Body: { resetToken, newPassword }
 // Đổi mật khẩu bằng reset_token đã được cấp sau khi verify OTP
+// Trong tệp: backend/src/controllers/otp.controller.ts
+
 export async function resetPassword(req: Request, res: Response) {
   const { resetToken, newPassword } = req.body;
 
@@ -83,26 +87,39 @@ export async function resetPassword(req: Request, res: Response) {
     return res.status(400).json({ message: "Token không hợp lệ." });
   }
   if (!newPassword || newPassword.length < 6) {
-    return res
-      .status(400)
-      .json({ message: "Mật khẩu mới phải ít nhất 6 ký tự." });
+    return res.status(400).json({ message: "Mật khẩu mới phải ít nhất 6 ký tự." });
   }
 
   try {
-    // Lấy email từ token (ném lỗi nếu hết hạn)
+    // 1. Lấy email từ token (ném lỗi nếu hết hạn)
     const email = await otpService.getEmailByResetToken(resetToken);
 
-    // Hash mật khẩu mới
+    // 🌟 GIẢI PHÁP: Truy vấn tài khoản từ cơ sở dữ liệu trước để lấy thông tin userId
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "Không tìm thấy tài khoản người dùng." });
+    }
+
+    // 2. Hash mật khẩu mới với salt round 12 bảo mật
     const hash = await bcrypt.hash(newPassword, 12);
 
-    // Cập nhật DB
-    await User.updateOne({ email }, { $set: { passwordHash: hash } });
+    // 3. Cập nhật mật khẩu mới vào cơ sở dữ liệu
+    user.passwordHash = hash;
+    await user.save();
 
-    // Xoá token để không dùng lại được
+    // 🌟 GIẢI PHÁP BẢO MẬT: Thu hồi toàn bộ Refresh Token của User này trong Redis để buộc đăng xuất các thiết bị khác
+    const keys = await redis.keys(`auth:refresh:${user._id}:*`);
+    if (keys.length > 0) {
+      await redis.del(...keys);
+    }
+
+    // 4. Xoá token đặt lại mật khẩu tạm thời để không dùng lại được nữa
     await otpService.consumeResetToken(resetToken);
 
+    logger.info(`Password reset successfully and all active sessions revoked for UserID=${user._id}`);
+
     return res.json({
-      message: "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.",
+      message: "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại bằng mật khẩu mới.",
     });
   } catch (err: any) {
     if (err.status)

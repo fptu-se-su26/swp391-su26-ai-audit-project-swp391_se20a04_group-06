@@ -7,12 +7,16 @@ import { notifyFollowersNewProduct } from "./notification.service";
 import { logger } from "../utils/logger";
 import mongoose from "mongoose";
 import { HttpError } from "../errors/HttpError";
+import { extractPublicId } from "../controllers/image.controller";
+import { cloudinary } from "../config/cloudinary";
+import { Report } from "../models/Report";
+
 
 export const productService = {
   async list(query: Record<string, string | undefined>) {
     const queryType = query.type;
-    const freshVer = await redis.get("product:list:version:Fresh") || "1";
-    const driedVer = await redis.get("product:list:version:Dried") || "1";
+    const freshVer = await redis.get("product:list:version:Fresh") || "0";
+    const driedVer = await redis.get("product:list:version:Dried") || "0";
     const listVersion = queryType === "Fresh" ? freshVer : queryType === "Dried" ? driedVer : `${freshVer}_${driedVer}`;
 
     // 1. TỐI ƯU CACHE KEY: Tránh Cache Pollution do GPS và Search
@@ -31,16 +35,15 @@ export const productService = {
       }
     }
 
-    const {
-      type,
-      category,
-      search,
-      lat,
-      lng,
-      page: rawPage,
-      limit: rawLimit,
-      sellerId,
-    } = query;
+    // Ép kiểu tường minh về dạng string để triệt tiêu mọi cấu trúc đối tượng NoSQL Injection
+    const type = typeof query.type === "string" ? query.type : undefined;
+    const category = typeof query.category === "string" ? query.category : undefined;
+    const search = typeof query.search === "string" ? query.search : undefined;
+    const lat = typeof query.lat === "string" ? query.lat : undefined;
+    const lng = typeof query.lng === "string" ? query.lng : undefined;
+    const rawPage = typeof query.page === "string" ? query.page : undefined;
+    const rawLimit = typeof query.limit === "string" ? query.limit : undefined;
+    const sellerId = typeof query.sellerId === "string" ? query.sellerId : undefined;
     const { page, limit } = parsePagination(rawPage, rawLimit);
     const skip = (page - 1) * limit;
 
@@ -129,11 +132,21 @@ export const productService = {
     }
 
     const detailCacheKey = `product:detail:${id}`;
+    const viewsCacheKey = `product:views:count:${id}`; // Khóa đếm lượt xem động trong Redis
+
     const cachedDetail = await redis.get(detailCacheKey);
 
     if (cachedDetail) {
+      const parsed = JSON.parse(cachedDetail);
+
+      // Tăng lượt xem ngầm trong MongoDB
       Product.findByIdAndUpdate(id, { $inc: { viewCount: 1 } }).catch(() => { });
-      return JSON.parse(cachedDetail);
+
+      // 🌟 GIẢI PHÁP: Tăng và lấy lượt xem thời gian thực trực tiếp từ Redis
+      const realTimeViews = await redis.incr(viewsCacheKey);
+      parsed.viewCount = realTimeViews; // Ghi đè số lượt xem cũ tĩnh trong cache bằng số thực tế
+
+      return parsed;
     }
 
     const p: any = await Product.findByIdAndUpdate(
@@ -142,7 +155,10 @@ export const productService = {
       { new: true },
     ).populate("sellerId", "name isVerified isPremium");
 
-    if (!p) throw new HttpError(404, "Không tìm thấy sản phẩm");
+    if (!p || p.status === "Deleted") {
+      throw new HttpError(404, "Không tìm thấy sản phẩm hoặc sản phẩm đã bị xóa");
+    }
+
 
     const finalDetail = {
       id: p._id,
@@ -173,6 +189,7 @@ export const productService = {
       })),
     };
 
+    await redis.set(viewsCacheKey, p.viewCount, "EX", 1800);
     await redis.set(detailCacheKey, JSON.stringify(finalDetail), "EX", 1800);
     return finalDetail;
   },
@@ -194,8 +211,13 @@ export const productService = {
       lng,
       origin,
       expiryDate,
-      images, // Nhận thêm images từ body (nếu có)
+      images,
     } = body;
+
+    // 🌟 GIẢI PHÁP BẢO MẬT: Bắt buộc kiểm tra GPS đối với hải sản tươi sống ngay tại Backend
+    if (type === "Fresh" && (!lat || !lng)) {
+      throw new HttpError(400, "Tọa độ vị trí GPS là bắt buộc đối với hải sản tươi sống!");
+    }
 
     const user = await User.findById(userId);
     if (!user) throw new HttpError(404, "Không tìm thấy người dùng");
@@ -298,6 +320,18 @@ export const productService = {
     if (role !== "Admin" && currentProduct.sellerId.toString() !== userId)
       throw new HttpError(403, "Bạn không có quyền chỉnh sửa bài đăng này");
 
+    // 🌟 GIẢI PHÁP 1: Kiểm tra tính toàn vẹn của phân loại Tươi sống sau khi cập nhật
+    const targetType = body.type !== undefined ? body.type : currentProduct.type;
+    const targetLat = body.lat !== undefined ? body.lat : (currentProduct.location?.coordinates?.[1]);
+    const targetLng = body.lng !== undefined ? body.lng : (currentProduct.location?.coordinates?.[0]);
+
+    if (targetType === "Fresh" && (!targetLat || !targetLng)) {
+      throw new HttpError(400, "Tọa độ GPS vị trí mẻ hàng là bắt buộc đối với hải sản tươi sống!");
+    }
+
+
+
+
     // FIX LỖI 0-VALUE: So sánh trực tiếp với undefined
     const newPrice = body.price !== undefined ? parseInt(body.price, 10) : undefined;
     if (newPrice !== undefined && isNaN(newPrice)) {
@@ -316,8 +350,24 @@ export const productService = {
     if (body.category !== undefined) updateFields.category = body.category;
     if (body.salesType !== undefined) updateFields.salesType = body.salesType;
     if (body.status !== undefined) updateFields.status = body.status;
-    if (body.images !== undefined && Array.isArray(body.images)) updateFields.images = body.images;
+    if (body.images !== undefined && Array.isArray(body.images)) {
+      updateFields.images = body.images;
 
+      // 🌟 GIẢI PHÁP 2: Tự động so sánh lọc ra các ảnh bị gỡ bỏ để xoá sạch trên Cloudinary
+      const removedImages = (currentProduct.images || []).filter(img => !body.images.includes(img));
+      if (removedImages.length > 0) {
+        const removedPublicIds = removedImages
+          .map(extractPublicId)
+          .filter((id): id is string => !!id);
+
+        if (removedPublicIds.length > 0) {
+          // Gọi xóa bulk trên Cloudinary không đồng bộ để tránh block tiến trình phản hồi chính
+          cloudinary.api.delete_resources(removedPublicIds).catch((err: any) => {
+            logger.error(`Cloudinary cleanup failed during product update: ${err.message}`);
+          });
+        }
+      }
+    }
     if (newPrice !== undefined) {
       updateFields.price = newPrice;
     }
@@ -383,12 +433,31 @@ export const productService = {
     if (role !== "Admin" && currentProduct.sellerId.toString() !== userId)
       throw new HttpError(403, "Bạn không có quyền xoá bài đăng này");
 
+    // 🌟 GIẢI PHÁP 1: Tự động xóa sạch toàn bộ các tệp ảnh của sản phẩm trên Cloudinary
+    if (currentProduct.images && currentProduct.images.length > 0) {
+      const publicIds = currentProduct.images
+        .map(extractPublicId)
+        .filter((id): id is string => !!id);
+
+      if (publicIds.length > 0) {
+        // Gọi xóa bulk trên Cloudinary không đồng bộ để tránh block tiến trình phản hồi chính
+        cloudinary.api.delete_resources(publicIds).catch((err: any) => {
+          logger.error(`Cloudinary cleanup failed during product deletion: ${err.message}`);
+        });
+      }
+    }
+
+    // Chuyển trạng thái sang Deleted
     await Product.findByIdAndUpdate(id, { $set: { status: "Deleted" } });
+    // 🌟 GIẢI PHÁP 2: Tự động gỡ ID sản phẩm bị xóa khỏi mảng "favorites" của toàn bộ User khác
+    await User.updateMany({}, { $pull: { favorites: id as any } });
+
+    // 🌟 GIẢI PHÁP 3: Tự động dọn dẹp toàn bộ các Báo cáo vi phạm (Reports) hướng tới sản phẩm này
+    await Report.deleteMany({ productId: id as any });
 
     await redis.del(`product:detail:${id}`);
     await redis.incr(`product:list:version:${currentProduct.type}`);
   },
-
   async bump(id: string, userId: string): Promise<void> {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new HttpError(400, "ID sản phẩm không hợp lệ");

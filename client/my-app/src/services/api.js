@@ -41,7 +41,6 @@ export async function api(path, options = {}) {
   if (
     res.status === 401 &&
     !options._isRetry &&
-    path !== "/auth/me" &&
     path !== "/auth/login" &&
     path !== "/auth/register"
   ) {
@@ -55,14 +54,18 @@ export async function api(path, options = {}) {
           credentials: "include",
         });
 
+        // Trong tệp: client/my-app/src/services/api.js
+
         if (refreshRes.ok) {
           isRefreshing = false;
           onRefreshed(null);
         } else {
           isRefreshing = false;
           onRefreshed(new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."));
-          // Không thể gia hạn phiên -> Yêu cầu đăng nhập lại
-          window.location.href = "/dang-nhap";
+
+          // ❌ HÃY XÓA BỎ DÒNG LỆNH NÀY để triệt tiêu vòng lặp tải trang:
+          // window.location.href = "/dang-nhap"; 
+
           throw new Error(
             "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
           );

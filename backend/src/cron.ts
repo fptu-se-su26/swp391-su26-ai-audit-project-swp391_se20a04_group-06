@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { Product } from './models/Product';
 import { logger } from './utils/logger';
+import { redis } from './config/redis'; // 👈 Import thêm redis
 
 /**
  * Chạy mỗi giờ: tự động chuyển hải sản tươi quá 24h sang Status = 'Expired'.
@@ -22,8 +23,12 @@ export function startCronJobs() {
         },
         { $set: { status: 'Expired' } }
       );
+
       if (result.modifiedCount > 0) {
         logger.info(`⏰ [CRON] Đã hết hạn ${result.modifiedCount} bài hải sản tươi`);
+
+        // 🌟 GIẢI PHÁP: Tăng phiên bản cache để ép các client dọn dẹp cache rác của hải sản tươi ngay lập tức
+        await redis.incr("product:list:version:Fresh");
       }
     } catch (err: any) {
       logger.error('[CRON] Lỗi khi expire sản phẩm tươi:', err);

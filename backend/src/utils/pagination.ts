@@ -25,8 +25,12 @@ export function parsePagination(
   rawLimit?: string,
   maxLimit = 100,
 ): PaginationParams {
-  const page = Math.max(1, parseInt(rawPage || '1', 10));
-  const limit = Math.min(maxLimit, Math.max(1, parseInt(rawLimit || '20', 10)));
+  const parsedPage = parseInt(rawPage || '1', 10);
+  const page = isNaN(parsedPage) ? 1 : Math.max(1, parsedPage);
+
+  const parsedLimit = parseInt(rawLimit || '20', 10);
+  const limit = isNaN(parsedLimit) ? 20 : Math.min(maxLimit, Math.max(1, parsedLimit));
+
   return { page, limit, offset: (page - 1) * limit };
 }
 

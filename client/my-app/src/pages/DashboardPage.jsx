@@ -1,11 +1,12 @@
 /**
- * DashboardPage.jsx — Refactored
+ * DashboardPage.jsx — Refactored & Optimized (Edit Price + Pagination Support)
  *
  * CHANGES:
  *   1. Loại bỏ prop `user` — dùng useAuth() thay thế (Context Pattern)
  *   2. Thay toàn bộ alert() → useToast() (Observer Pattern)
  *   3. Thay confirm() → ConfirmDialog component nội bộ (không chặn UI thread)
- *   4. Giữ nguyên 100% UI, logic, và API calls
+ *   4. Tích hợp tính năng SỬA GIÁ bên cạnh SỬA CÂN NẶNG dùng chung hàm gộp handleSave()
+ *   5. Hỗ trợ PHÂN TRANG (Pagination) mượt mà cho danh sách tin cá nhân
  */
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -16,16 +17,10 @@ import { useCountdown } from "../hooks/useCountdown";
 import { CountdownBadge } from "../components/ProductCard";
 import { ChatBox } from "../components/ChatBox";
 import { InboxTab } from "../components/InboxTab";
-import { useAuth } from "../context/AuthContext"; // ← NEW
-import { useToast } from "../context/ToastContext"; // ← NEW
+import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 // ── ConfirmDialog — thay thế window.confirm() ───────────────
-/**
- * TRƯỚC: if (!confirm("Xoá bài đăng này?")) return;
- * SAU:   <ConfirmDialog> với callback onConfirm
- *
- * confirm() block UI thread, không có animation, không customizable
- */
 function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
     <div
@@ -104,10 +99,21 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
     </div>
   );
 }
+// Kiểm tra xem mẻ hàng có đang trong thời gian chờ 24h hay không
+const isBumpingOnCooldown = (bumpedAtStr) => {
+  if (!bumpedAtStr) return false;
+  const diffMs = Date.now() - new Date(bumpedAtStr).getTime();
+  return diffMs < 24 * 3600 * 1000;
+};
 
+// Tính số giờ còn lại cần phải đợi
+const getCooldownHours = (bumpedAtStr) => {
+  if (!bumpedAtStr) return 0;
+  const diffMs = Date.now() - new Date(bumpedAtStr).getTime();
+  return Math.ceil((24 * 3600 * 1000 - diffMs) / 3600000);
+};
 // ── Main Component ───────────────────────────────────────────
 export function DashboardPage() {
-  // ← THAY ĐỔI: không nhận user qua props nữa
   const { user } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
@@ -116,62 +122,96 @@ export function DashboardPage() {
   const [listings, setListings] = useState([]);
   const [loadingListings, setLoadingListings] = useState(true);
   const [unread, setUnread] = useState(0);
+
+  // States quản lý phân trang cá nhân
+  const [listingsPage, setListingsPage] = useState(1);
+  const [listingsTotalPages, setListingsTotalPages] = useState(1);
+  const [listingsTotal, setListingsTotal] = useState(0);
+
+  // States sửa đổi cân nặng & giá cả mẻ hàng
   const [editId, setEditId] = useState(null);
+  const [editType, setEditType] = useState(null); // 'weight' hoặc 'price'
   const [editVal, setEditVal] = useState("");
   const [editLoading, setEditLoading] = useState(false);
+
   const [bumpingId, setBumpingId] = useState(null);
   const [favorites, setFavorites] = useState([]);
   const [favLoading, setFavLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(null); // productId cần xoá
 
-  useEffect(() => {
-    api("/products/my")
-      .then((data) => setListings(data))
-      .catch(() => {})
+  // Hàm tải danh sách mẻ hàng phân trang
+  const fetchMyListings = useCallback((pageNo) => {
+    setLoadingListings(true);
+    // Đặt limit=5 để dễ dàng kiểm tra cơ chế phân trang hoạt động ngoài giao diện
+    api(`/products/my?page=${pageNo}&limit=5`)
+      .then((res) => {
+        setListings(res.data || []);
+        setListingsTotalPages(res.totalPages || 1);
+        setListingsTotal(res.total || 0);
+      })
+      .catch(() => { })
       .finally(() => setLoadingListings(false));
+  }, []);
+
+  // Tải danh sách mẻ hàng khi thay đổi trang hoặc tab chuyển sang "listings"
+  useEffect(() => {
+    if (tab === "listings") {
+      fetchMyListings(listingsPage);
+    }
+  }, [tab, listingsPage, fetchMyListings]);
+
+  // Tải số tin nhắn chưa đọc & danh mục yêu thích
+  useEffect(() => {
     api("/messages/unread-count")
       .then((data) => setUnread(data.count))
-      .catch(() => {});
+      .catch(() => { });
     api("/favorites")
       .then((data) => setFavorites(data))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setFavLoading(false));
   }, []);
 
-  const saveWeight = async (productId) => {
+  // Hàm cập nhật cân nặng hoặc đổi giá tích hợp
+  const handleSave = async (productId) => {
     if (!editVal) return;
     setEditLoading(true);
+
+    const payload = editType === "weight"
+      ? { remainingWeight: parseFloat(editVal) }
+      : { price: parseInt(editVal, 10) };
+
     try {
       await api(`/products/${productId}`, {
         method: "PUT",
-        body: JSON.stringify({ remainingWeight: parseFloat(editVal) }),
+        body: JSON.stringify(payload),
       });
+
       setListings((prev) =>
         prev.map((p) =>
           p.id === productId
-            ? { ...p, remainingWeight: parseFloat(editVal) }
+            ? { ...p, ...payload }
             : p,
         ),
       );
       setEditId(null);
-      toast.success("Đã cập nhật trọng lượng!"); // ← THAY alert()
+      setEditType(null);
+      toast.success(editType === "weight" ? "Đã cập nhật trọng lượng!" : "Đã cập nhật giá bán mới!");
     } catch (e) {
-      toast.error(e.message); // ← THAY alert()
+      toast.error(e.message);
     } finally {
       setEditLoading(false);
     }
   };
 
-  // TRƯỚC: if (!confirm(...)) return; await api(...) / catch alert()
-  // SAU:   mở ConfirmDialog → onConfirm gọi doDelete
   const doDelete = async (productId) => {
     setConfirmDelete(null);
     try {
       await api(`/products/${productId}`, { method: "DELETE" });
-      setListings((prev) => prev.filter((p) => p.id !== productId));
-      toast.success("Đã xoá bài đăng."); // ← THAY alert()
+      toast.success("Đã xoá bài đăng.");
+      // Tải lại dữ liệu phân trang mới nhất để dồn tin từ trang sau lên lấp đầy slot trống
+      fetchMyListings(listingsPage);
     } catch (e) {
-      toast.error(e.message); // ← THAY alert()
+      toast.error(e.message);
     }
   };
 
@@ -179,9 +219,16 @@ export function DashboardPage() {
     setBumpingId(productId);
     try {
       const res = await api(`/products/${productId}/bump`, { method: "POST" });
-      toast.success(res.message || "Đã đẩy tin lên đầu thành công!"); // ← THAY alert()
+      toast.success(res.message || "Đã đẩy tin lên đầu thành công!");
+
+      // 🌟 CẢI TIẾN: Cập nhật cục bộ thời gian đẩy tin mới nhất để nút đổi sang Cooldown ngay lập tức
+      setListings((prev) =>
+        prev.map((p) =>
+          p.id === productId ? { ...p, bumpedAt: new Date().toISOString() } : p
+        )
+      );
     } catch (e) {
-      toast.error(e.message); // ← THAY alert()
+      toast.error(e.message);
     } finally {
       setBumpingId(null);
     }
@@ -323,7 +370,7 @@ export function DashboardPage() {
         }}
       >
         {[
-          ["listings", `📦 Bài đã đăng (${listings.length})`],
+          ["listings", `📦 Bài đã đăng (${listingsTotal})`],
           ["chats", "💬 Tin nhắn trao đổi"],
           ["favorites", `❤️ Mục yêu thích (${favorites.length})`],
         ].map(([k, l]) => (
@@ -472,7 +519,7 @@ export function DashboardPage() {
 
                   {/* Actions */}
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {/* Edit weight */}
+                    {/* Khung nhập liệu khi đang Sửa kg hoặc Sửa giá */}
                     {editId === p.id ? (
                       <div
                         style={{
@@ -485,10 +532,10 @@ export function DashboardPage() {
                           type="number"
                           value={editVal}
                           min="0"
-                          step="0.5"
+                          step={editType === "weight" ? "0.5" : "1000"}
                           onChange={(e) => setEditVal(e.target.value)}
                           style={{
-                            width: 80,
+                            width: editType === "weight" ? 80 : 115,
                             padding: "6px 10px",
                             borderRadius: 8,
                             border: `1px solid ${C.border}`,
@@ -498,7 +545,7 @@ export function DashboardPage() {
                           autoFocus
                         />
                         <button
-                          onClick={() => saveWeight(p.id)}
+                          onClick={() => handleSave(p.id)}
                           disabled={editLoading}
                           style={{
                             padding: "6px 14px",
@@ -515,7 +562,7 @@ export function DashboardPage() {
                           {editLoading ? "…" : "Lưu"}
                         </button>
                         <button
-                          onClick={() => setEditId(null)}
+                          onClick={() => { setEditId(null); setEditType(null); }}
                           style={{
                             padding: "6px 12px",
                             borderRadius: 8,
@@ -531,48 +578,83 @@ export function DashboardPage() {
                         </button>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => {
-                          setEditId(p.id);
-                          setEditVal(String(p.remainingWeight));
-                        }}
-                        style={{
-                          padding: "6px 14px",
-                          borderRadius: 8,
-                          border: `1px solid ${C.border}`,
-                          background: C.white,
-                          color: C.ocean,
-                          fontWeight: 600,
-                          cursor: "pointer",
-                          fontFamily: "inherit",
-                          fontSize: 13,
-                        }}
-                      >
-                        ✏️ Sửa kg
-                      </button>
+                      <>
+                        {/* Nút Sửa cân nặng */}
+                        <button
+                          onClick={() => {
+                            setEditId(p.id);
+                            setEditType("weight");
+                            setEditVal(String(p.remainingWeight));
+                          }}
+                          style={{
+                            padding: "6px 14px",
+                            borderRadius: 8,
+                            border: `1px solid ${C.border}`,
+                            background: C.white,
+                            color: C.ocean,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            fontFamily: "inherit",
+                            fontSize: 13,
+                          }}
+                        >
+                          ⚖️ Sửa kg
+                        </button>
+
+                        {/* Nút Sửa giá bán */}
+                        <button
+                          onClick={() => {
+                            setEditId(p.id);
+                            setEditType("price");
+                            setEditVal(String(p.price));
+                          }}
+                          style={{
+                            padding: "6px 14px",
+                            borderRadius: 8,
+                            border: `1px solid ${C.border}`,
+                            background: C.white,
+                            color: C.coral,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            fontFamily: "inherit",
+                            fontSize: 13,
+                          }}
+                        >
+                          🏷️ Sửa giá
+                        </button>
+                      </>
                     )}
 
+                    {/* Nút Đẩy tin */}
                     <button
                       onClick={() => bumpProduct(p.id)}
-                      disabled={bumpingId === p.id}
+                      // 🌟 CẢI TIẾN: Khóa nút bấm nếu đang trong trạng thái loading hoặc đang trong thời gian Cooldown 24h
+                      disabled={bumpingId === p.id || isBumpingOnCooldown(p.bumpedAt)}
                       style={{
                         padding: "6px 14px",
                         borderRadius: 8,
                         border: "none",
-                        background: `linear-gradient(135deg, ${C.ocean}, ${C.oceanL})`,
+                        // Nếu đang chờ thì đổi màu xám sẫm, nếu sẵn sàng thì hiển thị màu xanh đại dương nguyên bản
+                        background: isBumpingOnCooldown(p.bumpedAt)
+                          ? "#64748B"
+                          : `linear-gradient(135deg, ${C.ocean}, ${C.oceanL})`,
                         color: "#fff",
                         fontWeight: 700,
-                        cursor: "pointer",
+                        cursor: isBumpingOnCooldown(p.bumpedAt) ? "not-allowed" : "pointer",
                         fontFamily: "inherit",
                         fontSize: 13,
-                        opacity: bumpingId === p.id ? 0.7 : 1,
+                        opacity: bumpingId === p.id || isBumpingOnCooldown(p.bumpedAt) ? 0.75 : 1,
                       }}
                     >
-                      {bumpingId === p.id ? "…" : "🚀 Đẩy tin"}
+                      {bumpingId === p.id
+                        ? "…"
+                        : isBumpingOnCooldown(p.bumpedAt)
+                          ? `⏳ Chờ (${getCooldownHours(p.bumpedAt)}h)` // Hiển thị số giờ còn lại
+                          : "🚀 Đẩy tin"
+                      }
                     </button>
 
-                    {/* TRƯỚC: onClick={() => deleteProduct(p.id)} dùng confirm()
-                        SAU: mở ConfirmDialog */}
+                    {/* Nút Xoá bài */}
                     <button
                       onClick={() => setConfirmDelete(p.id)}
                       style={{
@@ -593,6 +675,53 @@ export function DashboardPage() {
                 </div>
               </div>
             ))
+          )}
+
+          {/* Phân trang cho tab Listings */}
+          {listingsTotalPages > 1 && (
+            <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 24 }}>
+              <button
+                disabled={listingsPage === 1}
+                onClick={() => setListingsPage((p) => Math.max(1, p - 1))}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 8,
+                  border: `1px solid ${C.border}`,
+                  background: C.white,
+                  color: listingsPage === 1 ? C.muted : C.ocean,
+                  cursor: listingsPage === 1 ? "not-allowed" : "pointer",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  fontFamily: "inherit",
+                  transition: "all 0.2s"
+                }}
+              >
+                ‹ Trước
+              </button>
+
+              <span style={{ fontSize: 13, fontWeight: 700, color: C.dark, alignSelf: "center" }}>
+                Trang {listingsPage} / {listingsTotalPages}
+              </span>
+
+              <button
+                disabled={listingsPage === listingsTotalPages}
+                onClick={() => setListingsPage((p) => Math.min(listingsTotalPages, p + 1))}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 8,
+                  border: `1px solid ${C.border}`,
+                  background: C.white,
+                  color: listingsPage === listingsTotalPages ? C.muted : C.ocean,
+                  cursor: listingsPage === listingsTotalPages ? "not-allowed" : "pointer",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  fontFamily: "inherit",
+                  transition: "all 0.2s"
+                }}
+              >
+                Sau ›
+              </button>
+            </div>
           )}
         </div>
       )}

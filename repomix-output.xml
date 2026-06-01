@@ -145,12 +145,15 @@ client/my-app/src/components/ProductCard.jsx
 client/my-app/src/components/ProductCard.module.css
 client/my-app/src/components/ReviewList.jsx
 client/my-app/src/components/VerifiedBadge.jsx
+client/my-app/src/components/VideoCallOverlay.jsx
 client/my-app/src/context/AuthContext.jsx
 client/my-app/src/context/ToastContext.jsx
+client/my-app/src/context/VideoCallContext.jsx
 client/my-app/src/hooks/useApiFetch.js
 client/my-app/src/hooks/useCountdown.js
 client/my-app/src/hooks/useNotifications.js
 client/my-app/src/hooks/useSEO.js
+client/my-app/src/hooks/useVideoCall.js
 client/my-app/src/hooks/useViewTransitionNavigate.js
 client/my-app/src/index.css
 client/my-app/src/layout/Navbar.jsx
@@ -194,6 +197,519 @@ scratch/stress_test.js
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path="client/my-app/src/components/VideoCallOverlay.jsx">
+import React, { useEffect, useRef } from "react";
+import { createPortal } from "react-dom"; // Import Portal để đưa giao diện ra ngoài body
+import { C } from "../utils/theme";
+
+export function VideoCallOverlay({ callState, localStream, remoteStream, onAccept, onReject, partnerName }) {
+    const localVideoRef = useRef(null);
+    const remoteVideoRef = useRef(null);
+
+    // Xử lý nạp và bắt buộc phát lại Video Local của mình
+    useEffect(() => {
+        const videoElement = localVideoRef.current;
+        if (videoElement && localStream) {
+            videoElement.srcObject = localStream;
+            // Ép phát lại phòng trường hợp trình duyệt di động tạm dừng
+            videoElement.play().catch((err) => {
+                console.warn("[WebRTC] Trình duyệt chặn autoplay local video, thử lại...", err);
+            });
+        }
+    }, [localStream]);
+
+    // Xử lý nạp và bắt buộc phát lại Video Remote của đối phương (QUAN TRỌNG)
+    useEffect(() => {
+        const videoElement = remoteVideoRef.current;
+        if (videoElement && remoteStream) {
+            videoElement.srcObject = remoteStream;
+
+            // Thực hiện gọi lệnh .play() chủ động
+            videoElement.play()
+                .then(() => {
+                    console.log("[WebRTC] Đã phát luồng video của đối phương thành công!");
+                })
+                .catch((err) => {
+                    console.warn("[WebRTC] Autoplay bị chặn bởi chính sách trình duyệt, kích hoạt cơ chế dự phòng...", err);
+
+                    // Cơ chế dự phòng: Thử phát lại sau 300ms
+                    setTimeout(() => {
+                        videoElement.play().catch(() => { });
+                    }, 300);
+                });
+        }
+    }, [remoteStream]);
+
+    // Khai báo cấu trúc JSX cho overlay cuộc gọi
+    const overlayJsx = (
+        <div style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.98)", // Màu nền tối sang trọng
+            zIndex: 999999, // z-index siêu lớn để đè lên mọi popover khác
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#fff",
+            fontFamily: "inherit"
+        }}>
+            {/* ── Trạng thái: Đang đổ chuông gọi đi ── */}
+            {callState === "calling" && (
+                <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 64, animation: "pulse 1.5s infinite", marginBottom: 16 }}>📞</div>
+                    <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 8px 0" }}>Đang gọi video...</h2>
+                    <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, margin: 0 }}>Vui lòng chờ {partnerName} bắt máy</p>
+                    <button
+                        onClick={onReject}
+                        style={{
+                            marginTop: 36,
+                            padding: "14px 32px",
+                            background: "#EF4444",
+                            border: "none",
+                            borderRadius: 14,
+                            color: "#fff",
+                            fontWeight: 700,
+                            fontSize: 14,
+                            cursor: "pointer",
+                            boxShadow: "0 4px 14px rgba(239, 68, 68, 0.45)"
+                        }}
+                    >
+                        Hủy cuộc gọi
+                    </button>
+                </div>
+            )}
+
+            {/* ── Trạng thái: Có cuộc gọi đến ── */}
+            {callState === "incoming" && (
+                <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 64, animation: "bounce 1s infinite", marginBottom: 16 }}>🔔</div>
+                    <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 8px 0" }}>Cuộc gọi video đến</h2>
+                    <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, margin: 0 }}><strong>{partnerName}</strong> đang gọi cho bạn</p>
+                    <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 36 }}>
+                        <button
+                            onClick={onAccept}
+                            style={{
+                                padding: "14px 36px",
+                                background: "#10B981",
+                                border: "none",
+                                borderRadius: 14,
+                                color: "#fff",
+                                fontWeight: 700,
+                                fontSize: 14,
+                                cursor: "pointer",
+                                boxShadow: "0 4px 14px rgba(16, 185, 129, 0.45)"
+                            }}
+                        >
+                            Trả lời
+                        </button>
+                        <button
+                            onClick={onReject}
+                            style={{
+                                padding: "14px 36px",
+                                background: "#EF4444",
+                                border: "none",
+                                borderRadius: 14,
+                                color: "#fff",
+                                fontWeight: 700,
+                                fontSize: 14,
+                                cursor: "pointer",
+                                boxShadow: "0 4px 14px rgba(239, 68, 68, 0.45)"
+                            }}
+                        >
+                            Từ chối
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Trạng thái: Cuộc gọi đã kết nối ── */}
+            {callState === "connected" && (
+                <div style={{ position: "relative", width: "100vw", height: "100vh", display: "flex", justifyContent: "center", alignItems: "center" }}>
+
+                    {/* Màn hình lớn hiển thị camera của đối phương */}
+                    <video
+                        ref={remoteVideoRef}
+                        autoPlay
+                        playsInline
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+
+                    {/* Màn hình nhỏ hiển thị camera của chính mình */}
+                    <video
+                        ref={localVideoRef}
+                        autoPlay
+                        playsInline
+                        muted // Tắt tiếng máy mình để tránh dội âm lặp ngược lại micro
+                        style={{
+                            position: "absolute",
+                            top: 24,
+                            right: 24,
+                            width: 120,
+                            height: 160,
+                            objectFit: "cover",
+                            borderRadius: 12,
+                            border: "2px solid #fff",
+                            boxShadow: "0 4px 20px rgba(0,0,0,0.4)"
+                        }}
+                    />
+
+                    {/* Thanh nút gác máy cuộc gọi */}
+                    <div style={{ position: "absolute", bottom: 44, left: "50%", transform: "translateX(-50%)" }}>
+                        <button
+                            onClick={onReject}
+                            style={{
+                                padding: "14px 32px",
+                                background: "#EF4444",
+                                border: "none",
+                                borderRadius: 99,
+                                color: "#fff",
+                                fontWeight: 700,
+                                fontSize: 15,
+                                cursor: "pointer",
+                                boxShadow: "0 4px 14px rgba(239, 68, 68, 0.45)",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8
+                            }}
+                        >
+                            <span>🛑</span> Kết thúc cuộc gọi
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+
+    // Render trực tiếp ra ngoài thẻ <body> sử dụng Portal
+    return createPortal(overlayJsx, document.body);
+}
+</file>
+
+<file path="client/my-app/src/context/VideoCallContext.jsx">
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
+import { useAuth } from "./AuthContext";
+import { useToast } from "./ToastContext";
+import { getSocket } from "../services/socket";
+import { VideoCallOverlay } from "../components/VideoCallOverlay";
+
+const VideoCallContext = createContext(null);
+
+const rtcConfig = {
+    iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" }
+    ]
+};
+
+export function VideoCallProvider({ children }) {
+    const { user } = useAuth();
+    const { error, warn, info } = useToast();
+    const currentUserId = user?.id || user?.userId;
+
+    const [callState, setCallState] = useState("idle"); // idle | calling | incoming | connected
+    const [partnerId, setPartnerId] = useState(null);
+    const [partnerName, setPartnerName] = useState("Người dùng");
+    const [localStream, setLocalStream] = useState(null);
+    const [remoteStream, setRemoteStream] = useState(null);
+
+    const socketRef = useRef(null);
+    const peerConnectionRef = useRef(null);
+    const localStreamRef = useRef(null);
+    const tempOfferRef = useRef(null);
+    const iceQueueRef = useRef([]);
+
+    const latestStateRef = useRef({ callState, partnerId, localStream });
+    useEffect(() => {
+        latestStateRef.current = { callState, partnerId, localStream };
+    }, [callState, partnerId, localStream]);
+
+    // Giải phóng toàn bộ thiết bị cuộc gọi
+    const cleanUpCall = useCallback(() => {
+        console.log("[WebRTC] Đang tiến hành dọn dẹp giải phóng thiết bị...");
+
+        if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach((track) => {
+                track.stop();
+            });
+            localStreamRef.current = null;
+        }
+
+        if (peerConnectionRef.current) {
+            try {
+                peerConnectionRef.current.close();
+            } catch (e) {
+                console.warn("Lỗi đóng kết nối RTC:", e);
+            }
+        }
+
+        peerConnectionRef.current = null;
+        tempOfferRef.current = null;
+        iceQueueRef.current = [];
+
+        setLocalStream(null);
+        setRemoteStream(null);
+        setPartnerId(null);
+        setPartnerName("Người dùng");
+        setCallState("idle");
+    }, []);
+
+    // Tự động gác máy khi đăng xuất tài khoản đột ngột
+    useEffect(() => {
+        if (!currentUserId) {
+            cleanUpCall();
+        }
+    }, [currentUserId, cleanUpCall]);
+
+    // Thiết lập kết nối Socket lắng nghe cuộc gọi toàn màn hình
+    useEffect(() => {
+        if (!currentUserId) return;
+        let isMounted = true;
+
+        const handleIncomingCall = ({ from, offer, callerName }) => {
+            if (!isMounted) return;
+            console.log("[Socket Call] Nhận cuộc gọi đến từ:", callerName);
+            setCallState("incoming");
+            setPartnerId(from);
+            setPartnerName(callerName || "Ngư dân bản địa");
+            tempOfferRef.current = offer;
+        };
+
+        const handleCallAccepted = async ({ answer }) => {
+            if (!isMounted) return;
+            console.log("[Socket Call] Đối phương đã chấp nhận bắt máy:", answer);
+            try {
+                const pc = peerConnectionRef.current;
+                if (pc) {
+                    await pc.setRemoteDescription(answer);
+                    setCallState("connected");
+
+                    console.log(`[WebRTC] Đang đồng bộ ${iceQueueRef.current.length} ứng viên mạng từ hàng đợi...`);
+                    for (const candidate of iceQueueRef.current) {
+                        await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch((e) => {
+                            console.warn("Lỗi đồng bộ candidate sớm:", e);
+                        });
+                    }
+                    iceQueueRef.current = [];
+                }
+            } catch (err) {
+                console.error("Lỗi thiết lập đàm thoại:", err);
+                error("Lỗi đồng bộ kết nối đàm thoại.");
+                cleanUpCall();
+            }
+        };
+
+        const handleNewIceCandidate = async ({ candidate }) => {
+            if (!isMounted) return;
+            const pc = peerConnectionRef.current;
+            if (pc && pc.remoteDescription) {
+                try {
+                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (err) {
+                    console.warn("Lỗi gán ICE candidate trực tiếp:", err);
+                }
+            } else {
+                iceQueueRef.current.push(candidate);
+            }
+        };
+
+        const handleCallEndedByPartner = () => {
+            if (!isMounted) return;
+            info("Cuộc gọi đã kết thúc.");
+            cleanUpCall();
+        };
+
+        getSocket()
+            .then((socket) => {
+                if (!isMounted) return;
+                socketRef.current = socket;
+
+                socket.on("incoming_call", handleIncomingCall);
+                socket.on("call_accepted", handleCallAccepted);
+                socket.on("ice_candidate", handleNewIceCandidate);
+                socket.on("call_ended", handleCallEndedByPartner);
+            })
+            .catch((err) => console.error("Kết nối Socket Call lỗi:", err));
+
+        return () => {
+            isMounted = false;
+            if (socketRef.current) {
+                socketRef.current.off("incoming_call", handleIncomingCall);
+                socketRef.current.off("call_accepted", handleCallAccepted);
+                socketRef.current.off("ice_candidate", handleNewIceCandidate);
+                socketRef.current.off("call_ended", handleCallEndedByPartner);
+            }
+        };
+    }, [currentUserId, cleanUpCall, error, info]);
+
+    const createPeerConnection = useCallback((targetId) => {
+        const pc = new RTCPeerConnection(rtcConfig);
+
+        pc.onicecandidate = (event) => {
+            if (event.candidate && socketRef.current) {
+                socketRef.current.emit("ice_candidate", {
+                    to: targetId,
+                    candidate: event.candidate.toJSON()
+                });
+            }
+        };
+
+        pc.ontrack = (event) => {
+            if (event.streams && event.streams[0]) {
+                // Luôn bọc trong một MediaStream mới để ép React kích hoạt re-render
+                setRemoteStream(new MediaStream(event.streams[0]));
+            } else {
+                setRemoteStream((prevStream) => {
+                    const stream = prevStream ? prevStream : new MediaStream();
+                    stream.addTrack(event.track);
+                    return new MediaStream(stream);
+                });
+            }
+        };
+
+        pc.onconnectionstatechange = () => {
+            if (pc.connectionState === "disconnected" || pc.connectionState === "failed" || pc.connectionState === "closed") {
+                warn("Kết nối cuộc gọi đã bị ngắt.");
+                cleanUpCall();
+            }
+        };
+
+        peerConnectionRef.current = pc;
+        return pc;
+    }, [cleanUpCall, warn]);
+
+    const startCall = async (targetUserId, targetUserName) => {
+        try {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error("Trình duyệt yêu cầu HTTPS bảo mật để sử dụng máy ảnh & micro.");
+            }
+
+            setCallState("calling");
+            setPartnerId(targetUserId);
+            setPartnerName(targetUserName || "Người dùng");
+
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            setLocalStream(stream);
+            localStreamRef.current = stream;
+
+            const pc = createPeerConnection(targetUserId);
+            stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            const offerToSend = {
+                type: offer.type,
+                sdp: offer.sdp
+            };
+
+            socketRef.current.emit("call_user", {
+                to: targetUserId,
+                offer: offerToSend,
+                callerName: user?.name || "Một người dùng"
+            });
+        } catch (err) {
+            console.error("Khởi động cuộc gọi lỗi:", err);
+            error(err.message || "Không thể truy cập camera của bạn.");
+            cleanUpCall();
+        }
+    };
+
+    const acceptCall = async () => {
+        const { partnerId: currentPartnerId } = latestStateRef.current;
+        try {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error("Trình duyệt yêu cầu HTTPS bảo mật để sử dụng máy ảnh & micro.");
+            }
+
+            const offer = tempOfferRef.current;
+            if (!offer) {
+                throw new Error("Không tìm thấy cấu hình cuộc gọi đến.");
+            }
+
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            setLocalStream(stream);
+            localStreamRef.current = stream;
+
+            const pc = createPeerConnection(currentPartnerId);
+            stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+            await pc.setRemoteDescription(offer);
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+
+            const answerToSend = {
+                type: answer.type,
+                sdp: answer.sdp
+            };
+
+            socketRef.current.emit("answer_call", { to: currentPartnerId, answer: answerToSend });
+            setCallState("connected");
+
+            for (const candidate of iceQueueRef.current) {
+                await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch((e) => {
+                    console.warn("Lỗi đồng bộ candidate sớm:", e);
+                });
+            }
+            iceQueueRef.current = [];
+
+        } catch (err) {
+            console.error("Chấp nhận cuộc gọi video lỗi:", err);
+            error(err.message || "Lỗi đồng bộ kết nối camera.");
+            cleanUpCall();
+        }
+    };
+
+    const endCall = () => {
+        const { partnerId: currentPartnerId } = latestStateRef.current;
+        if (socketRef.current && currentPartnerId) {
+            socketRef.current.emit("end_call", { to: currentPartnerId });
+        }
+        cleanUpCall();
+    };
+
+    return (
+        <VideoCallContext.Provider value={{ callState, partnerId, partnerName, startCall, acceptCall, endCall }}>
+            {children}
+            {callState !== "idle" && (
+                <VideoCallOverlay
+                    callState={callState}
+                    localStream={localStream}
+                    remoteStream={remoteStream}
+                    onAccept={acceptCall}
+                    onReject={endCall}
+                    partnerName={partnerName}
+                />
+            )}
+        </VideoCallContext.Provider>
+    );
+}
+
+export function useVideoCall() {
+    const ctx = useContext(VideoCallContext);
+    if (!ctx) throw new Error("useVideoCall phải được sử dụng bên trong VideoCallProvider");
+    return ctx;
+}
+</file>
+
+<file path="client/my-app/src/hooks/useVideoCall.js">
+/**
+ * useVideoCall.js
+ * 
+ * ĐỂ ĐƯA CHỨC NĂNG GỌI VIDEO RA TOÀN BỘ MÀN HÌNH (HomePage, Dashboard, Profile...):
+ * Chúng ta đã đóng gói toàn bộ trạng thái WebRTC và Camera vào VideoCallProvider toàn cục.
+ * 
+ * File này đóng vai trò là một "Cổng kết nối" (Re-export) giúp kết nối 
+ * các trang trong dự án (như ChatBox.jsx) sử dụng chung một luồng đàm thoại Global duy nhất,
+ * giúp khắc phục triệt để lỗi xung đột đen màn hình 1 phía.
+ */
+import { useVideoCall as useGlobalVideoCall } from "../context/VideoCallContext";
+
+export function useVideoCall() {
+    return useGlobalVideoCall();
+}
+</file>
 
 <file path=".github/ISSUE_TEMPLATE/bug.md">
 ---
@@ -490,62 +1006,6 @@ COPY . .
 EXPOSE 5000
 
 CMD ["npm", "run", "dev"]
-</file>
-
-<file path="backend/logs/.3fa4d5e91883ce1217f62a49f94203b42caa131d-audit.json">
-{
-    "keep": {
-        "days": true,
-        "amount": 14
-    },
-    "auditLog": "logs/.3fa4d5e91883ce1217f62a49f94203b42caa131d-audit.json",
-    "files": [
-        {
-            "date": 1779983945404,
-            "name": "logs/combined-2026-05-28.log",
-            "hash": "39258e6e5a34297d6aefb112ffeaf58f930897cbed1a3f113dc4c3da9b9910cb"
-        },
-        {
-            "date": 1779989721729,
-            "name": "logs\\combined-2026-05-29.log",
-            "hash": "4d3c9129ab746e429a1c0536ac85ca9e32d884d1eaa7bc22ede55b1870ecc332"
-        },
-        {
-            "date": 1780270185856,
-            "name": "logs\\combined-2026-06-01.log",
-            "hash": "ee16dffe5a8a267e2dcfa7b51541f9b98949d2e02c2caefc695c5e610f4b1a1c"
-        }
-    ],
-    "hashType": "sha256"
-}
-</file>
-
-<file path="backend/logs/.944c2a6e38c8046075bb4cb64c11b1f8d919853c-audit.json">
-{
-    "keep": {
-        "days": true,
-        "amount": 14
-    },
-    "auditLog": "logs/.944c2a6e38c8046075bb4cb64c11b1f8d919853c-audit.json",
-    "files": [
-        {
-            "date": 1779983945393,
-            "name": "logs/error-2026-05-28.log",
-            "hash": "98d225165e42860abcd9161d9cd8152d72dc937b0407ffb3154c389572059258"
-        },
-        {
-            "date": 1779989721726,
-            "name": "logs\\error-2026-05-29.log",
-            "hash": "0d71c0d26400a63cec707cb42c3e0f9d3342821b93a879b3b405867a3bc86240"
-        },
-        {
-            "date": 1780270185855,
-            "name": "logs\\error-2026-06-01.log",
-            "hash": "0a47580e8b2d0c8a0f153971e1e9ae1d846357481fc2e3e1eda00a1fb19fa1d0"
-        }
-    ],
-    "hashType": "sha256"
-}
 </file>
 
 <file path="backend/sql/seed.sql">
@@ -4695,6 +5155,62 @@ ESMS_SMS_TYPE=4          # 4 = SMS thường, 2 = Brandname
 ESMS_BRANDNAME=HaiSan    # Chỉ cần khi SMS_TYPE=2
 </file>
 
+<file path="backend/logs/.3fa4d5e91883ce1217f62a49f94203b42caa131d-audit.json">
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "logs/.3fa4d5e91883ce1217f62a49f94203b42caa131d-audit.json",
+    "files": [
+        {
+            "date": 1779983945404,
+            "name": "logs/combined-2026-05-28.log",
+            "hash": "39258e6e5a34297d6aefb112ffeaf58f930897cbed1a3f113dc4c3da9b9910cb"
+        },
+        {
+            "date": 1779989721729,
+            "name": "logs\\combined-2026-05-29.log",
+            "hash": "4d3c9129ab746e429a1c0536ac85ca9e32d884d1eaa7bc22ede55b1870ecc332"
+        },
+        {
+            "date": 1780270185856,
+            "name": "logs\\combined-2026-06-01.log",
+            "hash": "ee16dffe5a8a267e2dcfa7b51541f9b98949d2e02c2caefc695c5e610f4b1a1c"
+        }
+    ],
+    "hashType": "sha256"
+}
+</file>
+
+<file path="backend/logs/.944c2a6e38c8046075bb4cb64c11b1f8d919853c-audit.json">
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "logs/.944c2a6e38c8046075bb4cb64c11b1f8d919853c-audit.json",
+    "files": [
+        {
+            "date": 1779983945393,
+            "name": "logs/error-2026-05-28.log",
+            "hash": "98d225165e42860abcd9161d9cd8152d72dc937b0407ffb3154c389572059258"
+        },
+        {
+            "date": 1779989721726,
+            "name": "logs\\error-2026-05-29.log",
+            "hash": "0d71c0d26400a63cec707cb42c3e0f9d3342821b93a879b3b405867a3bc86240"
+        },
+        {
+            "date": 1780270185855,
+            "name": "logs\\error-2026-06-01.log",
+            "hash": "0a47580e8b2d0c8a0f153971e1e9ae1d846357481fc2e3e1eda00a1fb19fa1d0"
+        }
+    ],
+    "hashType": "sha256"
+}
+</file>
+
 <file path="backend/README.md">
 # 🐟 HảiSản.vn — Backend
 
@@ -5402,207 +5918,6 @@ router.get("/", authenticate, adminOnly, getReports);
 router.patch("/:id", authenticate, adminOnly, handleReport);
 
 export default router;
-</file>
-
-<file path="backend/src/services/otp.service.ts">
-import crypto from "crypto";
-import { redis } from "../config/redis";
-import { logger } from "../utils/logger";
-
-const OTP_TTL_SEC = 5 * 60; // OTP hết hạn sau 5 phút
-const ATTEMPT_TTL_SEC = 15 * 60; // Cửa sổ rate-limit gửi: 15 phút
-const MAX_SEND_ATTEMPTS = 3; // Tối đa 3 lần gửi / 15 phút
-const MAX_VERIFY_ATTEMPTS = 5; // Tối đa 5 lần verify sai / phiên OTP
-const RESET_TOKEN_TTL = 10 * 60; // Reset token hết hạn sau 10 phút
-
-import nodemailer from "nodemailer";
-
-const KEY_OTP = (email: string) => `otp:hash:${email.toLowerCase().trim()}`;
-const KEY_ATTEMPTS = (email: string) =>
-  `otp:attempts:${email.toLowerCase().trim()}`;
-const KEY_VERIFY_FAILS = (email: string) =>
-  `otp:verify_fails:${email.toLowerCase().trim()}`;
-const KEY_RESET = (token: string) => `otp:reset_token:${token}`;
-
-async function sendOtpEmail(email: string, otp: string): Promise<void> {
-  const user = process.env.EMAIL_USER;
-  const pass = process.env.EMAIL_PASS;
-
-  if (
-    !user ||
-    !pass ||
-    user.includes("your_email") ||
-    pass.includes("your_password")
-  ) {
-    throw new Error("MockMode");
-  }
-
-  // Tạo 1 lần, tái sử dụng
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
-  // Thêm verify khi khởi động để phát hiện sai config sớm
-  transporter.verify((err) => {
-    if (err) logger.error(`[Email] SMTP config lỗi: ${err.message}`);
-    else logger.info("[Email] SMTP Gmail sẵn sàng");
-  });
-
-  const mailOptions = {
-    from: `"HảiSản.vn" <${user}>`,
-    to: email,
-    subject: "[HảiSản.vn] Mã xác minh đặt lại mật khẩu",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-        <h2 style="color: #0284c7; text-align: center;">Xác Minh Đặt Lại Mật Khẩu</h2>
-        <p>Chào bạn,</p>
-        <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản HảiSản.vn liên kết với email này.</p>
-        <p>Mã xác nhận (OTP) của bạn là:</p>
-        <div style="background-color: #f3f4f6; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #1f2937; border-radius: 6px; margin: 20px 0;">
-          ${otp}
-        </div>
-        <p style="color: #6b7280; font-size: 14px;">Mã này có hiệu lực trong vòng 5 phút. Để bảo mật, vui lòng không chia sẻ mã này với bất kỳ ai.</p>
-        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
-        <p style="color: #9ca3af; font-size: 12px; text-align: center;">Hệ thống tự động từ HảiSản.vn</p>
-      </div>
-    `,
-  };
-
-  await transporter.sendMail(mailOptions);
-}
-
-function hashOtp(otp: string): string {
-  const secret = (process.env.OTP_SECRET || process.env.JWT_SECRET) as string;
-  return crypto.createHmac("sha256", secret).update(otp).digest("hex");
-}
-
-function makeError(message: string, status: number): Error {
-  const err: any = new Error(message);
-  err.status = status;
-  return err;
-}
-
-export const otpService = {
-  async sendOtp(email: string): Promise<void> {
-    const cleanEmail = email.toLowerCase().trim();
-    const currentAttempts = await redis.get(KEY_ATTEMPTS(cleanEmail));
-    if (currentAttempts && parseInt(currentAttempts, 10) >= MAX_SEND_ATTEMPTS) {
-      throw makeError(
-        `Bạn đã yêu cầu OTP quá ${MAX_SEND_ATTEMPTS} lần. Vui lòng thử lại sau 15 phút.`,
-        429,
-      );
-    }
-
-    const otp = crypto.randomInt(100_000, 999_999).toString();
-    const hashed = hashOtp(otp);
-
-    // Ghi Redis: lưu OTP hash, tăng attempt counter, xóa verify fails cũ
-    const pipe = redis.pipeline();
-    pipe.set(KEY_OTP(cleanEmail), hashed, "EX", OTP_TTL_SEC);
-    pipe.incr(KEY_ATTEMPTS(cleanEmail));
-    pipe.expire(KEY_ATTEMPTS(cleanEmail), ATTEMPT_TTL_SEC);
-    pipe.del(KEY_VERIFY_FAILS(cleanEmail));
-    await pipe.exec();
-
-    const user = process.env.EMAIL_USER;
-    const pass = process.env.EMAIL_PASS;
-    const isMockEmail =
-      !user ||
-      !pass ||
-      user.includes("your_email") ||
-      user === "" ||
-      pass === "";
-
-    if (isMockEmail) {
-      logger.info(
-        `✉️ [MOCK EMAIL DEVELOPMENT MODE] Gửi OTP tới Email: ${cleanEmail} -> MÃ OTP: ${otp}`,
-      );
-    } else {
-      try {
-        await sendOtpEmail(cleanEmail, otp);
-        logger.info(`[Email] OTP sent successfully to ${cleanEmail}`);
-      } catch (err: any) {
-        logger.error(
-          `[Email] Delivery failed: ${err.message}. Falling back to logging OTP.`,
-        );
-        logger.info(
-          `✉️ [EMAIL FALLBACK] Mã OTP cho Email ${cleanEmail}: ${otp}`,
-        );
-      }
-    }
-  },
-
-  async verifyOtp(email: string, otp: string): Promise<string> {
-    const cleanEmail = email.toLowerCase().trim();
-    const fails = await redis.get(KEY_VERIFY_FAILS(cleanEmail));
-    if (fails && parseInt(fails, 10) >= MAX_VERIFY_ATTEMPTS) {
-      throw makeError(
-        `Bạn đã nhập sai OTP quá ${MAX_VERIFY_ATTEMPTS} lần. Vui lòng yêu cầu mã mới.`,
-        429,
-      );
-    }
-
-    const stored = await redis.get(KEY_OTP(cleanEmail));
-    if (!stored) {
-      throw makeError("Mã OTP đã hết hạn. Vui lòng yêu cầu gửi lại.", 400);
-    }
-
-    if (hashOtp(otp) !== stored) {
-      const otpTtl = await redis.ttl(KEY_OTP(cleanEmail));
-      const pipe = redis.pipeline();
-      pipe.incr(KEY_VERIFY_FAILS(cleanEmail));
-      pipe.expire(
-        KEY_VERIFY_FAILS(cleanEmail),
-        otpTtl > 0 ? otpTtl : OTP_TTL_SEC,
-      );
-      await pipe.exec();
-
-      const remaining = MAX_VERIFY_ATTEMPTS - parseInt(fails ?? "0") - 1;
-      throw makeError(
-        remaining > 0
-          ? `Mã OTP không đúng. Còn ${remaining} lần thử.`
-          : `Mã OTP không đúng. Vui lòng yêu cầu mã mới.`,
-        400,
-      );
-    }
-
-    // OTP hợp lệ: xóa OTP và failure counter
-    const pipe = redis.pipeline();
-    pipe.del(KEY_OTP(cleanEmail));
-    pipe.del(KEY_VERIFY_FAILS(cleanEmail));
-    await pipe.exec();
-
-    const resetToken = crypto.randomBytes(32).toString("hex");
-    await redis.set(KEY_RESET(resetToken), cleanEmail, "EX", RESET_TOKEN_TTL);
-
-    return resetToken;
-  },
-
-  async getEmailByResetToken(resetToken: string): Promise<string> {
-    const email = await redis.get(KEY_RESET(resetToken));
-    if (!email) {
-      throw makeError(
-        "Phiên đặt lại mật khẩu đã hết hạn. Vui lòng thực hiện lại từ đầu.",
-        400,
-      );
-    }
-    return email;
-  },
-
-  async consumeResetToken(resetToken: string): Promise<void> {
-    await redis.del(KEY_RESET(resetToken));
-  },
-
-  async getOtpTtl(email: string): Promise<number> {
-    const cleanEmail = email.toLowerCase().trim();
-    const ttl = await redis.ttl(KEY_OTP(cleanEmail));
-    return ttl > 0 ? ttl : 0;
-  },
-};
 </file>
 
 <file path="backend/src/types/declarations.d.ts">
@@ -9716,34 +10031,6 @@ volumes:
   mongo_data:
 </file>
 
-<file path="backend/.env">
-MONGO_URI=mongodb://127.0.0.1:27017/seafood_db
-
-# ─── Auth ────────────────────────────────────
-JWT_SECRET=haiSanVn_super_secret_2024
-JWT_EXPIRES_IN=7d
-OTP_SECRET=otp_secret_key_32_characters_random_number_123
-
-# ─── Server ──────────────────────────────────
-PORT=5000
-CLIENT_URL=http://localhost:3000
-
-# ─── Cloudinary ──────────────────────────────
-CLOUDINARY_CLOUD_NAME=drjmbtafn
-CLOUDINARY_API_KEY=833871645525131
-CLOUDINARY_API_SECRET=HezOkvV6fsWcjkoFs9X6CWubLrQ
-
-ESMS_API_KEY=<lấy tại esms.vn>
-ESMS_SECRET_KEY=<lấy tại esms.vn>
-ESMS_SMS_TYPE=4          # 4 = SMS thường, 2 = Brandname
-ESMS_BRANDNAME=HaiSan    # Chỉ cần khi SMS_TYPE=2
-
-
-# ─── Email (Gmail SMTP) ───────────────────────
-EMAIL_USER=daudaubut@gmail.com
-EMAIL_PASS=uezd tktc qysj jlpo
-</file>
-
 <file path="backend/.gitignore">
 node_modules/
 dist/
@@ -10035,6 +10322,207 @@ const userSchema = new Schema<IUser>(
 );
 
 export const User = model<IUser>("User", userSchema);
+</file>
+
+<file path="backend/src/services/otp.service.ts">
+import crypto from "crypto";
+import { redis } from "../config/redis";
+import { logger } from "../utils/logger";
+
+const OTP_TTL_SEC = 5 * 60; // OTP hết hạn sau 5 phút
+const ATTEMPT_TTL_SEC = 15 * 60; // Cửa sổ rate-limit gửi: 15 phút
+const MAX_SEND_ATTEMPTS = 3; // Tối đa 3 lần gửi / 15 phút
+const MAX_VERIFY_ATTEMPTS = 5; // Tối đa 5 lần verify sai / phiên OTP
+const RESET_TOKEN_TTL = 10 * 60; // Reset token hết hạn sau 10 phút
+
+import nodemailer from "nodemailer";
+
+const KEY_OTP = (email: string) => `otp:hash:${email.toLowerCase().trim()}`;
+const KEY_ATTEMPTS = (email: string) =>
+  `otp:attempts:${email.toLowerCase().trim()}`;
+const KEY_VERIFY_FAILS = (email: string) =>
+  `otp:verify_fails:${email.toLowerCase().trim()}`;
+const KEY_RESET = (token: string) => `otp:reset_token:${token}`;
+
+async function sendOtpEmail(email: string, otp: string): Promise<void> {
+  const user = process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASS;
+
+  if (
+    !user ||
+    !pass ||
+    user.includes("your_email") ||
+    pass.includes("your_password")
+  ) {
+    throw new Error("MockMode");
+  }
+
+  // Tạo 1 lần, tái sử dụng
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  // Thêm verify khi khởi động để phát hiện sai config sớm
+  transporter.verify((err) => {
+    if (err) logger.error(`[Email] SMTP config lỗi: ${err.message}`);
+    else logger.info("[Email] SMTP Gmail sẵn sàng");
+  });
+
+  const mailOptions = {
+    from: `"HảiSản.vn" <${user}>`,
+    to: email,
+    subject: "[HảiSản.vn] Mã xác minh đặt lại mật khẩu",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+        <h2 style="color: #0284c7; text-align: center;">Xác Minh Đặt Lại Mật Khẩu</h2>
+        <p>Chào bạn,</p>
+        <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản HảiSản.vn liên kết với email này.</p>
+        <p>Mã xác nhận (OTP) của bạn là:</p>
+        <div style="background-color: #f3f4f6; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #1f2937; border-radius: 6px; margin: 20px 0;">
+          ${otp}
+        </div>
+        <p style="color: #6b7280; font-size: 14px;">Mã này có hiệu lực trong vòng 5 phút. Để bảo mật, vui lòng không chia sẻ mã này với bất kỳ ai.</p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+        <p style="color: #9ca3af; font-size: 12px; text-align: center;">Hệ thống tự động từ HảiSản.vn</p>
+      </div>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+}
+
+function hashOtp(otp: string): string {
+  const secret = (process.env.OTP_SECRET || process.env.JWT_SECRET) as string;
+  return crypto.createHmac("sha256", secret).update(otp).digest("hex");
+}
+
+function makeError(message: string, status: number): Error {
+  const err: any = new Error(message);
+  err.status = status;
+  return err;
+}
+
+export const otpService = {
+  async sendOtp(email: string): Promise<void> {
+    const cleanEmail = email.toLowerCase().trim();
+    const currentAttempts = await redis.get(KEY_ATTEMPTS(cleanEmail));
+    if (currentAttempts && parseInt(currentAttempts, 10) >= MAX_SEND_ATTEMPTS) {
+      throw makeError(
+        `Bạn đã yêu cầu OTP quá ${MAX_SEND_ATTEMPTS} lần. Vui lòng thử lại sau 15 phút.`,
+        429,
+      );
+    }
+
+    const otp = crypto.randomInt(100_000, 999_999).toString();
+    const hashed = hashOtp(otp);
+
+    // Ghi Redis: lưu OTP hash, tăng attempt counter, xóa verify fails cũ
+    const pipe = redis.pipeline();
+    pipe.set(KEY_OTP(cleanEmail), hashed, "EX", OTP_TTL_SEC);
+    pipe.incr(KEY_ATTEMPTS(cleanEmail));
+    pipe.expire(KEY_ATTEMPTS(cleanEmail), ATTEMPT_TTL_SEC);
+    pipe.del(KEY_VERIFY_FAILS(cleanEmail));
+    await pipe.exec();
+
+    const user = process.env.EMAIL_USER;
+    const pass = process.env.EMAIL_PASS;
+    const isMockEmail =
+      !user ||
+      !pass ||
+      user.includes("your_email") ||
+      user === "" ||
+      pass === "";
+
+    if (isMockEmail) {
+      logger.info(
+        `✉️ [MOCK EMAIL DEVELOPMENT MODE] Gửi OTP tới Email: ${cleanEmail} -> MÃ OTP: ${otp}`,
+      );
+    } else {
+      try {
+        await sendOtpEmail(cleanEmail, otp);
+        logger.info(`[Email] OTP sent successfully to ${cleanEmail}`);
+      } catch (err: any) {
+        logger.error(
+          `[Email] Delivery failed: ${err.message}. Falling back to logging OTP.`,
+        );
+        logger.info(
+          `✉️ [EMAIL FALLBACK] Mã OTP cho Email ${cleanEmail}: ${otp}`,
+        );
+      }
+    }
+  },
+
+  async verifyOtp(email: string, otp: string): Promise<string> {
+    const cleanEmail = email.toLowerCase().trim();
+    const fails = await redis.get(KEY_VERIFY_FAILS(cleanEmail));
+    if (fails && parseInt(fails, 10) >= MAX_VERIFY_ATTEMPTS) {
+      throw makeError(
+        `Bạn đã nhập sai OTP quá ${MAX_VERIFY_ATTEMPTS} lần. Vui lòng yêu cầu mã mới.`,
+        429,
+      );
+    }
+
+    const stored = await redis.get(KEY_OTP(cleanEmail));
+    if (!stored) {
+      throw makeError("Mã OTP đã hết hạn. Vui lòng yêu cầu gửi lại.", 400);
+    }
+
+    if (hashOtp(otp) !== stored) {
+      const otpTtl = await redis.ttl(KEY_OTP(cleanEmail));
+      const pipe = redis.pipeline();
+      pipe.incr(KEY_VERIFY_FAILS(cleanEmail));
+      pipe.expire(
+        KEY_VERIFY_FAILS(cleanEmail),
+        otpTtl > 0 ? otpTtl : OTP_TTL_SEC,
+      );
+      await pipe.exec();
+
+      const remaining = MAX_VERIFY_ATTEMPTS - parseInt(fails ?? "0") - 1;
+      throw makeError(
+        remaining > 0
+          ? `Mã OTP không đúng. Còn ${remaining} lần thử.`
+          : `Mã OTP không đúng. Vui lòng yêu cầu mã mới.`,
+        400,
+      );
+    }
+
+    // OTP hợp lệ: xóa OTP và failure counter
+    const pipe = redis.pipeline();
+    pipe.del(KEY_OTP(cleanEmail));
+    pipe.del(KEY_VERIFY_FAILS(cleanEmail));
+    await pipe.exec();
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    await redis.set(KEY_RESET(resetToken), cleanEmail, "EX", RESET_TOKEN_TTL);
+
+    return resetToken;
+  },
+
+  async getEmailByResetToken(resetToken: string): Promise<string> {
+    const email = await redis.get(KEY_RESET(resetToken));
+    if (!email) {
+      throw makeError(
+        "Phiên đặt lại mật khẩu đã hết hạn. Vui lòng thực hiện lại từ đầu.",
+        400,
+      );
+    }
+    return email;
+  },
+
+  async consumeResetToken(resetToken: string): Promise<void> {
+    await redis.del(KEY_RESET(resetToken));
+  },
+
+  async getOtpTtl(email: string): Promise<number> {
+    const cleanEmail = email.toLowerCase().trim();
+    const ttl = await redis.ttl(KEY_OTP(cleanEmail));
+    return ttl > 0 ? ttl : 0;
+  },
+};
 </file>
 
 <file path="backend/src/utils/fillDays.ts">
@@ -13237,6 +13725,34 @@ export default defineConfig({
     },
   },
 });
+</file>
+
+<file path="backend/.env">
+MONGO_URI=mongodb://127.0.0.1:27017/seafood_db
+
+# ─── Auth ────────────────────────────────────
+JWT_SECRET=haiSanVn_super_secret_2024
+JWT_EXPIRES_IN=7d
+OTP_SECRET=otp_secret_key_32_characters_random_number_123
+
+# ─── Server ──────────────────────────────────
+PORT=5000
+CLIENT_URL=https://secluding-dimly-steep.ngrok-free.dev/
+
+# ─── Cloudinary ──────────────────────────────
+CLOUDINARY_CLOUD_NAME=drjmbtafn
+CLOUDINARY_API_KEY=833871645525131
+CLOUDINARY_API_SECRET=HezOkvV6fsWcjkoFs9X6CWubLrQ
+
+ESMS_API_KEY=<lấy tại esms.vn>
+ESMS_SECRET_KEY=<lấy tại esms.vn>
+ESMS_SMS_TYPE=4          # 4 = SMS thường, 2 = Brandname
+ESMS_BRANDNAME=HaiSan    # Chỉ cần khi SMS_TYPE=2
+
+
+# ─── Email (Gmail SMTP) ───────────────────────
+EMAIL_USER=daudaubut@gmail.com
+EMAIL_PASS=uezd tktc qysj jlpo
 </file>
 
 <file path="backend/package.json">
@@ -18098,8 +18614,8 @@ export function initSocket(server: HttpServer) {
     const pubClient = redis.duplicate();
     const subClient = redis.duplicate();
 
-    pubClient.connect().catch(() => {});
-    subClient.connect().catch(() => {});
+    pubClient.connect().catch(() => { });
+    subClient.connect().catch(() => { });
 
     io.adapter(createAdapter(pubClient, subClient));
     logger.info("Socket.IO Redis Adapter configured successfully");
@@ -18172,10 +18688,6 @@ export function initSocket(server: HttpServer) {
           return;
         }
 
-        // FIX: Dùng pipeline atomic để tránh race condition.
-        // Trước đây: incr + expire là 2 lệnh riêng biệt.
-        // Nếu server crash sau incr nhưng trước expire → key sống vĩnh viễn → block user mãi mãi.
-        // Bây giờ: cả 2 lệnh gửi trong 1 round-trip, kết quả đảm bảo nhất quán.
         const rateLimitKey = `ratelimit:socket:msg:${userId}`;
         try {
           const pipe = redis.pipeline();
@@ -18183,7 +18695,6 @@ export function initSocket(server: HttpServer) {
           pipe.expire(rateLimitKey, 2);
           const results = await pipe.exec();
 
-          // results[0] = [error, incrValue]
           const currentCount = (results?.[0]?.[1] as number) ?? 0;
 
           if (currentCount > 5) {
@@ -18235,6 +18746,43 @@ export function initSocket(server: HttpServer) {
       },
     );
 
+    /* ─── VIDEO CALL EVENTS (MỚI) ─── */
+
+    // 1. Gửi yêu cầu gọi (Truyền kèm callerName sang cho Callee)
+    socket.on("call_user", (data: { to: string; offer: any; callerName?: string }) => {
+      const { to, offer, callerName } = data;
+      logger.info(`[Socket Call] User ${userId} (${callerName || "Không tên"}) is calling User ${to}`);
+      socket.to(`user_${to}`).emit("incoming_call", {
+        from: userId,
+        offer,
+        callerName: callerName || "Một người dùng"
+      });
+    });
+
+    // 2. Chấp nhận cuộc gọi
+    socket.on("answer_call", (data: { to: string; answer: any }) => {
+      const { to, answer } = data;
+      logger.info(`[Socket Call] User ${userId} accepted call from User ${to}`);
+      socket.to(`user_${to}`).emit("call_accepted", {
+        answer
+      });
+    });
+
+    // 3. Trao đổi cấu hình mạng ICE Candidates
+    socket.on("ice_candidate", (data: { to: string; candidate: any }) => {
+      const { to, candidate } = data;
+      socket.to(`user_${to}`).emit("ice_candidate", {
+        candidate
+      });
+    });
+
+    // 4. Kết thúc/Từ chối cuộc gọi
+    socket.on("end_call", (data: { to: string }) => {
+      const { to } = data;
+      logger.info(`[Socket Call] Call ended between User ${userId} and User ${to}`);
+      socket.to(`user_${to}`).emit("call_ended");
+    });
+
     socket.join(`user_${userId}`);
   });
 
@@ -18255,6 +18803,7 @@ import { getSocket } from "../services/socket";
 import { api } from "../services/api";
 import { MessageIcon, XIcon, CheckCircleIcon } from "./icons/index";
 import { useToast } from "../context/ToastContext";
+import { useVideoCall } from "../context/VideoCallContext"; // ← SỬA ĐƯỜNG DẪN IMPORT SANG CONTEXT
 
 export function ChatBox({ product, onClose, user, fullHeight = false }) {
   const toast = useToast();
@@ -18271,6 +18820,9 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
   const otherUserRef = useRef(null);
 
   const currentUserId = user?.id || user?.userId;
+
+  // LẤY TRỰC TIẾP HÀM BẮT ĐẦU CUỘC GỌI TỪ GLOBAL PROVIDER
+  const { startCall } = useVideoCall();
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -18293,7 +18845,7 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
         const other = data.find((m) => m.senderId !== currentUserId);
         if (other) otherUserRef.current = other.senderId;
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, [product.id, currentUserId]);
 
@@ -18344,13 +18896,16 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs]);
 
+  const getReceiverId = () => {
+    const sellerId = product.sellerId;
+    return currentUserId === sellerId ? otherUserRef.current : sellerId;
+  };
+
   const send = (txtContent = "", imgUrl = null) => {
     const finalContent = txtContent.trim();
     if (!finalContent && !imgUrl) return;
 
-    const sellerId = product.sellerId;
-    const receiverId =
-      currentUserId === sellerId ? otherUserRef.current : sellerId;
+    const receiverId = getReceiverId();
     if (!receiverId) {
       toast.warn("Chưa có người nhận. Hãy chờ người mua nhắn trước.");
       return;
@@ -18415,6 +18970,17 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
     }
   };
 
+  // Kích hoạt cuộc gọi qua Global Provider
+  const handleInitiateCall = () => {
+    const targetId = getReceiverId();
+    if (!targetId) {
+      toast.warn("Không tìm thấy đối phương hoạt động để thực hiện cuộc gọi.");
+      return;
+    }
+    // Gửi đi tín hiệu gọi kèm tên đối phương hiển thị ở đầu bên kia
+    startCall(targetId, product.sellerName);
+  };
+
   const chatHeight = fullHeight ? 420 : 250;
 
   return (
@@ -18426,6 +18992,7 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
         background: C.white,
       }}
     >
+      {/* Header */}
       <div
         style={{
           background: "#0f172a",
@@ -18456,19 +19023,41 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
             Sản phẩm: {product.name}
           </div>
         </div>
-        {onClose && (
+
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          {/* NÚT GỌI VIDEO CALL */}
           <button
-            onClick={onClose}
+            onClick={handleInitiateCall}
             style={{
               background: "none",
               border: "none",
-              color: "#94a3b8",
+              color: "#38bdf8",
               cursor: "pointer",
+              fontSize: 14,
+              padding: "4px",
+              display: "flex",
+              alignItems: "center"
             }}
+            title="Gọi video cho đối phương"
           >
-            <XIcon size={16} />
+            📞
           </button>
-        )}
+
+          {onClose && (
+            <button
+              onClick={onClose}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#94a3b8",
+                cursor: "pointer",
+                padding: "4px"
+              }}
+            >
+              <XIcon size={16} />
+            </button>
+          )}
+        </div>
       </div>
 
       <div
@@ -19311,6 +19900,8 @@ userRouter.get("/:id", getUserPublicProfile);
  * SAU:   Route khai báo sạch, gọn — đọc như spec của app
  */
 import React, { useState, useEffect, Suspense, lazy } from "react";
+import { VideoCallProvider } from "./context/VideoCallContext"; // ← MỚI
+
 import {
   BrowserRouter,
   Routes,
@@ -19473,7 +20064,7 @@ function AppShell() {
     const fetchUnread = () =>
       api("/messages/unread-count")
         .then((d) => setUnread(d.count))
-        .catch(() => {});
+        .catch(() => { });
     fetchUnread();
     const id = setInterval(fetchUnread, 30_000);
     return () => clearInterval(id);
@@ -19498,7 +20089,7 @@ function AppShell() {
         socket.on("notification", handler);
         cleanupSocketListener = () => socket.off("notification", handler);
       })
-      .catch(() => {});
+      .catch(() => { });
 
     return () => {
       active = false;
@@ -19645,7 +20236,9 @@ export default function App() {
       <ErrorBoundary>
         <AuthProvider>
           <ToastProvider>
-            <AppShell />
+            <VideoCallProvider>
+              <AppShell />
+            </VideoCallProvider>
           </ToastProvider>
         </AuthProvider>
       </ErrorBoundary>

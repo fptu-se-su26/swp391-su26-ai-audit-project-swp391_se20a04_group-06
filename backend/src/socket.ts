@@ -36,8 +36,8 @@ export function initSocket(server: HttpServer) {
     const pubClient = redis.duplicate();
     const subClient = redis.duplicate();
 
-    pubClient.connect().catch(() => {});
-    subClient.connect().catch(() => {});
+    pubClient.connect().catch(() => { });
+    subClient.connect().catch(() => { });
 
     io.adapter(createAdapter(pubClient, subClient));
     logger.info("Socket.IO Redis Adapter configured successfully");
@@ -110,10 +110,6 @@ export function initSocket(server: HttpServer) {
           return;
         }
 
-        // FIX: Dùng pipeline atomic để tránh race condition.
-        // Trước đây: incr + expire là 2 lệnh riêng biệt.
-        // Nếu server crash sau incr nhưng trước expire → key sống vĩnh viễn → block user mãi mãi.
-        // Bây giờ: cả 2 lệnh gửi trong 1 round-trip, kết quả đảm bảo nhất quán.
         const rateLimitKey = `ratelimit:socket:msg:${userId}`;
         try {
           const pipe = redis.pipeline();
@@ -121,7 +117,6 @@ export function initSocket(server: HttpServer) {
           pipe.expire(rateLimitKey, 2);
           const results = await pipe.exec();
 
-          // results[0] = [error, incrValue]
           const currentCount = (results?.[0]?.[1] as number) ?? 0;
 
           if (currentCount > 5) {
@@ -172,6 +167,43 @@ export function initSocket(server: HttpServer) {
         }
       },
     );
+
+    /* ─── VIDEO CALL EVENTS (MỚI) ─── */
+
+    // 1. Gửi yêu cầu gọi (Truyền kèm callerName sang cho Callee)
+    socket.on("call_user", (data: { to: string; offer: any; callerName?: string }) => {
+      const { to, offer, callerName } = data;
+      logger.info(`[Socket Call] User ${userId} (${callerName || "Không tên"}) is calling User ${to}`);
+      socket.to(`user_${to}`).emit("incoming_call", {
+        from: userId,
+        offer,
+        callerName: callerName || "Một người dùng"
+      });
+    });
+
+    // 2. Chấp nhận cuộc gọi
+    socket.on("answer_call", (data: { to: string; answer: any }) => {
+      const { to, answer } = data;
+      logger.info(`[Socket Call] User ${userId} accepted call from User ${to}`);
+      socket.to(`user_${to}`).emit("call_accepted", {
+        answer
+      });
+    });
+
+    // 3. Trao đổi cấu hình mạng ICE Candidates
+    socket.on("ice_candidate", (data: { to: string; candidate: any }) => {
+      const { to, candidate } = data;
+      socket.to(`user_${to}`).emit("ice_candidate", {
+        candidate
+      });
+    });
+
+    // 4. Kết thúc/Từ chối cuộc gọi
+    socket.on("end_call", (data: { to: string }) => {
+      const { to } = data;
+      logger.info(`[Socket Call] Call ended between User ${userId} and User ${to}`);
+      socket.to(`user_${to}`).emit("call_ended");
+    });
 
     socket.join(`user_${userId}`);
   });

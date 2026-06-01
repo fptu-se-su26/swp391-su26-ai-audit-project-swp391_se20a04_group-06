@@ -13,6 +13,8 @@
  * SAU:   Route khai báo sạch, gọn — đọc như spec của app
  */
 import React, { useState, useEffect, Suspense, lazy } from "react";
+import { VideoCallProvider } from "./context/VideoCallContext"; // ← MỚI
+
 import {
   BrowserRouter,
   Routes,
@@ -175,7 +177,7 @@ function AppShell() {
     const fetchUnread = () =>
       api("/messages/unread-count")
         .then((d) => setUnread(d.count))
-        .catch(() => {});
+        .catch(() => { });
     fetchUnread();
     const id = setInterval(fetchUnread, 30_000);
     return () => clearInterval(id);
@@ -200,7 +202,7 @@ function AppShell() {
         socket.on("notification", handler);
         cleanupSocketListener = () => socket.off("notification", handler);
       })
-      .catch(() => {});
+      .catch(() => { });
 
     return () => {
       active = false;
@@ -347,7 +349,9 @@ export default function App() {
       <ErrorBoundary>
         <AuthProvider>
           <ToastProvider>
-            <AppShell />
+            <VideoCallProvider>
+              <AppShell />
+            </VideoCallProvider>
           </ToastProvider>
         </AuthProvider>
       </ErrorBoundary>

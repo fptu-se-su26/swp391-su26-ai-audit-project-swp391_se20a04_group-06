@@ -4,6 +4,7 @@ import { getSocket } from "../services/socket";
 import { api } from "../services/api";
 import { MessageIcon, XIcon, CheckCircleIcon } from "./icons/index";
 import { useToast } from "../context/ToastContext";
+import { useVideoCall } from "../context/VideoCallContext"; // ← SỬA ĐƯỜNG DẪN IMPORT SANG CONTEXT
 
 export function ChatBox({ product, onClose, user, fullHeight = false }) {
   const toast = useToast();
@@ -20,6 +21,9 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
   const otherUserRef = useRef(null);
 
   const currentUserId = user?.id || user?.userId;
+
+  // LẤY TRỰC TIẾP HÀM BẮT ĐẦU CUỘC GỌI TỪ GLOBAL PROVIDER
+  const { startCall } = useVideoCall();
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -42,7 +46,7 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
         const other = data.find((m) => m.senderId !== currentUserId);
         if (other) otherUserRef.current = other.senderId;
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, [product.id, currentUserId]);
 
@@ -93,13 +97,16 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs]);
 
+  const getReceiverId = () => {
+    const sellerId = product.sellerId;
+    return currentUserId === sellerId ? otherUserRef.current : sellerId;
+  };
+
   const send = (txtContent = "", imgUrl = null) => {
     const finalContent = txtContent.trim();
     if (!finalContent && !imgUrl) return;
 
-    const sellerId = product.sellerId;
-    const receiverId =
-      currentUserId === sellerId ? otherUserRef.current : sellerId;
+    const receiverId = getReceiverId();
     if (!receiverId) {
       toast.warn("Chưa có người nhận. Hãy chờ người mua nhắn trước.");
       return;
@@ -164,6 +171,17 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
     }
   };
 
+  // Kích hoạt cuộc gọi qua Global Provider
+  const handleInitiateCall = () => {
+    const targetId = getReceiverId();
+    if (!targetId) {
+      toast.warn("Không tìm thấy đối phương hoạt động để thực hiện cuộc gọi.");
+      return;
+    }
+    // Gửi đi tín hiệu gọi kèm tên đối phương hiển thị ở đầu bên kia
+    startCall(targetId, product.sellerName);
+  };
+
   const chatHeight = fullHeight ? 420 : 250;
 
   return (
@@ -175,6 +193,7 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
         background: C.white,
       }}
     >
+      {/* Header */}
       <div
         style={{
           background: "#0f172a",
@@ -205,19 +224,41 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
             Sản phẩm: {product.name}
           </div>
         </div>
-        {onClose && (
+
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          {/* NÚT GỌI VIDEO CALL */}
           <button
-            onClick={onClose}
+            onClick={handleInitiateCall}
             style={{
               background: "none",
               border: "none",
-              color: "#94a3b8",
+              color: "#38bdf8",
               cursor: "pointer",
+              fontSize: 14,
+              padding: "4px",
+              display: "flex",
+              alignItems: "center"
             }}
+            title="Gọi video cho đối phương"
           >
-            <XIcon size={16} />
+            📞
           </button>
-        )}
+
+          {onClose && (
+            <button
+              onClick={onClose}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#94a3b8",
+                cursor: "pointer",
+                padding: "4px"
+              }}
+            >
+              <XIcon size={16} />
+            </button>
+          )}
+        </div>
       </div>
 
       <div

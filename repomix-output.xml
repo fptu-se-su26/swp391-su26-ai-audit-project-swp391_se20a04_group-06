@@ -5365,35 +5365,6 @@ messageSchema.index({ receiverId: 1, createdAt: -1 });
 export const Message = model<IMessage>("Message", messageSchema);
 </file>
 
-<file path="backend/src/models/Notification.ts">
-import { Schema, model, Document, Types } from "mongoose";
-
-export interface INotification extends Document {
-  userId: Types.ObjectId;
-  type: string;
-  content: string;
-  isRead: boolean;
-  productId?: Types.ObjectId;
-  reviewId?: Types.ObjectId;
-  createdAt: Date;
-}
-
-const notificationSchema = new Schema<INotification>(
-  {
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
-    type: { type: String, required: true },
-    content: { type: String, required: true },
-    isRead: { type: Boolean, default: false },
-    productId: { type: Schema.Types.ObjectId, ref: "Product" },
-    reviewId: { type: Schema.Types.ObjectId, ref: "Review" },
-  },
-  { timestamps: { createdAt: true, updatedAt: false } }
-);
-notificationSchema.index({ userId: 1, createdAt: -1 });
-
-export const Notification = model<INotification>("Notification", notificationSchema);
-</file>
-
 <file path="backend/src/routes/image.routes.ts">
 import { Router } from 'express';
 import { uploadImages, deleteImage } from '../controllers/image.controller';
@@ -5410,44 +5381,6 @@ router.get('/images/signature', authenticate, getUploadSignature);
 
 // Xoá 1 ảnh
 router.delete('/images/:id', authenticate, deleteImage);
-
-export default router;
-</file>
-
-<file path="backend/src/routes/message.routes.ts">
-import { Router } from "express";
-import {
-  getMessages,
-  sendMessage,
-  unreadCount,
-  getConversations,
-  uploadChatImage, // ← Import
-} from "../controllers/message.controller";
-import { authenticate } from "../middlewares/auth";
-import { upload } from "../middlewares/upload";
-import rateLimit from "express-rate-limit";
-
-const router = Router();
-const messageSendLimiter = rateLimit({
-  windowMs: 10 * 1000, // 10 giây
-  max: 10,
-  message: { message: "Bạn đang gửi tin nhắn quá nhanh. Vui lòng làm chậm lại." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-
-router.get("/unread-count", authenticate, unreadCount);
-router.get("/conversations", authenticate, getConversations);
-router.post(
-  "/upload-image",
-  authenticate,
-  upload.single("image"),
-  uploadChatImage,
-); // 🌟 Route tải ảnh trong chat
-router.get("/:productId", authenticate, getMessages);
-router.post("/", authenticate, sendMessage);
-router.post("/", authenticate, messageSendLimiter, sendMessage);
 
 export default router;
 </file>
@@ -9858,84 +9791,6 @@ dist/
 *.log
 </file>
 
-<file path="backend/src/controllers/follow.controller.ts">
-import { Request, Response } from "express";
-import { User } from "../models/User";
-import { sendServerError } from "../helpers/response.helper";
-import mongoose from "mongoose";
-
-// Trong tệp: backend/src/controllers/follow.controller.ts
-
-export async function toggleFollow(req: Request, res: Response) {
-  const { userId } = req.user;
-  const sellerId = req.params.sellerId;
-
-  if (!sellerId || !mongoose.Types.ObjectId.isValid(sellerId)) {
-    return res.status(400).json({ message: "ID người bán không hợp lệ" });
-  }
-  if (userId.toString() === sellerId) {
-    return res.status(400).json({ message: "Không thể tự follow chính mình" });
-  }
-
-  try {
-    const user = await User.findById(userId);
-    if (!user)
-      return res.status(404).json({ message: "Không tìm thấy người dùng" });
-
-    const sellerObjId = new mongoose.Types.ObjectId(sellerId);
-    const isFollowing = user.following.some((id) => id.toString() === sellerId);
-
-    // 🌟 GIẢI PHÁP BẢO MẬT: Chặn không cho phép theo dõi nếu người bán không tồn tại hoặc bị khóa tài khoản
-    if (!isFollowing) {
-      const sellerExists = await User.exists({
-        _id: sellerObjId,
-        isActive: true
-      });
-      if (!sellerExists) {
-        return res.status(404).json({ message: "Người bán không tồn tại hoặc tài khoản đã bị vô hiệu hóa." });
-      }
-    }
-
-    if (isFollowing) {
-      user.following = user.following.filter(
-        (id) => id.toString() !== sellerId,
-      );
-      await user.save();
-      return res.json({ message: "Đã hủy theo dõi", isFollowing: false });
-    }
-
-    user.following.push(sellerObjId as any);
-    await user.save();
-    return res.json({ message: "Đã theo dõi thành công", isFollowing: true });
-  } catch (err) {
-    return sendServerError(res, err);
-  }
-}
-
-// Trong tệp: backend/src/controllers/follow.controller.ts (hàm checkFollow)
-
-export async function checkFollow(req: Request, res: Response) {
-  const { userId } = req.user;
-  const sellerId = req.params.sellerId;
-
-  if (!sellerId || !mongoose.Types.ObjectId.isValid(sellerId)) {
-    return res.status(400).json({ message: "ID người bán không hợp lệ" });
-  }
-
-  try {
-    // 🌟 GIẢI PHÁP HIỆU NĂNG: Chỉ truy vấn duy nhất mảng "following" của người dùng để kiểm tra
-    const user = await User.findById(userId).select("following");
-    if (!user)
-      return res.status(404).json({ message: "Không tìm thấy người dùng" });
-
-    const isFollowing = user.following.some((id) => id.toString() === sellerId);
-    return res.json({ isFollowing });
-  } catch (err) {
-    return sendServerError(res, err);
-  }
-}
-</file>
-
 <file path="backend/src/controllers/notification.controller.ts">
 import { Request, Response } from "express";
 import { Notification } from "../models/Notification";
@@ -10213,6 +10068,35 @@ export function deleteFromCloudinary(publicId: string): Promise<void> {
 }
 </file>
 
+<file path="backend/src/models/Notification.ts">
+import { Schema, model, Document, Types } from "mongoose";
+
+export interface INotification extends Document {
+  userId: Types.ObjectId;
+  type: string;
+  content: string;
+  isRead: boolean;
+  productId?: Types.ObjectId;
+  reviewId?: Types.ObjectId;
+  createdAt: Date;
+}
+
+const notificationSchema = new Schema<INotification>(
+  {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    type: { type: String, required: true },
+    content: { type: String, required: true },
+    isRead: { type: Boolean, default: false },
+    productId: { type: Schema.Types.ObjectId, ref: "Product" },
+    reviewId: { type: Schema.Types.ObjectId, ref: "Review" },
+  },
+  { timestamps: { createdAt: true, updatedAt: false } }
+);
+notificationSchema.index({ userId: 1, createdAt: -1 });
+
+export const Notification = model<INotification>("Notification", notificationSchema);
+</file>
+
 <file path="backend/src/models/Product.ts">
 import { Schema, model, Document, Types } from "mongoose";
 
@@ -10407,6 +10291,44 @@ export const productRepository = {
     return { data, total };
   }
 };
+</file>
+
+<file path="backend/src/routes/message.routes.ts">
+import { Router } from "express";
+import {
+  getMessages,
+  sendMessage,
+  unreadCount,
+  getConversations,
+  uploadChatImage, // ← Import
+} from "../controllers/message.controller";
+import { authenticate } from "../middlewares/auth";
+import { upload } from "../middlewares/upload";
+import rateLimit from "express-rate-limit";
+
+const router = Router();
+const messageSendLimiter = rateLimit({
+  windowMs: 10 * 1000, // 10 giây
+  max: 10,
+  message: { message: "Bạn đang gửi tin nhắn quá nhanh. Vui lòng làm chậm lại." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+
+router.get("/unread-count", authenticate, unreadCount);
+router.get("/conversations", authenticate, getConversations);
+router.post(
+  "/upload-image",
+  authenticate,
+  upload.single("image"),
+  uploadChatImage,
+); // 🌟 Route tải ảnh trong chat
+router.get("/:productId", authenticate, getMessages);
+router.post("/", authenticate, sendMessage);
+router.post("/", authenticate, messageSendLimiter, sendMessage);
+
+export default router;
 </file>
 
 <file path="backend/src/utils/fillDays.ts">
@@ -10695,344 +10617,6 @@ img {
 }
 </file>
 
-<file path="client/my-app/src/components/NotificationBell.jsx">
-/**
- * NotificationBell.jsx — Modernized UI/UX Version
- *
- * FIXES:
- *   1. Prop typo: component nhận `onMarkRead` nhưng Navbar truyền `onMarkAllRead`.
- *      Chuẩn hóa thành `onMarkAllRead` (tên ý nghĩa hơn, match với useNotifications).
- *
- *   2. Click outside handler dùng ref thay vì event delegation — tránh memory leak
- *      khi component unmount trước khi event được remove.
- *
- *   3. Thêm keyboard accessibility: Escape đóng dropdown.
- */
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { C } from "../utils/theme";
-
-export function NotificationBell({
-  notifs,
-  unreadCount,
-  onMarkAllRead, // FIX: đổi từ onMarkRead → onMarkAllRead cho nhất quán với Navbar/useNotifications
-  onNotifClick,
-}) {
-  const [open, setOpen] = useState(false);
-  const bellRef = useRef(null);
-
-  const handleToggle = useCallback(() => {
-    setOpen((prev) => !prev); // 🌟 Chỉ bật/tắt hộp thông báo thông thường
-  }, []);
-
-  // Đóng dropdown khi click ra ngoài
-  useEffect(() => {
-    if (!open) return;
-
-    function handleClickOutside(event) {
-      if (bellRef.current && !bellRef.current.contains(event.target)) {
-        setOpen(false);
-      }
-    }
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape") setOpen(false);
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open]);
-
-  return (
-    <div ref={bellRef} style={{ position: "relative" }}>
-      <button
-        onClick={handleToggle}
-        style={{
-          background: "rgba(255,255,255,0.15)",
-          color: "#fff",
-          border: "none",
-          borderRadius: "50%",
-          width: 36,
-          height: 36,
-          cursor: "pointer",
-          fontSize: 18,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          transition: "all 0.2s ease",
-        }}
-        onMouseEnter={(e) =>
-          (e.currentTarget.style.background = "rgba(255,255,255,0.25)")
-        }
-        onMouseLeave={(e) =>
-          (e.currentTarget.style.background = "rgba(255,255,255,0.15)")
-        }
-        aria-label={`Thông báo${unreadCount > 0 ? ` (${unreadCount} chưa đọc)` : ""}`}
-        aria-expanded={open}
-        aria-haspopup="true"
-      >
-        🔔
-      </button>
-
-      {unreadCount > 0 && <Badge count={unreadCount} />}
-
-      {open && (
-        <NotifDropdown
-          notifs={notifs}
-          unreadCount={unreadCount}
-          onMarkAllRead={onMarkAllRead}
-          onNotifClick={(n) => {
-            setOpen(false);
-            onNotifClick?.(n);
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-function Badge({ count }) {
-  return (
-    <div
-      aria-hidden="true"
-      style={{
-        position: "absolute",
-        top: -4,
-        right: -4,
-        background: "#EF4444",
-        color: "#fff",
-        borderRadius: "50%",
-        width: 20,
-        height: 20,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 11,
-        fontWeight: 700,
-        boxShadow: "0 2px 8px rgba(239, 68, 68, 0.45)",
-        pointerEvents: "none",
-      }}
-    >
-      {count > 99 ? "99+" : count}
-    </div>
-  );
-}
-
-// Trong tệp: client/my-app/src/components/NotificationBell.jsx (phần cuối tệp)
-
-function NotifDropdown({ notifs, unreadCount, onNotifClick, onMarkAllRead }) { // 👈 Thêm nhận diện onMarkAllRead ở đây
-  return (
-    <div
-      role="dialog"
-      aria-label="Thông báo"
-      style={{
-        position: "absolute",
-        top: 46,
-        right: 0,
-        width: 330,
-        background: "#fff",
-        borderRadius: 16,
-        boxShadow:
-          "0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.05)",
-        overflow: "hidden",
-        border: `1px solid ${C.border}`,
-        zIndex: 1000,
-      }}
-    >
-      {/* Giao diện tiêu đề nâng cấp */}
-      <div
-        style={{
-          padding: "14px 18px",
-          background: `linear-gradient(135deg, ${C.ocean} 0%, ${C.oceanL} 100%)`,
-          color: "#fff",
-          fontWeight: 700,
-          fontSize: 14,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <span>Thông báo của bạn</span>
-
-        {/* Nhóm các nút điều hướng phụ bên góc phải */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {unreadCount > 0 && (
-            // 🌟 CẢI TIẾN: Nút bấm "Đọc tất cả" nhỏ gọn, tinh tế ngay trong Header
-            <button
-              onClick={(e) => {
-                e.stopPropagation(); // Chặn nổi bọt sự kiện để không bị đóng dropdown
-                onMarkAllRead?.();
-              }}
-              style={{
-                background: "rgba(255, 255, 255, 0.18)",
-                border: "none",
-                borderRadius: 6,
-                color: "#fff",
-                fontSize: 11,
-                fontWeight: 700,
-                padding: "3px 8px",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                transition: "background 0.2s",
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255, 255, 255, 0.28)"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255, 255, 255, 0.18)"}
-            >
-              ✓ Đọc tất cả
-            </button>
-          )}
-
-          {unreadCount > 0 && (
-            <span
-              style={{
-                fontSize: 10,
-                background: "rgba(255,255,255,0.2)",
-                backdropFilter: "blur(4px)",
-                WebkitBackdropFilter: "blur(4px)",
-                padding: "3px 10px",
-                borderRadius: 20,
-                fontWeight: 700,
-              }}
-            >
-              {unreadCount} mới
-            </span>
-          )}
-        </div>
-      </div>
-
-      <div style={{ maxHeight: 340, overflowY: "auto" }}>
-        {notifs.length === 0 ? (
-          <div
-            style={{
-              padding: "40px 20px",
-              textAlign: "center",
-              color: C.muted,
-              fontSize: 13,
-            }}
-          >
-            <div style={{ fontSize: 32, marginBottom: 8 }}>🔔</div>
-            <div style={{ fontWeight: 600, color: C.dark }}>
-              Không có thông báo nào
-            </div>
-            <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>
-              Chúng tôi sẽ báo cho bạn khi có tin mới.
-            </div>
-          </div>
-        ) : (
-          notifs.map((n, i) => (
-            <NotifItem
-              key={n.id || i}
-              notif={n}
-              onClick={() => onNotifClick(n)}
-            />
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
-
-function NotifItem({ notif: n, onClick }) {
-  return (
-    <div
-      onClick={onClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === "Enter" && onClick()}
-      style={{
-        padding: "14px 18px",
-        borderBottom: `1px solid ${C.border}`,
-        fontSize: 13,
-        color: C.dark,
-        borderLeft: n.isRead ? "4px solid transparent" : `4px solid ${C.ocean}`,
-        background: n.isRead ? "#fff" : "rgba(11, 79, 108, 0.04)",
-        display: "flex",
-        gap: 12,
-        alignItems: "flex-start",
-        cursor: n.productId ? "pointer" : "default",
-        transition: "all 0.2s ease",
-      }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "#F1F5F9")}
-      onMouseLeave={(e) =>
-      (e.currentTarget.style.background = n.isRead
-        ? "#fff"
-        : "rgba(11, 79, 108, 0.04)")
-      }
-    >
-      <div
-        style={{
-          width: 34,
-          height: 34,
-          borderRadius: "50%",
-          background: n.type === "new_review" ? "#FEF3C7" : "#E6F4F9",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 14,
-          flexShrink: 0,
-          marginTop: 1,
-          boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
-        }}
-      >
-        {n.type === "new_review" ? "⭐" : "📢"}
-      </div>
-
-      <div style={{ flex: 1, overflow: "hidden" }}>
-        <div
-          style={{
-            lineHeight: 1.45,
-            fontWeight: n.isRead ? 400 : 700,
-            color: n.isRead ? C.text : C.dark,
-          }}
-        >
-          {n.preview || n.content}
-        </div>
-        {n.createdAt && (
-          <div
-            style={{
-              fontSize: 11,
-              color: C.muted,
-              marginTop: 6,
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-            }}
-          >
-            <span>🕒</span>
-            <span>
-              {new Date(n.createdAt).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-              {" - "}
-              {new Date(n.createdAt).toLocaleDateString()}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {!n.isRead && (
-        <span
-          aria-hidden="true"
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background: C.ocean,
-            flexShrink: 0,
-            marginTop: 6,
-            boxShadow: "0 0 0 2px rgba(11, 79, 108, 0.2)",
-          }}
-        />
-      )}
-    </div>
-  );
-}
-</file>
-
 <file path="client/my-app/src/context/AuthContext.jsx">
 /**
  * AuthContext.jsx — PATTERN: Context + Provider Pattern
@@ -11109,104 +10693,6 @@ export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth phải được dùng bên trong <AuthProvider>");
   return ctx;
-}
-</file>
-
-<file path="client/my-app/src/hooks/useNotifications.js">
-import { useState, useEffect } from "react";
-import { api } from "../services/api";
-import { getSocket } from "../services/socket";
-
-/**
- * Hook quản lý thông báo real-time.
- * Tách ra khỏi Navbar để Navbar không phải kiêm nhiệm logic này.
- */
-export function useNotifications(user) {
-  const [notifs, setNotifs] = useState([]);
-
-  // Tải thông báo khi đăng nhập
-  useEffect(() => {
-    if (!user) {
-      setNotifs([]);
-      return;
-    }
-    api("/notifications")
-      .then((data) =>
-        setNotifs(
-          data.map((item) => ({
-            id: item.id,
-            type: item.type,
-            preview: item.content,
-            productId: item.productId,
-            reviewId: item.reviewId || null,
-            isRead: !!item.isRead,
-            createdAt: item.createdAt,
-          })),
-        ),
-      )
-      .catch((err) => console.error("Lỗi tải thông báo:", err));
-  }, [user]);
-
-  // Lắng nghe thông báo real-time từ socket
-  useEffect(() => {
-    if (!user) return;
-    let active = true;
-    // BUG FIX: trước đây `return () => socket.off(...)` bên trong .then() bị bỏ qua hoàn toàn
-    // (return value của Promise callback không phải là cleanup function của useEffect).
-    // Hậu quả: mỗi lần re-render thêm một listener mới mà không bao giờ bị gỡ → memory leak + gọi N lần.
-    let cleanupSocketListener = null;
-
-    getSocket()
-      .then((socket) => {
-        if (!active) return;
-        const handler = (data) => {
-          if (data.type === "new_product" || data.type === "new_review") {
-            setNotifs((prev) => [
-              {
-                id: data.id || Date.now(),
-                type: data.type,
-                preview: data.preview || data.content,
-                productId: data.productId,
-                reviewId: data.reviewId || null,
-                isRead: false,
-                createdAt: new Date().toISOString(),
-              },
-              ...prev,
-            ]);
-          }
-        };
-        socket.on("notification", handler);
-        cleanupSocketListener = () => socket.off("notification", handler);
-      })
-      .catch(() => { });
-
-    return () => {
-      active = false;
-      cleanupSocketListener?.(); // gỡ listener đúng cách
-    };
-  }, [user]);
-
-  const markAllRead = () => {
-    api("/notifications/read", { method: "PUT" })
-      .then(() =>
-        setNotifs((prev) => prev.map((n) => ({ ...n, isRead: true }))),
-      )
-      .catch((err) => console.error("Lỗi đánh dấu đã đọc:", err));
-  };
-  // 🌟 GIẢI PHÁP: Bổ sung hàm đánh dấu đọc một thông báo duy nhất
-  const markSingleRead = (id) => {
-    api(`/notifications/${id}`, { method: "PATCH" })
-      .then(() =>
-        setNotifs((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-        )
-      )
-      .catch((err) => console.error("Lỗi đánh dấu đọc thông báo:", err));
-  };
-
-  const unreadCount = notifs.filter((n) => !n.isRead).length;
-
-  return { notifs, unreadCount, markAllRead, markSingleRead };
 }
 </file>
 
@@ -13106,213 +12592,78 @@ CREATE INDEX idx_follow_follower      ON Follow(FollowerID);
 ALTER TABLE Review ADD CONSTRAINT unique_review_per_product UNIQUE (ReviewerID, ProductID);
 </file>
 
-<file path="backend/src/controllers/message.controller.ts">
+<file path="backend/src/controllers/follow.controller.ts">
 import { Request, Response } from "express";
-import { Message } from "../models/Message";
-import { Product } from "../models/Product";
 import { User } from "../models/User";
-import { sendServerError, parseId } from "../helpers/response.helper";
-import { uploadToCloudinary } from "../middlewares/upload";
+import { sendServerError } from "../helpers/response.helper";
 import mongoose from "mongoose";
 
-// Trong tệp: backend/src/controllers/message.controller.ts (hàm getMessages)
+// Trong tệp: backend/src/controllers/follow.controller.ts
 
-export async function getMessages(req: Request, res: Response) {
-  const { userId, role } = req.user;
-  const productId = parseId(req.params.productId);
-  if (!productId)
-    return res.status(400).json({ message: "ID sản phẩm không hợp lệ" });
+export async function toggleFollow(req: Request, res: Response) {
+  const { userId } = req.user;
+  const sellerId = req.params.sellerId;
+
+  if (!sellerId || !mongoose.Types.ObjectId.isValid(sellerId)) {
+    return res.status(400).json({ message: "ID người bán không hợp lệ" });
+  }
+  if (userId.toString() === sellerId) {
+    return res.status(400).json({ message: "Không thể tự follow chính mình" });
+  }
 
   try {
-    const filter: any = { productId };
-    if (role !== "Admin") {
-      filter.$or = [{ senderId: userId }, { receiverId: userId }];
+    const user = await User.findById(userId);
+    if (!user)
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
+
+    const sellerObjId = new mongoose.Types.ObjectId(sellerId);
+    const isFollowing = user.following.some((id) => id.toString() === sellerId);
+
+    // 🌟 GIẢI PHÁP BẢO MẬT: Chặn không cho phép theo dõi nếu người bán không tồn tại hoặc bị khóa tài khoản
+    if (!isFollowing) {
+      const sellerExists = await User.exists({
+        _id: sellerObjId,
+        isActive: true
+      });
+      if (!sellerExists) {
+        return res.status(404).json({ message: "Người bán không tồn tại hoặc tài khoản đã bị vô hiệu hóa." });
+      }
     }
 
-    // 🌟 GIẢI PHÁP: Cập nhật trạng thái "Đã đọc" trước khi truy vấn dữ liệu để đồng bộ hóa tuyệt đối
-    if (role !== "Admin") {
-      await Message.updateMany(
-        { productId, receiverId: userId, isRead: false } as any,
-        { $set: { isRead: true } }
+    if (isFollowing) {
+      user.following = user.following.filter(
+        (id) => id.toString() !== sellerId,
       );
+      await user.save();
+      return res.json({ message: "Đã hủy theo dõi", isFollowing: false });
     }
 
-    // Sau khi cơ sở dữ liệu đã được cập nhật, thực hiện tìm kiếm dữ liệu mới nhất
-    const messages = await Message.find(filter)
-      .populate("senderId", "name")
-      .sort({ createdAt: 1 });
-
-    // Ánh xạ dữ liệu gọn gàng hơn (loại bỏ hoàn toàn được mảng map messageIds cũ)
-    const formattedRows = messages.map((m: any) => ({
-      id: m._id.toString(),
-      senderId: m.senderId?._id.toString(),
-      senderName: m.senderId?.name || "Một người dùng",
-      receiverId: m.receiverId.toString(),
-      content: m.content,
-      imageUrl: m.imageUrl,
-      isRead: m.isRead, // 🌟 Giờ đây giá trị này chắc chắn là "true" chính xác đối với người nhận
-      sentAt: m.createdAt,
-    }));
-
-    return res.json(formattedRows);
+    user.following.push(sellerObjId as any);
+    await user.save();
+    return res.json({ message: "Đã theo dõi thành công", isFollowing: true });
   } catch (err) {
     return sendServerError(res, err);
   }
 }
 
-// Trong tệp: backend/src/controllers/message.controller.ts (hàm sendMessage)
+// Trong tệp: backend/src/controllers/follow.controller.ts (hàm checkFollow)
 
-export async function sendMessage(req: Request, res: Response) {
+export async function checkFollow(req: Request, res: Response) {
   const { userId } = req.user;
-  const { productId, receiverId, content, imageUrl } = req.body;
+  const sellerId = req.params.sellerId;
 
-  if (!productId || !receiverId)
-    return res.status(400).json({ message: "Thiếu thông tin nhận tin" });
-
-  if (!content?.trim() && !imageUrl)
-    return res.status(400).json({ message: "Nội dung tin nhắn trống" });
-
-  if (receiverId === userId)
-    return res
-      .status(400)
-      .json({ message: "Không thể tự gửi tin nhắn cho chính mình" });
-
-  try {
-    // 🌟 GIẢI PHÁP: Loại bỏ thẻ HTML cơ bản và giới hạn tối đa 1000 ký tự tin nhắn
-    const cleanContent = content
-      ? content.trim().replace(/<[^>]*>/g, "").slice(0, 1000)
-      : null;
-
-    const newMsg = new Message({
-      productId,
-      senderId: userId,
-      receiverId,
-      content: cleanContent, // Lưu nội dung sạch đã được khống chế độ dài
-      imageUrl: imageUrl || null,
-    });
-
-    await newMsg.save();
-
-    return res
-      .status(201)
-      .json({ id: newMsg._id.toString(), message: "Gửi thành công" });
-  } catch (err) {
-    return sendServerError(res, err);
+  if (!sellerId || !mongoose.Types.ObjectId.isValid(sellerId)) {
+    return res.status(400).json({ message: "ID người bán không hợp lệ" });
   }
-}
-
-export async function uploadChatImage(req: Request, res: Response) {
-  if (!req.file)
-    return res.status(400).json({ message: "Chưa chọn file ảnh gửi kèm" });
 
   try {
-    const { url } = await uploadToCloudinary(req.file.buffer, "chat_images");
-    return res.json({ imageUrl: url });
-  } catch (err) {
-    return sendServerError(res, err);
-  }
-}
+    // 🌟 GIẢI PHÁP HIỆU NĂNG: Chỉ truy vấn duy nhất mảng "following" của người dùng để kiểm tra
+    const user = await User.findById(userId).select("following");
+    if (!user)
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
 
-export async function unreadCount(req: Request, res: Response) {
-  const { userId } = req.user;
-  try {
-    const count = await Message.countDocuments({
-      receiverId: userId,
-      isRead: false,
-    } as any);
-    return res.json({ count });
-  } catch (err) {
-    return sendServerError(res, err);
-  }
-}
-
-export async function getConversations(req: Request, res: Response) {
-  const { userId } = req.user;
-  try {
-    // [M-05 PERFORMANCE NOTE]
-    // Pipeline này sử dụng mô hình $sort -> $group -> $sort để trích xuất tin nhắn cuối cùng của mỗi cuộc hội thoại.
-    // Mặc dù chính xác về mặt kết quả, việc thực hiện $sort trên toàn bộ tin nhắn liên quan trước khi group có thể 
-    // làm suy giảm hiệu năng khi số lượng bản ghi tin nhắn lớn (hàng triệu bản ghi).
-    // KHUYẾN NGHỊ: Xem xét phi chuẩn hóa (denormalize) các trường `lastMessage`, `unreadCount` vào một collection 
-    // `Conversations` riêng biệt và cập nhật real-time để loại bỏ bước aggregation nặng nề này.
-    const conversations = await Message.aggregate([
-      {
-        $match: {
-          $or: [
-            { senderId: new mongoose.Types.ObjectId(userId) },
-            { receiverId: new mongoose.Types.ObjectId(userId) },
-          ],
-        },
-      },
-      { $sort: { createdAt: -1 } },
-      {
-        $group: {
-          _id: {
-            productId: "$productId",
-            otherUserId: {
-              $cond: [
-                { $eq: ["$senderId", new mongoose.Types.ObjectId(userId)] },
-                "$receiverId",
-                "$senderId",
-              ],
-            },
-          },
-          lastMessage: { $first: "$content" },
-          lastMessageImageUrl: { $first: "$imageUrl" },
-          lastSentAt: { $first: "$createdAt" },
-          // TỐI ƯU HÓA: Sử dụng toán tử $sum hiệu suất cao thay vì $push
-          unreadCount: {
-            $sum: {
-              $cond: [
-                {
-                  $and: [
-                    { $eq: ["$isRead", false] },
-                    {
-                      $eq: ["$receiverId", new mongoose.Types.ObjectId(userId)],
-                    },
-                  ],
-                },
-                1,
-                0,
-              ],
-            },
-          },
-        },
-      },
-      {
-        $lookup: {
-          from: "products",
-          localField: "_id.productId",
-          foreignField: "_id",
-          as: "product",
-        },
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "_id.otherUserId",
-          foreignField: "_id",
-          as: "otherUser",
-        },
-      },
-      { $unwind: { path: "$product", preserveNullAndEmptyArrays: true } },
-      { $unwind: { path: "$otherUser", preserveNullAndEmptyArrays: true } },
-      { $sort: { lastSentAt: -1 } },
-    ]);
-
-    const formattedRows = conversations.map((conv: any) => ({
-      productId: conv._id.productId?.toString() || "",
-      otherUserId: conv._id.otherUserId?.toString() || "",
-      productName: conv.product?.name || "Sản phẩm đã bị xóa",
-      otherUserName: conv.otherUser?.name || "Một người dùng",
-      otherUserIsVerified: conv.otherUser?.isVerified ? 1 : 0,
-      lastMessage: conv.lastMessage,
-      lastMessageImageUrl: conv.lastMessageImageUrl,
-      lastSentAt: conv.lastSentAt,
-      unread: conv.unreadCount || 0,
-    }));
-
-    return res.json(formattedRows);
+    const isFollowing = user.following.some((id) => id.toString() === sellerId);
+    return res.json({ isFollowing });
   } catch (err) {
     return sendServerError(res, err);
   }
@@ -13320,8 +12671,11 @@ export async function getConversations(req: Request, res: Response) {
 </file>
 
 <file path="backend/src/controllers/user.controller.ts">
+// Trong tệp: backend/src/controllers/user.controller.ts
+
 import { Request, Response } from "express";
 import { User } from "../models/User";
+import { Review } from "../models/Review"; // 🌟 GIẢI PHÁP: Import thêm Model Review
 import { sendServerError, parseId } from "../helpers/response.helper";
 
 export async function getUserPublicProfile(req: Request, res: Response) {
@@ -13333,13 +12687,30 @@ export async function getUserPublicProfile(req: Request, res: Response) {
     if (!user)
       return res.status(404).json({ message: "Không tìm thấy người dùng" });
 
+    // 🌟 GIẢI PHÁP: Tính toán điểm đánh giá trung bình và số lượng review trực tiếp từ MongoDB
+    const reviewStats = await Review.aggregate([
+      { $match: { sellerId: user._id } },
+      {
+        $group: {
+          _id: null,
+          avgRating: { $avg: "$rating" },
+          totalReviews: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const avgRating = reviewStats[0]?.avgRating ? Math.round(reviewStats[0].avgRating * 10) / 10 : 0;
+    const ratingCount = reviewStats[0]?.totalReviews || 0;
+
     return res.json({
       id: user._id.toString(),
       name: user.name,
       email: user.email,
-      isVerified: user.isVerified ? 1 : 0,
+      isVerified: !!user.isVerified, // 🌟 Đồng bộ hóa kiểu dữ liệu boolean chuẩn
       isPremium: !!user.isPremium,
       createdAt: user.createdAt,
+      avgRating,    // Trả về điểm trung bình thực tế
+      ratingCount,  // Trả về tổng số lượng đánh giá thực tế
     });
   } catch (err) {
     return sendServerError(res, err);
@@ -13561,6 +12932,344 @@ export async function notifySellerNewReview(params: {
   } catch (err) {
     console.error('Lỗi khi lưu và phát thông báo đánh giá:', err);
   }
+}
+</file>
+
+<file path="client/my-app/src/components/NotificationBell.jsx">
+/**
+ * NotificationBell.jsx — Modernized UI/UX Version
+ *
+ * FIXES:
+ *   1. Prop typo: component nhận `onMarkRead` nhưng Navbar truyền `onMarkAllRead`.
+ *      Chuẩn hóa thành `onMarkAllRead` (tên ý nghĩa hơn, match với useNotifications).
+ *
+ *   2. Click outside handler dùng ref thay vì event delegation — tránh memory leak
+ *      khi component unmount trước khi event được remove.
+ *
+ *   3. Thêm keyboard accessibility: Escape đóng dropdown.
+ */
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { C } from "../utils/theme";
+
+export function NotificationBell({
+  notifs,
+  unreadCount,
+  onMarkAllRead, // FIX: đổi từ onMarkRead → onMarkAllRead cho nhất quán với Navbar/useNotifications
+  onNotifClick,
+}) {
+  const [open, setOpen] = useState(false);
+  const bellRef = useRef(null);
+
+  const handleToggle = useCallback(() => {
+    setOpen((prev) => !prev); // 🌟 Chỉ bật/tắt hộp thông báo thông thường
+  }, []);
+
+  // Đóng dropdown khi click ra ngoài
+  useEffect(() => {
+    if (!open) return;
+
+    function handleClickOutside(event) {
+      if (bellRef.current && !bellRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") setOpen(false);
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={bellRef} style={{ position: "relative" }}>
+      <button
+        onClick={handleToggle}
+        style={{
+          background: "rgba(255,255,255,0.15)",
+          color: "#fff",
+          border: "none",
+          borderRadius: "50%",
+          width: 36,
+          height: 36,
+          cursor: "pointer",
+          fontSize: 18,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          transition: "all 0.2s ease",
+        }}
+        onMouseEnter={(e) =>
+          (e.currentTarget.style.background = "rgba(255,255,255,0.25)")
+        }
+        onMouseLeave={(e) =>
+          (e.currentTarget.style.background = "rgba(255,255,255,0.15)")
+        }
+        aria-label={`Thông báo${unreadCount > 0 ? ` (${unreadCount} chưa đọc)` : ""}`}
+        aria-expanded={open}
+        aria-haspopup="true"
+      >
+        🔔
+      </button>
+
+      {unreadCount > 0 && <Badge count={unreadCount} />}
+
+      {open && (
+        <NotifDropdown
+          notifs={notifs}
+          unreadCount={unreadCount}
+          onMarkAllRead={onMarkAllRead}
+          onNotifClick={(n) => {
+            setOpen(false);
+            onNotifClick?.(n);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function Badge({ count }) {
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        top: -4,
+        right: -4,
+        background: "#EF4444",
+        color: "#fff",
+        borderRadius: "50%",
+        width: 20,
+        height: 20,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 11,
+        fontWeight: 700,
+        boxShadow: "0 2px 8px rgba(239, 68, 68, 0.45)",
+        pointerEvents: "none",
+      }}
+    >
+      {count > 99 ? "99+" : count}
+    </div>
+  );
+}
+
+// Trong tệp: client/my-app/src/components/NotificationBell.jsx (phần cuối tệp)
+
+function NotifDropdown({ notifs, unreadCount, onNotifClick, onMarkAllRead }) { // 👈 Thêm nhận diện onMarkAllRead ở đây
+  return (
+    <div
+      role="dialog"
+      aria-label="Thông báo"
+      style={{
+        position: "absolute",
+        top: 46,
+        right: 0,
+        width: 330,
+        background: "#fff",
+        borderRadius: 16,
+        boxShadow:
+          "0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.05)",
+        overflow: "hidden",
+        border: `1px solid ${C.border}`,
+        zIndex: 1000,
+      }}
+    >
+      {/* Giao diện tiêu đề nâng cấp */}
+      <div
+        style={{
+          padding: "14px 18px",
+          background: `linear-gradient(135deg, ${C.ocean} 0%, ${C.oceanL} 100%)`,
+          color: "#fff",
+          fontWeight: 700,
+          fontSize: 14,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <span>Thông báo của bạn</span>
+
+        {/* Nhóm các nút điều hướng phụ bên góc phải */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {unreadCount > 0 && (
+            // 🌟 CẢI TIẾN: Nút bấm "Đọc tất cả" nhỏ gọn, tinh tế ngay trong Header
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); // Chặn nổi bọt sự kiện để không bị đóng dropdown
+                onMarkAllRead?.();
+              }}
+              style={{
+                background: "rgba(255, 255, 255, 0.18)",
+                border: "none",
+                borderRadius: 6,
+                color: "#fff",
+                fontSize: 11,
+                fontWeight: 700,
+                padding: "3px 8px",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                transition: "background 0.2s",
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255, 255, 255, 0.28)"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255, 255, 255, 0.18)"}
+            >
+              ✓ Đọc tất cả
+            </button>
+          )}
+
+          {unreadCount > 0 && (
+            <span
+              style={{
+                fontSize: 10,
+                background: "rgba(255,255,255,0.2)",
+                backdropFilter: "blur(4px)",
+                WebkitBackdropFilter: "blur(4px)",
+                padding: "3px 10px",
+                borderRadius: 20,
+                fontWeight: 700,
+              }}
+            >
+              {unreadCount} mới
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div style={{ maxHeight: 340, overflowY: "auto" }}>
+        {notifs.length === 0 ? (
+          <div
+            style={{
+              padding: "40px 20px",
+              textAlign: "center",
+              color: C.muted,
+              fontSize: 13,
+            }}
+          >
+            <div style={{ fontSize: 32, marginBottom: 8 }}>🔔</div>
+            <div style={{ fontWeight: 600, color: C.dark }}>
+              Không có thông báo nào
+            </div>
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>
+              Chúng tôi sẽ báo cho bạn khi có tin mới.
+            </div>
+          </div>
+        ) : (
+          notifs.map((n, i) => (
+            <NotifItem
+              key={n.id || i}
+              notif={n}
+              onClick={() => onNotifClick(n)}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function NotifItem({ notif: n, onClick }) {
+  return (
+    <div
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === "Enter" && onClick()}
+      style={{
+        padding: "14px 18px",
+        borderBottom: `1px solid ${C.border}`,
+        fontSize: 13,
+        color: C.dark,
+        borderLeft: n.isRead ? "4px solid transparent" : `4px solid ${C.ocean}`,
+        background: n.isRead ? "#fff" : "rgba(11, 79, 108, 0.04)",
+        display: "flex",
+        gap: 12,
+        alignItems: "flex-start",
+        cursor: n.productId ? "pointer" : "default",
+        transition: "all 0.2s ease",
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = "#F1F5F9")}
+      onMouseLeave={(e) =>
+      (e.currentTarget.style.background = n.isRead
+        ? "#fff"
+        : "rgba(11, 79, 108, 0.04)")
+      }
+    >
+      <div
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: "50%",
+          background: n.type === "new_review" ? "#FEF3C7" : "#E6F4F9",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 14,
+          flexShrink: 0,
+          marginTop: 1,
+          boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+        }}
+      >
+        {n.type === "new_review" ? "⭐" : "📢"}
+      </div>
+
+      <div style={{ flex: 1, overflow: "hidden" }}>
+        <div
+          style={{
+            lineHeight: 1.45,
+            fontWeight: n.isRead ? 400 : 700,
+            color: n.isRead ? C.text : C.dark,
+          }}
+        >
+          {n.preview || n.content}
+        </div>
+        {n.createdAt && (
+          <div
+            style={{
+              fontSize: 11,
+              color: C.muted,
+              marginTop: 6,
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            <span>🕒</span>
+            <span>
+              {new Date(n.createdAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+              {" - "}
+              {new Date(n.createdAt).toLocaleDateString()}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {!n.isRead && (
+        <span
+          aria-hidden="true"
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            background: C.ocean,
+            flexShrink: 0,
+            marginTop: 6,
+            boxShadow: "0 0 0 2px rgba(11, 79, 108, 0.2)",
+          }}
+        />
+      )}
+    </div>
+  );
 }
 </file>
 
@@ -14184,6 +13893,104 @@ export function ReviewList({ sellerId, user, productId, scrollToReviewId }) {
       )}
     </div>
   );
+}
+</file>
+
+<file path="client/my-app/src/hooks/useNotifications.js">
+import { useState, useEffect } from "react";
+import { api } from "../services/api";
+import { getSocket } from "../services/socket";
+
+/**
+ * Hook quản lý thông báo real-time.
+ * Tách ra khỏi Navbar để Navbar không phải kiêm nhiệm logic này.
+ */
+export function useNotifications(user) {
+  const [notifs, setNotifs] = useState([]);
+
+  // Tải thông báo khi đăng nhập
+  useEffect(() => {
+    if (!user) {
+      setNotifs([]);
+      return;
+    }
+    api("/notifications")
+      .then((data) =>
+        setNotifs(
+          data.map((item) => ({
+            id: item.id,
+            type: item.type,
+            preview: item.content,
+            productId: item.productId,
+            reviewId: item.reviewId || null,
+            isRead: !!item.isRead,
+            createdAt: item.createdAt,
+          })),
+        ),
+      )
+      .catch((err) => console.error("Lỗi tải thông báo:", err));
+  }, [user]);
+
+  // Lắng nghe thông báo real-time từ socket
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    // BUG FIX: trước đây `return () => socket.off(...)` bên trong .then() bị bỏ qua hoàn toàn
+    // (return value của Promise callback không phải là cleanup function của useEffect).
+    // Hậu quả: mỗi lần re-render thêm một listener mới mà không bao giờ bị gỡ → memory leak + gọi N lần.
+    let cleanupSocketListener = null;
+
+    getSocket()
+      .then((socket) => {
+        if (!active) return;
+        const handler = (data) => {
+          if (data.type === "new_product" || data.type === "new_review") {
+            setNotifs((prev) => [
+              {
+                id: data.id || Date.now(),
+                type: data.type,
+                preview: data.preview || data.content,
+                productId: data.productId,
+                reviewId: data.reviewId || null,
+                isRead: false,
+                createdAt: new Date().toISOString(),
+              },
+              ...prev,
+            ]);
+          }
+        };
+        socket.on("notification", handler);
+        cleanupSocketListener = () => socket.off("notification", handler);
+      })
+      .catch(() => { });
+
+    return () => {
+      active = false;
+      cleanupSocketListener?.(); // gỡ listener đúng cách
+    };
+  }, [user]);
+
+  const markAllRead = () => {
+    api("/notifications/read", { method: "PUT" })
+      .then(() =>
+        setNotifs((prev) => prev.map((n) => ({ ...n, isRead: true }))),
+      )
+      .catch((err) => console.error("Lỗi đánh dấu đã đọc:", err));
+  };
+  // 🌟 GIẢI PHÁP: Bổ sung hàm đánh dấu đọc một thông báo duy nhất
+  const markSingleRead = (id) => {
+    api(`/notifications/${id}`, { method: "PATCH" })
+      .then(() =>
+        setNotifs((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+        )
+      )
+      .catch((err) => console.error("Lỗi đánh dấu đọc thông báo:", err));
+  };
+
+  const unreadCount = notifs.filter((n) => !n.isRead).length;
+
+  return { notifs, unreadCount, markAllRead, markSingleRead };
 }
 </file>
 
@@ -15889,7 +15696,7 @@ export function SellerProfilePage({ seller }) {
     }
     api(`/products?sellerId=${seller.id}&limit=100`)
       .then((data) => setProducts(data.data || []))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, [seller?.id, navigate]);
 
@@ -15900,10 +15707,8 @@ export function SellerProfilePage({ seller }) {
   });
 
   const sellerName = seller?.name || products[0]?.sellerName || "...";
-  const sellerRating = products[0]?.sellerRating
-    ? parseFloat(products[0].sellerRating)
-    : null;
-  const ratingCount = products[0]?.ratingCount || 0;
+  const sellerRating = seller?.avgRating ? parseFloat(seller.avgRating) : null;
+  const ratingCount = seller?.ratingCount || 0;
   const freshCount = products.filter((p) => p.type === "Fresh").length;
   const driedCount = products.filter((p) => p.type === "Dried").length;
 
@@ -16214,6 +16019,7 @@ import { sendServerError, parseId } from "../helpers/response.helper";
 import { parsePagination, paginatedResponse } from "../utils/pagination";
 import { fillDays } from "../utils/fillDays";
 import { logger } from "../utils/logger";
+import { productService } from "../services/product.service"; // Đảm bảo đã import
 
 export async function getStats(_req: Request, res: Response) {
   try {
@@ -16515,14 +16321,15 @@ export async function adminDeleteProduct(req: Request, res: Response) {
   if (!id) return res.status(400).json({ message: "ID sản phẩm không hợp lệ" });
 
   try {
-    const product = await Product.findByIdAndUpdate(id, {
-      $set: { status: "Deleted" },
-    });
-    if (!product)
-      return res.status(404).json({ message: "Không tìm thấy bài đăng" });
+    // 🌟 GIẢI PHÁP: Gọi trực tiếp productService.delete để thực hiện toàn bộ chuỗi dọn dẹp và giải phóng Cache!
+    await productService.delete(
+      id,
+      req.user.userId,
+      "Admin" // Truyền quyền Admin để vượt qua kiểm tra chủ sở hữu sản phẩm
+    );
 
-    logger.info(`Admin soft deleted ProductID=${id}`);
-    return res.json({ message: "Đã xoá bài đăng" });
+    logger.info(`Admin deleted ProductID=${id} and cleaned up all associated resources`);
+    return res.json({ message: "Đã xoá bài đăng và dọn dẹp tài nguyên thành công" });
   } catch (err) {
     logger.error(
       `adminDeleteProduct error: ${err instanceof Error ? err.message : err}`,
@@ -16532,134 +16339,213 @@ export async function adminDeleteProduct(req: Request, res: Response) {
 }
 </file>
 
-<file path="backend/src/controllers/image.controller.ts">
-import { Request, Response } from 'express';
-import { Product } from '../models/Product';
-import { uploadToCloudinary, deleteFromCloudinary } from '../middlewares/upload';
-import { sendServerError, parseId } from '../helpers/response.helper';
-import { cloudinary } from '../config/cloudinary';
+<file path="backend/src/controllers/message.controller.ts">
+import { Request, Response } from "express";
+import { Message } from "../models/Message";
+import { Product } from "../models/Product";
+import { User } from "../models/User";
+import { sendServerError, parseId } from "../helpers/response.helper";
+import { uploadToCloudinary } from "../middlewares/upload";
+import mongoose from "mongoose";
 
-const MAX_IMAGES = 5;
+// Trong tệp: backend/src/controllers/message.controller.ts (hàm getMessages)
 
-// Helper to extract Cloudinary public ID from URL for deletion
-export function extractPublicId(url: string): string | null {
-  const parts = url.split('/upload/');
-  if (parts.length < 2) return null;
-  const pathWithVersion = parts[1];
-  const pathParts = pathWithVersion.split('/');
-  if (pathParts[0].startsWith('v')) {
-    pathParts.shift();
-  }
-  const pathWithoutVersion = pathParts.join('/');
-  const lastDotIndex = pathWithoutVersion.lastIndexOf('.');
-  if (lastDotIndex === -1) return pathWithoutVersion;
-  return pathWithoutVersion.substring(0, lastDotIndex);
-}
-
-export async function uploadImages(req: Request, res: Response) {
+export async function getMessages(req: Request, res: Response) {
   const { userId, role } = req.user;
-  const productId = parseId(req.params.id);
-  const files = req.files as Express.Multer.File[];
-
-  if (!productId) return res.status(400).json({ message: 'ID sản phẩm không hợp lệ' });
-  if (!files || files.length === 0)
-    return res.status(400).json({ message: 'Chưa chọn ảnh nào' });
+  const productId = parseId(req.params.productId);
+  if (!productId)
+    return res.status(400).json({ message: "ID sản phẩm không hợp lệ" });
 
   try {
-    const prod = await Product.findById(productId);
-    if (!prod) return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
-
-    if (prod.sellerId.toString() !== userId && role !== 'Admin')
-      return res.status(403).json({ message: 'Không có quyền tải ảnh cho bài đăng này' });
-
-    const currentCount = prod.images.length;
-    const canAdd = MAX_IMAGES - currentCount;
-
-    if (canAdd <= 0)
-      return res.status(400).json({ message: `Đã đủ ${MAX_IMAGES} ảnh. Xoá ảnh cũ trước khi tải thêm.` });
-
-    const toUpload = files.slice(0, canAdd);
-    const uploadedResults = await Promise.all(
-      toUpload.map((file) => uploadToCloudinary(file.buffer, 'seafood')),
-    );
-
-    const newUrls = uploadedResults.map((item) => item.url);
-    await Product.findByIdAndUpdate(productId, {
-      $push: { images: { $each: newUrls } }
-    });
-
-    const uploaded = uploadedResults.map((item, index) => ({
-      id: currentCount + index,
-      url: item.url,
-    }));
-
-    return res.status(201).json({ message: `Đã tải lên ${uploaded.length} ảnh`, images: uploaded });
-  } catch (err) {
-    return sendServerError(res, err);
-  }
-}
-
-export async function getUploadSignature(req: Request, res: Response) {
-  try {
-    const timestamp = Math.round(new Date().getTime() / 1000);
-
-    // Cấu hình các tham số bắt buộc phải khớp khi gửi từ Client
-    const params = {
-      timestamp,
-      folder: 'seafood',
-    };
-
-    // Tạo chữ ký số bằng API Secret bí mật của bạn ở Backend
-    const signature = cloudinary.utils.api_sign_request(
-      params,
-      process.env.CLOUDINARY_API_SECRET as string
-    );
-
-    return res.json({
-      signature,
-      timestamp,
-      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
-      apiKey: process.env.CLOUDINARY_API_KEY,
-      folder: 'seafood',
-    });
-  } catch (err) {
-    return sendServerError(res, err);
-  }
-}
-
-// Trong tệp: backend/src/controllers/image.controller.ts
-
-export async function deleteImage(req: Request, res: Response) {
-  const { userId, role } = req.user;
-  const imageId = req.params.id;
-
-  if (!imageId) return res.status(400).json({ message: 'ID ảnh không hợp lệ' });
-
-  try {
-    // 🌟 GIẢI PHÁP BẢO MẬT: Escape toàn bộ các ký tự Regex đặc biệt để chống tấn công đóng băng máy chủ (ReDoS)
-    const escapedImageId = imageId.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-
-    // Tìm sản phẩm chứa ảnh bằng chuỗi Regex đã được làm sạch an toàn
-    const prod = await Product.findOne({
-      images: { $regex: escapedImageId }
-    });
-
-    if (!prod) return res.status(404).json({ message: 'Không tìm thấy ảnh' });
-
-    if (prod.sellerId.toString() !== userId && role !== 'Admin')
-      return res.status(403).json({ message: 'Không có quyền xoá ảnh này' });
-
-    const imageUrl = prod.images.find((img) => img.includes(imageId));
-    if (imageUrl) {
-      const publicId = extractPublicId(imageUrl);
-      if (publicId) {
-        await deleteFromCloudinary(publicId).catch(() => { });
-      }
-      prod.images = prod.images.filter((img) => img !== imageUrl);
-      await prod.save();
+    const filter: any = { productId };
+    if (role !== "Admin") {
+      filter.$or = [{ senderId: userId }, { receiverId: userId }];
     }
 
-    return res.json({ message: 'Đã xoá ảnh' });
+    // 🌟 GIẢI PHÁP: Cập nhật trạng thái "Đã đọc" trước khi truy vấn dữ liệu để đồng bộ hóa tuyệt đối
+    if (role !== "Admin") {
+      await Message.updateMany(
+        { productId, receiverId: userId, isRead: false } as any,
+        { $set: { isRead: true } }
+      );
+    }
+
+    // Sau khi cơ sở dữ liệu đã được cập nhật, thực hiện tìm kiếm dữ liệu mới nhất
+    const messages = await Message.find(filter)
+      .populate("senderId", "name")
+      .sort({ createdAt: 1 });
+
+    // Ánh xạ dữ liệu gọn gàng hơn (loại bỏ hoàn toàn được mảng map messageIds cũ)
+    const formattedRows = messages.map((m: any) => ({
+      id: m._id.toString(),
+      senderId: m.senderId?._id.toString(),
+      senderName: m.senderId?.name || "Một người dùng",
+      receiverId: m.receiverId.toString(),
+      content: m.content,
+      imageUrl: m.imageUrl,
+      isRead: m.isRead, // 🌟 Giờ đây giá trị này chắc chắn là "true" chính xác đối với người nhận
+      sentAt: m.createdAt,
+    }));
+
+    return res.json(formattedRows);
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+
+// Trong tệp: backend/src/controllers/message.controller.ts (hàm sendMessage)
+
+export async function sendMessage(req: Request, res: Response) {
+  const { userId } = req.user;
+  const { productId, receiverId, content, imageUrl } = req.body;
+
+  if (!productId || !receiverId)
+    return res.status(400).json({ message: "Thiếu thông tin nhận tin" });
+
+  if (!content?.trim() && !imageUrl)
+    return res.status(400).json({ message: "Nội dung tin nhắn trống" });
+
+  if (receiverId === userId)
+    return res
+      .status(400)
+      .json({ message: "Không thể tự gửi tin nhắn cho chính mình" });
+
+  try {
+    // 🌟 GIẢI PHÁP: Loại bỏ thẻ HTML cơ bản và giới hạn tối đa 1000 ký tự tin nhắn
+    const cleanContent = content
+      ? content.trim().replace(/<[^>]*>/g, "").slice(0, 1000)
+      : null;
+
+    const newMsg = new Message({
+      productId,
+      senderId: userId,
+      receiverId,
+      content: cleanContent, // Lưu nội dung sạch đã được khống chế độ dài
+      imageUrl: imageUrl || null,
+    });
+
+    await newMsg.save();
+
+    return res
+      .status(201)
+      .json({ id: newMsg._id.toString(), message: "Gửi thành công" });
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+
+export async function uploadChatImage(req: Request, res: Response) {
+  if (!req.file)
+    return res.status(400).json({ message: "Chưa chọn file ảnh gửi kèm" });
+
+  try {
+    const { url } = await uploadToCloudinary(req.file.buffer, "chat_images");
+    return res.json({ imageUrl: url });
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+
+export async function unreadCount(req: Request, res: Response) {
+  const { userId } = req.user;
+  try {
+    const count = await Message.countDocuments({
+      receiverId: userId,
+      isRead: false,
+    } as any);
+    return res.json({ count });
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+
+export async function getConversations(req: Request, res: Response) {
+  const { userId } = req.user;
+  try {
+    // [M-05 PERFORMANCE NOTE]
+    // Pipeline này sử dụng mô hình $sort -> $group -> $sort để trích xuất tin nhắn cuối cùng của mỗi cuộc hội thoại.
+    // Mặc dù chính xác về mặt kết quả, việc thực hiện $sort trên toàn bộ tin nhắn liên quan trước khi group có thể 
+    // làm suy giảm hiệu năng khi số lượng bản ghi tin nhắn lớn (hàng triệu bản ghi).
+    // KHUYẾN NGHỊ: Xem xét phi chuẩn hóa (denormalize) các trường `lastMessage`, `unreadCount` vào một collection 
+    // `Conversations` riêng biệt và cập nhật real-time để loại bỏ bước aggregation nặng nề này.
+    const conversations = await Message.aggregate([
+      {
+        $match: {
+          $or: [
+            { senderId: new mongoose.Types.ObjectId(userId) },
+            { receiverId: new mongoose.Types.ObjectId(userId) },
+          ],
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: {
+            productId: "$productId",
+            otherUserId: {
+              $cond: [
+                { $eq: ["$senderId", new mongoose.Types.ObjectId(userId)] },
+                "$receiverId",
+                "$senderId",
+              ],
+            },
+          },
+          lastMessage: { $first: "$content" },
+          lastMessageImageUrl: { $first: "$imageUrl" },
+          lastSentAt: { $first: "$createdAt" },
+          // TỐI ƯU HÓA: Sử dụng toán tử $sum hiệu suất cao thay vì $push
+          unreadCount: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ["$isRead", false] },
+                    {
+                      $eq: ["$receiverId", new mongoose.Types.ObjectId(userId)],
+                    },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "products",
+          localField: "_id.productId",
+          foreignField: "_id",
+          as: "product",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id.otherUserId",
+          foreignField: "_id",
+          as: "otherUser",
+        },
+      },
+      { $unwind: { path: "$product", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$otherUser", preserveNullAndEmptyArrays: true } },
+      { $sort: { lastSentAt: -1 } },
+    ]);
+
+    const formattedRows = conversations.map((conv: any) => ({
+      productId: conv._id.productId?.toString() || "",
+      otherUserId: conv._id.otherUserId?.toString() || "",
+      productName: conv.product?.name || "Sản phẩm đã bị xóa",
+      otherUserName: conv.otherUser?.name || "Một người dùng",
+      otherUserIsVerified: conv.otherUser?.isVerified ? 1 : 0,
+      lastMessage: conv.lastMessage,
+      lastMessageImageUrl: conv.lastMessageImageUrl,
+      lastSentAt: conv.lastSentAt,
+      unread: conv.unreadCount || 0,
+    }));
+
+    return res.json(formattedRows);
   } catch (err) {
     return sendServerError(res, err);
   }
@@ -16671,6 +16557,8 @@ import { Request, Response } from 'express';
 import { Report } from '../models/Report';
 import { Product } from '../models/Product';
 import { sendServerError, parseId } from '../helpers/response.helper';
+import { productService } from "../services/product.service";
+import { parsePagination } from '../utils/pagination';
 
 export async function createReport(req: Request, res: Response) {
   const { userId } = req.user;
@@ -16681,14 +16569,27 @@ export async function createReport(req: Request, res: Response) {
     return res.status(400).json({ message: 'Thiếu thông tin' });
 
   try {
+    // 🌟 GIẢI PHÁP NGHIỆP VỤ: Xác minh sản phẩm tồn tại và không phải của chính mình
+    const product = await Product.findOne({ _id: productId, status: { $ne: "Deleted" } });
+    if (!product) {
+      return res.status(404).json({ message: "Sản phẩm không tồn tại hoặc đã bị ẩn vĩnh viễn" });
+    }
+
+    if (product.sellerId.toString() === userId.toString()) {
+      return res.status(400).json({ message: "Bạn không thể tự gửi báo cáo sản phẩm của chính mình!" });
+    }
+
     const existing = await Report.findOne({ reporterId: userId, productId });
     if (existing)
       return res.status(400).json({ message: 'Bạn đã báo cáo bài đăng này rồi' });
 
+    // Làm sạch ký tự HTML cơ bản để chống chèn mã độc
+    const cleanReason = reason.trim().replace(/<[^>]*>/g, "").slice(0, 500);
+
     const newReport = new Report({
       reporterId: userId,
       productId,
-      reason,
+      reason: cleanReason,
     });
     await newReport.save();
     return res.json({ message: 'Báo cáo đã gửi thành công' });
@@ -16704,9 +16605,10 @@ export async function getReports(req: Request, res: Response) {
   }
   const status = queryStatus as 'Pending' | 'Resolved' | 'Dismissed';
 
-  const page = Math.max(1, parseInt(req.query.page as string) || 1);
-  const limit = Math.max(1, Math.min(100, parseInt(req.query.limit as string) || 20));
-  const skip = (page - 1) * limit;
+  // 🌟 GIẢI PHÁP: Sử dụng Helper phân trang dùng chung an toàn của dự án
+  const rawPage = typeof req.query.page === "string" ? req.query.page : undefined;
+  const rawLimit = typeof req.query.limit === "string" ? req.query.limit : undefined;
+  const { page, limit, offset } = parsePagination(rawPage, rawLimit, 100);
 
   try {
     const total = await Report.countDocuments({ status });
@@ -16721,7 +16623,7 @@ export async function getReports(req: Request, res: Response) {
         }
       })
       .sort({ createdAt: -1 })
-      .skip(skip)
+      .skip(offset) // Sử dụng offset an toàn đã sửa lỗi NaN
       .limit(limit);
 
     const formattedRows = reports.map((r: any) => ({
@@ -16764,17 +16666,20 @@ export async function handleReport(req: Request, res: Response) {
     if (!report)
       return res.status(404).json({ message: 'Không tìm thấy báo cáo' });
 
+    // 🌟 GIẢI PHÁP: Gọi hàm Service dọn dẹp cascade đồng bộ nếu Admin duyệt ẩn tin vi phạm
     if (action === 'resolve' && report.productId) {
-      await Product.findByIdAndUpdate(report.productId, {
-        $set: { status: 'Deleted' }
-      });
+      await productService.delete(
+        report.productId.toString(),
+        req.user.userId,
+        "Admin" // Truyền quyền Admin để vượt qua kiểm tra chủ sở hữu sản phẩm
+      );
     }
 
     report.status = newStatus;
     report.adminNote = adminNote || null;
     await report.save();
 
-    return res.json({ message: 'Đã xử lý báo cáo' });
+    return res.json({ message: 'Đã xử lý báo cáo và dọn dẹp tài nguyên thành công!' });
   } catch (err) {
     return sendServerError(res, err);
   }
@@ -17348,378 +17253,6 @@ export const otpService = {
     return ttl > 0 ? ttl : 0;
   },
 };
-</file>
-
-<file path="client/my-app/src/layout/Navbar.jsx">
-/**
- * Navbar.jsx — Refactored + Fixed
- *
- * FIXES:
- *   1. FIX CRITICAL TYPO: `onMarkRead` → `onMarkAllRead` khi truyền vào NotificationBell.
- *      Bug: NotificationBell nhận prop `onMarkAllRead` nhưng Navbar truyền `onMarkRead`
- *      → notifications không bao giờ được đánh dấu đã đọc khi mở dropdown.
- *
- *   2. Thêm cleanup cho event listener IntersectionObserver (đã có nhưng cần verify).
- *
- *   3. Loại bỏ `disconnectSocket` import thừa (logout đã được handle trong AuthContext).
- *
- *   4. `handleLogout` không cần async/await — `logout()` từ AuthContext đã handle internally.
- */
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { ChatPopover } from "../components/ChatPopover";
-import { NotificationBell } from "../components/NotificationBell";
-import { useNotifications } from "../hooks/useNotifications";
-import {
-  MessageIcon,
-  HomeIcon,
-  BarChartIcon,
-  SettingsIcon,
-  LogOutIcon,
-  MenuIcon,
-  XIcon,
-  PlusIcon,
-  TruckIcon,
-  PhoneIcon,
-  ChevronDownIcon,
-  SparklesIcon,
-} from "../components/icons";
-import styles from "./Navbar.module.css";
-
-export function Navbar({ unread, onOpenGlobalChat }) {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const dropdownRef = useRef(null);
-  const sentinelRef = useRef(null);
-
-  const [showChatPopover, setShowChatPopover] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
-  const { notifs, unreadCount, markAllRead, markSingleRead } = useNotifications(user);
-
-  // Đóng profile dropdown khi click ra ngoài
-  useEffect(() => {
-    const handler = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setShowProfileDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  // Detect scroll để thu nhỏ navbar
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setScrolled(!entry.isIntersecting),
-      { threshold: 0 },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, []);
-
-  // Đóng mobile menu khi route thay đổi
-  useEffect(() => {
-    setMenuOpen(false);
-    setShowChatPopover(false);
-    setShowProfileDropdown(false);
-  }, [location.pathname]);
-
-  const handleNotifClick = useCallback(
-    (n) => {
-      if (!n.isRead) {
-        markSingleRead(n.id);
-      }
-      if (n.productId) navigate(`/san-pham/${n.productId}`);
-    },
-    [navigate, markSingleRead]
-  );
-
-  // FIX: Không cần async/await — logout() trong AuthContext tự handle
-  const handleLogout = useCallback(async () => {
-    await logout();
-    navigate("/");
-    setMenuOpen(false);
-    setShowProfileDropdown(false);
-  }, [logout, navigate]);
-
-  const isActive = useCallback(
-    (path) => location.pathname === path,
-    [location.pathname],
-  );
-
-  const navTo = useCallback(
-    (path) => {
-      navigate(path);
-      setMenuOpen(false);
-    },
-    [navigate],
-  );
-
-  return (
-    <>
-      <div
-        ref={sentinelRef}
-        style={{
-          position: "absolute",
-          top: 0,
-          height: 1,
-          width: "100%",
-          pointerEvents: "none",
-        }}
-      />
-
-      <div
-        className={`${styles.topBar} ${scrolled ? styles.topBarHidden : ""}`}
-      >
-        <span className={styles.topBarItem}>
-          <TruckIcon size={12} />
-          Giao tươi trong 20km · Khô giao toàn quốc
-        </span>
-        <span className={styles.topBarItem}>
-          <PhoneIcon size={12} />
-          Hỗ trợ kỹ thuật: 1800 6688
-        </span>
-      </div>
-
-      <nav className={`${styles.nav} ${scrolled ? styles.navScrolled : ""}`}>
-        <button
-          className={styles.logo}
-          onClick={() => navTo("/")}
-          aria-label="Trang chủ"
-        >
-          <span className={styles.logoMark}>
-            <SparklesIcon size={18} style={{ color: "var(--ocean)" }} />
-          </span>
-          <span>
-            <span className={styles.logoName}>
-              Hải<span className={styles.logoAccent}>Sản</span>.vn
-            </span>
-            <span className={styles.logoTagline}>Tươi từ ngư dân</span>
-          </span>
-        </button>
-
-        <div className={styles.navLinks}>
-          <button
-            className={`${styles.navBtn} ${isActive("/") ? styles.active : ""}`}
-            onClick={() => navTo("/")}
-          >
-            <HomeIcon size={14} />
-            Trang chủ
-          </button>
-          {user && (
-            <>
-              <button
-                className={`${styles.navBtn} ${isActive("/dashboard") ? styles.active : ""}`}
-                onClick={() => navTo("/dashboard")}
-              >
-                <BarChartIcon size={14} />
-                Quản lý
-              </button>
-              {user.role === "Admin" && (
-                <button
-                  className={`${styles.navBtn} ${isActive("/admin") ? styles.active : ""}`}
-                  onClick={() => navTo("/admin")}
-                >
-                  <SettingsIcon size={14} />
-                  Admin
-                </button>
-              )}
-            </>
-          )}
-        </div>
-
-        <div className={styles.actions}>
-          {user ? (
-            <>
-              <div style={{ position: "relative" }}>
-                <button
-                  className={styles.iconBtn}
-                  onClick={() => setShowChatPopover((v) => !v)}
-                  aria-label={`Tin nhắn${unread > 0 ? ` (${unread} chưa đọc)` : ""}`}
-                >
-                  <MessageIcon size={16} />
-                  {unread > 0 && (
-                    <span className={styles.badge}>
-                      {unread > 9 ? "9+" : unread}
-                    </span>
-                  )}
-                </button>
-                {showChatPopover && (
-                  <ChatPopover
-                    user={user}
-                    onClose={() => setShowChatPopover(false)}
-                    onOpenChat={(chat) => {
-                      onOpenGlobalChat?.(chat);
-                      setShowChatPopover(false);
-                    }}
-                  />
-                )}
-              </div>
-
-              {/* FIX: prop onMarkRead → onMarkAllRead */}
-              <NotificationBell
-                notifs={notifs}
-                unreadCount={unreadCount}
-                onMarkAllRead={markAllRead}
-                onNotifClick={handleNotifClick}
-              />
-
-              <button
-                className={styles.postBtn}
-                onClick={() => navTo("/dang-bai")}
-              >
-                <PlusIcon size={14} />
-                Đăng bán
-              </button>
-
-              <div style={{ position: "relative" }} ref={dropdownRef}>
-                <button
-                  className={styles.profileBtn}
-                  onClick={() => setShowProfileDropdown((v) => !v)}
-                  aria-expanded={showProfileDropdown}
-                  aria-haspopup="true"
-                >
-                  {user.avatarUrl ? (
-                    <img
-                      src={user.avatarUrl}
-                      alt={user.name}
-                      className={styles.avatar}
-                    />
-                  ) : (
-                    <span className={styles.avatarInitial}>
-                      {(user.name || "?").charAt(0).toUpperCase()}
-                    </span>
-                  )}
-                  <span>{user.name?.split(" ").pop()}</span>
-                  <ChevronDownIcon size={11} />
-                </button>
-
-                {showProfileDropdown && (
-                  <div className={styles.dropdown} role="menu">
-                    <div className={styles.dropdownHeader}>
-                      <div className={styles.dropdownName}>{user.name}</div>
-                      <div className={styles.dropdownSub}>{user.email}</div>
-                    </div>
-                    <button
-                      className={styles.dropdownItem}
-                      role="menuitem"
-                      onClick={() => {
-                        navTo("/profile");
-                        setShowProfileDropdown(false);
-                      }}
-                    >
-                      <SettingsIcon size={13} />
-                      Cài đặt tài khoản
-                    </button>
-                    <button
-                      className={styles.dropdownItem}
-                      role="menuitem"
-                      onClick={() => {
-                        navTo("/dashboard");
-                        setShowProfileDropdown(false);
-                      }}
-                    >
-                      <BarChartIcon size={13} />
-                      Quản lý bán hàng
-                    </button>
-                    <hr className={styles.dropdownDivider} />
-                    <button
-                      className={`${styles.dropdownItem} ${styles.danger}`}
-                      role="menuitem"
-                      onClick={handleLogout}
-                    >
-                      <LogOutIcon size={13} />
-                      Đăng xuất
-                    </button>
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              <button
-                className={styles.postBtn}
-                onClick={() => navTo("/dang-bai")}
-              >
-                <PlusIcon size={14} />
-                Đăng bán
-              </button>
-              <button
-                className={styles.loginBtn}
-                onClick={() => navTo("/dang-nhap")}
-              >
-                Đăng nhập
-              </button>
-            </>
-          )}
-        </div>
-
-        <div className={styles.mobileActions}>
-          <button
-            className={styles.hamburger}
-            onClick={() => setMenuOpen((v) => !v)}
-            aria-label={menuOpen ? "Đóng menu" : "Mở menu"}
-            aria-expanded={menuOpen}
-          >
-            {menuOpen ? <XIcon size={16} /> : <MenuIcon size={16} />}
-          </button>
-        </div>
-      </nav>
-
-      {menuOpen && (
-        <div
-          className={styles.mobileMenu}
-          role="navigation"
-          aria-label="Menu di động"
-        >
-          <button className={styles.mobileMenuItem} onClick={() => navTo("/")}>
-            <HomeIcon size={14} />
-            Trang chủ
-          </button>
-          {user && (
-            <button
-              className={styles.mobileMenuItem}
-              onClick={() => navTo("/dashboard")}
-            >
-              <BarChartIcon size={14} />
-              Quản lý bán hàng
-            </button>
-          )}
-          <button
-            className={styles.mobileMenuItem}
-            onClick={() => navTo("/dang-bai")}
-          >
-            <PlusIcon size={14} />
-            Đăng bán ngay
-          </button>
-          {user ? (
-            <button
-              className={`${styles.mobileMenuItem} ${styles.danger}`}
-              onClick={handleLogout}
-            >
-              <LogOutIcon size={14} />
-              Đăng xuất
-            </button>
-          ) : (
-            <button
-              className={styles.mobileMenuItem}
-              onClick={() => navTo("/dang-nhap")}
-            >
-              Đăng nhập
-            </button>
-          )}
-        </div>
-      )}
-    </>
-  );
-}
 </file>
 
 <file path="client/my-app/src/pages/PostListingPage.jsx">
@@ -18856,96 +18389,134 @@ EMAIL_USER=daudaubut@gmail.com
 EMAIL_PASS=uezd tktc qysj jlpo
 </file>
 
-<file path="backend/src/controllers/favorite.controller.ts">
-import { Request, Response } from "express";
-import { User } from "../models/User";
-import { sendServerError } from "../helpers/response.helper";
-import mongoose from "mongoose";
-import { Product } from "../models/Product";
+<file path="backend/src/controllers/image.controller.ts">
+import { Request, Response } from 'express';
+import { Product } from '../models/Product';
+import { uploadToCloudinary, deleteFromCloudinary } from '../middlewares/upload';
+import { sendServerError, parseId } from '../helpers/response.helper';
+import { cloudinary } from '../config/cloudinary';
 
-export async function getMyFavorites(req: Request, res: Response) {
-  const { userId } = req.user;
-  try {
-    const user = await User.findById(userId).populate({
-      path: "favorites",
-      populate: { path: "sellerId", select: "name isVerified" },
-    });
+const MAX_IMAGES = 5;
 
-    if (!user)
-      return res.status(404).json({ message: "Không tìm thấy người dùng" });
-
-    const formatted = (user.favorites as any[]).map((p) => ({
-      id: p._id,
-      name: p.name,
-      price: p.price,
-      type: p.type,
-      status: p.status,
-      remainingWeight: p.remainingWeight,
-      viewCount: p.viewCount,
-      sellerName: p.sellerId?.name || "Một ngư dân",
-      sellerIsVerified: p.sellerId?.isVerified ? 1 : 0,
-      coverImg: p.images?.[0] || null,
-      savedAt: p.createdAt,
-    }));
-
-    return res.json(formatted);
-  } catch (err) {
-    return sendServerError(res, err);
+// Helper to extract Cloudinary public ID from URL for deletion
+export function extractPublicId(url: string): string | null {
+  const parts = url.split('/upload/');
+  if (parts.length < 2) return null;
+  const pathWithVersion = parts[1];
+  const pathParts = pathWithVersion.split('/');
+  if (pathParts[0].startsWith('v')) {
+    pathParts.shift();
   }
+  const pathWithoutVersion = pathParts.join('/');
+  const lastDotIndex = pathWithoutVersion.lastIndexOf('.');
+  if (lastDotIndex === -1) return pathWithoutVersion;
+  return pathWithoutVersion.substring(0, lastDotIndex);
 }
 
-export async function getMyFavoriteIds(req: Request, res: Response) {
-  const { userId } = req.user;
-  try {
-    const user = await User.findById(userId);
-    return res.json(user ? user.favorites : []);
-  } catch (err) {
-    return sendServerError(res, err);
-  }
-}
+export async function uploadImages(req: Request, res: Response) {
+  const { userId, role } = req.user;
+  const productId = parseId(req.params.id);
+  const files = req.files as Express.Multer.File[];
 
-// Trong tệp: backend/src/controllers/favorite.controller.ts
-
-export async function toggleFavorite(req: Request, res: Response) {
-  const { userId } = req.user;
-  const productId = req.params.productId;
-
-  if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
-    return res.status(400).json({ message: "ID không hợp lệ" });
-  }
+  if (!productId) return res.status(400).json({ message: 'ID sản phẩm không hợp lệ' });
+  if (!files || files.length === 0)
+    return res.status(400).json({ message: 'Chưa chọn ảnh nào' });
 
   try {
-    const user = await User.findById(userId);
-    if (!user)
-      return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    const prod = await Product.findById(productId);
+    if (!prod) return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
 
-    const prodObjId = new mongoose.Types.ObjectId(productId);
-    const isFavorited = user.favorites.some(
-      (id) => id.toString() === productId,
+    if (prod.sellerId.toString() !== userId && role !== 'Admin')
+      return res.status(403).json({ message: 'Không có quyền tải ảnh cho bài đăng này' });
+
+    const currentCount = prod.images.length;
+    const canAdd = MAX_IMAGES - currentCount;
+
+    if (canAdd <= 0)
+      return res.status(400).json({ message: `Đã đủ ${MAX_IMAGES} ảnh. Xoá ảnh cũ trước khi tải thêm.` });
+
+    const toUpload = files.slice(0, canAdd);
+    const uploadedResults = await Promise.all(
+      toUpload.map((file) => uploadToCloudinary(file.buffer, 'seafood')),
     );
 
-    // 🌟 GIẢI PHÁP BẢO MẬT: Chặn không cho phép yêu thích nếu sản phẩm không tồn tại hoặc đã bị xóa mềm
-    if (!isFavorited) {
-      const productExists = await Product.exists({
-        _id: prodObjId,
-        status: { $ne: "Deleted" }
-      });
-      if (!productExists) {
-        return res.status(404).json({ message: "Sản phẩm không tồn tại hoặc đã bị xóa vĩnh viễn" });
+    const newUrls = uploadedResults.map((item) => item.url);
+    await Product.findByIdAndUpdate(productId, {
+      $push: { images: { $each: newUrls } }
+    });
+
+    const uploaded = uploadedResults.map((item, index) => ({
+      id: currentCount + index,
+      url: item.url,
+    }));
+
+    return res.status(201).json({ message: `Đã tải lên ${uploaded.length} ảnh`, images: uploaded });
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+
+export async function getUploadSignature(req: Request, res: Response) {
+  try {
+    const timestamp = Math.round(new Date().getTime() / 1000);
+
+    // Cấu hình các tham số bắt buộc phải khớp khi gửi từ Client
+    const params = {
+      timestamp,
+      folder: 'seafood',
+    };
+
+    // Tạo chữ ký số bằng API Secret bí mật của bạn ở Backend
+    const signature = cloudinary.utils.api_sign_request(
+      params,
+      process.env.CLOUDINARY_API_SECRET as string
+    );
+
+    return res.json({
+      signature,
+      timestamp,
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      apiKey: process.env.CLOUDINARY_API_KEY,
+      folder: 'seafood',
+    });
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+
+// Trong tệp: backend/src/controllers/image.controller.ts
+
+export async function deleteImage(req: Request, res: Response) {
+  const { userId, role } = req.user;
+  const imageId = req.params.id;
+
+  if (!imageId) return res.status(400).json({ message: 'ID ảnh không hợp lệ' });
+
+  try {
+    // 🌟 GIẢI PHÁP BẢO MẬT: Escape toàn bộ các ký tự Regex đặc biệt để chống tấn công đóng băng máy chủ (ReDoS)
+    const escapedImageId = imageId.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+
+    // Tìm sản phẩm chứa ảnh bằng chuỗi Regex đã được làm sạch an toàn
+    const prod = await Product.findOne({
+      images: { $regex: escapedImageId }
+    });
+
+    if (!prod) return res.status(404).json({ message: 'Không tìm thấy ảnh' });
+
+    if (prod.sellerId.toString() !== userId && role !== 'Admin')
+      return res.status(403).json({ message: 'Không có quyền xoá ảnh này' });
+
+    const imageUrl = prod.images.find((img) => img.includes(imageId));
+    if (imageUrl) {
+      const publicId = extractPublicId(imageUrl);
+      if (publicId) {
+        await deleteFromCloudinary(publicId).catch(() => { });
       }
+      prod.images = prod.images.filter((img) => img !== imageUrl);
+      await prod.save();
     }
 
-    if (isFavorited) {
-      user.favorites = user.favorites.filter(
-        (id) => id.toString() !== productId,
-      );
-      await user.save();
-      return res.json({ favorited: false });
-    }
-
-    user.favorites.push(prodObjId as any);
-    await user.save();
-    return res.json({ favorited: true });
+    return res.json({ message: 'Đã xoá ảnh' });
   } catch (err) {
     return sendServerError(res, err);
   }
@@ -19206,1206 +18777,374 @@ async function uploadAvatarToCloudinary(buffer: Buffer): Promise<string> {
 }
 </file>
 
-<file path="backend/src/services/product.service.ts">
-import { Product, IProduct } from "../models/Product";
-import { User } from "../models/User";
-import { redis } from "../config/redis";
-import { MAX_FRESH_DISTANCE_KM } from "../utils/haversine";
-import { parsePagination, paginatedResponse } from "../utils/pagination";
-import { notifyFollowersNewProduct } from "./notification.service";
-import { logger } from "../utils/logger";
-import mongoose from "mongoose";
-import { HttpError } from "../errors/HttpError";
-import { extractPublicId } from "../controllers/image.controller";
-import { cloudinary } from "../config/cloudinary";
-import { Report } from "../models/Report";
-import { Notification } from "../models/Notification"; // Hãy chắc chắn đã import mô hình
+<file path="client/my-app/src/layout/Navbar.jsx">
+/**
+ * Navbar.jsx — Refactored + Fixed
+ *
+ * FIXES:
+ *   1. FIX CRITICAL TYPO: `onMarkRead` → `onMarkAllRead` khi truyền vào NotificationBell.
+ *      Bug: NotificationBell nhận prop `onMarkAllRead` nhưng Navbar truyền `onMarkRead`
+ *      → notifications không bao giờ được đánh dấu đã đọc khi mở dropdown.
+ *
+ *   2. Thêm cleanup cho event listener IntersectionObserver (đã có nhưng cần verify).
+ *
+ *   3. Loại bỏ `disconnectSocket` import thừa (logout đã được handle trong AuthContext).
+ *
+ *   4. `handleLogout` không cần async/await — `logout()` từ AuthContext đã handle internally.
+ */
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { ChatPopover } from "../components/ChatPopover";
+import { NotificationBell } from "../components/NotificationBell";
+import { useNotifications } from "../hooks/useNotifications";
+import {
+  MessageIcon,
+  HomeIcon,
+  BarChartIcon,
+  SettingsIcon,
+  LogOutIcon,
+  MenuIcon,
+  XIcon,
+  PlusIcon,
+  TruckIcon,
+  PhoneIcon,
+  ChevronDownIcon,
+  SparklesIcon,
+} from "../components/icons";
+import styles from "./Navbar.module.css";
 
+export function Navbar({ unread, onOpenGlobalChat }) {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const dropdownRef = useRef(null);
+  const sentinelRef = useRef(null);
 
+  const [showChatPopover, setShowChatPopover] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
-export const productService = {
-  async list(query: Record<string, string | undefined>) {
-    const queryType = query.type;
-    const freshVer = await redis.get("product:list:version:Fresh") || "0";
-    const driedVer = await redis.get("product:list:version:Dried") || "0";
-    const listVersion = queryType === "Fresh" ? freshVer : queryType === "Dried" ? driedVer : `${freshVer}_${driedVer}`;
+  const { notifs, unreadCount, markAllRead, markSingleRead } = useNotifications(user);
 
-    // 1. TỐI ƯU CACHE KEY: Tránh Cache Pollution do GPS và Search
-    const normalizedQuery: any = { ...query };
-    if (normalizedQuery.lat) normalizedQuery.lat = parseFloat(normalizedQuery.lat).toFixed(3); // Làm tròn ~110m
-    if (normalizedQuery.lng) normalizedQuery.lng = parseFloat(normalizedQuery.lng).toFixed(3);
-
-    const cacheKey = `product:list:v${listVersion}:${JSON.stringify(normalizedQuery)}`;
-
-    // Chỉ đọc cache nếu KHÔNG có từ khóa tìm kiếm (vì tìm kiếm có độ tùy biến rất lớn)
-    const isSearching = !!(query.search && query.search.trim());
-    if (!isSearching) {
-      const cachedData = await redis.get(cacheKey);
-      if (cachedData) {
-        return JSON.parse(cachedData);
+  // Đóng profile dropdown khi click ra ngoài
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowProfileDropdown(false);
       }
-    }
-
-    // Ép kiểu tường minh về dạng string để triệt tiêu mọi cấu trúc đối tượng NoSQL Injection
-    const type = typeof query.type === "string" ? query.type : undefined;
-    const category = typeof query.category === "string" ? query.category : undefined;
-    const search = typeof query.search === "string" ? query.search : undefined;
-    const lat = typeof query.lat === "string" ? query.lat : undefined;
-    const lng = typeof query.lng === "string" ? query.lng : undefined;
-    const rawPage = typeof query.page === "string" ? query.page : undefined;
-    const rawLimit = typeof query.limit === "string" ? query.limit : undefined;
-    const sellerId = typeof query.sellerId === "string" ? query.sellerId : undefined;
-    const { page, limit } = parsePagination(rawPage, rawLimit);
-    const skip = (page - 1) * limit;
-
-    const filter: any = { status: "Active" };
-
-    if (sellerId && mongoose.Types.ObjectId.isValid(sellerId)) {
-      filter.sellerId = new mongoose.Types.ObjectId(sellerId);
-    }
-
-    if (type === "Fresh" || type === "Dried") {
-      filter.type = type;
-    }
-    if (category && category !== "All") {
-      filter.category = category;
-    }
-
-    let sortOption: any = { bumpedAt: -1, createdAt: -1 };
-    let projection: any = {};
-
-    if (search && search.trim()) {
-      filter.$text = { $search: search.trim() };
-      projection = { score: { $meta: "textScore" } };
-      sortOption = { score: { $meta: "textScore" } };
-    }
-
-    if (type === "Fresh" && lat && lng) {
-      const latVal = parseFloat(lat);
-      const lngVal = parseFloat(lng);
-      if (!isNaN(latVal) && !isNaN(lngVal)) {
-        filter.location = {
-          $geoWithin: {
-            $centerSphere: [[lngVal, latVal], MAX_FRESH_DISTANCE_KM / 6378.1],
-          },
-        };
-      }
-    }
-
-    const total = await Product.countDocuments(filter);
-    const rows = await Product.find(filter, projection)
-      .populate("sellerId", "name isVerified isPremium")
-      .sort(sortOption)
-      .skip(skip)
-      .limit(limit);
-
-    const formattedRows = rows.map((p: any) => ({
-      id: p._id,
-      sellerId: p.sellerId?._id || null,
-      sellerName: p.sellerId?.name || "Một ngư dân",
-      sellerIsVerified: p.sellerId?.isVerified ? 1 : 0,
-      sellerIsPremium: p.sellerId?.isPremium ? 1 : 0,
-      type: p.type,
-      category: p.category,
-      name: p.name,
-      description: p.description,
-      price: p.price,
-      salesType: p.salesType,
-      totalWeight: p.totalWeight,
-      remainingWeight: p.remainingWeight,
-      status: p.status,
-      catchTime: p.catchTime,
-      lat: p.location?.coordinates?.[1] || null,
-      lng: p.location?.coordinates?.[0] || null,
-      origin: p.origin,
-      expiryDate: p.expiryDate,
-      createdAt: p.createdAt,
-      viewCount: p.viewCount,
-      bumpedAt: p.bumpedAt,
-      // FIX LỖI: Sử dụng Optional Chaining cho mảng images để tránh API bị sập khi images là undefined
-      coverImg: p.images?.[0] || null,
-      imgCount: p.images?.length || 0,
-    }));
-
-    const finalResponse = paginatedResponse(formattedRows, total, page, limit);
-
-    // Không lưu cache nếu đang tìm kiếm để tránh tràn bộ nhớ Redis
-    if (!isSearching) {
-      await redis.set(cacheKey, JSON.stringify(finalResponse), "EX", 600);
-    }
-
-    return finalResponse;
-  },
-
-  async getById(id: string) {
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw new HttpError(400, "ID sản phẩm không hợp lệ");
-    }
-
-    const detailCacheKey = `product:detail:${id}`;
-    const viewsCacheKey = `product:views:count:${id}`; // Khóa đếm lượt xem động trong Redis
-
-    const cachedDetail = await redis.get(detailCacheKey);
-
-    if (cachedDetail) {
-      const parsed = JSON.parse(cachedDetail);
-
-      // Tăng lượt xem ngầm trong MongoDB
-      Product.findByIdAndUpdate(id, { $inc: { viewCount: 1 } }).catch(() => { });
-
-      // 🌟 GIẢI PHÁP: Tăng và lấy lượt xem thời gian thực trực tiếp từ Redis
-      const realTimeViews = await redis.incr(viewsCacheKey);
-      parsed.viewCount = realTimeViews; // Ghi đè số lượt xem cũ tĩnh trong cache bằng số thực tế
-
-      return parsed;
-    }
-
-    const p: any = await Product.findByIdAndUpdate(
-      id,
-      { $inc: { viewCount: 1 } },
-      { new: true },
-    ).populate("sellerId", "name isVerified isPremium");
-
-    if (!p || p.status === "Deleted") {
-      throw new HttpError(404, "Không tìm thấy sản phẩm hoặc sản phẩm đã bị xóa");
-    }
-
-
-    const finalDetail = {
-      id: p._id,
-      sellerId: p.sellerId?._id,
-      sellerName: p.sellerId?.name || "Một ngư dân",
-      sellerIsVerified: p.sellerId?.isVerified ? 1 : 0,
-      sellerIsPremium: p.sellerId?.isPremium ? 1 : 0,
-      type: p.type,
-      category: p.category,
-      name: p.name,
-      description: p.description,
-      price: p.price,
-      salesType: p.salesType,
-      totalWeight: p.totalWeight,
-      remainingWeight: p.remainingWeight,
-      status: p.status,
-      catchTime: p.catchTime,
-      lat: p.location?.coordinates?.[1] || null,
-      lng: p.location?.coordinates?.[0] || null,
-      origin: p.origin,
-      expiryDate: p.expiryDate,
-      createdAt: p.createdAt,
-      viewCount: p.viewCount,
-      bumpedAt: p.bumpedAt,
-      images: (p.images || []).map((img: string, idx: number) => ({
-        id: idx,
-        url: img,
-      })),
     };
-
-    await redis.set(viewsCacheKey, p.viewCount, "EX", 1800);
-    await redis.set(detailCacheKey, JSON.stringify(finalDetail), "EX", 1800);
-    return finalDetail;
-  },
-
-  async create(
-    userId: string,
-    body: Record<string, any>,
-  ): Promise<{ productId: string }> {
-    const {
-      type,
-      category,
-      name,
-      description,
-      price,
-      salesType,
-      totalWeight,
-      catchTime,
-      lat,
-      lng,
-      origin,
-      expiryDate,
-      images,
-    } = body;
-
-    // 🌟 GIẢI PHÁP BẢO MẬT: Bắt buộc kiểm tra GPS đối với hải sản tươi sống ngay tại Backend
-    if (type === "Fresh" && (!lat || !lng)) {
-      throw new HttpError(400, "Tọa độ vị trí GPS là bắt buộc đối với hải sản tươi sống!");
-    }
-
-    const user = await User.findById(userId);
-    if (!user) throw new HttpError(404, "Không tìm thấy người dùng");
-
-    if (!user.isPremium && user.role !== "Admin") {
-      // FIX LỆCH MÚI GIỜ: Chuyển đổi về 0h ngày hôm nay theo giờ Việt Nam (UTC+7)
-      const nowVN = new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
-      nowVN.setUTCHours(0, 0, 0, 0);
-      const startOfDay = new Date(nowVN.getTime() - 7 * 60 * 60 * 1000);
-
-      const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000 - 1);
-
-      const countToday = await Product.countDocuments({
-        sellerId: userId,
-        createdAt: { $gte: startOfDay, $lte: endOfDay },
-        status: { $ne: "Deleted" },
-      });
-
-      if (countToday >= 10) {
-        throw new HttpError(
-          403,
-          "Tài khoản thường chỉ được phép đăng tối đa 5 bài viết mỗi ngày. Vui lòng nâng cấp lên Premium để đăng không giới hạn!"
-        );
-      }
-    }
-
-    const cleanDesc = description
-      ? description.trim().replace(/<[^>]*>/g, "").slice(0, 2000)
-      : null;
-
-    const parsedPrice = typeof price === "number" ? price : parseInt(price, 10);
-    const parsedWeight = typeof totalWeight === "number" ? totalWeight : parseFloat(totalWeight);
-
-    if (isNaN(parsedPrice) || isNaN(parsedWeight)) {
-      throw new HttpError(400, "Thông tin giá cả hoặc khối lượng không hợp lệ");
-    }
-
-    const newProduct = new Product({
-      sellerId: userId,
-      type,
-      category,
-      name: name.trim(),
-      description: cleanDesc,
-      price: parsedPrice,
-      salesType: salesType ?? "Retail",
-      totalWeight: parsedWeight,
-      remainingWeight: parsedWeight,
-      catchTime,
-      origin,
-      expiryDate,
-      images: Array.isArray(images) ? images : [],
-      ...(lat && lng
-        ? {
-          location: {
-            type: "Point",
-            coordinates: [
-              typeof lng === "number" ? lng : parseFloat(lng),
-              typeof lat === "number" ? lat : parseFloat(lat),
-            ],
-          },
-        }
-        : {}),
-    });
-
-    await newProduct.save();
-    await redis.incr(`product:list:version:${newProduct.type}`);
-
-    User.findById(userId)
-      .select("name")
-      .lean()
-      .then((seller: any) =>
-        notifyFollowersNewProduct(
-          userId,
-          seller?.name || "Một ngư dân",
-          newProduct._id.toString(),
-          newProduct.name,
-        ),
-      )
-      .catch((err: any) =>
-        logger.error(
-          `[Notify] notifyFollowersNewProduct failed: ${err.message}`,
-        ),
-      );
-
-    return { productId: newProduct._id.toString() };
-  },
-
-  async update(
-    id: string,
-    userId: string,
-    role: string,
-    body: Record<string, any>,
-  ): Promise<void> {
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw new HttpError(400, "ID sản phẩm không hợp lệ");
-    }
-
-    const currentProduct = await Product.findById(id);
-    if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
-    if (role !== "Admin" && currentProduct.sellerId.toString() !== userId)
-      throw new HttpError(403, "Bạn không có quyền chỉnh sửa bài đăng này");
-
-    // 🌟 GIẢI PHÁP 1: Kiểm tra tính toàn vẹn của phân loại Tươi sống sau khi cập nhật
-    const targetType = body.type !== undefined ? body.type : currentProduct.type;
-    const targetLat = body.lat !== undefined ? body.lat : (currentProduct.location?.coordinates?.[1]);
-    const targetLng = body.lng !== undefined ? body.lng : (currentProduct.location?.coordinates?.[0]);
-
-    if (targetType === "Fresh" && (!targetLat || !targetLng)) {
-      throw new HttpError(400, "Tọa độ GPS vị trí mẻ hàng là bắt buộc đối với hải sản tươi sống!");
-    }
-
-
-
-
-    // FIX LỖI 0-VALUE: So sánh trực tiếp với undefined
-    const newPrice = body.price !== undefined ? parseInt(body.price, 10) : undefined;
-    if (newPrice !== undefined && isNaN(newPrice)) {
-      throw new HttpError(400, "Giá sản phẩm mới không hợp lệ");
-    }
-
-    const updateFields: any = {};
-
-    if (body.name !== undefined) updateFields.name = body.name.trim();
-    if (body.description !== undefined)
-      updateFields.description = body.description
-        ? body.description.trim().replace(/<[^>]*>/g, "").slice(0, 2000)
-        : null;
-    if (body.origin !== undefined) updateFields.origin = body.origin;
-    if (body.type !== undefined) updateFields.type = body.type;
-    if (body.category !== undefined) updateFields.category = body.category;
-    if (body.salesType !== undefined) updateFields.salesType = body.salesType;
-    if (body.status !== undefined) updateFields.status = body.status;
-    if (body.images !== undefined && Array.isArray(body.images)) {
-      updateFields.images = body.images;
-
-      // 🌟 GIẢI PHÁP 2: Tự động so sánh lọc ra các ảnh bị gỡ bỏ để xoá sạch trên Cloudinary
-      const removedImages = (currentProduct.images || []).filter(img => !body.images.includes(img));
-      if (removedImages.length > 0) {
-        const removedPublicIds = removedImages
-          .map(extractPublicId)
-          .filter((id): id is string => !!id);
-
-        if (removedPublicIds.length > 0) {
-          // Gọi xóa bulk trên Cloudinary không đồng bộ để tránh block tiến trình phản hồi chính
-          cloudinary.api.delete_resources(removedPublicIds).catch((err: any) => {
-            logger.error(`Cloudinary cleanup failed during product update: ${err.message}`);
-          });
-        }
-      }
-    }
-    if (newPrice !== undefined) {
-      updateFields.price = newPrice;
-    }
-    if (body.totalWeight !== undefined) {
-      updateFields.totalWeight = parseFloat(body.totalWeight);
-    }
-    if (body.remainingWeight !== undefined) {
-      updateFields.remainingWeight = parseFloat(body.remainingWeight);
-    }
-
-    if (body.catchTime !== undefined) {
-      updateFields.catchTime = body.catchTime ? new Date(body.catchTime) : null;
-    }
-    if (body.expiryDate !== undefined) {
-      updateFields.expiryDate = body.expiryDate
-        ? new Date(body.expiryDate)
-        : null;
-    }
-
-    if (
-      body.lat !== undefined &&
-      body.lng !== undefined &&
-      body.lat !== null &&
-      body.lng !== null
-    ) {
-      const latVal = parseFloat(body.lat);
-      const lngVal = parseFloat(body.lng);
-      if (!isNaN(latVal) && !isNaN(lngVal)) {
-        updateFields.location = {
-          type: "Point",
-          coordinates: [lngVal, latVal],
-        };
-      }
-    }
-
-    // TỐI ƯU HOÁ: Gộp toán tử $set và $push vào 1 lượt ghi cơ sở dữ liệu duy nhất
-    const updateQuery: any = { $set: updateFields };
-
-    if (newPrice !== undefined && newPrice !== currentProduct.price) {
-      updateQuery.$push = {
-        priceHistory: {
-          oldPrice: currentProduct.price,
-          newPrice: newPrice,
-          changedAt: new Date(),
-        },
-      };
-      logger.info(`Price change logged for ProductID=${id}`);
-    }
-
-    await Product.findByIdAndUpdate(id, updateQuery);
-
-    await redis.del(`product:detail:${id}`);
-    await redis.incr(`product:list:version:${currentProduct.type}`);
-  },
-
-  async delete(id: string, userId: string, role: string): Promise<void> {
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw new HttpError(400, "ID sản phẩm không hợp lệ");
-    }
-
-    const currentProduct = await Product.findById(id);
-    if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
-    if (role !== "Admin" && currentProduct.sellerId.toString() !== userId)
-      throw new HttpError(403, "Bạn không có quyền xoá bài đăng này");
-
-    // 🌟 GIẢI PHÁP 1: Tự động xóa sạch toàn bộ các tệp ảnh của sản phẩm trên Cloudinary
-    if (currentProduct.images && currentProduct.images.length > 0) {
-      const publicIds = currentProduct.images
-        .map(extractPublicId)
-        .filter((id): id is string => !!id);
-
-      if (publicIds.length > 0) {
-        // Gọi xóa bulk trên Cloudinary không đồng bộ để tránh block tiến trình phản hồi chính
-        cloudinary.api.delete_resources(publicIds).catch((err: any) => {
-          logger.error(`Cloudinary cleanup failed during product deletion: ${err.message}`);
-        });
-      }
-    }
-
-    // Chuyển trạng thái sang Deleted
-    await Product.findByIdAndUpdate(id, { $set: { status: "Deleted" } });
-    await Notification.deleteMany({ productId: id as any });
-
-    // 🌟 GIẢI PHÁP 2: Tự động gỡ ID sản phẩm bị xóa khỏi mảng "favorites" của toàn bộ User khác
-    await User.updateMany({}, { $pull: { favorites: id as any } });
-
-    // 🌟 GIẢI PHÁP 3: Tự động dọn dẹp toàn bộ các Báo cáo vi phạm (Reports) hướng tới sản phẩm này
-    await Report.deleteMany({ productId: id as any });
-
-    await redis.del(`product:detail:${id}`);
-    await redis.incr(`product:list:version:${currentProduct.type}`);
-  },
-  async bump(id: string, userId: string): Promise<void> {
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw new HttpError(400, "ID sản phẩm không hợp lệ");
-    }
-
-    const currentProduct = await Product.findById(id);
-    if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
-    if (currentProduct.sellerId.toString() !== userId)
-      throw new HttpError(403, "Không có quyền");
-
-    if (currentProduct.bumpedAt) {
-      const diffMs = Date.now() - new Date(currentProduct.bumpedAt).getTime();
-      if (diffMs < 24 * 3600 * 1000) {
-        const remaining = Math.ceil((24 * 3600 * 1000 - diffMs) / 3600000);
-        throw new HttpError(429, `Đẩy tin lại sau ${remaining} giờ nữa`);
-      }
-    }
-
-    await Product.findByIdAndUpdate(id, { $set: { bumpedAt: new Date() } });
-
-    await redis.del(`product:detail:${id}`);
-    await redis.incr(`product:list:version:${currentProduct.type}`);
-  },
-};
-</file>
-
-<file path="backend/src/socket.ts">
-import "dotenv/config";
-import { Server as HttpServer } from "http";
-import { Server as IOServer, Socket } from "socket.io";
-import { createAdapter } from "@socket.io/redis-adapter";
-import jwt from "jsonwebtoken";
-import cookie from "cookie";
-import { Message } from "./models/Message";
-import { Product } from "./models/Product";
-import { redis } from "./config/redis";
-import { logger } from "./utils/logger";
-
-interface AuthPayload {
-  userId: string;
-  role: string;
-}
-
-let ioInstance: IOServer;
-
-function getTokenFromCookie(headers: any): string | null {
-  const cookieHeader = headers.cookie;
-  if (!cookieHeader) return null;
-  const parsed = cookie.parse(cookieHeader);
-  return parsed.token || null;
-}
-
-export function initSocket(server: HttpServer) {
-  const io = new IOServer(server, {
-    cors: {
-      origin: process.env.CLIENT_URL || "http://localhost:3000",
-      methods: ["GET", "POST"],
-      credentials: true,
-    },
-  });
-
-  try {
-    const pubClient = redis.duplicate();
-    const subClient = redis.duplicate();
-
-    pubClient.connect().catch(() => { });
-    subClient.connect().catch(() => { });
-
-    io.adapter(createAdapter(pubClient, subClient));
-    logger.info("Socket.IO Redis Adapter configured successfully");
-  } catch (err: any) {
-    logger.error(`Failed to configure Socket.IO Redis Adapter: ${err.message}`);
-  }
-
-  io.use((socket: Socket, next) => {
-    const token = getTokenFromCookie(socket.handshake.headers);
-    if (!token) {
-      return next(
-        new Error("Chưa đăng nhập (không tìm thấy token trong cookie)"),
-      );
-    }
-    try {
-      const payload = jwt.verify(
-        token,
-        process.env.JWT_SECRET as string,
-      ) as AuthPayload;
-      (socket as any).user = payload;
-      next();
-    } catch (err) {
-      return next(new Error("Token không hợp lệ hoặc đã hết hạn"));
-    }
-  });
-
-  io.on("connection", (socket: Socket) => {
-    const { userId } = (socket as any).user as AuthPayload;
-
-    socket.on("join_room", async (productId: string) => {
-      if (!productId) return;
-      try {
-        const prod = await Product.findById(productId);
-        const isSeller = prod && prod.sellerId.toString() === userId;
-
-        const hasMessages = await Message.exists({
-          productId,
-          $or: [{ senderId: userId }, { receiverId: userId }],
-        } as any);
-
-        if (isSeller || hasMessages) {
-          socket.join(`product_${productId}`);
-        }
-      } catch (err: any) {
-        logger.error(`Socket join_room error: ${err.message}`);
-      }
-    });
-
-    socket.on("leave_room", (productId: string) => {
-      socket.leave(`product_${productId}`);
-    });
-
-    socket.on(
-      "send_message",
-      async (data: {
-        productId: string;
-        receiverId: string;
-        content?: string;
-        imageUrl?: string;
-      }) => {
-        const { productId, receiverId, content, imageUrl } = data;
-        if (!productId || !receiverId) return;
-
-        if (!content?.trim() && !imageUrl) return;
-
-        if (receiverId === userId) {
-          socket.emit("error", {
-            message: "Không thể tự gửi tin nhắn cho chính mình",
-          });
-          return;
-        }
-
-        const rateLimitKey = `ratelimit:socket:msg:${userId}`;
-        try {
-          const pipe = redis.pipeline();
-          pipe.incr(rateLimitKey);
-          pipe.expire(rateLimitKey, 2);
-          const results = await pipe.exec();
-
-          const currentCount = (results?.[0]?.[1] as number) ?? 0;
-
-          if (currentCount > 5) {
-            socket.emit("error", {
-              message:
-                "Bạn gửi tin quá nhanh. Vui lòng làm chậm lại hành động của mình.",
-            });
-            return;
-          }
-        } catch (err: any) {
-          logger.error(`Rate limiter Redis error: ${err.message}`);
-        }
-
-        try {
-          const cleanContent = content
-            ? content.trim().replace(/<[^>]*>/g, "").slice(0, 1000)
-            : null;
-          const newMsg = new Message({
-            productId,
-            senderId: userId,
-            receiverId,
-            content: cleanContent,
-            imageUrl: imageUrl || null,
-          });
-
-          await newMsg.save();
-
-          const messageResponse = {
-            id: newMsg._id.toString(),
-            productId,
-            senderId: userId,
-            receiverId,
-            content: newMsg.content,
-            imageUrl: newMsg.imageUrl,
-            sentAt: newMsg.createdAt,
-            isRead: false,
-          };
-
-          io.to(`user_${userId}`).emit("new_message", messageResponse);
-          io.to(`user_${receiverId}`).emit("new_message", messageResponse);
-
-          io.to(`user_${receiverId}`).emit("notification", {
-            type: "new_message",
-            productId,
-            senderId: userId,
-            preview: imageUrl ? "📷 [Hình ảnh]" : content!.trim().slice(0, 40),
-          });
-        } catch (err: any) {
-          logger.error(`Socket send_message saving error: ${err.message}`);
-          socket.emit("error", { message: "Gửi tin thất bại" });
-        }
-      },
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Detect scroll để thu nhỏ navbar
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setScrolled(!entry.isIntersecting),
+      { threshold: 0 },
     );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
 
-    /* ─── VIDEO CALL EVENTS (MỚI) ─── */
-
-    // 1. Gửi yêu cầu gọi (Truyền kèm callerName sang cho Callee)
-    socket.on("call_user", (data: { to: string; offer: any; callerName?: string }) => {
-      const { to, offer, callerName } = data;
-      logger.info(`[Socket Call] User ${userId} (${callerName || "Không tên"}) is calling User ${to}`);
-      socket.to(`user_${to}`).emit("incoming_call", {
-        from: userId,
-        offer,
-        callerName: callerName || "Một người dùng"
-      });
-    });
-
-    // 2. Chấp nhận cuộc gọi
-    socket.on("answer_call", (data: { to: string; answer: any }) => {
-      const { to, answer } = data;
-      logger.info(`[Socket Call] User ${userId} accepted call from User ${to}`);
-      socket.to(`user_${to}`).emit("call_accepted", {
-        answer
-      });
-    });
-
-    // 3. Trao đổi cấu hình mạng ICE Candidates
-    socket.on("ice_candidate", (data: { to: string; candidate: any }) => {
-      const { to, candidate } = data;
-      socket.to(`user_${to}`).emit("ice_candidate", {
-        candidate
-      });
-    });
-
-    // 4. Kết thúc/Từ chối cuộc gọi
-    socket.on("end_call", (data: { to: string }) => {
-      const { to } = data;
-      logger.info(`[Socket Call] Call ended between User ${userId} and User ${to}`);
-      socket.to(`user_${to}`).emit("call_ended");
-    });
-
-    socket.join(`user_${userId}`);
-  });
-
-  ioInstance = io;
-  return io;
-}
-
-export function getIO() {
-  if (!ioInstance) throw new Error("Socket.io chưa được khởi tạo");
-  return ioInstance;
-}
-</file>
-
-<file path="client/my-app/src/components/ChatBox.jsx">
-import { useState, useEffect, useRef } from "react";
-import { C } from "../utils/theme";
-import { getSocket } from "../services/socket";
-import { api } from "../services/api";
-import { MessageIcon, XIcon, CheckCircleIcon } from "./icons/index";
-import { useToast } from "../context/ToastContext";
-import { useVideoCall } from "../context/VideoCallContext"; // ← SỬA ĐƯỜNG DẪN IMPORT SANG CONTEXT
-
-export function ChatBox({ product, onClose, user, fullHeight = false }) {
-  const toast = useToast();
-  const [msgs, setMsgs] = useState([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [socketReady, setSocketReady] = useState(false);
-  const [isInputFocused, setIsInputFocused] = useState(false);
-  const [uploading, setUploading] = useState(false);
-
-  const endRef = useRef(null);
-  const socketRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const otherUserRef = useRef(null);
-
-  const currentUserId = user?.id || user?.userId;
-
-  // LẤY TRỰC TIẾP HÀM BẮT ĐẦU CUỘC GỌI TỪ GLOBAL PROVIDER
-  const { startCall } = useVideoCall();
-
+  // Đóng mobile menu khi route thay đổi
   useEffect(() => {
-    if (!currentUserId) return;
-    setMsgs([]);
-    setLoading(true);
-    api(`/messages/${product.id}`)
-      .then((data) => {
-        const mapped = data.map((m) => ({
-          id: m.id,
-          senderId: m.senderId,
-          content: m.content,
-          imageUrl: m.imageUrl,
-          time: new Date(m.sentAt).toLocaleTimeString("vi", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          isMine: m.senderId === currentUserId,
-        }));
-        setMsgs(mapped);
-        const other = data.find((m) => m.senderId !== currentUserId);
-        if (other) otherUserRef.current = other.senderId;
-      })
-      .catch(() => { })
-      .finally(() => setLoading(false));
-  }, [product.id, currentUserId]);
+    setMenuOpen(false);
+    setShowChatPopover(false);
+    setShowProfileDropdown(false);
+  }, [location.pathname]);
 
-  useEffect(() => {
-    if (!currentUserId) return;
-    let cancelled = false;
-
-    getSocket().then((socket) => {
-      if (cancelled) return;
-      socketRef.current = socket;
-
-      // 🌟 GIẢI PHÁP: Định nghĩa hàm gia nhập phòng chat để tái sử dụng
-      const joinRoom = () => {
-        socket.emit("join_room", product.id);
-      };
-
-      // Gia nhập phòng chat lần đầu
-      joinRoom();
-
-      // 🌟 GIẢI PHÁP BẢO VỆ: Lắng nghe sự kiện kết nối lại thành công để tự động gia nhập lại phòng chat
-      socket.on("connect", joinRoom);
-      socket.on("new_message", handleNewMessage);
-
-      setSocketReady(true);
-    });
-
-    function handleNewMessage(msg) {
-      if (msg.productId !== product.id) return;
-      if (msg.senderId !== currentUserId) otherUserRef.current = msg.senderId;
-      setMsgs((prev) => {
-        if (prev.some((m) => m.id === msg.id)) return prev;
-        return [
-          ...prev,
-          {
-            id: msg.id,
-            senderId: msg.senderId,
-            content: msg.content,
-            imageUrl: msg.imageUrl,
-            time: new Date(msg.sentAt).toLocaleTimeString("vi", {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-            isMine: msg.senderId === currentUserId,
-          },
-        ];
-      });
-    }
-
-    return () => {
-      cancelled = true;
-      if (socketRef.current) {
-        // 🌟 Gỡ bỏ bộ lắng nghe kết nối khi unmount
-        socketRef.current.off("connect", joinRoom);
-        socketRef.current.off("new_message", handleNewMessage);
-        socketRef.current.emit("leave_room", product.id);
+  const handleNotifClick = useCallback(
+    (n) => {
+      if (!n.isRead) {
+        markSingleRead(n.id);
       }
-    };
-  }, [product.id, currentUserId]);
+      if (n.productId) navigate(`/san-pham/${n.productId}`);
+    },
+    [navigate, markSingleRead]
+  );
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [msgs]);
+  // FIX: Không cần async/await — logout() trong AuthContext tự handle
+  const handleLogout = useCallback(async () => {
+    await logout();
+    navigate("/");
+    setMenuOpen(false);
+    setShowProfileDropdown(false);
+  }, [logout, navigate]);
 
-  const getReceiverId = () => {
-    const sellerId = product.sellerId;
-    return currentUserId === sellerId ? otherUserRef.current : sellerId;
-  };
+  const isActive = useCallback(
+    (path) => location.pathname === path,
+    [location.pathname],
+  );
 
-  const send = (txtContent = "", imgUrl = null) => {
-    const finalContent = txtContent.trim();
-    if (!finalContent && !imgUrl) return;
-
-    const receiverId = getReceiverId();
-    if (!receiverId) {
-      toast.warn("Chưa có người nhận. Hãy chờ người mua nhắn trước.");
-      return;
-    }
-
-    if (socketRef.current?.connected) {
-      socketRef.current.emit("send_message", {
-        productId: product.id,
-        receiverId,
-        content: finalContent || null,
-        imageUrl: imgUrl,
-      });
-    } else {
-      api("/messages", {
-        method: "POST",
-        body: JSON.stringify({
-          productId: product.id,
-          receiverId,
-          content: finalContent || null,
-          imageUrl: imgUrl,
-        }),
-      })
-        .then((res) => {
-          setMsgs((prev) => [
-            ...prev,
-            {
-              id: res.id,
-              senderId: currentUserId,
-              content: finalContent || null,
-              imageUrl: imgUrl,
-              time: new Date().toLocaleTimeString("vi", {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-              isMine: true,
-            },
-          ]);
-        })
-        .catch((e) => toast.error(e.message));
-    }
-    setInput("");
-  };
-
-  // Hàm nén ảnh tối giản dành riêng cho khung Chat (Co về 800px, chất lượng 70%)
-  const compressChatImage = (file) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target.result;
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          const MAX_WIDTH = 800; // Khung chat chỉ cần tối đa 800px là đủ sắc nét
-          let width = img.width;
-          let height = img.height;
-
-          if (width > MAX_WIDTH) {
-            height = Math.round((height * MAX_WIDTH) / width);
-            width = MAX_WIDTH;
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, width, height);
-
-          canvas.toBlob(
-            (blob) => {
-              resolve(new File([blob], file.name, { type: "image/jpeg" }));
-            },
-            "image/jpeg",
-            0.70 // Nén chất lượng về 70% để gửi siêu tốc
-          );
-        };
-      };
-    });
-  };
-
-  // Trong tệp: client/my-app/src/components/ChatBox.jsx
-
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setUploading(true);
-
-    try {
-      // 🌟 CẢI TIẾN: Nén ảnh siêu nhỏ ngay tại Client trước khi tải lên
-      const compressedFile = await compressChatImage(file);
-
-      const fd = new FormData();
-      fd.append("image", compressedFile); // Đưa file đã nén cực nhẹ vào FormData
-
-      const res = await api("/messages/upload-image", {
-        method: "POST",
-        body: fd,
-      });
-
-      // Gửi tin nhắn chứa URL ảnh đã tải thành công qua Socket
-      send("", res.imageUrl);
-    } catch (err) {
-      toast.error("Gửi ảnh thất bại: " + err.message);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  // Kích hoạt cuộc gọi qua Global Provider
-  const handleInitiateCall = () => {
-    const targetId = getReceiverId();
-    if (!targetId) {
-      toast.warn("Không tìm thấy đối phương hoạt động để thực hiện cuộc gọi.");
-      return;
-    }
-    // Gửi đi tín hiệu gọi kèm tên đối phương hiển thị ở đầu bên kia
-    startCall(targetId, product.sellerName);
-  };
-
-  const chatHeight = fullHeight ? 420 : 250;
+  const navTo = useCallback(
+    (path) => {
+      navigate(path);
+      setMenuOpen(false);
+    },
+    [navigate],
+  );
 
   return (
-    <div
-      style={{
-        border: "1.5px solid #eaeaea",
-        borderRadius: 12,
-        overflow: "hidden",
-        background: C.white,
-      }}
-    >
-      {/* Header */}
+    <>
       <div
+        ref={sentinelRef}
         style={{
-          background: "#0f172a",
-          color: "#fff",
-          padding: "12px 16px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
+          position: "absolute",
+          top: 0,
+          height: 1,
+          width: "100%",
+          pointerEvents: "none",
         }}
+      />
+
+      <div
+        className={`${styles.topBar} ${scrolled ? styles.topBarHidden : ""}`}
       >
-        <div>
-          <div
-            style={{
-              fontWeight: 700,
-              fontSize: 13,
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-            }}
-          >
-            <MessageIcon size={14} />
-            <span>{product.sellerName}</span>
-            {product.sellerIsVerified && (
-              <CheckCircleIcon size={12} style={{ color: "#38bdf8" }} />
-            )}
-          </div>
-          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
-            Sản phẩm: {product.name}
-          </div>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          {/* NÚT GỌI VIDEO CALL */}
-          <button
-            onClick={handleInitiateCall}
-            style={{
-              background: "none",
-              border: "none",
-              color: "#38bdf8",
-              cursor: "pointer",
-              fontSize: 14,
-              padding: "4px",
-              display: "flex",
-              alignItems: "center"
-            }}
-            title="Gọi video cho đối phương"
-          >
-            📞
-          </button>
-
-          {onClose && (
-            <button
-              onClick={onClose}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#94a3b8",
-                cursor: "pointer",
-                padding: "4px"
-              }}
-            >
-              <XIcon size={16} />
-            </button>
-          )}
-        </div>
+        <span className={styles.topBarItem}>
+          <TruckIcon size={12} />
+          Giao tươi trong 20km · Khô giao toàn quốc
+        </span>
+        <span className={styles.topBarItem}>
+          <PhoneIcon size={12} />
+          Hỗ trợ kỹ thuật: 1800 6688
+        </span>
       </div>
 
-      <div
-        style={{
-          height: chatHeight,
-          overflowY: "auto",
-          padding: "16px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
-          background: "#f8fafc",
-        }}
-      >
-        {loading ? (
-          <div
-            style={{
-              textAlign: "center",
-              color: "#94a3b8",
-              fontSize: 12,
-              marginTop: 40,
-            }}
-          >
-            Đang tải tin nhắn...
-          </div>
-        ) : msgs.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              color: "#94a3b8",
-              fontSize: 12,
-              marginTop: 40,
-            }}
-          >
-            Gửi tin nhắn để bắt đầu cuộc trò chuyện.
-          </div>
-        ) : (
-          msgs.map((m) => (
-            <div
-              key={m.id}
-              style={{
-                display: "flex",
-                justifyContent: m.isMine ? "flex-end" : "flex-start",
-              }}
-            >
-              <div
-                style={{
-                  maxWidth: "75%",
-                  background: m.isMine ? "#0f172a" : "#fff",
-                  color: m.isMine ? "#fff" : "#1e293b",
-                  padding: "8px 12px",
-                  borderRadius: m.isMine
-                    ? "8px 8px 0px 8px"
-                    : "8px 8px 8px 0px",
-                  fontSize: 13,
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-                  border: m.isMine ? "none" : "1px solid #f1f5f9",
-                }}
-              >
-                {m.content && (
-                  <div style={{ wordBreak: "break-word" }}>{m.content}</div>
-                )}
+      <nav className={`${styles.nav} ${scrolled ? styles.navScrolled : ""}`}>
+        <button
+          className={styles.logo}
+          onClick={() => navTo("/")}
+          aria-label="Trang chủ"
+        >
+          <span className={styles.logoMark}>
+            <SparklesIcon size={18} style={{ color: "var(--ocean)" }} />
+          </span>
+          <span>
+            <span className={styles.logoName}>
+              Hải<span className={styles.logoAccent}>Sản</span>.vn
+            </span>
+            <span className={styles.logoTagline}>Tươi từ ngư dân</span>
+          </span>
+        </button>
 
-                {m.imageUrl && (
-                  <img
-                    src={m.imageUrl}
-                    alt="Ảnh hải sản đính kèm"
-                    style={{
-                      maxWidth: "100%",
-                      borderRadius: 8,
-                      marginTop: m.content ? 6 : 0,
-                      maxHeight: 180,
-                      objectFit: "cover",
-                      display: "block",
+        <div className={styles.navLinks}>
+          <button
+            className={`${styles.navBtn} ${isActive("/") ? styles.active : ""}`}
+            onClick={() => navTo("/")}
+          >
+            <HomeIcon size={14} />
+            Trang chủ
+          </button>
+          {user && (
+            <>
+              <button
+                className={`${styles.navBtn} ${isActive("/dashboard") ? styles.active : ""}`}
+                onClick={() => navTo("/dashboard")}
+              >
+                <BarChartIcon size={14} />
+                Quản lý
+              </button>
+              {user.role === "Admin" && (
+                <button
+                  className={`${styles.navBtn} ${isActive("/admin") ? styles.active : ""}`}
+                  onClick={() => navTo("/admin")}
+                >
+                  <SettingsIcon size={14} />
+                  Admin
+                </button>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className={styles.actions}>
+          {user ? (
+            <>
+              <div style={{ position: "relative" }}>
+                <button
+                  className={styles.iconBtn}
+                  onClick={() => setShowChatPopover((v) => !v)}
+                  aria-label={`Tin nhắn${unread > 0 ? ` (${unread} chưa đọc)` : ""}`}
+                >
+                  <MessageIcon size={16} />
+                  {unread > 0 && (
+                    <span className={styles.badge}>
+                      {unread > 9 ? "9+" : unread}
+                    </span>
+                  )}
+                </button>
+                {showChatPopover && (
+                  <ChatPopover
+                    user={user}
+                    onClose={() => setShowChatPopover(false)}
+                    onOpenChat={(chat) => {
+                      onOpenGlobalChat?.(chat);
+                      setShowChatPopover(false);
                     }}
                   />
                 )}
-
-                <div
-                  style={{
-                    fontSize: 9,
-                    color: m.isMine ? "rgba(255,255,255,0.6)" : "#94a3b8",
-                    marginTop: 4,
-                    textAlign: "right",
-                  }}
-                >
-                  {m.time}
-                </div>
               </div>
-            </div>
-          ))
-        )}
-        <div ref={endRef} />
-      </div>
 
-      <div
-        style={{
-          padding: "12px",
-          display: "flex",
-          gap: 8,
-          borderTop: "1px solid #f1f5f9",
-          background: C.white,
-          alignItems: "center",
-        }}
-      >
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          type="button"
-          style={{
-            background: "#f1f5f9",
-            border: "none",
-            borderRadius: 6,
-            width: 36,
-            height: 36,
-            cursor: "pointer",
-            fontSize: 16,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-          title="Gửi hình ảnh thực tế"
-        >
-          {uploading ? "⏳" : "📷"}
-        </button>
-        <input
-          type="file"
-          accept="image/*"
-          ref={fileInputRef}
-          onChange={handleImageUpload}
-          style={{ display: "none" }}
-        />
+              {/* FIX: prop onMarkRead → onMarkAllRead */}
+              <NotificationBell
+                notifs={notifs}
+                unreadCount={unreadCount}
+                onMarkAllRead={markAllRead}
+                onNotifClick={handleNotifClick}
+              />
 
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && send(input)}
-          onFocus={() => setIsInputFocused(true)}
-          onBlur={() => setIsInputFocused(false)}
-          placeholder="Nhập tin nhắn..."
-          style={{
-            flex: 1,
-            border: `1.5px solid ${isInputFocused ? "#0f172a" : "#cbd5e1"}`,
-            borderRadius: 6,
-            padding: "8px 12px",
-            fontSize: 13,
-            outline: "none",
-            transition: "all 0.15s ease",
-          }}
-        />
-        <button
-          onClick={() => send(input)}
-          style={{
-            background: "#0f172a",
-            color: "#fff",
-            border: "none",
-            borderRadius: 6,
-            padding: "8px 14px",
-            cursor: "pointer",
-            fontWeight: 700,
-            fontSize: 13,
-          }}
+              <button
+                className={styles.postBtn}
+                onClick={() => navTo("/dang-bai")}
+              >
+                <PlusIcon size={14} />
+                Đăng bán
+              </button>
+
+              <div style={{ position: "relative" }} ref={dropdownRef}>
+                <button
+                  className={styles.profileBtn}
+                  onClick={() => setShowProfileDropdown((v) => !v)}
+                  aria-expanded={showProfileDropdown}
+                  aria-haspopup="true"
+                >
+                  {user.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.name}
+                      className={styles.avatar}
+                    />
+                  ) : (
+                    <span className={styles.avatarInitial}>
+                      {(user.name || "?").charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  <span>{user.name?.split(" ").pop()}</span>
+                  <ChevronDownIcon size={11} />
+                </button>
+
+                {showProfileDropdown && (
+                  <div className={styles.dropdown} role="menu">
+                    <div className={styles.dropdownHeader}>
+                      <div className={styles.dropdownName}>{user.name}</div>
+                      <div className={styles.dropdownSub}>{user.email}</div>
+                    </div>
+                    <button
+                      className={styles.dropdownItem}
+                      role="menuitem"
+                      onClick={() => {
+                        navTo("/profile");
+                        setShowProfileDropdown(false);
+                      }}
+                    >
+                      <SettingsIcon size={13} />
+                      Cài đặt tài khoản
+                    </button>
+                    <button
+                      className={styles.dropdownItem}
+                      role="menuitem"
+                      onClick={() => {
+                        navTo("/dashboard");
+                        setShowProfileDropdown(false);
+                      }}
+                    >
+                      <BarChartIcon size={13} />
+                      Quản lý bán hàng
+                    </button>
+                    <hr className={styles.dropdownDivider} />
+                    <button
+                      className={`${styles.dropdownItem} ${styles.danger}`}
+                      role="menuitem"
+                      onClick={handleLogout}
+                    >
+                      <LogOutIcon size={13} />
+                      Đăng xuất
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <button
+                className={styles.postBtn}
+                onClick={() => navTo("/dang-bai")}
+              >
+                <PlusIcon size={14} />
+                Đăng bán
+              </button>
+              <button
+                className={styles.loginBtn}
+                onClick={() => navTo("/dang-nhap")}
+              >
+                Đăng nhập
+              </button>
+            </>
+          )}
+        </div>
+
+        <div className={styles.mobileActions}>
+          <button
+            className={styles.hamburger}
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label={menuOpen ? "Đóng menu" : "Mở menu"}
+            aria-expanded={menuOpen}
+          >
+            {menuOpen ? <XIcon size={16} /> : <MenuIcon size={16} />}
+          </button>
+        </div>
+      </nav>
+
+      {menuOpen && (
+        <div
+          className={styles.mobileMenu}
+          role="navigation"
+          aria-label="Menu di động"
         >
-          Gửi
-        </button>
-      </div>
-    </div>
+          <button className={styles.mobileMenuItem} onClick={() => navTo("/")}>
+            <HomeIcon size={14} />
+            Trang chủ
+          </button>
+          {user && (
+            <button
+              className={styles.mobileMenuItem}
+              onClick={() => navTo("/dashboard")}
+            >
+              <BarChartIcon size={14} />
+              Quản lý bán hàng
+            </button>
+          )}
+          <button
+            className={styles.mobileMenuItem}
+            onClick={() => navTo("/dang-bai")}
+          >
+            <PlusIcon size={14} />
+            Đăng bán ngay
+          </button>
+          {user ? (
+            <button
+              className={`${styles.mobileMenuItem} ${styles.danger}`}
+              onClick={handleLogout}
+            >
+              <LogOutIcon size={14} />
+              Đăng xuất
+            </button>
+          ) : (
+            <button
+              className={styles.mobileMenuItem}
+              onClick={() => navTo("/dang-nhap")}
+            >
+              Đăng nhập
+            </button>
+          )}
+        </div>
+      )}
+    </>
   );
 }
 </file>
@@ -22666,6 +21405,102 @@ git push origin feature/ten-tinh-nang
 </p>
 </file>
 
+<file path="backend/src/controllers/favorite.controller.ts">
+import { Request, Response } from "express";
+import { User } from "../models/User";
+import { sendServerError } from "../helpers/response.helper";
+import mongoose from "mongoose";
+import { Product } from "../models/Product";
+
+export async function getMyFavorites(req: Request, res: Response) {
+  const { userId } = req.user;
+  try {
+    const user = await User.findById(userId).populate({
+      path: "favorites",
+      populate: { path: "sellerId", select: "name isVerified" },
+    });
+
+    if (!user)
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
+
+    const formatted = (user.favorites as any[]).map((p) => ({
+      id: p._id,
+      name: p.name,
+      price: p.price,
+      type: p.type,
+      status: p.status,
+      remainingWeight: p.remainingWeight,
+      viewCount: p.viewCount,
+      sellerName: p.sellerId?.name || "Một ngư dân",
+      sellerIsVerified: p.sellerId?.isVerified ? 1 : 0,
+      coverImg: p.images?.[0] || null,
+      savedAt: p.createdAt,
+    }));
+
+    return res.json(formatted);
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+
+export async function getMyFavoriteIds(req: Request, res: Response) {
+  const { userId } = req.user;
+  try {
+    const user = await User.findById(userId);
+    return res.json(user ? user.favorites : []);
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+
+// Trong tệp: backend/src/controllers/favorite.controller.ts
+
+export async function toggleFavorite(req: Request, res: Response) {
+  const { userId } = req.user;
+  const productId = req.params.productId;
+
+  if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
+    return res.status(400).json({ message: "ID không hợp lệ" });
+  }
+
+  try {
+    const user = await User.findById(userId);
+    if (!user)
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
+
+    const prodObjId = new mongoose.Types.ObjectId(productId);
+    const isFavorited = user.favorites.some(
+      (id) => id.toString() === productId,
+    );
+
+    // 🌟 GIẢI PHÁP BẢO MẬT: Chặn không cho phép yêu thích nếu sản phẩm không tồn tại hoặc đã bị xóa mềm
+    if (!isFavorited) {
+      const productExists = await Product.exists({
+        _id: prodObjId,
+        status: { $ne: "Deleted" }
+      });
+      if (!productExists) {
+        return res.status(404).json({ message: "Sản phẩm không tồn tại hoặc đã bị xóa vĩnh viễn" });
+      }
+    }
+
+    if (isFavorited) {
+      user.favorites = user.favorites.filter(
+        (id) => id.toString() !== productId,
+      );
+      await user.save();
+      return res.json({ favorited: false });
+    }
+
+    user.favorites.push(prodObjId as any);
+    await user.save();
+    return res.json({ favorited: true });
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+</file>
+
 <file path="backend/src/controllers/product.controller.ts">
 import { Request, Response } from "express";
 import { productService } from "../services/product.service";
@@ -22831,6 +21666,1403 @@ export async function bumpProduct(req: Request, res: Response) {
     return sendServerError(res, err);
   }
 }
+</file>
+
+<file path="backend/src/services/product.service.ts">
+import { Product, IProduct } from "../models/Product";
+import { User } from "../models/User";
+import { redis } from "../config/redis";
+import { MAX_FRESH_DISTANCE_KM } from "../utils/haversine";
+import { parsePagination, paginatedResponse } from "../utils/pagination";
+import { notifyFollowersNewProduct } from "./notification.service";
+import { logger } from "../utils/logger";
+import mongoose from "mongoose";
+import { HttpError } from "../errors/HttpError";
+import { extractPublicId } from "../controllers/image.controller";
+import { cloudinary } from "../config/cloudinary";
+import { Report } from "../models/Report";
+import { Notification } from "../models/Notification"; // Hãy chắc chắn đã import mô hình
+
+
+
+export const productService = {
+  async list(query: Record<string, string | undefined>) {
+    const queryType = query.type;
+    const freshVer = await redis.get("product:list:version:Fresh") || "0";
+    const driedVer = await redis.get("product:list:version:Dried") || "0";
+    const listVersion = queryType === "Fresh" ? freshVer : queryType === "Dried" ? driedVer : `${freshVer}_${driedVer}`;
+
+    // 1. TỐI ƯU CACHE KEY: Tránh Cache Pollution do GPS và Search
+    const normalizedQuery: any = { ...query };
+    if (normalizedQuery.lat) normalizedQuery.lat = parseFloat(normalizedQuery.lat).toFixed(3); // Làm tròn ~110m
+    if (normalizedQuery.lng) normalizedQuery.lng = parseFloat(normalizedQuery.lng).toFixed(3);
+
+    const cacheKey = `product:list:v${listVersion}:${JSON.stringify(normalizedQuery)}`;
+
+    // Chỉ đọc cache nếu KHÔNG có từ khóa tìm kiếm (vì tìm kiếm có độ tùy biến rất lớn)
+    const isSearching = !!(query.search && query.search.trim());
+    if (!isSearching) {
+      const cachedData = await redis.get(cacheKey);
+      if (cachedData) {
+        return JSON.parse(cachedData);
+      }
+    }
+
+    // Ép kiểu tường minh về dạng string để triệt tiêu mọi cấu trúc đối tượng NoSQL Injection
+    const type = typeof query.type === "string" ? query.type : undefined;
+    const category = typeof query.category === "string" ? query.category : undefined;
+    const search = typeof query.search === "string" ? query.search : undefined;
+    const lat = typeof query.lat === "string" ? query.lat : undefined;
+    const lng = typeof query.lng === "string" ? query.lng : undefined;
+    const rawPage = typeof query.page === "string" ? query.page : undefined;
+    const rawLimit = typeof query.limit === "string" ? query.limit : undefined;
+    const sellerId = typeof query.sellerId === "string" ? query.sellerId : undefined;
+    const { page, limit } = parsePagination(rawPage, rawLimit);
+    const skip = (page - 1) * limit;
+
+    const filter: any = { status: "Active" };
+
+    if (sellerId && mongoose.Types.ObjectId.isValid(sellerId)) {
+      filter.sellerId = new mongoose.Types.ObjectId(sellerId);
+    }
+
+    if (type === "Fresh" || type === "Dried") {
+      filter.type = type;
+    }
+    if (category && category !== "All") {
+      filter.category = category;
+    }
+
+    let sortOption: any = { bumpedAt: -1, createdAt: -1 };
+    let projection: any = {};
+
+    if (search && search.trim()) {
+      filter.$text = { $search: search.trim() };
+      projection = { score: { $meta: "textScore" } };
+      sortOption = { score: { $meta: "textScore" } };
+    }
+
+    if (type === "Fresh" && lat && lng) {
+      const latVal = parseFloat(lat);
+      const lngVal = parseFloat(lng);
+      if (!isNaN(latVal) && !isNaN(lngVal)) {
+        filter.location = {
+          $geoWithin: {
+            $centerSphere: [[lngVal, latVal], MAX_FRESH_DISTANCE_KM / 6378.1],
+          },
+        };
+      }
+    }
+
+    const total = await Product.countDocuments(filter);
+    const rows = await Product.find(filter, projection)
+      .populate("sellerId", "name isVerified isPremium")
+      .sort(sortOption)
+      .skip(skip)
+      .limit(limit);
+
+    const formattedRows = rows.map((p: any) => ({
+      id: p._id,
+      sellerId: p.sellerId?._id || null,
+      sellerName: p.sellerId?.name || "Một ngư dân",
+      sellerIsVerified: p.sellerId?.isVerified ? 1 : 0,
+      sellerIsPremium: p.sellerId?.isPremium ? 1 : 0,
+      type: p.type,
+      category: p.category,
+      name: p.name,
+      description: p.description,
+      price: p.price,
+      salesType: p.salesType,
+      totalWeight: p.totalWeight,
+      remainingWeight: p.remainingWeight,
+      status: p.status,
+      catchTime: p.catchTime,
+      lat: p.location?.coordinates?.[1] || null,
+      lng: p.location?.coordinates?.[0] || null,
+      origin: p.origin,
+      expiryDate: p.expiryDate,
+      createdAt: p.createdAt,
+      viewCount: p.viewCount,
+      bumpedAt: p.bumpedAt,
+      // FIX LỖI: Sử dụng Optional Chaining cho mảng images để tránh API bị sập khi images là undefined
+      coverImg: p.images?.[0] || null,
+      imgCount: p.images?.length || 0,
+    }));
+
+    const finalResponse = paginatedResponse(formattedRows, total, page, limit);
+
+    // Không lưu cache nếu đang tìm kiếm để tránh tràn bộ nhớ Redis
+    if (!isSearching) {
+      await redis.set(cacheKey, JSON.stringify(finalResponse), "EX", 600);
+    }
+
+    return finalResponse;
+  },
+
+  async getById(id: string) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError(400, "ID sản phẩm không hợp lệ");
+    }
+
+    const detailCacheKey = `product:detail:${id}`;
+    const viewsCacheKey = `product:views:count:${id}`; // Khóa đếm lượt xem động trong Redis
+
+    const cachedDetail = await redis.get(detailCacheKey);
+
+    if (cachedDetail) {
+      const parsed = JSON.parse(cachedDetail);
+
+      // Tăng lượt xem ngầm trong MongoDB
+      Product.findByIdAndUpdate(id, { $inc: { viewCount: 1 } }).catch(() => { });
+
+      // 🌟 GIẢI PHÁP: Tăng và lấy lượt xem thời gian thực trực tiếp từ Redis
+      const realTimeViews = await redis.incr(viewsCacheKey);
+      parsed.viewCount = realTimeViews; // Ghi đè số lượt xem cũ tĩnh trong cache bằng số thực tế
+
+      return parsed;
+    }
+
+    const p: any = await Product.findByIdAndUpdate(
+      id,
+      { $inc: { viewCount: 1 } },
+      { new: true },
+    ).populate("sellerId", "name isVerified isPremium");
+
+    if (!p || p.status === "Deleted") {
+      throw new HttpError(404, "Không tìm thấy sản phẩm hoặc sản phẩm đã bị xóa");
+    }
+
+
+    const finalDetail = {
+      id: p._id,
+      sellerId: p.sellerId?._id,
+      sellerName: p.sellerId?.name || "Một ngư dân",
+      sellerIsVerified: p.sellerId?.isVerified ? 1 : 0,
+      sellerIsPremium: p.sellerId?.isPremium ? 1 : 0,
+      type: p.type,
+      category: p.category,
+      name: p.name,
+      description: p.description,
+      price: p.price,
+      salesType: p.salesType,
+      totalWeight: p.totalWeight,
+      remainingWeight: p.remainingWeight,
+      status: p.status,
+      catchTime: p.catchTime,
+      lat: p.location?.coordinates?.[1] || null,
+      lng: p.location?.coordinates?.[0] || null,
+      origin: p.origin,
+      expiryDate: p.expiryDate,
+      createdAt: p.createdAt,
+      viewCount: p.viewCount,
+      bumpedAt: p.bumpedAt,
+      images: (p.images || []).map((img: string, idx: number) => ({
+        id: idx,
+        url: img,
+      })),
+    };
+
+    await redis.set(viewsCacheKey, p.viewCount, "EX", 1800);
+    await redis.set(detailCacheKey, JSON.stringify(finalDetail), "EX", 1800);
+    return finalDetail;
+  },
+
+  async create(
+    userId: string,
+    body: Record<string, any>,
+  ): Promise<{ productId: string }> {
+    const {
+      type,
+      category,
+      name,
+      description,
+      price,
+      salesType,
+      totalWeight,
+      catchTime,
+      lat,
+      lng,
+      origin,
+      expiryDate,
+      images,
+    } = body;
+
+    // 🌟 GIẢI PHÁP BẢO MẬT: Bắt buộc kiểm tra GPS đối với hải sản tươi sống ngay tại Backend
+    if (type === "Fresh" && (!lat || !lng)) {
+      throw new HttpError(400, "Tọa độ vị trí GPS là bắt buộc đối với hải sản tươi sống!");
+    }
+
+    const user = await User.findById(userId);
+    if (!user) throw new HttpError(404, "Không tìm thấy người dùng");
+
+    if (!user.isPremium && user.role !== "Admin") {
+      // FIX LỆCH MÚI GIỜ: Chuyển đổi về 0h ngày hôm nay theo giờ Việt Nam (UTC+7)
+      const nowVN = new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
+      nowVN.setUTCHours(0, 0, 0, 0);
+      const startOfDay = new Date(nowVN.getTime() - 7 * 60 * 60 * 1000);
+
+      const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000 - 1);
+
+      const countToday = await Product.countDocuments({
+        sellerId: userId,
+        createdAt: { $gte: startOfDay, $lte: endOfDay },
+        status: { $ne: "Deleted" },
+      });
+
+      if (countToday >= 10) {
+        throw new HttpError(
+          403,
+          "Tài khoản thường chỉ được phép đăng tối đa 5 bài viết mỗi ngày. Vui lòng nâng cấp lên Premium để đăng không giới hạn!"
+        );
+      }
+    }
+
+    const cleanDesc = description
+      ? description.trim().replace(/<[^>]*>/g, "").slice(0, 2000)
+      : null;
+
+    const parsedPrice = typeof price === "number" ? price : parseInt(price, 10);
+    const parsedWeight = typeof totalWeight === "number" ? totalWeight : parseFloat(totalWeight);
+
+    if (isNaN(parsedPrice) || isNaN(parsedWeight)) {
+      throw new HttpError(400, "Thông tin giá cả hoặc khối lượng không hợp lệ");
+    }
+
+    const newProduct = new Product({
+      sellerId: userId,
+      type,
+      category,
+      name: name.trim(),
+      description: cleanDesc,
+      price: parsedPrice,
+      salesType: salesType ?? "Retail",
+      totalWeight: parsedWeight,
+      remainingWeight: parsedWeight,
+      catchTime,
+      origin,
+      expiryDate,
+      images: Array.isArray(images) ? images : [],
+      ...(lat && lng
+        ? {
+          location: {
+            type: "Point",
+            coordinates: [
+              typeof lng === "number" ? lng : parseFloat(lng),
+              typeof lat === "number" ? lat : parseFloat(lat),
+            ],
+          },
+        }
+        : {}),
+    });
+
+    await newProduct.save();
+    await redis.incr(`product:list:version:${newProduct.type}`);
+
+    User.findById(userId)
+      .select("name")
+      .lean()
+      .then((seller: any) =>
+        notifyFollowersNewProduct(
+          userId,
+          seller?.name || "Một ngư dân",
+          newProduct._id.toString(),
+          newProduct.name,
+        ),
+      )
+      .catch((err: any) =>
+        logger.error(
+          `[Notify] notifyFollowersNewProduct failed: ${err.message}`,
+        ),
+      );
+
+    return { productId: newProduct._id.toString() };
+  },
+
+  async update(
+    id: string,
+    userId: string,
+    role: string,
+    body: Record<string, any>,
+  ): Promise<void> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError(400, "ID sản phẩm không hợp lệ");
+    }
+
+    const currentProduct = await Product.findById(id);
+    if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
+    if (role !== "Admin" && currentProduct.sellerId.toString() !== userId)
+      throw new HttpError(403, "Bạn không có quyền chỉnh sửa bài đăng này");
+
+    // 🌟 GIẢI PHÁP 1: Kiểm tra tính toàn vẹn của phân loại Tươi sống sau khi cập nhật
+    const targetType = body.type !== undefined ? body.type : currentProduct.type;
+    const targetLat = body.lat !== undefined ? body.lat : (currentProduct.location?.coordinates?.[1]);
+    const targetLng = body.lng !== undefined ? body.lng : (currentProduct.location?.coordinates?.[0]);
+
+    if (targetType === "Fresh" && (!targetLat || !targetLng)) {
+      throw new HttpError(400, "Tọa độ GPS vị trí mẻ hàng là bắt buộc đối với hải sản tươi sống!");
+    }
+
+
+
+
+    // FIX LỖI 0-VALUE: So sánh trực tiếp với undefined
+    const newPrice = body.price !== undefined ? parseInt(body.price, 10) : undefined;
+    if (newPrice !== undefined && isNaN(newPrice)) {
+      throw new HttpError(400, "Giá sản phẩm mới không hợp lệ");
+    }
+
+    const updateFields: any = {};
+
+    if (body.name !== undefined) updateFields.name = body.name.trim();
+    if (body.description !== undefined)
+      updateFields.description = body.description
+        ? body.description.trim().replace(/<[^>]*>/g, "").slice(0, 2000)
+        : null;
+    if (body.origin !== undefined) updateFields.origin = body.origin;
+    if (body.type !== undefined) updateFields.type = body.type;
+    if (body.category !== undefined) updateFields.category = body.category;
+    if (body.salesType !== undefined) updateFields.salesType = body.salesType;
+    if (body.status !== undefined) updateFields.status = body.status;
+    if (body.images !== undefined && Array.isArray(body.images)) {
+      updateFields.images = body.images;
+
+      // 🌟 GIẢI PHÁP 2: Tự động so sánh lọc ra các ảnh bị gỡ bỏ để xoá sạch trên Cloudinary
+      const removedImages = (currentProduct.images || []).filter(img => !body.images.includes(img));
+      if (removedImages.length > 0) {
+        const removedPublicIds = removedImages
+          .map(extractPublicId)
+          .filter((id): id is string => !!id);
+
+        if (removedPublicIds.length > 0) {
+          // Gọi xóa bulk trên Cloudinary không đồng bộ để tránh block tiến trình phản hồi chính
+          cloudinary.api.delete_resources(removedPublicIds).catch((err: any) => {
+            logger.error(`Cloudinary cleanup failed during product update: ${err.message}`);
+          });
+        }
+      }
+    }
+    if (newPrice !== undefined) {
+      updateFields.price = newPrice;
+    }
+    if (body.totalWeight !== undefined) {
+      updateFields.totalWeight = parseFloat(body.totalWeight);
+    }
+    if (body.remainingWeight !== undefined) {
+      updateFields.remainingWeight = parseFloat(body.remainingWeight);
+    }
+
+    if (body.catchTime !== undefined) {
+      updateFields.catchTime = body.catchTime ? new Date(body.catchTime) : null;
+    }
+    if (body.expiryDate !== undefined) {
+      updateFields.expiryDate = body.expiryDate
+        ? new Date(body.expiryDate)
+        : null;
+    }
+
+    if (
+      body.lat !== undefined &&
+      body.lng !== undefined &&
+      body.lat !== null &&
+      body.lng !== null
+    ) {
+      const latVal = parseFloat(body.lat);
+      const lngVal = parseFloat(body.lng);
+      if (!isNaN(latVal) && !isNaN(lngVal)) {
+        updateFields.location = {
+          type: "Point",
+          coordinates: [lngVal, latVal],
+        };
+      }
+    }
+
+    // TỐI ƯU HOÁ: Gộp toán tử $set và $push vào 1 lượt ghi cơ sở dữ liệu duy nhất
+    const updateQuery: any = { $set: updateFields };
+
+    if (newPrice !== undefined && newPrice !== currentProduct.price) {
+      updateQuery.$push = {
+        priceHistory: {
+          oldPrice: currentProduct.price,
+          newPrice: newPrice,
+          changedAt: new Date(),
+        },
+      };
+      logger.info(`Price change logged for ProductID=${id}`);
+    }
+
+    await Product.findByIdAndUpdate(id, updateQuery);
+
+    await redis.del(`product:detail:${id}`);
+    await redis.incr(`product:list:version:${currentProduct.type}`);
+  },
+
+  async delete(id: string, userId: string, role: string): Promise<void> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError(400, "ID sản phẩm không hợp lệ");
+    }
+
+    const currentProduct = await Product.findById(id);
+    if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
+    if (role !== "Admin" && currentProduct.sellerId.toString() !== userId)
+      throw new HttpError(403, "Bạn không có quyền xoá bài đăng này");
+
+    // 🌟 GIẢI PHÁP 1: Tự động xóa sạch toàn bộ các tệp ảnh của sản phẩm trên Cloudinary
+    if (currentProduct.images && currentProduct.images.length > 0) {
+      const publicIds = currentProduct.images
+        .map(extractPublicId)
+        .filter((id): id is string => !!id);
+
+      if (publicIds.length > 0) {
+        // Gọi xóa bulk trên Cloudinary không đồng bộ để tránh block tiến trình phản hồi chính
+        cloudinary.api.delete_resources(publicIds).catch((err: any) => {
+          logger.error(`Cloudinary cleanup failed during product deletion: ${err.message}`);
+        });
+      }
+    }
+
+    // Chuyển trạng thái sang Deleted
+    await Product.findByIdAndUpdate(id, { $set: { status: "Deleted" } });
+    await Notification.deleteMany({ productId: id as any });
+
+    // 🌟 GIẢI PHÁP 2: Tự động gỡ ID sản phẩm bị xóa khỏi mảng "favorites" của toàn bộ User khác
+    await User.updateMany({}, { $pull: { favorites: id as any } });
+
+    // 🌟 GIẢI PHÁP 3: Tự động dọn dẹp toàn bộ các Báo cáo vi phạm (Reports) hướng tới sản phẩm này
+    await Report.deleteMany({ productId: id as any });
+
+    await redis.del(`product:detail:${id}`);
+    await redis.incr(`product:list:version:${currentProduct.type}`);
+  },
+  async bump(id: string, userId: string): Promise<void> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError(400, "ID sản phẩm không hợp lệ");
+    }
+
+    const currentProduct = await Product.findById(id);
+    if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
+    if (currentProduct.sellerId.toString() !== userId)
+      throw new HttpError(403, "Không có quyền");
+
+    if (currentProduct.bumpedAt) {
+      const diffMs = Date.now() - new Date(currentProduct.bumpedAt).getTime();
+      if (diffMs < 24 * 3600 * 1000) {
+        const remaining = Math.ceil((24 * 3600 * 1000 - diffMs) / 3600000);
+        throw new HttpError(429, `Đẩy tin lại sau ${remaining} giờ nữa`);
+      }
+    }
+
+    await Product.findByIdAndUpdate(id, { $set: { bumpedAt: new Date() } });
+
+    await redis.del(`product:detail:${id}`);
+    await redis.incr(`product:list:version:${currentProduct.type}`);
+  },
+};
+</file>
+
+<file path="backend/src/socket.ts">
+import "dotenv/config";
+import { Server as HttpServer } from "http";
+import { Server as IOServer, Socket } from "socket.io";
+import { createAdapter } from "@socket.io/redis-adapter";
+import jwt from "jsonwebtoken";
+import cookie from "cookie";
+import { Message } from "./models/Message";
+import { Product } from "./models/Product";
+import { redis } from "./config/redis";
+import { logger } from "./utils/logger";
+
+interface AuthPayload {
+  userId: string;
+  role: string;
+}
+
+let ioInstance: IOServer;
+
+function getTokenFromCookie(headers: any): string | null {
+  const cookieHeader = headers.cookie;
+  if (!cookieHeader) return null;
+  const parsed = cookie.parse(cookieHeader);
+  return parsed.token || null;
+}
+
+export function initSocket(server: HttpServer) {
+  const io = new IOServer(server, {
+    cors: {
+      origin: process.env.CLIENT_URL || "http://localhost:3000",
+      methods: ["GET", "POST"],
+      credentials: true,
+    },
+  });
+
+  try {
+    const pubClient = redis.duplicate();
+    const subClient = redis.duplicate();
+
+    pubClient.connect().catch(() => { });
+    subClient.connect().catch(() => { });
+
+    io.adapter(createAdapter(pubClient, subClient));
+    logger.info("Socket.IO Redis Adapter configured successfully");
+  } catch (err: any) {
+    logger.error(`Failed to configure Socket.IO Redis Adapter: ${err.message}`);
+  }
+
+  io.use((socket: Socket, next) => {
+    const token = getTokenFromCookie(socket.handshake.headers);
+    if (!token) {
+      return next(
+        new Error("Chưa đăng nhập (không tìm thấy token trong cookie)"),
+      );
+    }
+    try {
+      const payload = jwt.verify(
+        token,
+        process.env.JWT_SECRET as string,
+      ) as AuthPayload;
+      (socket as any).user = payload;
+      next();
+    } catch (err) {
+      return next(new Error("Token không hợp lệ hoặc đã hết hạn"));
+    }
+  });
+
+  io.on("connection", (socket: Socket) => {
+    const { userId } = (socket as any).user as AuthPayload;
+
+    socket.on("join_room", async (productId: string) => {
+      if (!productId) return;
+      try {
+        const prod = await Product.findById(productId);
+        const isSeller = prod && prod.sellerId.toString() === userId;
+
+        const hasMessages = await Message.exists({
+          productId,
+          $or: [{ senderId: userId }, { receiverId: userId }],
+        } as any);
+
+        if (isSeller || hasMessages) {
+          socket.join(`product_${productId}`);
+        }
+      } catch (err: any) {
+        logger.error(`Socket join_room error: ${err.message}`);
+      }
+    });
+
+    socket.on("leave_room", (productId: string) => {
+      socket.leave(`product_${productId}`);
+    });
+
+    socket.on(
+      "send_message",
+      async (data: {
+        productId: string;
+        receiverId: string;
+        content?: string;
+        imageUrl?: string;
+      }) => {
+        const { productId, receiverId, content, imageUrl } = data;
+        if (!productId || !receiverId) return;
+
+        if (!content?.trim() && !imageUrl) return;
+
+        if (receiverId === userId) {
+          socket.emit("error", {
+            message: "Không thể tự gửi tin nhắn cho chính mình",
+          });
+          return;
+        }
+
+        const rateLimitKey = `ratelimit:socket:msg:${userId}`;
+        try {
+          const pipe = redis.pipeline();
+          pipe.incr(rateLimitKey);
+          pipe.expire(rateLimitKey, 2);
+          const results = await pipe.exec();
+
+          const currentCount = (results?.[0]?.[1] as number) ?? 0;
+
+          if (currentCount > 5) {
+            socket.emit("error", {
+              message:
+                "Bạn gửi tin quá nhanh. Vui lòng làm chậm lại hành động của mình.",
+            });
+            return;
+          }
+        } catch (err: any) {
+          logger.error(`Rate limiter Redis error: ${err.message}`);
+        }
+
+        try {
+          const cleanContent = content
+            ? content.trim().replace(/<[^>]*>/g, "").slice(0, 1000)
+            : null;
+          const newMsg = new Message({
+            productId,
+            senderId: userId,
+            receiverId,
+            content: cleanContent,
+            imageUrl: imageUrl || null,
+          });
+
+          await newMsg.save();
+
+          const messageResponse = {
+            id: newMsg._id.toString(),
+            productId,
+            senderId: userId,
+            receiverId,
+            content: newMsg.content,
+            imageUrl: newMsg.imageUrl,
+            sentAt: newMsg.createdAt,
+            isRead: false,
+          };
+
+          io.to(`user_${userId}`).emit("new_message", messageResponse);
+          io.to(`user_${receiverId}`).emit("new_message", messageResponse);
+
+          io.to(`user_${receiverId}`).emit("notification", {
+            type: "new_message",
+            productId,
+            senderId: userId,
+            preview: imageUrl ? "📷 [Hình ảnh]" : content!.trim().slice(0, 40),
+          });
+        } catch (err: any) {
+          logger.error(`Socket send_message saving error: ${err.message}`);
+          socket.emit("error", { message: "Gửi tin thất bại" });
+        }
+      },
+    );
+
+    /* ─── VIDEO CALL EVENTS (MỚI) ─── */
+
+    // 1. Gửi yêu cầu gọi (Truyền kèm callerName sang cho Callee)
+    socket.on("call_user", (data: { to: string; offer: any; callerName?: string }) => {
+      const { to, offer, callerName } = data;
+      logger.info(`[Socket Call] User ${userId} (${callerName || "Không tên"}) is calling User ${to}`);
+      socket.to(`user_${to}`).emit("incoming_call", {
+        from: userId,
+        offer,
+        callerName: callerName || "Một người dùng"
+      });
+    });
+
+    // 2. Chấp nhận cuộc gọi
+    socket.on("answer_call", (data: { to: string; answer: any }) => {
+      const { to, answer } = data;
+      logger.info(`[Socket Call] User ${userId} accepted call from User ${to}`);
+      socket.to(`user_${to}`).emit("call_accepted", {
+        answer
+      });
+    });
+
+    // 3. Trao đổi cấu hình mạng ICE Candidates
+    socket.on("ice_candidate", (data: { to: string; candidate: any }) => {
+      const { to, candidate } = data;
+      socket.to(`user_${to}`).emit("ice_candidate", {
+        candidate
+      });
+    });
+
+    // 4. Kết thúc/Từ chối cuộc gọi
+    socket.on("end_call", (data: { to: string }) => {
+      const { to } = data;
+      logger.info(`[Socket Call] Call ended between User ${userId} and User ${to}`);
+      socket.to(`user_${to}`).emit("call_ended");
+    });
+
+    socket.join(`user_${userId}`);
+  });
+
+  ioInstance = io;
+  return io;
+}
+
+export function getIO() {
+  if (!ioInstance) throw new Error("Socket.io chưa được khởi tạo");
+  return ioInstance;
+}
+</file>
+
+<file path="client/my-app/src/components/ChatBox.jsx">
+// Trong tệp: client/my-app/src/components/ChatBox.jsx
+
+import { useState, useEffect, useRef } from "react";
+import { C } from "../utils/theme";
+import { getSocket } from "../services/socket";
+import { api } from "../services/api";
+import { MessageIcon, XIcon, CheckCircleIcon } from "./icons/index";
+import { useToast } from "../context/ToastContext";
+import { useVideoCall } from "../context/VideoCallContext";
+
+export function ChatBox({ product, onClose, user, fullHeight = false }) {
+  const toast = useToast();
+  const [msgs, setMsgs] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [socketReady, setSocketReady] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const endRef = useRef(null);
+  const socketRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const otherUserRef = useRef(null);
+
+  const currentUserId = user?.id || user?.userId;
+
+  // LẤY TRỰC TIẾP HÀM BẮT ĐẦU CUỘC GỌI TỪ GLOBAL PROVIDER
+  const { startCall } = useVideoCall();
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    setMsgs([]);
+    setLoading(true);
+    api(`/messages/${product.id}`)
+      .then((data) => {
+        const mapped = data.map((m) => ({
+          id: m.id,
+          senderId: m.senderId,
+          content: m.content,
+          imageUrl: m.imageUrl,
+          time: new Date(m.sentAt).toLocaleTimeString("vi", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          isMine: m.senderId === currentUserId,
+        }));
+        setMsgs(mapped);
+        const other = data.find((m) => m.senderId !== currentUserId);
+        if (other) otherUserRef.current = other.senderId;
+      })
+      .catch(() => { })
+      .finally(() => setLoading(false));
+  }, [product.id, currentUserId]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    let cancelled = false;
+
+    // 🌟 GIẢI PHÁP: Khai báo hàm joinRoom ở tầm vực useEffect để cả .then() lẫn cleanup return bên dưới đều đọc được
+    const joinRoom = () => {
+      if (socketRef.current) {
+        socketRef.current.emit("join_room", product.id);
+      }
+    };
+
+    getSocket().then((socket) => {
+      if (cancelled) return;
+      socketRef.current = socket;
+
+      // Gia nhập phòng chat lần đầu
+      joinRoom();
+
+      // 🌟 Lắng nghe sự kiện kết nối lại thành công để tự động gia nhập lại phòng chat
+      socket.on("connect", joinRoom);
+      socket.on("new_message", handleNewMessage);
+
+      setSocketReady(true);
+    });
+
+    function handleNewMessage(msg) {
+      if (msg.productId !== product.id) return;
+      if (msg.senderId !== currentUserId) otherUserRef.current = msg.senderId;
+      setMsgs((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [
+          ...prev,
+          {
+            id: msg.id,
+            senderId: msg.senderId,
+            content: msg.content,
+            imageUrl: msg.imageUrl,
+            time: new Date(msg.sentAt).toLocaleTimeString("vi", {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            isMine: msg.senderId === currentUserId,
+          },
+        ];
+      });
+    }
+
+    return () => {
+      cancelled = true;
+      if (socketRef.current) {
+        // Gỡ bỏ bộ lắng nghe kết nối khi unmount
+        socketRef.current.off("connect", joinRoom);
+        socketRef.current.off("new_message", handleNewMessage);
+        socketRef.current.emit("leave_room", product.id);
+      }
+    };
+  }, [product.id, currentUserId]);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [msgs]);
+
+  const getReceiverId = () => {
+    const sellerId = product.sellerId;
+    return currentUserId === sellerId ? otherUserRef.current : sellerId;
+  };
+
+  const send = (txtContent = "", imgUrl = null) => {
+    const finalContent = txtContent.trim();
+    if (!finalContent && !imgUrl) return;
+
+    const receiverId = getReceiverId();
+    if (!receiverId) {
+      toast.warn("Chưa có người nhận. Hãy chờ người mua nhắn trước.");
+      return;
+    }
+
+    if (socketRef.current?.connected) {
+      socketRef.current.emit("send_message", {
+        productId: product.id,
+        receiverId,
+        content: finalContent || null,
+        imageUrl: imgUrl,
+      });
+    } else {
+      api("/messages", {
+        method: "POST",
+        body: JSON.stringify({
+          productId: product.id,
+          receiverId,
+          content: finalContent || null,
+          imageUrl: imgUrl,
+        }),
+      })
+        .then((res) => {
+          setMsgs((prev) => [
+            ...prev,
+            {
+              id: res.id,
+              senderId: currentUserId,
+              content: finalContent || null,
+              imageUrl: imgUrl,
+              time: new Date().toLocaleTimeString("vi", {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+              isMine: true,
+            },
+          ]);
+        })
+        .catch((e) => toast.error(e.message));
+    }
+    setInput("");
+  };
+
+  // Hàm nén ảnh tối giản dành riêng cho khung Chat (Co về 800px, chất lượng 70%)
+  const compressChatImage = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_WIDTH = 800; // Khung chat chỉ cần tối đa 800px là đủ sắc nét
+          let width = img.width;
+          let height = img.height;
+
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              resolve(new File([blob], file.name, { type: "image/jpeg" }));
+            },
+            "image/jpeg",
+            0.70 // Nén chất lượng về 70% để gửi siêu tốc
+          );
+        };
+      };
+    });
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+
+    try {
+      const compressedFile = await compressChatImage(file);
+
+      const fd = new FormData();
+      fd.append("image", compressedFile);
+
+      const res = await api("/messages/upload-image", {
+        method: "POST",
+        body: fd,
+      });
+
+      send("", res.imageUrl);
+    } catch (err) {
+      toast.error("Gửi ảnh thất bại: " + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleInitiateCall = () => {
+    const targetId = getReceiverId();
+    if (!targetId) {
+      toast.warn("Không tìm thấy đối phương hoạt động để thực hiện cuộc gọi.");
+      return;
+    }
+    startCall(targetId, product.sellerName);
+  };
+
+  const chatHeight = fullHeight ? 420 : 250;
+
+  return (
+    <div
+      style={{
+        border: "1.5px solid #eaeaea",
+        borderRadius: 12,
+        overflow: "hidden",
+        background: C.white,
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          background: "#0f172a",
+          color: "#fff",
+          padding: "12px 16px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontWeight: 700,
+              fontSize: 13,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <MessageIcon size={14} />
+            <span>{product.sellerName}</span>
+            {product.sellerIsVerified && (
+              <CheckCircleIcon size={12} style={{ color: "#38bdf8" }} />
+            )}
+          </div>
+          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
+            Sản phẩm: {product.name}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          {/* NÚT GỌI VIDEO CALL */}
+          <button
+            onClick={handleInitiateCall}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#38bdf8",
+              cursor: "pointer",
+              fontSize: 14,
+              padding: "4px",
+              display: "flex",
+              alignItems: "center"
+            }}
+            title="Gọi video cho đối phương"
+          >
+            📞
+          </button>
+
+          {onClose && (
+            <button
+              onClick={onClose}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#94a3b8",
+                cursor: "pointer",
+                padding: "4px"
+              }}
+            >
+              <XIcon size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div
+        style={{
+          height: chatHeight,
+          overflowY: "auto",
+          padding: "16px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+          background: "#f8fafc",
+        }}
+      >
+        {loading ? (
+          <div
+            style={{
+              textAlign: "center",
+              color: "#94a3b8",
+              fontSize: 12,
+              marginTop: 40,
+            }}
+          >
+            Đang tải tin nhắn...
+          </div>
+        ) : msgs.length === 0 ? (
+          <div
+            style={{
+              textAlign: "center",
+              color: "#94a3b8",
+              fontSize: 12,
+              marginTop: 40,
+            }}
+          >
+            Gửi tin nhắn để bắt đầu cuộc trò chuyện.
+          </div>
+        ) : (
+          msgs.map((m) => (
+            <div
+              key={m.id}
+              style={{
+                display: "flex",
+                justifyContent: m.isMine ? "flex-end" : "flex-start",
+              }}
+            >
+              <div
+                style={{
+                  maxWidth: "75%",
+                  background: m.isMine ? "#0f172a" : "#fff",
+                  color: m.isMine ? "#fff" : "#1e293b",
+                  padding: "8px 12px",
+                  borderRadius: m.isMine
+                    ? "8px 8px 0px 8px"
+                    : "8px 8px 8px 0px",
+                  fontSize: 13,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+                  border: m.isMine ? "none" : "1px solid #f1f5f9",
+                }}
+              >
+                {m.content && (
+                  <div style={{ wordBreak: "break-word" }}>{m.content}</div>
+                )}
+
+                {m.imageUrl && (
+                  <img
+                    src={m.imageUrl}
+                    alt="Ảnh hải sản đính kèm"
+                    style={{
+                      maxWidth: "100%",
+                      borderRadius: 8,
+                      marginTop: m.content ? 6 : 0,
+                      maxHeight: 180,
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                  />
+                )}
+
+                <div
+                  style={{
+                    fontSize: 9,
+                    color: m.isMine ? "rgba(255,255,255,0.6)" : "#94a3b8",
+                    marginTop: 4,
+                    textAlign: "right",
+                  }}
+                >
+                  {m.time}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+        <div ref={endRef} />
+      </div>
+
+      <div
+        style={{
+          padding: "12px",
+          display: "flex",
+          gap: 8,
+          borderTop: "1px solid #f1f5f9",
+          background: C.white,
+          alignItems: "center",
+        }}
+      >
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          type="button"
+          style={{
+            background: "#f1f5f9",
+            border: "none",
+            borderRadius: 6,
+            width: 36,
+            height: 36,
+            cursor: "pointer",
+            fontSize: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          title="Gửi hình ảnh thực tế"
+        >
+          {uploading ? "⏳" : "📷"}
+        </button>
+        <input
+          type="file"
+          accept="image/*"
+          ref={fileInputRef}
+          onChange={handleImageUpload}
+          style={{ display: "none" }}
+        />
+
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && send(input)}
+          onFocus={() => setIsInputFocused(true)}
+          onBlur={() => setIsInputFocused(false)}
+          placeholder="Nhập tin nhắn..."
+          style={{
+            flex: 1,
+            border: `1.5px solid ${isInputFocused ? "#0f172a" : "#cbd5e1"}`,
+            borderRadius: 6,
+            padding: "8px 12px",
+            fontSize: 13,
+            outline: "none",
+            transition: "all 0.15s ease",
+          }}
+        />
+        <button
+          onClick={() => send(input)}
+          style={{
+            background: "#0f172a",
+            color: "#fff",
+            border: "none",
+            borderRadius: 6,
+            padding: "8px 14px",
+            cursor: "pointer",
+            fontWeight: 700,
+            fontSize: 13,
+          }}
+        >
+          Gửi
+        </button>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="backend/src/app.ts">
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import http from "http";
+import helmet from "helmet";
+import cookieParser from "cookie-parser";
+import mongoose from "mongoose"; // 🌟 Import Mongoose
+import { connectRedis, redis } from "./config/redis";
+import { logger } from "./utils/logger";
+
+import { testConnection } from "./db";
+import { initSocket } from "./socket";
+import { startCronJobs } from "./cron";
+import { generateCsrfToken, validateCsrf } from "./middlewares/csrf";
+
+import authRoutes, { userRouter } from "./routes/auth.routes";
+import otpRoutes from "./routes/otp.routes";
+import productRoutes from "./routes/product.routes";
+import imageRoutes from "./routes/image.routes";
+import messageRoutes from "./routes/message.routes";
+import adminRoutes from "./routes/admin.routes";
+import followRoutes from "./routes/follow.routes";
+import reviewRoutes from "./routes/review.routes";
+import notificationRoutes from "./routes/notification.routes";
+import favoriteRoutes from "./routes/favorite.routes";
+import reportRoutes from "./routes/report.routes";
+import paymentRoutes from "./routes/payment.routes";
+
+const app = express();
+const server = http.createServer(app);
+
+app.set("trust proxy", 1);
+
+app.use(
+  helmet({
+    // Cho phép các popup như Google Sign-In truyền tin (postMessage) về trang web
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: false,
+  }),
+);
+
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    credentials: true,
+  }),
+);
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: true, limit: "2mb" }));
+app.use(cookieParser());
+
+app.use((req, _res, next) => {
+  logger.info(`HTTP Request: ${req.method} ${req.url} - IP: ${req.ip}`);
+  next();
+});
+
+app.use(generateCsrfToken);
+
+app.use("/api", (req, res, next) => {
+  const publicPaths = [
+    "/auth/login",
+    "/auth/register",
+    "/health",
+    "/auth/logout",
+    "/auth/forgot-password",
+    "/auth/verify-otp",
+    "/auth/reset-password",
+    "/auth/refresh",
+    "/auth/google",
+    "/payment/webhook",
+  ];
+
+  const cleanPath = req.path.replace(/\/$/, "");
+  const isPublic = publicPaths.some((p) => p.replace(/\/$/, "") === cleanPath);
+
+  if (isPublic) return next();
+  if (req.method === "GET") return next();
+
+  validateCsrf(req, res, next);
+});
+
+app.get("/api/health", (_req, res) =>
+  res.json({ status: "ok", time: new Date() }),
+);
+
+app.use("/api/auth", authRoutes);
+app.use("/api/auth", otpRoutes);
+app.use("/api/users", userRouter);
+app.use("/api/products", productRoutes);
+app.use("/api", imageRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/follows", followRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/favorites", favoriteRoutes);
+app.use("/api/reports", reportRoutes);
+app.use("/api/payment", paymentRoutes);
+
+app.use((_req, res) =>
+  res.status(404).json({ message: "Không tìm thấy endpoint này" }),
+);
+
+app.use(
+  (
+    err: Error,
+    req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction,
+  ) => {
+    logger.error(`Exception on ${req.method} ${req.url}: ${err.message}`, {
+      stack: err.stack,
+    });
+    return res
+      .status(500)
+      .json({ message: "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau." });
+  },
+);
+
+process.on("uncaughtException", (err) => {
+  logger.error(`[CRITICAL] uncaughtException: ${err.message}`, {
+    stack: err.stack,
+  });
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  logger.error(
+    `[CRITICAL] unhandledRejection at: ${promise}, reason: ${reason}`,
+  );
+});
+
+const PORT = parseInt(process.env.PORT || "5000");
+let serverInstance: any;
+
+async function bootstrap() {
+  await testConnection(); // Gọi Mongoose Connection mới
+  await connectRedis();
+
+  initSocket(server);
+  startCronJobs();
+
+  serverInstance = server.listen(PORT, () => {
+    logger.info(`\n🚀 Server is running on http://localhost:${PORT}`);
+    logger.info(`🔒 Helmet + CSRF + Cookie-based JWT Enabled`);
+    logger.info(`📡 Socket.IO server is ready (cookie-based handshake)`);
+    logger.info(`🗄️  Active Database: MongoDB (NoSQL)\n`);
+  });
+}
+
+// Graceful Shutdown
+async function gracefulShutdown(signal: string) {
+  logger.warn(`Received ${signal}. Starting Graceful Shutdown...`);
+
+  if (serverInstance) {
+    serverInstance.close(async () => {
+      logger.info("HTTP Server stopped accepting new connections.");
+      try {
+        await redis.quit();
+        logger.info("Redis connection closed cleanly.");
+
+        // 🌟 Giải phóng kết nối cơ sở dữ liệu MongoDB an toàn
+        await mongoose.connection.close();
+        logger.info("Mongoose connection closed cleanly.");
+
+        logger.info("Graceful shutdown completed successfully. Exiting.");
+        process.exit(0);
+      } catch (err: any) {
+        logger.error(`Error during graceful shutdown: ${err.message}`);
+        process.exit(1);
+      }
+    });
+  }
+
+  setTimeout(() => {
+    logger.error("Forceful shutdown triggered after timeout.");
+    process.exit(1);
+  }, 10000);
+}
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
+bootstrap().catch((err) => {
+  logger.error(`[CRITICAL] Bootstrap failed: ${err.message}`, {
+    stack: err.stack,
+  });
+  process.exit(1);
+});
+
+export { app, server };
 </file>
 
 <file path="client/my-app/src/App.jsx">
@@ -23205,201 +23437,6 @@ export default function App() {
     </BrowserRouter>
   );
 }
-</file>
-
-<file path="backend/src/app.ts">
-import "dotenv/config";
-import express from "express";
-import cors from "cors";
-import http from "http";
-import helmet from "helmet";
-import cookieParser from "cookie-parser";
-import mongoose from "mongoose"; // 🌟 Import Mongoose
-import { connectRedis, redis } from "./config/redis";
-import { logger } from "./utils/logger";
-
-import { testConnection } from "./db";
-import { initSocket } from "./socket";
-import { startCronJobs } from "./cron";
-import { generateCsrfToken, validateCsrf } from "./middlewares/csrf";
-
-import authRoutes, { userRouter } from "./routes/auth.routes";
-import otpRoutes from "./routes/otp.routes";
-import productRoutes from "./routes/product.routes";
-import imageRoutes from "./routes/image.routes";
-import messageRoutes from "./routes/message.routes";
-import adminRoutes from "./routes/admin.routes";
-import followRoutes from "./routes/follow.routes";
-import reviewRoutes from "./routes/review.routes";
-import notificationRoutes from "./routes/notification.routes";
-import favoriteRoutes from "./routes/favorite.routes";
-import reportRoutes from "./routes/report.routes";
-import paymentRoutes from "./routes/payment.routes";
-
-const app = express();
-const server = http.createServer(app);
-
-app.set("trust proxy", 1);
-
-app.use(
-  helmet({
-    // Cho phép các popup như Google Sign-In truyền tin (postMessage) về trang web
-    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-    contentSecurityPolicy: false,
-  }),
-);
-
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
-    credentials: true,
-  }),
-);
-app.use(express.json({ limit: "2mb" }));
-app.use(express.urlencoded({ extended: true, limit: "2mb" }));
-app.use(cookieParser());
-
-app.use((req, _res, next) => {
-  logger.info(`HTTP Request: ${req.method} ${req.url} - IP: ${req.ip}`);
-  next();
-});
-
-app.use(generateCsrfToken);
-
-app.use("/api", (req, res, next) => {
-  const publicPaths = [
-    "/auth/login",
-    "/auth/register",
-    "/health",
-    "/auth/logout",
-    "/auth/forgot-password",
-    "/auth/verify-otp",
-    "/auth/reset-password",
-    "/auth/refresh",
-    "/auth/google",
-    "/payment/webhook",
-  ];
-
-  const cleanPath = req.path.replace(/\/$/, "");
-  const isPublic = publicPaths.some((p) => p.replace(/\/$/, "") === cleanPath);
-
-  if (isPublic) return next();
-  if (req.method === "GET") return next();
-
-  validateCsrf(req, res, next);
-});
-
-app.get("/api/health", (_req, res) =>
-  res.json({ status: "ok", time: new Date() }),
-);
-
-app.use("/api/auth", authRoutes);
-app.use("/api/auth", otpRoutes);
-app.use("/api/users", userRouter);
-app.use("/api/products", productRoutes);
-app.use("/api", imageRoutes);
-app.use("/api/messages", messageRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/follows", followRoutes);
-app.use("/api/reviews", reviewRoutes);
-app.use("/api/notifications", notificationRoutes);
-app.use("/api/favorites", favoriteRoutes);
-app.use("/api/reports", reportRoutes);
-app.use("/api/payment", paymentRoutes);
-
-app.use((_req, res) =>
-  res.status(404).json({ message: "Không tìm thấy endpoint này" }),
-);
-
-app.use(
-  (
-    err: Error,
-    req: express.Request,
-    res: express.Response,
-    _next: express.NextFunction,
-  ) => {
-    logger.error(`Exception on ${req.method} ${req.url}: ${err.message}`, {
-      stack: err.stack,
-    });
-    return res
-      .status(500)
-      .json({ message: "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau." });
-  },
-);
-
-process.on("uncaughtException", (err) => {
-  logger.error(`[CRITICAL] uncaughtException: ${err.message}`, {
-    stack: err.stack,
-  });
-  process.exit(1);
-});
-
-process.on("unhandledRejection", (reason, promise) => {
-  logger.error(
-    `[CRITICAL] unhandledRejection at: ${promise}, reason: ${reason}`,
-  );
-});
-
-const PORT = parseInt(process.env.PORT || "5000");
-let serverInstance: any;
-
-async function bootstrap() {
-  await testConnection(); // Gọi Mongoose Connection mới
-  await connectRedis();
-
-  initSocket(server);
-  startCronJobs();
-
-  serverInstance = server.listen(PORT, () => {
-    logger.info(`\n🚀 Server is running on http://localhost:${PORT}`);
-    logger.info(`🔒 Helmet + CSRF + Cookie-based JWT Enabled`);
-    logger.info(`📡 Socket.IO server is ready (cookie-based handshake)`);
-    logger.info(`🗄️  Active Database: MongoDB (NoSQL)\n`);
-  });
-}
-
-// Graceful Shutdown
-async function gracefulShutdown(signal: string) {
-  logger.warn(`Received ${signal}. Starting Graceful Shutdown...`);
-
-  if (serverInstance) {
-    serverInstance.close(async () => {
-      logger.info("HTTP Server stopped accepting new connections.");
-      try {
-        await redis.quit();
-        logger.info("Redis connection closed cleanly.");
-
-        // 🌟 Giải phóng kết nối cơ sở dữ liệu MongoDB an toàn
-        await mongoose.connection.close();
-        logger.info("Mongoose connection closed cleanly.");
-
-        logger.info("Graceful shutdown completed successfully. Exiting.");
-        process.exit(0);
-      } catch (err: any) {
-        logger.error(`Error during graceful shutdown: ${err.message}`);
-        process.exit(1);
-      }
-    });
-  }
-
-  setTimeout(() => {
-    logger.error("Forceful shutdown triggered after timeout.");
-    process.exit(1);
-  }, 10000);
-}
-
-process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-process.on("SIGINT", () => gracefulShutdown("SIGINT"));
-
-bootstrap().catch((err) => {
-  logger.error(`[CRITICAL] Bootstrap failed: ${err.message}`, {
-    stack: err.stack,
-  });
-  process.exit(1);
-});
-
-export { app, server };
 </file>
 
 <file path="client/my-app/src/pages/AuthPage.jsx">

@@ -31,7 +31,7 @@ export function SellerProfilePage({ seller }) {
     }
     api(`/products?sellerId=${seller.id}&limit=100`)
       .then((data) => setProducts(data.data || []))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, [seller?.id, navigate]);
 
@@ -42,10 +42,8 @@ export function SellerProfilePage({ seller }) {
   });
 
   const sellerName = seller?.name || products[0]?.sellerName || "...";
-  const sellerRating = products[0]?.sellerRating
-    ? parseFloat(products[0].sellerRating)
-    : null;
-  const ratingCount = products[0]?.ratingCount || 0;
+  const sellerRating = seller?.avgRating ? parseFloat(seller.avgRating) : null;
+  const ratingCount = seller?.ratingCount || 0;
   const freshCount = products.filter((p) => p.type === "Fresh").length;
   const driedCount = products.filter((p) => p.type === "Dried").length;
 

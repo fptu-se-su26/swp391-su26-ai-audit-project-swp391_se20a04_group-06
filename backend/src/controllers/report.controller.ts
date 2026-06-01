@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { Report } from '../models/Report';
 import { Product } from '../models/Product';
 import { sendServerError, parseId } from '../helpers/response.helper';
+import { productService } from "../services/product.service";
+import { parsePagination } from '../utils/pagination';
 
 export async function createReport(req: Request, res: Response) {
   const { userId } = req.user;
@@ -12,14 +14,27 @@ export async function createReport(req: Request, res: Response) {
     return res.status(400).json({ message: 'Thiếu thông tin' });
 
   try {
+    // 🌟 GIẢI PHÁP NGHIỆP VỤ: Xác minh sản phẩm tồn tại và không phải của chính mình
+    const product = await Product.findOne({ _id: productId, status: { $ne: "Deleted" } });
+    if (!product) {
+      return res.status(404).json({ message: "Sản phẩm không tồn tại hoặc đã bị ẩn vĩnh viễn" });
+    }
+
+    if (product.sellerId.toString() === userId.toString()) {
+      return res.status(400).json({ message: "Bạn không thể tự gửi báo cáo sản phẩm của chính mình!" });
+    }
+
     const existing = await Report.findOne({ reporterId: userId, productId });
     if (existing)
       return res.status(400).json({ message: 'Bạn đã báo cáo bài đăng này rồi' });
 
+    // Làm sạch ký tự HTML cơ bản để chống chèn mã độc
+    const cleanReason = reason.trim().replace(/<[^>]*>/g, "").slice(0, 500);
+
     const newReport = new Report({
       reporterId: userId,
       productId,
-      reason,
+      reason: cleanReason,
     });
     await newReport.save();
     return res.json({ message: 'Báo cáo đã gửi thành công' });
@@ -35,9 +50,10 @@ export async function getReports(req: Request, res: Response) {
   }
   const status = queryStatus as 'Pending' | 'Resolved' | 'Dismissed';
 
-  const page = Math.max(1, parseInt(req.query.page as string) || 1);
-  const limit = Math.max(1, Math.min(100, parseInt(req.query.limit as string) || 20));
-  const skip = (page - 1) * limit;
+  // 🌟 GIẢI PHÁP: Sử dụng Helper phân trang dùng chung an toàn của dự án
+  const rawPage = typeof req.query.page === "string" ? req.query.page : undefined;
+  const rawLimit = typeof req.query.limit === "string" ? req.query.limit : undefined;
+  const { page, limit, offset } = parsePagination(rawPage, rawLimit, 100);
 
   try {
     const total = await Report.countDocuments({ status });
@@ -52,7 +68,7 @@ export async function getReports(req: Request, res: Response) {
         }
       })
       .sort({ createdAt: -1 })
-      .skip(skip)
+      .skip(offset) // Sử dụng offset an toàn đã sửa lỗi NaN
       .limit(limit);
 
     const formattedRows = reports.map((r: any) => ({
@@ -95,18 +111,22 @@ export async function handleReport(req: Request, res: Response) {
     if (!report)
       return res.status(404).json({ message: 'Không tìm thấy báo cáo' });
 
+    // 🌟 GIẢI PHÁP: Gọi hàm Service dọn dẹp cascade đồng bộ nếu Admin duyệt ẩn tin vi phạm
     if (action === 'resolve' && report.productId) {
-      await Product.findByIdAndUpdate(report.productId, {
-        $set: { status: 'Deleted' }
-      });
+      await productService.delete(
+        report.productId.toString(),
+        req.user.userId,
+        "Admin" // Truyền quyền Admin để vượt qua kiểm tra chủ sở hữu sản phẩm
+      );
     }
 
     report.status = newStatus;
     report.adminNote = adminNote || null;
     await report.save();
 
-    return res.json({ message: 'Đã xử lý báo cáo' });
+    return res.json({ message: 'Đã xử lý báo cáo và dọn dẹp tài nguyên thành công!' });
   } catch (err) {
     return sendServerError(res, err);
   }
 }
+

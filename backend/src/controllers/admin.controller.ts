@@ -7,6 +7,7 @@ import { sendServerError, parseId } from "../helpers/response.helper";
 import { parsePagination, paginatedResponse } from "../utils/pagination";
 import { fillDays } from "../utils/fillDays";
 import { logger } from "../utils/logger";
+import { productService } from "../services/product.service"; // Đảm bảo đã import
 
 export async function getStats(_req: Request, res: Response) {
   try {
@@ -308,14 +309,15 @@ export async function adminDeleteProduct(req: Request, res: Response) {
   if (!id) return res.status(400).json({ message: "ID sản phẩm không hợp lệ" });
 
   try {
-    const product = await Product.findByIdAndUpdate(id, {
-      $set: { status: "Deleted" },
-    });
-    if (!product)
-      return res.status(404).json({ message: "Không tìm thấy bài đăng" });
+    // 🌟 GIẢI PHÁP: Gọi trực tiếp productService.delete để thực hiện toàn bộ chuỗi dọn dẹp và giải phóng Cache!
+    await productService.delete(
+      id,
+      req.user.userId,
+      "Admin" // Truyền quyền Admin để vượt qua kiểm tra chủ sở hữu sản phẩm
+    );
 
-    logger.info(`Admin soft deleted ProductID=${id}`);
-    return res.json({ message: "Đã xoá bài đăng" });
+    logger.info(`Admin deleted ProductID=${id} and cleaned up all associated resources`);
+    return res.json({ message: "Đã xoá bài đăng và dọn dẹp tài nguyên thành công" });
   } catch (err) {
     logger.error(
       `adminDeleteProduct error: ${err instanceof Error ? err.message : err}`,

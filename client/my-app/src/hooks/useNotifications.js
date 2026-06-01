@@ -63,7 +63,7 @@ export function useNotifications(user) {
         socket.on("notification", handler);
         cleanupSocketListener = () => socket.off("notification", handler);
       })
-      .catch(() => {});
+      .catch(() => { });
 
     return () => {
       active = false;
@@ -78,8 +78,18 @@ export function useNotifications(user) {
       )
       .catch((err) => console.error("Lỗi đánh dấu đã đọc:", err));
   };
+  // 🌟 GIẢI PHÁP: Bổ sung hàm đánh dấu đọc một thông báo duy nhất
+  const markSingleRead = (id) => {
+    api(`/notifications/${id}`, { method: "PATCH" })
+      .then(() =>
+        setNotifs((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+        )
+      )
+      .catch((err) => console.error("Lỗi đánh dấu đọc thông báo:", err));
+  };
 
   const unreadCount = notifs.filter((n) => !n.isRead).length;
 
-  return { notifs, unreadCount, markAllRead };
+  return { notifs, unreadCount, markAllRead, markSingleRead };
 }

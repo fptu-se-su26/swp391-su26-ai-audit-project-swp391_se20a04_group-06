@@ -6,6 +6,8 @@ import { sendServerError, parseId } from "../helpers/response.helper";
 import { uploadToCloudinary } from "../middlewares/upload";
 import mongoose from "mongoose";
 
+// Trong tệp: backend/src/controllers/message.controller.ts (hàm getMessages)
+
 export async function getMessages(req: Request, res: Response) {
   const { userId, role } = req.user;
   const productId = parseId(req.params.productId);
@@ -18,18 +20,20 @@ export async function getMessages(req: Request, res: Response) {
       filter.$or = [{ senderId: userId }, { receiverId: userId }];
     }
 
+    // 🌟 GIẢI PHÁP: Cập nhật trạng thái "Đã đọc" trước khi truy vấn dữ liệu để đồng bộ hóa tuyệt đối
+    if (role !== "Admin") {
+      await Message.updateMany(
+        { productId, receiverId: userId, isRead: false } as any,
+        { $set: { isRead: true } }
+      );
+    }
+
+    // Sau khi cơ sở dữ liệu đã được cập nhật, thực hiện tìm kiếm dữ liệu mới nhất
     const messages = await Message.find(filter)
       .populate("senderId", "name")
       .sort({ createdAt: 1 });
 
-    const messageIds = messages.map((m) => m._id);
-    if (messageIds.length > 0) {
-      await Message.updateMany(
-        { _id: { $in: messageIds }, receiverId: userId, isRead: false } as any,
-        { $set: { isRead: true } },
-      );
-    }
-
+    // Ánh xạ dữ liệu gọn gàng hơn (loại bỏ hoàn toàn được mảng map messageIds cũ)
     const formattedRows = messages.map((m: any) => ({
       id: m._id.toString(),
       senderId: m.senderId?._id.toString(),
@@ -37,7 +41,7 @@ export async function getMessages(req: Request, res: Response) {
       receiverId: m.receiverId.toString(),
       content: m.content,
       imageUrl: m.imageUrl,
-      isRead: m.isRead,
+      isRead: m.isRead, // 🌟 Giờ đây giá trị này chắc chắn là "true" chính xác đối với người nhận
       sentAt: m.createdAt,
     }));
 
@@ -46,6 +50,8 @@ export async function getMessages(req: Request, res: Response) {
     return sendServerError(res, err);
   }
 }
+
+// Trong tệp: backend/src/controllers/message.controller.ts (hàm sendMessage)
 
 export async function sendMessage(req: Request, res: Response) {
   const { userId } = req.user;
@@ -63,11 +69,16 @@ export async function sendMessage(req: Request, res: Response) {
       .json({ message: "Không thể tự gửi tin nhắn cho chính mình" });
 
   try {
+    // 🌟 GIẢI PHÁP: Loại bỏ thẻ HTML cơ bản và giới hạn tối đa 1000 ký tự tin nhắn
+    const cleanContent = content
+      ? content.trim().replace(/<[^>]*>/g, "").slice(0, 1000)
+      : null;
+
     const newMsg = new Message({
       productId,
       senderId: userId,
       receiverId,
-      content: content ? content.trim() : null,
+      content: cleanContent, // Lưu nội dung sạch đã được khống chế độ dài
       imageUrl: imageUrl || null,
     });
 

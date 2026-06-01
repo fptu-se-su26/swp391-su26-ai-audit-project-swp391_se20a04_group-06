@@ -23,12 +23,8 @@ export function NotificationBell({
   const bellRef = useRef(null);
 
   const handleToggle = useCallback(() => {
-    setOpen((prev) => {
-      const next = !prev;
-      if (next && unreadCount > 0) onMarkAllRead?.();
-      return next;
-    });
-  }, [unreadCount, onMarkAllRead]);
+    setOpen((prev) => !prev); // 🌟 Chỉ bật/tắt hộp thông báo thông thường
+  }, []);
 
   // Đóng dropdown khi click ra ngoài
   useEffect(() => {
@@ -89,6 +85,7 @@ export function NotificationBell({
         <NotifDropdown
           notifs={notifs}
           unreadCount={unreadCount}
+          onMarkAllRead={onMarkAllRead}
           onNotifClick={(n) => {
             setOpen(false);
             onNotifClick?.(n);
@@ -126,7 +123,9 @@ function Badge({ count }) {
   );
 }
 
-function NotifDropdown({ notifs, unreadCount, onNotifClick }) {
+// Trong tệp: client/my-app/src/components/NotificationBell.jsx (phần cuối tệp)
+
+function NotifDropdown({ notifs, unreadCount, onNotifClick, onMarkAllRead }) { // 👈 Thêm nhận diện onMarkAllRead ở đây
   return (
     <div
       role="dialog"
@@ -145,6 +144,7 @@ function NotifDropdown({ notifs, unreadCount, onNotifClick }) {
         zIndex: 1000,
       }}
     >
+      {/* Giao diện tiêu đề nâng cấp */}
       <div
         style={{
           padding: "14px 18px",
@@ -158,21 +158,51 @@ function NotifDropdown({ notifs, unreadCount, onNotifClick }) {
         }}
       >
         <span>Thông báo của bạn</span>
-        {unreadCount > 0 && (
-          <span
-            style={{
-              fontSize: 10,
-              background: "rgba(255,255,255,0.2)",
-              backdropFilter: "blur(4px)",
-              WebkitBackdropFilter: "blur(4px)",
-              padding: "3px 10px",
-              borderRadius: 20,
-              fontWeight: 700,
-            }}
-          >
-            {unreadCount} mới
-          </span>
-        )}
+
+        {/* Nhóm các nút điều hướng phụ bên góc phải */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {unreadCount > 0 && (
+            // 🌟 CẢI TIẾN: Nút bấm "Đọc tất cả" nhỏ gọn, tinh tế ngay trong Header
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); // Chặn nổi bọt sự kiện để không bị đóng dropdown
+                onMarkAllRead?.();
+              }}
+              style={{
+                background: "rgba(255, 255, 255, 0.18)",
+                border: "none",
+                borderRadius: 6,
+                color: "#fff",
+                fontSize: 11,
+                fontWeight: 700,
+                padding: "3px 8px",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                transition: "background 0.2s",
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255, 255, 255, 0.28)"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255, 255, 255, 0.18)"}
+            >
+              ✓ Đọc tất cả
+            </button>
+          )}
+
+          {unreadCount > 0 && (
+            <span
+              style={{
+                fontSize: 10,
+                background: "rgba(255,255,255,0.2)",
+                backdropFilter: "blur(4px)",
+                WebkitBackdropFilter: "blur(4px)",
+                padding: "3px 10px",
+                borderRadius: 20,
+                fontWeight: 700,
+              }}
+            >
+              {unreadCount} mới
+            </span>
+          )}
+        </div>
       </div>
 
       <div style={{ maxHeight: 340, overflowY: "auto" }}>
@@ -229,9 +259,9 @@ function NotifItem({ notif: n, onClick }) {
       }}
       onMouseEnter={(e) => (e.currentTarget.style.background = "#F1F5F9")}
       onMouseLeave={(e) =>
-        (e.currentTarget.style.background = n.isRead
-          ? "#fff"
-          : "rgba(11, 79, 108, 0.04)")
+      (e.currentTarget.style.background = n.isRead
+        ? "#fff"
+        : "rgba(11, 79, 108, 0.04)")
       }
     >
       <div

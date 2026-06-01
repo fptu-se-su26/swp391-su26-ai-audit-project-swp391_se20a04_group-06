@@ -131,11 +131,14 @@ export function initSocket(server: HttpServer) {
         }
 
         try {
+          const cleanContent = content
+            ? content.trim().replace(/<[^>]*>/g, "").slice(0, 1000)
+            : null;
           const newMsg = new Message({
             productId,
             senderId: userId,
             receiverId,
-            content: content ? content.trim() : null,
+            content: cleanContent,
             imageUrl: imageUrl || null,
           });
 

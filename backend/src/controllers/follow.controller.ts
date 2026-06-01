@@ -3,6 +3,8 @@ import { User } from "../models/User";
 import { sendServerError } from "../helpers/response.helper";
 import mongoose from "mongoose";
 
+// Trong tệp: backend/src/controllers/follow.controller.ts
+
 export async function toggleFollow(req: Request, res: Response) {
   const { userId } = req.user;
   const sellerId = req.params.sellerId;
@@ -22,8 +24,18 @@ export async function toggleFollow(req: Request, res: Response) {
     const sellerObjId = new mongoose.Types.ObjectId(sellerId);
     const isFollowing = user.following.some((id) => id.toString() === sellerId);
 
+    // 🌟 GIẢI PHÁP BẢO MẬT: Chặn không cho phép theo dõi nếu người bán không tồn tại hoặc bị khóa tài khoản
+    if (!isFollowing) {
+      const sellerExists = await User.exists({
+        _id: sellerObjId,
+        isActive: true
+      });
+      if (!sellerExists) {
+        return res.status(404).json({ message: "Người bán không tồn tại hoặc tài khoản đã bị vô hiệu hóa." });
+      }
+    }
+
     if (isFollowing) {
-      // Tối ưu hóa: Cắt giảm lượt truy vấn cơ sở dữ liệu dư thừa
       user.following = user.following.filter(
         (id) => id.toString() !== sellerId,
       );
@@ -39,6 +51,8 @@ export async function toggleFollow(req: Request, res: Response) {
   }
 }
 
+// Trong tệp: backend/src/controllers/follow.controller.ts (hàm checkFollow)
+
 export async function checkFollow(req: Request, res: Response) {
   const { userId } = req.user;
   const sellerId = req.params.sellerId;
@@ -48,7 +62,8 @@ export async function checkFollow(req: Request, res: Response) {
   }
 
   try {
-    const user = await User.findById(userId);
+    // 🌟 GIẢI PHÁP HIỆU NĂNG: Chỉ truy vấn duy nhất mảng "following" của người dùng để kiểm tra
+    const user = await User.findById(userId).select("following");
     if (!user)
       return res.status(404).json({ message: "Không tìm thấy người dùng" });
 

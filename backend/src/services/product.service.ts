@@ -10,6 +10,8 @@ import { HttpError } from "../errors/HttpError";
 import { extractPublicId } from "../controllers/image.controller";
 import { cloudinary } from "../config/cloudinary";
 import { Report } from "../models/Report";
+import { Notification } from "../models/Notification"; // Hãy chắc chắn đã import mô hình
+
 
 
 export const productService = {
@@ -236,7 +238,7 @@ export const productService = {
         status: { $ne: "Deleted" },
       });
 
-      if (countToday >= 5) {
+      if (countToday >= 10) {
         throw new HttpError(
           403,
           "Tài khoản thường chỉ được phép đăng tối đa 5 bài viết mỗi ngày. Vui lòng nâng cấp lên Premium để đăng không giới hạn!"
@@ -449,6 +451,8 @@ export const productService = {
 
     // Chuyển trạng thái sang Deleted
     await Product.findByIdAndUpdate(id, { $set: { status: "Deleted" } });
+    await Notification.deleteMany({ productId: id as any });
+
     // 🌟 GIẢI PHÁP 2: Tự động gỡ ID sản phẩm bị xóa khỏi mảng "favorites" của toàn bộ User khác
     await User.updateMany({}, { $pull: { favorites: id as any } });
 

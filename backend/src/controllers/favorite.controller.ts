@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { User } from "../models/User";
 import { sendServerError } from "../helpers/response.helper";
 import mongoose from "mongoose";
+import { Product } from "../models/Product";
 
 export async function getMyFavorites(req: Request, res: Response) {
   const { userId } = req.user;
@@ -24,7 +25,7 @@ export async function getMyFavorites(req: Request, res: Response) {
       viewCount: p.viewCount,
       sellerName: p.sellerId?.name || "Một ngư dân",
       sellerIsVerified: p.sellerId?.isVerified ? 1 : 0,
-      coverImg: p.images[0] || null,
+      coverImg: p.images?.[0] || null,
       savedAt: p.createdAt,
     }));
 
@@ -44,9 +45,12 @@ export async function getMyFavoriteIds(req: Request, res: Response) {
   }
 }
 
+// Trong tệp: backend/src/controllers/favorite.controller.ts
+
 export async function toggleFavorite(req: Request, res: Response) {
   const { userId } = req.user;
   const productId = req.params.productId;
+
   if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
     return res.status(400).json({ message: "ID không hợp lệ" });
   }
@@ -61,8 +65,18 @@ export async function toggleFavorite(req: Request, res: Response) {
       (id) => id.toString() === productId,
     );
 
+    // 🌟 GIẢI PHÁP BẢO MẬT: Chặn không cho phép yêu thích nếu sản phẩm không tồn tại hoặc đã bị xóa mềm
+    if (!isFavorited) {
+      const productExists = await Product.exists({
+        _id: prodObjId,
+        status: { $ne: "Deleted" }
+      });
+      if (!productExists) {
+        return res.status(404).json({ message: "Sản phẩm không tồn tại hoặc đã bị xóa vĩnh viễn" });
+      }
+    }
+
     if (isFavorited) {
-      // Tối ưu hóa: Thay vì gọi thêm findByIdAndUpdate bên ngoài, lưu trực tiếp tài liệu hiện có
       user.favorites = user.favorites.filter(
         (id) => id.toString() !== productId,
       );

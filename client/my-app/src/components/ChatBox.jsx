@@ -1,10 +1,12 @@
+// Trong tệp: client/my-app/src/components/ChatBox.jsx
+
 import { useState, useEffect, useRef } from "react";
 import { C } from "../utils/theme";
 import { getSocket } from "../services/socket";
 import { api } from "../services/api";
 import { MessageIcon, XIcon, CheckCircleIcon } from "./icons/index";
 import { useToast } from "../context/ToastContext";
-import { useVideoCall } from "../context/VideoCallContext"; // ← SỬA ĐƯỜNG DẪN IMPORT SANG CONTEXT
+import { useVideoCall } from "../context/VideoCallContext";
 
 export function ChatBox({ product, onClose, user, fullHeight = false }) {
   const toast = useToast();
@@ -54,11 +56,24 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
     if (!currentUserId) return;
     let cancelled = false;
 
+    // 🌟 GIẢI PHÁP: Khai báo hàm joinRoom ở tầm vực useEffect để cả .then() lẫn cleanup return bên dưới đều đọc được
+    const joinRoom = () => {
+      if (socketRef.current) {
+        socketRef.current.emit("join_room", product.id);
+      }
+    };
+
     getSocket().then((socket) => {
       if (cancelled) return;
       socketRef.current = socket;
-      socket.emit("join_room", product.id);
+
+      // Gia nhập phòng chat lần đầu
+      joinRoom();
+
+      // 🌟 Lắng nghe sự kiện kết nối lại thành công để tự động gia nhập lại phòng chat
+      socket.on("connect", joinRoom);
       socket.on("new_message", handleNewMessage);
+
       setSocketReady(true);
     });
 
@@ -87,6 +102,8 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
     return () => {
       cancelled = true;
       if (socketRef.current) {
+        // Gỡ bỏ bộ lắng nghe kết nối khi unmount
+        socketRef.current.off("connect", joinRoom);
         socketRef.current.off("new_message", handleNewMessage);
         socketRef.current.emit("leave_room", product.id);
       }
@@ -150,19 +167,59 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
     setInput("");
   };
 
+  // Hàm nén ảnh tối giản dành riêng cho khung Chat (Co về 800px, chất lượng 70%)
+  const compressChatImage = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_WIDTH = 800; // Khung chat chỉ cần tối đa 800px là đủ sắc nét
+          let width = img.width;
+          let height = img.height;
+
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              resolve(new File([blob], file.name, { type: "image/jpeg" }));
+            },
+            "image/jpeg",
+            0.70 // Nén chất lượng về 70% để gửi siêu tốc
+          );
+        };
+      };
+    });
+  };
+
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     setUploading(true);
-    const fd = new FormData();
-    fd.append("image", file);
 
     try {
+      const compressedFile = await compressChatImage(file);
+
+      const fd = new FormData();
+      fd.append("image", compressedFile);
+
       const res = await api("/messages/upload-image", {
         method: "POST",
         body: fd,
       });
+
       send("", res.imageUrl);
     } catch (err) {
       toast.error("Gửi ảnh thất bại: " + err.message);
@@ -171,14 +228,12 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
     }
   };
 
-  // Kích hoạt cuộc gọi qua Global Provider
   const handleInitiateCall = () => {
     const targetId = getReceiverId();
     if (!targetId) {
       toast.warn("Không tìm thấy đối phương hoạt động để thực hiện cuộc gọi.");
       return;
     }
-    // Gửi đi tín hiệu gọi kèm tên đối phương hiển thị ở đầu bên kia
     startCall(targetId, product.sellerName);
   };
 

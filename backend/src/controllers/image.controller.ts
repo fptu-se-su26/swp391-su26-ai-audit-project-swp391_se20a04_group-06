@@ -92,17 +92,23 @@ export async function getUploadSignature(req: Request, res: Response) {
   }
 }
 
+// Trong tệp: backend/src/controllers/image.controller.ts
+
 export async function deleteImage(req: Request, res: Response) {
   const { userId, role } = req.user;
-  const imageId = req.params.id; // could be index or part of URL string
+  const imageId = req.params.id;
 
   if (!imageId) return res.status(400).json({ message: 'ID ảnh không hợp lệ' });
 
   try {
-    // Tìm sản phẩm chứa ảnh (hoặc khớp một phần URL)
+    // 🌟 GIẢI PHÁP BẢO MẬT: Escape toàn bộ các ký tự Regex đặc biệt để chống tấn công đóng băng máy chủ (ReDoS)
+    const escapedImageId = imageId.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+
+    // Tìm sản phẩm chứa ảnh bằng chuỗi Regex đã được làm sạch an toàn
     const prod = await Product.findOne({
-      images: { $regex: imageId }
+      images: { $regex: escapedImageId }
     });
+
     if (!prod) return res.status(404).json({ message: 'Không tìm thấy ảnh' });
 
     if (prod.sellerId.toString() !== userId && role !== 'Admin')

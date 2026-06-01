@@ -46,7 +46,7 @@ export function Navbar({ unread, onOpenGlobalChat }) {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  const { notifs, unreadCount, markAllRead } = useNotifications(user);
+  const { notifs, unreadCount, markAllRead, markSingleRead } = useNotifications(user);
 
   // Đóng profile dropdown khi click ra ngoài
   useEffect(() => {
@@ -80,9 +80,12 @@ export function Navbar({ unread, onOpenGlobalChat }) {
 
   const handleNotifClick = useCallback(
     (n) => {
+      if (!n.isRead) {
+        markSingleRead(n.id);
+      }
       if (n.productId) navigate(`/san-pham/${n.productId}`);
     },
-    [navigate],
+    [navigate, markSingleRead]
   );
 
   // FIX: Không cần async/await — logout() trong AuthContext tự handle

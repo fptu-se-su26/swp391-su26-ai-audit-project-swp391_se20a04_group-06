@@ -166,6 +166,10 @@ function AppShell() {
   const location = useLocation();
   const [unread, setUnread] = useState(0);
   const [globalChat, setGlobalChat] = useState(null);
+  const activeChatRef = React.useRef(null);
+  useEffect(() => {
+    activeChatRef.current = globalChat;
+  }, [globalChat]);
 
   // Poll unread message count
   useEffect(() => {
@@ -196,6 +200,13 @@ function AppShell() {
         if (!active) return;
         const handler = (data) => {
           if (data.type === "new_message") {
+            const activeChat = activeChatRef.current;
+
+            // 🌟 GIẢI PHÁP: Nếu người dùng đang mở chat trực diện với sản phẩm này, bỏ qua không cộng dồn badge chưa đọc!
+            if (activeChat && activeChat.productId === data.productId) {
+              return;
+            }
+
             setUnread((prev) => prev + 1);
           }
         };

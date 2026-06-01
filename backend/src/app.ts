@@ -29,8 +29,12 @@ import paymentRoutes from "./routes/payment.routes";
 const app = express();
 const server = http.createServer(app);
 
+app.set("trust proxy", 1);
+
 app.use(
   helmet({
+    // Cho phép các popup như Google Sign-In truyền tin (postMessage) về trang web
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
     crossOriginResourcePolicy: { policy: "cross-origin" },
     contentSecurityPolicy: false,
   }),

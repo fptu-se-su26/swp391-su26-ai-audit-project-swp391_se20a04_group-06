@@ -18,6 +18,7 @@ import { AUTH_COOKIE_OPTIONS, CLEAR_COOKIE_OPTIONS } from "../config/cookie";
 import { rotateCsrfToken } from "../middlewares/csrf";
 import { logger } from "../utils/logger";
 
+
 const ACCESS_COOKIE_OPTS = {
   ...AUTH_COOKIE_OPTIONS,
   maxAge: 15 * 60 * 1000, // 15 phút — khớp với expiresIn của JWT
@@ -30,6 +31,18 @@ const REFRESH_COOKIE_OPTS = {
 
 export async function register(req: Request, res: Response) {
   const { name, email, password } = req.body;
+  if (!name || typeof name !== "string" || !name.trim()) {
+    return res.status(400).json({
+      message: "Họ tên không được để trống và phải là chuỗi hợp lệ",
+    });
+  }
+
+  const trimmedName = name.trim();
+  if (trimmedName.length < 2 || trimmedName.length > 100) {
+    return res.status(400).json({
+      message: "Họ tên phải nằm trong khoảng từ 2 đến 100 ký tự",
+    });
+  }
 
   if (!name || !email || !password)
     return res.status(400).json({
@@ -57,6 +70,8 @@ export async function register(req: Request, res: Response) {
 
     res.cookie("token", accessToken, ACCESS_COOKIE_OPTS);
     res.cookie("refreshToken", refreshToken, REFRESH_COOKIE_OPTS);
+    rotateCsrfToken(res);
+
 
     logger.info(
       `User registered successfully: ID=${user.userId}, Email=${email}`,
@@ -383,7 +398,12 @@ export async function googleAuth(req: Request, res: Response) {
         name?: string;
         picture?: string;
         aud?: string;
+        email_verified?: boolean | string;
       };
+
+      if (payload.email_verified !== true && payload.email_verified !== "true") {
+        return res.status(400).json({ message: "Tài khoản Google này chưa được xác minh." });
+      }
 
       if (!payload.email) {
         return res.status(400).json({ message: "Token Google không hợp lệ hoặc thiếu Email" });

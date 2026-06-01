@@ -136,6 +136,9 @@ export function AuthPage() {
   const submit = async (e) => {
     e.preventDefault();
     setErr("");
+    if (pw.length < 6) {
+      return setErr("Mật khẩu tối thiểu phải từ 6 ký tự");
+    }
     if (!email || !pw) return setErr("Vui lòng điền đầy đủ thông tin");
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!EMAIL_REGEX.test(email))

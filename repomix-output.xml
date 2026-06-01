@@ -980,10 +980,6 @@ export function paginatedResponse<T>(
 }
 </file>
 
-<file path="client/my-app/.env">
-VITE_GOOGLE_CLIENT_ID=your_google_client_id_here.apps.googleusercontent.com
-</file>
-
 <file path="client/my-app/.gitignore">
 # Logs
 logs
@@ -5990,6 +5986,10 @@ declare global {
 export {};
 </file>
 
+<file path="client/my-app/.env">
+VITE_GOOGLE_CLIENT_ID=348871274321-vd512p4870o3j7erpgruh9pd7oie65v5.apps.googleusercontent.com
+</file>
+
 <file path="client/my-app/.env.example">
 # Nếu deploy production, đặt URL backend ở đây
 # VITE_SOCKET_URL=https://your-backend.com
@@ -10368,225 +10368,6 @@ const userSchema = new Schema<IUser>(
 export const User = model<IUser>("User", userSchema);
 </file>
 
-<file path="backend/src/services/otp.service.ts">
-import crypto from "crypto";
-import { redis } from "../config/redis";
-import { logger } from "../utils/logger";
-
-const OTP_TTL_SEC = 5 * 60; // OTP hết hạn sau 5 phút
-const ATTEMPT_TTL_SEC = 15 * 60; // Cửa sổ rate-limit gửi: 15 phút
-const MAX_SEND_ATTEMPTS = 3; // Tối đa 3 lần gửi / 15 phút
-const MAX_VERIFY_ATTEMPTS = 5; // Tối đa 5 lần verify sai / phiên OTP
-const RESET_TOKEN_TTL = 10 * 60; // Reset token hết hạn sau 10 phút
-
-import nodemailer from "nodemailer";
-
-const KEY_OTP = (email: string) => `otp:hash:${email.toLowerCase().trim()}`;
-const KEY_ATTEMPTS = (email: string) =>
-  `otp:attempts:${email.toLowerCase().trim()}`;
-const KEY_VERIFY_FAILS = (email: string) =>
-  `otp:verify_fails:${email.toLowerCase().trim()}`;
-const KEY_RESET = (token: string) => `otp:reset_token:${token}`;
-
-async function sendOtpEmail(email: string, otp: string): Promise<void> {
-  const user = process.env.EMAIL_USER;
-  const pass = process.env.EMAIL_PASS;
-
-  if (
-    !user ||
-    !pass ||
-    user.includes("your_email") ||
-    pass.includes("your_password")
-  ) {
-    throw new Error("MockMode");
-  }
-
-  // Tạo 1 lần, tái sử dụng
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
-  // Thêm verify khi khởi động để phát hiện sai config sớm
-  transporter.verify((err) => {
-    if (err) logger.error(`[Email] SMTP config lỗi: ${err.message}`);
-    else logger.info("[Email] SMTP Gmail sẵn sàng");
-  });
-
-  const mailOptions = {
-    from: `"HảiSản.vn" <${user}>`,
-    to: email,
-    subject: "[HảiSản.vn] Mã xác minh đặt lại mật khẩu",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-        <h2 style="color: #0284c7; text-align: center;">Xác Minh Đặt Lại Mật Khẩu</h2>
-        <p>Chào bạn,</p>
-        <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản HảiSản.vn liên kết với email này.</p>
-        <p>Mã xác nhận (OTP) của bạn là:</p>
-        <div style="background-color: #f3f4f6; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #1f2937; border-radius: 6px; margin: 20px 0;">
-          ${otp}
-        </div>
-        <p style="color: #6b7280; font-size: 14px;">Mã này có hiệu lực trong vòng 5 phút. Để bảo mật, vui lòng không chia sẻ mã này với bất kỳ ai.</p>
-        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
-        <p style="color: #9ca3af; font-size: 12px; text-align: center;">Hệ thống tự động từ HảiSản.vn</p>
-      </div>
-    `,
-  };
-
-  await transporter.sendMail(mailOptions);
-}
-
-// Cập nhật hàm hashOtp để tránh sập app khi thiếu ENV
-function hashOtp(otp: string): string {
-  const secret = process.env.OTP_SECRET || process.env.JWT_SECRET;
-  if (!secret) {
-    logger.warn("[OTP] Cảnh báo: Không tìm thấy OTP_SECRET hay JWT_SECRET. Đang sử dụng fallback key mặc định.");
-  }
-  return crypto
-    .createHmac("sha256", secret || "fallback_default_secret_key_secure")
-    .update(otp)
-    .digest("hex");
-}
-
-function makeError(message: string, status: number): Error {
-  const err: any = new Error(message);
-  err.status = status;
-  return err;
-}
-
-export const otpService = {
-  async sendOtp(email: string): Promise<void> {
-    const cleanEmail = email.toLowerCase().trim();
-    const currentAttempts = await redis.get(KEY_ATTEMPTS(cleanEmail));
-    if (currentAttempts && parseInt(currentAttempts, 10) >= MAX_SEND_ATTEMPTS) {
-      throw makeError(
-        `Bạn đã yêu cầu OTP quá ${MAX_SEND_ATTEMPTS} lần. Vui lòng thử lại sau 15 phút.`,
-        429,
-      );
-    }
-
-    const otp = crypto.randomInt(100_000, 999_999).toString();
-    const hashed = hashOtp(otp);
-
-    // Ghi Redis: lưu OTP hash, tăng attempt counter, xóa verify fails cũ
-    const pipe = redis.pipeline();
-    pipe.set(KEY_OTP(cleanEmail), hashed, "EX", OTP_TTL_SEC);
-    pipe.incr(KEY_ATTEMPTS(cleanEmail));
-    pipe.expire(KEY_ATTEMPTS(cleanEmail), ATTEMPT_TTL_SEC);
-    pipe.del(KEY_VERIFY_FAILS(cleanEmail));
-    await pipe.exec();
-
-    const user = process.env.EMAIL_USER;
-    const pass = process.env.EMAIL_PASS;
-    const isMockEmail =
-      !user ||
-      !pass ||
-      user.includes("your_email") ||
-      user === "" ||
-      pass === "";
-
-    if (isMockEmail) {
-      logger.info(
-        `✉️ [MOCK EMAIL DEVELOPMENT MODE] Gửi OTP tới Email: ${cleanEmail} -> MÃ OTP: ${otp}`,
-      );
-    } else {
-      try {
-        await sendOtpEmail(cleanEmail, otp);
-        logger.info(`[Email] OTP sent successfully to ${cleanEmail}`);
-      } catch (err: any) {
-        logger.error(
-          `[Email] Delivery failed: ${err.message}. Falling back to logging OTP.`,
-        );
-        logger.info(
-          `✉️ [EMAIL FALLBACK] Mã OTP cho Email ${cleanEmail}: ${otp}`,
-        );
-      }
-    }
-  },
-
-
-
-  async verifyOtp(email: string, otp: string): Promise<string> {
-    const cleanEmail = email.toLowerCase().trim();
-    const cleanOtp = String(otp).trim(); // Ép kiểu string để tránh lỗi crash tại hàm hashOtp
-
-    // 1. Kiểm tra OTP có tồn tại không trước khi làm bất cứ việc gì khác
-    const stored = await redis.get(KEY_OTP(cleanEmail));
-    if (!stored) {
-      throw makeError("Mã OTP đã hết hạn. Vui lòng yêu cầu gửi lại.", 400);
-    }
-
-    // 2. Tăng số lần thử một cách ATOMIC ngay lập tức để chống tấn công Race Condition
-    const fails = await redis.incr(KEY_VERIFY_FAILS(cleanEmail));
-
-    // Nếu đây là lần thử sai/xác thực đầu tiên, set TTL cho key này khớp với thời gian còn lại của OTP
-    if (fails === 1) {
-      const otpTtl = await redis.ttl(KEY_OTP(cleanEmail));
-      await redis.expire(
-        KEY_VERIFY_FAILS(cleanEmail),
-        otpTtl > 0 ? otpTtl : OTP_TTL_SEC
-      );
-    }
-
-    // 3. Nếu số lần thử đã vượt quá giới hạn, chặn ngay lập tức
-    if (fails > MAX_VERIFY_ATTEMPTS) {
-      throw makeError(
-        `Bạn đã nhập sai OTP quá ${MAX_VERIFY_ATTEMPTS} lần. Vui lòng yêu cầu mã mới.`,
-        429,
-      );
-    }
-
-    // 4. Kiểm tra tính chính xác của OTP
-    if (hashOtp(cleanOtp) !== stored) {
-      const remaining = MAX_VERIFY_ATTEMPTS - fails;
-      throw makeError(
-        remaining > 0
-          ? `Mã OTP không đúng. Còn ${remaining} lần thử.`
-          : `Mã OTP không đúng. Vui lòng yêu cầu mã mới.`,
-        400,
-      );
-    }
-
-    // 5. Xác thực thành công: dọn dẹp các key liên quan trong Redis
-    const pipe = redis.pipeline();
-    pipe.del(KEY_OTP(cleanEmail));
-    pipe.del(KEY_VERIFY_FAILS(cleanEmail));
-    await pipe.exec();
-
-    // Tạo token đặt lại mật khẩu tạm thời
-    const resetToken = crypto.randomBytes(32).toString("hex");
-    await redis.set(KEY_RESET(resetToken), cleanEmail, "EX", RESET_TOKEN_TTL);
-
-    return resetToken;
-  },
-
-
-  async getEmailByResetToken(resetToken: string): Promise<string> {
-    const email = await redis.get(KEY_RESET(resetToken));
-    if (!email) {
-      throw makeError(
-        "Phiên đặt lại mật khẩu đã hết hạn. Vui lòng thực hiện lại từ đầu.",
-        400,
-      );
-    }
-    return email;
-  },
-
-  async consumeResetToken(resetToken: string): Promise<void> {
-    await redis.del(KEY_RESET(resetToken));
-  },
-
-  async getOtpTtl(email: string): Promise<number> {
-    const cleanEmail = email.toLowerCase().trim();
-    const ttl = await redis.ttl(KEY_OTP(cleanEmail));
-    return ttl > 0 ? ttl : 0;
-  },
-};
-</file>
-
 <file path="backend/src/utils/fillDays.ts">
 export interface DayData {
   date?: string | Date;
@@ -14807,420 +14588,221 @@ export async function notifySellerNewReview(params: {
 }
 </file>
 
-<file path="backend/src/services/product.service.ts">
-import { Product, IProduct } from "../models/Product";
-import { User } from "../models/User";
+<file path="backend/src/services/otp.service.ts">
+import crypto from "crypto";
 import { redis } from "../config/redis";
-import { MAX_FRESH_DISTANCE_KM } from "../utils/haversine";
-import { parsePagination, paginatedResponse } from "../utils/pagination";
-import { notifyFollowersNewProduct } from "./notification.service";
 import { logger } from "../utils/logger";
-import mongoose from "mongoose";
-import { HttpError } from "../errors/HttpError";
 
-export const productService = {
-  async list(query: Record<string, string | undefined>) {
-    const queryType = query.type;
-    const freshVer = await redis.get("product:list:version:Fresh") || "1";
-    const driedVer = await redis.get("product:list:version:Dried") || "1";
-    const listVersion = queryType === "Fresh" ? freshVer : queryType === "Dried" ? driedVer : `${freshVer}_${driedVer}`;
+const OTP_TTL_SEC = 5 * 60; // OTP hết hạn sau 5 phút
+const ATTEMPT_TTL_SEC = 15 * 60; // Cửa sổ rate-limit gửi: 15 phút
+const MAX_SEND_ATTEMPTS = 3; // Tối đa 3 lần gửi / 15 phút
+const MAX_VERIFY_ATTEMPTS = 5; // Tối đa 5 lần verify sai / phiên OTP
+const RESET_TOKEN_TTL = 10 * 60; // Reset token hết hạn sau 10 phút
 
-    // 1. TỐI ƯU CACHE KEY: Tránh Cache Pollution do GPS và Search
-    const normalizedQuery: any = { ...query };
-    if (normalizedQuery.lat) normalizedQuery.lat = parseFloat(normalizedQuery.lat).toFixed(3); // Làm tròn ~110m
-    if (normalizedQuery.lng) normalizedQuery.lng = parseFloat(normalizedQuery.lng).toFixed(3);
+import nodemailer from "nodemailer";
 
-    const cacheKey = `product:list:v${listVersion}:${JSON.stringify(normalizedQuery)}`;
+const KEY_OTP = (email: string) => `otp:hash:${email.toLowerCase().trim()}`;
+const KEY_ATTEMPTS = (email: string) =>
+  `otp:attempts:${email.toLowerCase().trim()}`;
+const KEY_VERIFY_FAILS = (email: string) =>
+  `otp:verify_fails:${email.toLowerCase().trim()}`;
+const KEY_RESET = (token: string) => `otp:reset_token:${token}`;
 
-    // Chỉ đọc cache nếu KHÔNG có từ khóa tìm kiếm (vì tìm kiếm có độ tùy biến rất lớn)
-    const isSearching = !!(query.search && query.search.trim());
-    if (!isSearching) {
-      const cachedData = await redis.get(cacheKey);
-      if (cachedData) {
-        return JSON.parse(cachedData);
-      }
+async function sendOtpEmail(email: string, otp: string): Promise<void> {
+  const user = process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASS;
+
+  if (
+    !user ||
+    !pass ||
+    user.includes("your_email") ||
+    pass.includes("your_password")
+  ) {
+    throw new Error("MockMode");
+  }
+
+  // Tạo 1 lần, tái sử dụng
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  // Thêm verify khi khởi động để phát hiện sai config sớm
+  transporter.verify((err) => {
+    if (err) logger.error(`[Email] SMTP config lỗi: ${err.message}`);
+    else logger.info("[Email] SMTP Gmail sẵn sàng");
+  });
+
+  const mailOptions = {
+    from: `"HảiSản.vn" <${user}>`,
+    to: email,
+    subject: "[HảiSản.vn] Mã xác minh đặt lại mật khẩu",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+        <h2 style="color: #0284c7; text-align: center;">Xác Minh Đặt Lại Mật Khẩu</h2>
+        <p>Chào bạn,</p>
+        <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản HảiSản.vn liên kết với email này.</p>
+        <p>Mã xác nhận (OTP) của bạn là:</p>
+        <div style="background-color: #f3f4f6; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #1f2937; border-radius: 6px; margin: 20px 0;">
+          ${otp}
+        </div>
+        <p style="color: #6b7280; font-size: 14px;">Mã này có hiệu lực trong vòng 5 phút. Để bảo mật, vui lòng không chia sẻ mã này với bất kỳ ai.</p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+        <p style="color: #9ca3af; font-size: 12px; text-align: center;">Hệ thống tự động từ HảiSản.vn</p>
+      </div>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+}
+
+// Cập nhật hàm hashOtp để tránh sập app khi thiếu ENV
+function hashOtp(otp: string): string {
+  const secret = process.env.OTP_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    logger.warn("[OTP] Cảnh báo: Không tìm thấy OTP_SECRET hay JWT_SECRET. Đang sử dụng fallback key mặc định.");
+  }
+  return crypto
+    .createHmac("sha256", secret || "fallback_default_secret_key_secure")
+    .update(otp)
+    .digest("hex");
+}
+
+function makeError(message: string, status: number): Error {
+  const err: any = new Error(message);
+  err.status = status;
+  return err;
+}
+
+export const otpService = {
+  async sendOtp(email: string): Promise<void> {
+    const cleanEmail = email.toLowerCase().trim();
+    const currentAttempts = await redis.get(KEY_ATTEMPTS(cleanEmail));
+    if (currentAttempts && parseInt(currentAttempts, 10) >= MAX_SEND_ATTEMPTS) {
+      throw makeError(
+        `Bạn đã yêu cầu OTP quá ${MAX_SEND_ATTEMPTS} lần. Vui lòng thử lại sau 15 phút.`,
+        429,
+      );
     }
 
-    const {
-      type,
-      category,
-      search,
-      lat,
-      lng,
-      page: rawPage,
-      limit: rawLimit,
-      sellerId,
-    } = query;
-    const { page, limit } = parsePagination(rawPage, rawLimit);
-    const skip = (page - 1) * limit;
+    const otp = crypto.randomInt(100_000, 999_999).toString();
+    const hashed = hashOtp(otp);
 
-    const filter: any = { status: "Active" };
+    // Ghi Redis: lưu OTP hash, tăng attempt counter, xóa verify fails cũ
+    const pipe = redis.pipeline();
+    pipe.set(KEY_OTP(cleanEmail), hashed, "EX", OTP_TTL_SEC);
+    pipe.incr(KEY_ATTEMPTS(cleanEmail));
+    pipe.expire(KEY_ATTEMPTS(cleanEmail), ATTEMPT_TTL_SEC);
+    pipe.del(KEY_VERIFY_FAILS(cleanEmail));
+    await pipe.exec();
 
-    if (sellerId && mongoose.Types.ObjectId.isValid(sellerId)) {
-      filter.sellerId = new mongoose.Types.ObjectId(sellerId);
-    }
+    const user = process.env.EMAIL_USER;
+    const pass = process.env.EMAIL_PASS;
+    const isMockEmail =
+      !user ||
+      !pass ||
+      user.includes("your_email") ||
+      user === "" ||
+      pass === "";
 
-    if (type === "Fresh" || type === "Dried") {
-      filter.type = type;
-    }
-    if (category && category !== "All") {
-      filter.category = category;
-    }
-
-    let sortOption: any = { bumpedAt: -1, createdAt: -1 };
-    let projection: any = {};
-
-    if (search && search.trim()) {
-      filter.$text = { $search: search.trim() };
-      projection = { score: { $meta: "textScore" } };
-      sortOption = { score: { $meta: "textScore" } };
-    }
-
-    if (type === "Fresh" && lat && lng) {
-      const latVal = parseFloat(lat);
-      const lngVal = parseFloat(lng);
-      if (!isNaN(latVal) && !isNaN(lngVal)) {
-        filter.location = {
-          $geoWithin: {
-            $centerSphere: [[lngVal, latVal], MAX_FRESH_DISTANCE_KM / 6378.1],
-          },
-        };
-      }
-    }
-
-    const total = await Product.countDocuments(filter);
-    const rows = await Product.find(filter, projection)
-      .populate("sellerId", "name isVerified isPremium")
-      .sort(sortOption)
-      .skip(skip)
-      .limit(limit);
-
-    const formattedRows = rows.map((p: any) => ({
-      id: p._id,
-      sellerId: p.sellerId?._id || null,
-      sellerName: p.sellerId?.name || "Một ngư dân",
-      sellerIsVerified: p.sellerId?.isVerified ? 1 : 0,
-      sellerIsPremium: p.sellerId?.isPremium ? 1 : 0,
-      type: p.type,
-      category: p.category,
-      name: p.name,
-      description: p.description,
-      price: p.price,
-      salesType: p.salesType,
-      totalWeight: p.totalWeight,
-      remainingWeight: p.remainingWeight,
-      status: p.status,
-      catchTime: p.catchTime,
-      lat: p.location?.coordinates?.[1] || null,
-      lng: p.location?.coordinates?.[0] || null,
-      origin: p.origin,
-      expiryDate: p.expiryDate,
-      createdAt: p.createdAt,
-      viewCount: p.viewCount,
-      bumpedAt: p.bumpedAt,
-      // FIX LỖI: Sử dụng Optional Chaining cho mảng images để tránh API bị sập khi images là undefined
-      coverImg: p.images?.[0] || null,
-      imgCount: p.images?.length || 0,
-    }));
-
-    const finalResponse = paginatedResponse(formattedRows, total, page, limit);
-
-    // Không lưu cache nếu đang tìm kiếm để tránh tràn bộ nhớ Redis
-    if (!isSearching) {
-      await redis.set(cacheKey, JSON.stringify(finalResponse), "EX", 600);
-    }
-
-    return finalResponse;
-  },
-
-  async getById(id: string) {
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw new HttpError(400, "ID sản phẩm không hợp lệ");
-    }
-
-    const detailCacheKey = `product:detail:${id}`;
-    const cachedDetail = await redis.get(detailCacheKey);
-
-    if (cachedDetail) {
-      Product.findByIdAndUpdate(id, { $inc: { viewCount: 1 } }).catch(() => { });
-      return JSON.parse(cachedDetail);
-    }
-
-    const p: any = await Product.findByIdAndUpdate(
-      id,
-      { $inc: { viewCount: 1 } },
-      { new: true },
-    ).populate("sellerId", "name isVerified isPremium");
-
-    if (!p) throw new HttpError(404, "Không tìm thấy sản phẩm");
-
-    const finalDetail = {
-      id: p._id,
-      sellerId: p.sellerId?._id,
-      sellerName: p.sellerId?.name || "Một ngư dân",
-      sellerIsVerified: p.sellerId?.isVerified ? 1 : 0,
-      sellerIsPremium: p.sellerId?.isPremium ? 1 : 0,
-      type: p.type,
-      category: p.category,
-      name: p.name,
-      description: p.description,
-      price: p.price,
-      salesType: p.salesType,
-      totalWeight: p.totalWeight,
-      remainingWeight: p.remainingWeight,
-      status: p.status,
-      catchTime: p.catchTime,
-      lat: p.location?.coordinates?.[1] || null,
-      lng: p.location?.coordinates?.[0] || null,
-      origin: p.origin,
-      expiryDate: p.expiryDate,
-      createdAt: p.createdAt,
-      viewCount: p.viewCount,
-      bumpedAt: p.bumpedAt,
-      images: (p.images || []).map((img: string, idx: number) => ({
-        id: idx,
-        url: img,
-      })),
-    };
-
-    await redis.set(detailCacheKey, JSON.stringify(finalDetail), "EX", 1800);
-    return finalDetail;
-  },
-
-  async create(
-    userId: string,
-    body: Record<string, any>,
-  ): Promise<{ productId: string }> {
-    const {
-      type,
-      category,
-      name,
-      description,
-      price,
-      salesType,
-      totalWeight,
-      catchTime,
-      lat,
-      lng,
-      origin,
-      expiryDate,
-      images, // Nhận thêm images từ body (nếu có)
-    } = body;
-
-    const user = await User.findById(userId);
-    if (!user) throw new HttpError(404, "Không tìm thấy người dùng");
-
-    if (!user.isPremium && user.role !== "Admin") {
-      // FIX LỆCH MÚI GIỜ: Chuyển đổi về 0h ngày hôm nay theo giờ Việt Nam (UTC+7)
-      const nowVN = new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
-      nowVN.setUTCHours(0, 0, 0, 0);
-      const startOfDay = new Date(nowVN.getTime() - 7 * 60 * 60 * 1000);
-
-      const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000 - 1);
-
-      const countToday = await Product.countDocuments({
-        sellerId: userId,
-        createdAt: { $gte: startOfDay, $lte: endOfDay },
-        status: { $ne: "Deleted" },
-      });
-
-      if (countToday >= 5) {
-        throw new HttpError(
-          403,
-          "Tài khoản thường chỉ được phép đăng tối đa 5 bài viết mỗi ngày. Vui lòng nâng cấp lên Premium để đăng không giới hạn!"
+    if (isMockEmail) {
+      logger.info(
+        `✉️ [MOCK EMAIL DEVELOPMENT MODE] Gửi OTP tới Email: ${cleanEmail} -> MÃ OTP: ${otp}`,
+      );
+    } else {
+      try {
+        await sendOtpEmail(cleanEmail, otp);
+        logger.info(`[Email] OTP sent successfully to ${cleanEmail}`);
+      } catch (err: any) {
+        logger.error(
+          `[Email] Delivery failed: ${err.message}. Falling back to logging OTP.`,
+        );
+        logger.info(
+          `✉️ [EMAIL FALLBACK] Mã OTP cho Email ${cleanEmail}: ${otp}`,
         );
       }
     }
+  },
 
-    const cleanDesc = description
-      ? description.trim().replace(/<[^>]*>/g, "").slice(0, 2000)
-      : null;
 
-    const parsedPrice = typeof price === "number" ? price : parseInt(price, 10);
-    const parsedWeight = typeof totalWeight === "number" ? totalWeight : parseFloat(totalWeight);
 
-    if (isNaN(parsedPrice) || isNaN(parsedWeight)) {
-      throw new HttpError(400, "Thông tin giá cả hoặc khối lượng không hợp lệ");
+  async verifyOtp(email: string, otp: string): Promise<string> {
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanOtp = String(otp).trim(); // Ép kiểu string để tránh lỗi crash tại hàm hashOtp
+
+    // 1. Kiểm tra OTP có tồn tại không trước khi làm bất cứ việc gì khác
+    const stored = await redis.get(KEY_OTP(cleanEmail));
+    if (!stored) {
+      throw makeError("Mã OTP đã hết hạn. Vui lòng yêu cầu gửi lại.", 400);
     }
 
-    const newProduct = new Product({
-      sellerId: userId,
-      type,
-      category,
-      name: name.trim(),
-      description: cleanDesc,
-      price: parsedPrice,
-      salesType: salesType ?? "Retail",
-      totalWeight: parsedWeight,
-      remainingWeight: parsedWeight,
-      catchTime,
-      origin,
-      expiryDate,
-      images: Array.isArray(images) ? images : [],
-      ...(lat && lng
-        ? {
-          location: {
-            type: "Point",
-            coordinates: [
-              typeof lng === "number" ? lng : parseFloat(lng),
-              typeof lat === "number" ? lat : parseFloat(lat),
-            ],
-          },
-        }
-        : {}),
-    });
+    // 2. Tăng số lần thử một cách ATOMIC ngay lập tức để chống tấn công Race Condition
+    const fails = await redis.incr(KEY_VERIFY_FAILS(cleanEmail));
 
-    await newProduct.save();
-    await redis.incr(`product:list:version:${newProduct.type}`);
-
-    User.findById(userId)
-      .select("name")
-      .lean()
-      .then((seller: any) =>
-        notifyFollowersNewProduct(
-          userId,
-          seller?.name || "Một ngư dân",
-          newProduct._id.toString(),
-          newProduct.name,
-        ),
-      )
-      .catch((err: any) =>
-        logger.error(
-          `[Notify] notifyFollowersNewProduct failed: ${err.message}`,
-        ),
+    // Nếu đây là lần thử sai/xác thực đầu tiên, set TTL cho key này khớp với thời gian còn lại của OTP
+    if (fails === 1) {
+      const otpTtl = await redis.ttl(KEY_OTP(cleanEmail));
+      await redis.expire(
+        KEY_VERIFY_FAILS(cleanEmail),
+        otpTtl > 0 ? otpTtl : OTP_TTL_SEC
       );
+    }
 
-    return { productId: newProduct._id.toString() };
+    // 3. Nếu số lần thử đã vượt quá giới hạn, chặn ngay lập tức
+    if (fails > MAX_VERIFY_ATTEMPTS) {
+      throw makeError(
+        `Bạn đã nhập sai OTP quá ${MAX_VERIFY_ATTEMPTS} lần. Vui lòng yêu cầu mã mới.`,
+        429,
+      );
+    }
+
+    // 4. Kiểm tra tính chính xác của OTP
+    if (hashOtp(cleanOtp) !== stored) {
+      const remaining = MAX_VERIFY_ATTEMPTS - fails;
+      throw makeError(
+        remaining > 0
+          ? `Mã OTP không đúng. Còn ${remaining} lần thử.`
+          : `Mã OTP không đúng. Vui lòng yêu cầu mã mới.`,
+        400,
+      );
+    }
+
+    // 5. Xác thực thành công: dọn dẹp các key liên quan trong Redis
+    const pipe = redis.pipeline();
+    pipe.del(KEY_OTP(cleanEmail));
+    pipe.del(KEY_VERIFY_FAILS(cleanEmail));
+    await pipe.exec();
+
+    // Tạo token đặt lại mật khẩu tạm thời
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    await redis.set(KEY_RESET(resetToken), cleanEmail, "EX", RESET_TOKEN_TTL);
+
+    return resetToken;
   },
 
-  async update(
-    id: string,
-    userId: string,
-    role: string,
-    body: Record<string, any>,
-  ): Promise<void> {
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw new HttpError(400, "ID sản phẩm không hợp lệ");
+
+  async getEmailByResetToken(resetToken: string): Promise<string> {
+    const email = await redis.get(KEY_RESET(resetToken));
+    if (!email) {
+      throw makeError(
+        "Phiên đặt lại mật khẩu đã hết hạn. Vui lòng thực hiện lại từ đầu.",
+        400,
+      );
     }
-
-    const currentProduct = await Product.findById(id);
-    if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
-    if (role !== "Admin" && currentProduct.sellerId.toString() !== userId)
-      throw new HttpError(403, "Bạn không có quyền chỉnh sửa bài đăng này");
-
-    // FIX LỖI 0-VALUE: So sánh trực tiếp với undefined
-    const newPrice = body.price !== undefined ? parseInt(body.price, 10) : undefined;
-    if (newPrice !== undefined && isNaN(newPrice)) {
-      throw new HttpError(400, "Giá sản phẩm mới không hợp lệ");
-    }
-
-    const updateFields: any = {};
-
-    if (body.name !== undefined) updateFields.name = body.name.trim();
-    if (body.description !== undefined)
-      updateFields.description = body.description
-        ? body.description.trim().replace(/<[^>]*>/g, "").slice(0, 2000)
-        : null;
-    if (body.origin !== undefined) updateFields.origin = body.origin;
-    if (body.type !== undefined) updateFields.type = body.type;
-    if (body.category !== undefined) updateFields.category = body.category;
-    if (body.salesType !== undefined) updateFields.salesType = body.salesType;
-    if (body.status !== undefined) updateFields.status = body.status;
-    if (body.images !== undefined && Array.isArray(body.images)) updateFields.images = body.images;
-
-    if (newPrice !== undefined) {
-      updateFields.price = newPrice;
-    }
-    if (body.totalWeight !== undefined) {
-      updateFields.totalWeight = parseFloat(body.totalWeight);
-    }
-    if (body.remainingWeight !== undefined) {
-      updateFields.remainingWeight = parseFloat(body.remainingWeight);
-    }
-
-    if (body.catchTime !== undefined) {
-      updateFields.catchTime = body.catchTime ? new Date(body.catchTime) : null;
-    }
-    if (body.expiryDate !== undefined) {
-      updateFields.expiryDate = body.expiryDate
-        ? new Date(body.expiryDate)
-        : null;
-    }
-
-    if (
-      body.lat !== undefined &&
-      body.lng !== undefined &&
-      body.lat !== null &&
-      body.lng !== null
-    ) {
-      const latVal = parseFloat(body.lat);
-      const lngVal = parseFloat(body.lng);
-      if (!isNaN(latVal) && !isNaN(lngVal)) {
-        updateFields.location = {
-          type: "Point",
-          coordinates: [lngVal, latVal],
-        };
-      }
-    }
-
-    // TỐI ƯU HOÁ: Gộp toán tử $set và $push vào 1 lượt ghi cơ sở dữ liệu duy nhất
-    const updateQuery: any = { $set: updateFields };
-
-    if (newPrice !== undefined && newPrice !== currentProduct.price) {
-      updateQuery.$push = {
-        priceHistory: {
-          oldPrice: currentProduct.price,
-          newPrice: newPrice,
-          changedAt: new Date(),
-        },
-      };
-      logger.info(`Price change logged for ProductID=${id}`);
-    }
-
-    await Product.findByIdAndUpdate(id, updateQuery);
-
-    await redis.del(`product:detail:${id}`);
-    await redis.incr(`product:list:version:${currentProduct.type}`);
+    return email;
   },
 
-  async delete(id: string, userId: string, role: string): Promise<void> {
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw new HttpError(400, "ID sản phẩm không hợp lệ");
-    }
-
-    const currentProduct = await Product.findById(id);
-    if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
-    if (role !== "Admin" && currentProduct.sellerId.toString() !== userId)
-      throw new HttpError(403, "Bạn không có quyền xoá bài đăng này");
-
-    await Product.findByIdAndUpdate(id, { $set: { status: "Deleted" } });
-
-    await redis.del(`product:detail:${id}`);
-    await redis.incr(`product:list:version:${currentProduct.type}`);
+  async consumeResetToken(resetToken: string): Promise<void> {
+    await redis.del(KEY_RESET(resetToken));
   },
 
-  async bump(id: string, userId: string): Promise<void> {
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw new HttpError(400, "ID sản phẩm không hợp lệ");
-    }
-
-    const currentProduct = await Product.findById(id);
-    if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
-    if (currentProduct.sellerId.toString() !== userId)
-      throw new HttpError(403, "Không có quyền");
-
-    if (currentProduct.bumpedAt) {
-      const diffMs = Date.now() - new Date(currentProduct.bumpedAt).getTime();
-      if (diffMs < 24 * 3600 * 1000) {
-        const remaining = Math.ceil((24 * 3600 * 1000 - diffMs) / 3600000);
-        throw new HttpError(429, `Đẩy tin lại sau ${remaining} giờ nữa`);
-      }
-    }
-
-    await Product.findByIdAndUpdate(id, { $set: { bumpedAt: new Date() } });
-
-    await redis.del(`product:detail:${id}`);
-    await redis.incr(`product:list:version:${currentProduct.type}`);
+  async getOtpTtl(email: string): Promise<number> {
+    const cleanEmail = email.toLowerCase().trim();
+    const ttl = await redis.ttl(KEY_OTP(cleanEmail));
+    return ttl > 0 ? ttl : 0;
   },
 };
 </file>
@@ -18060,34 +17642,6 @@ export async function api(path, options = {}) {
 }
 </file>
 
-<file path="backend/.env">
-MONGO_URI=mongodb://127.0.0.1:27017/seafood_db
-
-# ─── Auth ────────────────────────────────────
-JWT_SECRET=haiSanVn_super_secret_2024
-JWT_EXPIRES_IN=7d
-OTP_SECRET=otp_secret_key_32_characters_random_number_123
-
-# ─── Server ──────────────────────────────────
-PORT=5000
-CLIENT_URL=https://secluding-dimly-steep.ngrok-free.dev/
-
-# ─── Cloudinary ──────────────────────────────
-CLOUDINARY_CLOUD_NAME=drjmbtafn
-CLOUDINARY_API_KEY=833871645525131
-CLOUDINARY_API_SECRET=HezOkvV6fsWcjkoFs9X6CWubLrQ
-
-ESMS_API_KEY=<lấy tại esms.vn>
-ESMS_SECRET_KEY=<lấy tại esms.vn>
-ESMS_SMS_TYPE=4          # 4 = SMS thường, 2 = Brandname
-ESMS_BRANDNAME=HaiSan    # Chỉ cần khi SMS_TYPE=2
-
-
-# ─── Email (Gmail SMTP) ───────────────────────
-EMAIL_USER=daudaubut@gmail.com
-EMAIL_PASS=uezd tktc qysj jlpo
-</file>
-
 <file path="backend/src/controllers/admin.controller.ts">
 import { Request, Response } from "express";
 import { User } from "../models/User";
@@ -18669,6 +18223,424 @@ export async function getReviewsBySeller(req: Request, res: Response) {
 }
 </file>
 
+<file path="backend/src/services/product.service.ts">
+import { Product, IProduct } from "../models/Product";
+import { User } from "../models/User";
+import { redis } from "../config/redis";
+import { MAX_FRESH_DISTANCE_KM } from "../utils/haversine";
+import { parsePagination, paginatedResponse } from "../utils/pagination";
+import { notifyFollowersNewProduct } from "./notification.service";
+import { logger } from "../utils/logger";
+import mongoose from "mongoose";
+import { HttpError } from "../errors/HttpError";
+
+export const productService = {
+  async list(query: Record<string, string | undefined>) {
+    const queryType = query.type;
+    const freshVer = await redis.get("product:list:version:Fresh") || "1";
+    const driedVer = await redis.get("product:list:version:Dried") || "1";
+    const listVersion = queryType === "Fresh" ? freshVer : queryType === "Dried" ? driedVer : `${freshVer}_${driedVer}`;
+
+    // 1. TỐI ƯU CACHE KEY: Tránh Cache Pollution do GPS và Search
+    const normalizedQuery: any = { ...query };
+    if (normalizedQuery.lat) normalizedQuery.lat = parseFloat(normalizedQuery.lat).toFixed(3); // Làm tròn ~110m
+    if (normalizedQuery.lng) normalizedQuery.lng = parseFloat(normalizedQuery.lng).toFixed(3);
+
+    const cacheKey = `product:list:v${listVersion}:${JSON.stringify(normalizedQuery)}`;
+
+    // Chỉ đọc cache nếu KHÔNG có từ khóa tìm kiếm (vì tìm kiếm có độ tùy biến rất lớn)
+    const isSearching = !!(query.search && query.search.trim());
+    if (!isSearching) {
+      const cachedData = await redis.get(cacheKey);
+      if (cachedData) {
+        return JSON.parse(cachedData);
+      }
+    }
+
+    const {
+      type,
+      category,
+      search,
+      lat,
+      lng,
+      page: rawPage,
+      limit: rawLimit,
+      sellerId,
+    } = query;
+    const { page, limit } = parsePagination(rawPage, rawLimit);
+    const skip = (page - 1) * limit;
+
+    const filter: any = { status: "Active" };
+
+    if (sellerId && mongoose.Types.ObjectId.isValid(sellerId)) {
+      filter.sellerId = new mongoose.Types.ObjectId(sellerId);
+    }
+
+    if (type === "Fresh" || type === "Dried") {
+      filter.type = type;
+    }
+    if (category && category !== "All") {
+      filter.category = category;
+    }
+
+    let sortOption: any = { bumpedAt: -1, createdAt: -1 };
+    let projection: any = {};
+
+    if (search && search.trim()) {
+      filter.$text = { $search: search.trim() };
+      projection = { score: { $meta: "textScore" } };
+      sortOption = { score: { $meta: "textScore" } };
+    }
+
+    if (type === "Fresh" && lat && lng) {
+      const latVal = parseFloat(lat);
+      const lngVal = parseFloat(lng);
+      if (!isNaN(latVal) && !isNaN(lngVal)) {
+        filter.location = {
+          $geoWithin: {
+            $centerSphere: [[lngVal, latVal], MAX_FRESH_DISTANCE_KM / 6378.1],
+          },
+        };
+      }
+    }
+
+    const total = await Product.countDocuments(filter);
+    const rows = await Product.find(filter, projection)
+      .populate("sellerId", "name isVerified isPremium")
+      .sort(sortOption)
+      .skip(skip)
+      .limit(limit);
+
+    const formattedRows = rows.map((p: any) => ({
+      id: p._id,
+      sellerId: p.sellerId?._id || null,
+      sellerName: p.sellerId?.name || "Một ngư dân",
+      sellerIsVerified: p.sellerId?.isVerified ? 1 : 0,
+      sellerIsPremium: p.sellerId?.isPremium ? 1 : 0,
+      type: p.type,
+      category: p.category,
+      name: p.name,
+      description: p.description,
+      price: p.price,
+      salesType: p.salesType,
+      totalWeight: p.totalWeight,
+      remainingWeight: p.remainingWeight,
+      status: p.status,
+      catchTime: p.catchTime,
+      lat: p.location?.coordinates?.[1] || null,
+      lng: p.location?.coordinates?.[0] || null,
+      origin: p.origin,
+      expiryDate: p.expiryDate,
+      createdAt: p.createdAt,
+      viewCount: p.viewCount,
+      bumpedAt: p.bumpedAt,
+      // FIX LỖI: Sử dụng Optional Chaining cho mảng images để tránh API bị sập khi images là undefined
+      coverImg: p.images?.[0] || null,
+      imgCount: p.images?.length || 0,
+    }));
+
+    const finalResponse = paginatedResponse(formattedRows, total, page, limit);
+
+    // Không lưu cache nếu đang tìm kiếm để tránh tràn bộ nhớ Redis
+    if (!isSearching) {
+      await redis.set(cacheKey, JSON.stringify(finalResponse), "EX", 600);
+    }
+
+    return finalResponse;
+  },
+
+  async getById(id: string) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError(400, "ID sản phẩm không hợp lệ");
+    }
+
+    const detailCacheKey = `product:detail:${id}`;
+    const cachedDetail = await redis.get(detailCacheKey);
+
+    if (cachedDetail) {
+      Product.findByIdAndUpdate(id, { $inc: { viewCount: 1 } }).catch(() => { });
+      return JSON.parse(cachedDetail);
+    }
+
+    const p: any = await Product.findByIdAndUpdate(
+      id,
+      { $inc: { viewCount: 1 } },
+      { new: true },
+    ).populate("sellerId", "name isVerified isPremium");
+
+    if (!p) throw new HttpError(404, "Không tìm thấy sản phẩm");
+
+    const finalDetail = {
+      id: p._id,
+      sellerId: p.sellerId?._id,
+      sellerName: p.sellerId?.name || "Một ngư dân",
+      sellerIsVerified: p.sellerId?.isVerified ? 1 : 0,
+      sellerIsPremium: p.sellerId?.isPremium ? 1 : 0,
+      type: p.type,
+      category: p.category,
+      name: p.name,
+      description: p.description,
+      price: p.price,
+      salesType: p.salesType,
+      totalWeight: p.totalWeight,
+      remainingWeight: p.remainingWeight,
+      status: p.status,
+      catchTime: p.catchTime,
+      lat: p.location?.coordinates?.[1] || null,
+      lng: p.location?.coordinates?.[0] || null,
+      origin: p.origin,
+      expiryDate: p.expiryDate,
+      createdAt: p.createdAt,
+      viewCount: p.viewCount,
+      bumpedAt: p.bumpedAt,
+      images: (p.images || []).map((img: string, idx: number) => ({
+        id: idx,
+        url: img,
+      })),
+    };
+
+    await redis.set(detailCacheKey, JSON.stringify(finalDetail), "EX", 1800);
+    return finalDetail;
+  },
+
+  async create(
+    userId: string,
+    body: Record<string, any>,
+  ): Promise<{ productId: string }> {
+    const {
+      type,
+      category,
+      name,
+      description,
+      price,
+      salesType,
+      totalWeight,
+      catchTime,
+      lat,
+      lng,
+      origin,
+      expiryDate,
+      images, // Nhận thêm images từ body (nếu có)
+    } = body;
+
+    const user = await User.findById(userId);
+    if (!user) throw new HttpError(404, "Không tìm thấy người dùng");
+
+    if (!user.isPremium && user.role !== "Admin") {
+      // FIX LỆCH MÚI GIỜ: Chuyển đổi về 0h ngày hôm nay theo giờ Việt Nam (UTC+7)
+      const nowVN = new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
+      nowVN.setUTCHours(0, 0, 0, 0);
+      const startOfDay = new Date(nowVN.getTime() - 7 * 60 * 60 * 1000);
+
+      const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000 - 1);
+
+      const countToday = await Product.countDocuments({
+        sellerId: userId,
+        createdAt: { $gte: startOfDay, $lte: endOfDay },
+        status: { $ne: "Deleted" },
+      });
+
+      if (countToday >= 5) {
+        throw new HttpError(
+          403,
+          "Tài khoản thường chỉ được phép đăng tối đa 5 bài viết mỗi ngày. Vui lòng nâng cấp lên Premium để đăng không giới hạn!"
+        );
+      }
+    }
+
+    const cleanDesc = description
+      ? description.trim().replace(/<[^>]*>/g, "").slice(0, 2000)
+      : null;
+
+    const parsedPrice = typeof price === "number" ? price : parseInt(price, 10);
+    const parsedWeight = typeof totalWeight === "number" ? totalWeight : parseFloat(totalWeight);
+
+    if (isNaN(parsedPrice) || isNaN(parsedWeight)) {
+      throw new HttpError(400, "Thông tin giá cả hoặc khối lượng không hợp lệ");
+    }
+
+    const newProduct = new Product({
+      sellerId: userId,
+      type,
+      category,
+      name: name.trim(),
+      description: cleanDesc,
+      price: parsedPrice,
+      salesType: salesType ?? "Retail",
+      totalWeight: parsedWeight,
+      remainingWeight: parsedWeight,
+      catchTime,
+      origin,
+      expiryDate,
+      images: Array.isArray(images) ? images : [],
+      ...(lat && lng
+        ? {
+          location: {
+            type: "Point",
+            coordinates: [
+              typeof lng === "number" ? lng : parseFloat(lng),
+              typeof lat === "number" ? lat : parseFloat(lat),
+            ],
+          },
+        }
+        : {}),
+    });
+
+    await newProduct.save();
+    await redis.incr(`product:list:version:${newProduct.type}`);
+
+    User.findById(userId)
+      .select("name")
+      .lean()
+      .then((seller: any) =>
+        notifyFollowersNewProduct(
+          userId,
+          seller?.name || "Một ngư dân",
+          newProduct._id.toString(),
+          newProduct.name,
+        ),
+      )
+      .catch((err: any) =>
+        logger.error(
+          `[Notify] notifyFollowersNewProduct failed: ${err.message}`,
+        ),
+      );
+
+    return { productId: newProduct._id.toString() };
+  },
+
+  async update(
+    id: string,
+    userId: string,
+    role: string,
+    body: Record<string, any>,
+  ): Promise<void> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError(400, "ID sản phẩm không hợp lệ");
+    }
+
+    const currentProduct = await Product.findById(id);
+    if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
+    if (role !== "Admin" && currentProduct.sellerId.toString() !== userId)
+      throw new HttpError(403, "Bạn không có quyền chỉnh sửa bài đăng này");
+
+    // FIX LỖI 0-VALUE: So sánh trực tiếp với undefined
+    const newPrice = body.price !== undefined ? parseInt(body.price, 10) : undefined;
+    if (newPrice !== undefined && isNaN(newPrice)) {
+      throw new HttpError(400, "Giá sản phẩm mới không hợp lệ");
+    }
+
+    const updateFields: any = {};
+
+    if (body.name !== undefined) updateFields.name = body.name.trim();
+    if (body.description !== undefined)
+      updateFields.description = body.description
+        ? body.description.trim().replace(/<[^>]*>/g, "").slice(0, 2000)
+        : null;
+    if (body.origin !== undefined) updateFields.origin = body.origin;
+    if (body.type !== undefined) updateFields.type = body.type;
+    if (body.category !== undefined) updateFields.category = body.category;
+    if (body.salesType !== undefined) updateFields.salesType = body.salesType;
+    if (body.status !== undefined) updateFields.status = body.status;
+    if (body.images !== undefined && Array.isArray(body.images)) updateFields.images = body.images;
+
+    if (newPrice !== undefined) {
+      updateFields.price = newPrice;
+    }
+    if (body.totalWeight !== undefined) {
+      updateFields.totalWeight = parseFloat(body.totalWeight);
+    }
+    if (body.remainingWeight !== undefined) {
+      updateFields.remainingWeight = parseFloat(body.remainingWeight);
+    }
+
+    if (body.catchTime !== undefined) {
+      updateFields.catchTime = body.catchTime ? new Date(body.catchTime) : null;
+    }
+    if (body.expiryDate !== undefined) {
+      updateFields.expiryDate = body.expiryDate
+        ? new Date(body.expiryDate)
+        : null;
+    }
+
+    if (
+      body.lat !== undefined &&
+      body.lng !== undefined &&
+      body.lat !== null &&
+      body.lng !== null
+    ) {
+      const latVal = parseFloat(body.lat);
+      const lngVal = parseFloat(body.lng);
+      if (!isNaN(latVal) && !isNaN(lngVal)) {
+        updateFields.location = {
+          type: "Point",
+          coordinates: [lngVal, latVal],
+        };
+      }
+    }
+
+    // TỐI ƯU HOÁ: Gộp toán tử $set và $push vào 1 lượt ghi cơ sở dữ liệu duy nhất
+    const updateQuery: any = { $set: updateFields };
+
+    if (newPrice !== undefined && newPrice !== currentProduct.price) {
+      updateQuery.$push = {
+        priceHistory: {
+          oldPrice: currentProduct.price,
+          newPrice: newPrice,
+          changedAt: new Date(),
+        },
+      };
+      logger.info(`Price change logged for ProductID=${id}`);
+    }
+
+    await Product.findByIdAndUpdate(id, updateQuery);
+
+    await redis.del(`product:detail:${id}`);
+    await redis.incr(`product:list:version:${currentProduct.type}`);
+  },
+
+  async delete(id: string, userId: string, role: string): Promise<void> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError(400, "ID sản phẩm không hợp lệ");
+    }
+
+    const currentProduct = await Product.findById(id);
+    if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
+    if (role !== "Admin" && currentProduct.sellerId.toString() !== userId)
+      throw new HttpError(403, "Bạn không có quyền xoá bài đăng này");
+
+    await Product.findByIdAndUpdate(id, { $set: { status: "Deleted" } });
+
+    await redis.del(`product:detail:${id}`);
+    await redis.incr(`product:list:version:${currentProduct.type}`);
+  },
+
+  async bump(id: string, userId: string): Promise<void> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError(400, "ID sản phẩm không hợp lệ");
+    }
+
+    const currentProduct = await Product.findById(id);
+    if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
+    if (currentProduct.sellerId.toString() !== userId)
+      throw new HttpError(403, "Không có quyền");
+
+    if (currentProduct.bumpedAt) {
+      const diffMs = Date.now() - new Date(currentProduct.bumpedAt).getTime();
+      if (diffMs < 24 * 3600 * 1000) {
+        const remaining = Math.ceil((24 * 3600 * 1000 - diffMs) / 3600000);
+        throw new HttpError(429, `Đẩy tin lại sau ${remaining} giờ nữa`);
+      }
+    }
+
+    await Product.findByIdAndUpdate(id, { $set: { bumpedAt: new Date() } });
+
+    await redis.del(`product:detail:${id}`);
+    await redis.incr(`product:list:version:${currentProduct.type}`);
+  },
+};
+</file>
+
 <file path="client/my-app/src/layout/Navbar.jsx">
 /**
  * Navbar.jsx — Refactored + Fixed
@@ -19036,6 +19008,36 @@ export function Navbar({ unread, onOpenGlobalChat }) {
     </>
   );
 }
+</file>
+
+<file path="backend/.env">
+MONGO_URI=mongodb://127.0.0.1:27017/seafood_db
+
+# ─── Auth ────────────────────────────────────
+JWT_SECRET=haiSanVn_super_secret_2024
+JWT_EXPIRES_IN=7d
+OTP_SECRET=otp_secret_key_32_characters_random_number_123
+GOOGLE_CLIENT_ID=348871274321-vd512p4870o3j7erpgruh9pd7oie65v5.apps.googleusercontent.com
+
+
+# ─── Server ──────────────────────────────────
+PORT=5000
+CLIENT_URL=https://secluding-dimly-steep.ngrok-free.dev/
+
+# ─── Cloudinary ──────────────────────────────
+CLOUDINARY_CLOUD_NAME=drjmbtafn
+CLOUDINARY_API_KEY=833871645525131
+CLOUDINARY_API_SECRET=HezOkvV6fsWcjkoFs9X6CWubLrQ
+
+ESMS_API_KEY=<lấy tại esms.vn>
+ESMS_SECRET_KEY=<lấy tại esms.vn>
+ESMS_SMS_TYPE=4          # 4 = SMS thường, 2 = Brandname
+ESMS_BRANDNAME=HaiSan    # Chỉ cần khi SMS_TYPE=2
+
+
+# ─── Email (Gmail SMTP) ───────────────────────
+EMAIL_USER=daudaubut@gmail.com
+EMAIL_PASS=uezd tktc qysj jlpo
 </file>
 
 <file path="backend/src/controllers/favorite.controller.ts">
@@ -19973,640 +19975,6 @@ export function ChatBox({ product, onClose, user, fullHeight = false }) {
           Gửi
         </button>
       </div>
-    </div>
-  );
-}
-</file>
-
-<file path="client/my-app/src/pages/AuthPage.jsx">
-/**
- * AuthPage.jsx — Minimalist Editorial Version
- */
-
-import React, { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { api } from "../services/api";
-import { SparklesIcon, AlertCircleIcon } from "../components/icons";
-import { useAuth } from "../context/AuthContext";
-
-export function AuthPage() {
-  const navigate = useNavigate();
-  const { setUser } = useAuth();
-
-  const [mode, setMode] = useState("login");
-  const [email, setEmail] = useState("");
-  const [pw, setPw] = useState("");
-  const [name, setName] = useState("");
-  const [err, setErr] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [focusedField, setFocusedField] = useState(null);
-  const [showMockGooglePopup, setShowMockGooglePopup] = useState(false);
-
-  useEffect(() => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
-    if (!clientId) {
-      console.warn("VITE_GOOGLE_CLIENT_ID is missing. Mock Google Sign-In button will be active.");
-      return;
-    }
-
-    const initGoogleGis = () => {
-      if (typeof window.google === "undefined") {
-        setTimeout(initGoogleGis, 100);
-        return;
-      }
-
-      try {
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: handleGoogleCredentialResponse,
-          auto_select: false,
-        });
-
-        const btnDiv = document.getElementById("google-signin-btn");
-        if (btnDiv) {
-          window.google.accounts.id.renderButton(btnDiv, {
-            theme: "outline",
-            size: "large",
-            width: btnDiv.clientWidth || 336,
-            text: "signin_with",
-            shape: "rectangular",
-          });
-        }
-
-        window.google.accounts.id.prompt((notification) => {
-          if (notification.isNotDisplayed()) {
-            console.log("One Tap not displayed:", notification.getNotDisplayedReason());
-          }
-        });
-      } catch (error) {
-        console.error("Failed to initialize Google Identity Services:", error);
-      }
-    };
-
-    initGoogleGis();
-  }, []);
-
-  const handleGoogleCredentialResponse = async (response) => {
-    setLoading(true);
-    setErr("");
-    try {
-      const data = await api("/auth/google", {
-        method: "POST",
-        body: JSON.stringify({ idToken: response.credential }),
-      });
-      setUser(data.user);
-      navigate(data.user.role === "Admin" ? "/admin" : "/");
-    } catch (e) {
-      setErr(e.message || "Đăng nhập Google thất bại");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleMockGoogleLogin = () => {
-    setShowMockGooglePopup(true);
-  };
-
-  const selectMockAccount = async (email, name) => {
-    setShowMockGooglePopup(false);
-    setLoading(true);
-    setErr("");
-    try {
-      const data = await api("/auth/google", {
-        method: "POST",
-        body: JSON.stringify({
-          idToken: `mock_google_token_${email.toLowerCase().trim()}_${Date.now()}`
-        }),
-      });
-      setUser(data.user);
-      navigate(data.user.role === "Admin" ? "/admin" : "/");
-    } catch (e) {
-      setErr(e.message || "Giả lập đăng nhập Google thất bại");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleMockOtherAccount = async () => {
-    const mockEmail = window.prompt("Nhập email Google muốn giả lập đăng nhập:", "nguyenvana@gmail.com");
-    if (!mockEmail) return;
-    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!EMAIL_REGEX.test(mockEmail)) {
-      alert("Email không hợp lệ!");
-      return;
-    }
-    await selectMockAccount(mockEmail, `Mock User (${mockEmail.split("@")[0]})`);
-  };
-
-  const inputStyle = (field) => ({
-    width: "100%",
-    padding: "12px 16px",
-    background: "var(--white)",
-    border: `1.5px solid ${focusedField === field ? "var(--ocean)" : "var(--border)"}`,
-    borderRadius: 8,
-    fontSize: 14,
-    color: "var(--dark)",
-    outline: "none",
-    boxSizing: "border-box",
-    fontFamily: "inherit",
-    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-    boxShadow:
-      focusedField === field ? "0 0 0 3px rgba(8, 29, 44, 0.08)" : "none",
-  });
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setErr("");
-    if (!email || !pw) return setErr("Vui lòng điền đầy đủ thông tin");
-    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!EMAIL_REGEX.test(email))
-      return setErr("Email không hợp lệ");
-    if (mode === "register" && !name.trim())
-      return setErr("Vui lòng nhập họ tên");
-
-    setLoading(true);
-    try {
-      const endpoint = mode === "login" ? "/auth/login" : "/auth/register";
-      const body =
-        mode === "login"
-          ? { email, password: pw }
-          : { email, password: pw, name: name.trim() };
-      const data = await api(endpoint, {
-        method: "POST",
-        body: JSON.stringify(body),
-      });
-      setUser(data.user);
-      navigate(data.user.role === "Admin" ? "/admin" : "/");
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div
-      className="container-fluid min-vh-100 d-flex align-items-center justify-content-center p-3 p-sm-4"
-      style={{
-        backgroundColor: "var(--bg)",
-      }}
-    >
-      <div
-        className="card border-0 p-4 p-sm-5 w-100"
-        style={{
-          background: "var(--white)",
-          borderRadius: 16,
-          maxWidth: 400,
-          border: "1.5px solid var(--border)",
-          boxShadow: "var(--shadow-lg)",
-          boxSizing: "border-box",
-        }}
-      >
-        {/* ── Header ── */}
-        <div className="text-center mb-4">
-          <div
-            className="d-flex align-items-center justify-content-center mx-auto mb-3"
-            style={{
-              width: 56,
-              height: 56,
-              background: "var(--ocean-p)",
-              color: "var(--ocean)",
-              borderRadius: 12,
-              border: "1px solid rgba(8, 29, 44, 0.08)",
-            }}
-          >
-            <SparklesIcon size={24} />
-          </div>
-
-          <h1
-            className="fw-bold m-0"
-            style={{
-              fontSize: 22,
-              fontWeight: 800,
-              color: "var(--dark)",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            HảiSản.vn
-          </h1>
-          <p
-            className="m-0 mt-1 fw-bold text-uppercase"
-            style={{
-              color: "var(--muted)",
-              fontSize: 9,
-              letterSpacing: "0.15em",
-            }}
-          >
-            Tươi từ đại dương
-          </p>
-
-          <div
-            className="d-flex gap-1 p-1 mt-4"
-            style={{
-              background: "var(--bg-2)",
-              borderRadius: 8,
-            }}
-          >
-            {[
-              ["login", "Đăng nhập"],
-              ["register", "Đăng ký"],
-            ].map(([k, l]) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => {
-                  setMode(k);
-                  setErr("");
-                }}
-                className={`btn w-100 fw-bold border-0 py-2 ${mode === k ? "shadow-sm" : ""}`}
-                style={{
-                  flex: 1,
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  fontSize: 12,
-                  fontFamily: "inherit",
-                  transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-                  background: mode === k ? "var(--white)" : "transparent",
-                  color: mode === k ? "var(--ocean)" : "var(--muted)",
-                }}
-              >
-                {l}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Form ── */}
-        <form
-          onSubmit={submit}
-          className="d-flex flex-column gap-3"
-        >
-          {mode === "register" && (
-            <div className="d-flex flex-column gap-1">
-              <label
-                className="fw-bold"
-                style={{ fontSize: 11, color: "var(--muted)" }}
-              >
-                Họ và tên
-              </label>
-              <input
-                className="form-control border-0"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onFocus={() => setFocusedField("name")}
-                onBlur={() => setFocusedField(null)}
-                placeholder="Nguyễn Văn A"
-                style={inputStyle("name")}
-              />
-            </div>
-          )}
-
-          <div className="d-flex flex-column gap-1">
-            <label
-              className="fw-bold"
-              style={{ fontSize: 11, color: "var(--muted)" }}
-            >
-              Địa chỉ Email
-            </label>
-            <input
-              className="form-control border-0"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onFocus={() => setFocusedField("email")}
-              onBlur={() => setFocusedField(null)}
-              placeholder="nguyenvana@gmail.com"
-              style={inputStyle("email")}
-              type="email"
-            />
-          </div>
-
-          <div className="d-flex flex-column gap-1">
-            <div className="d-flex justify-content-between align-items-center">
-              <label
-                className="fw-bold"
-                style={{ fontSize: 11, color: "var(--muted)" }}
-              >
-                Mật khẩu
-              </label>
-              {mode === "login" && (
-                <Link
-                  to="/quen-mat-khau"
-                  className="text-decoration-none fw-semibold"
-                  style={{
-                    fontSize: 11,
-                    color: "var(--ocean)",
-                  }}
-                >
-                  Quên mật khẩu?
-                </Link>
-              )}
-            </div>
-            <input
-              className="form-control border-0"
-              value={pw}
-              onChange={(e) => setPw(e.target.value)}
-              onFocus={() => setFocusedField("password")}
-              onBlur={() => setFocusedField(null)}
-              placeholder="••••••••"
-              style={inputStyle("password")}
-              type="password"
-            />
-          </div>
-
-          {err && (
-            <div
-              className="alert alert-danger border-danger d-flex align-items-center gap-2 py-2 px-3 m-0"
-              style={{
-                color: "#991b1b",
-                fontSize: 12,
-                background: "#fef2f2",
-                borderLeft: "3.5px solid #ef4444",
-                borderRadius: 6,
-                fontWeight: 600,
-                lineHeight: 1.4,
-              }}
-            >
-              <AlertCircleIcon size={14} className="flex-shrink-0" />
-              <span>{err}</span>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn w-100 fw-bold py-2 mt-2"
-            style={{
-              background: loading ? "var(--muted)" : "var(--ocean)",
-              color: "var(--white)",
-              border: "none",
-              borderRadius: 8,
-              cursor: loading ? "not-allowed" : "pointer",
-              fontSize: 14,
-              fontFamily: "inherit",
-              transition: "background 0.2s, transform 0.1s active",
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) e.currentTarget.style.background = "var(--ocean-l)";
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) e.currentTarget.style.background = "var(--ocean)";
-            }}
-          >
-            {loading
-              ? "⏳ Đang xử lý..."
-              : mode === "login"
-                ? "Đăng nhập hệ thống"
-                : "Xác nhận tạo tài khoản"}
-          </button>
-
-          {/* Divider */}
-          <div className="d-flex align-items-center gap-2 my-2">
-            <div className="flex-grow-1" style={{ height: 1, background: "var(--border)" }} />
-            <span className="fw-semibold" style={{ fontSize: 12, color: "var(--muted)" }}>Hoặc</span>
-            <div className="flex-grow-1" style={{ height: 1, background: "var(--border)" }} />
-          </div>
-
-          {/* Google Sign In Container */}
-          <div id="google-signin-btn" className="w-100 d-flex justify-content-center mb-1" />
-
-          {/* Mock Google Login Button */}
-          <button
-            type="button"
-            onClick={handleMockGoogleLogin}
-            disabled={loading}
-            className="btn w-100 fw-bold py-2 d-flex align-items-center justify-content-center gap-2"
-            style={{
-              background: "#fff",
-              color: "#4B5563",
-              border: "1.5px solid var(--border)",
-              borderRadius: 8,
-              cursor: loading ? "not-allowed" : "pointer",
-              fontSize: 13,
-              fontFamily: "inherit",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) e.currentTarget.style.background = "#F9FAFB";
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) e.currentTarget.style.background = "#fff";
-            }}
-          >
-            <span>💬 Mock Google Login (Test nhanh)</span>
-          </button>
-        </form>
-
-        <div className="mt-4 text-center" style={{ color: "var(--muted)", fontSize: 11 }}></div>
-      </div>
-
-      {/* ── HIGH FIDELITY MOCK GOOGLE ACCOUNT CHOOSER POPUP ── */}
-      {showMockGooglePopup && (
-        <div
-          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center p-3"
-          style={{
-            background: "rgba(0, 0, 0, 0.65)",
-            zIndex: 99999,
-            fontFamily: "'Segoe UI', Roboto, sans-serif",
-          }}
-          onClick={() => setShowMockGooglePopup(false)}
-        >
-          <div
-            className="card border-0 w-100"
-            style={{
-              background: "#1E1E1E",
-              color: "#E3E3E3",
-              borderRadius: 8,
-              maxWidth: 440,
-              boxShadow: "0 12px 36px rgba(0, 0, 0, 0.6)",
-              boxSizing: "border-box",
-              overflow: "hidden",
-              border: "1px solid #333333",
-              textAlign: "left",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Edge Window titlebar mockup */}
-            <div
-              className="d-flex align-items-center justify-content-between px-3 py-2"
-              style={{
-                background: "#2D2D2D",
-                fontSize: 12,
-                color: "#CCCCCC",
-                borderBottom: "1px solid #333333",
-              }}
-            >
-              <div className="d-flex align-items-center gap-2">
-                <span className="fw-bolder" style={{ color: "#4285F4" }}>G</span>
-                <span>Đăng nhập - Tài khoản Google - Personal - Microsoft Edge</span>
-              </div>
-              <button
-                onClick={() => setShowMockGooglePopup(false)}
-                className="btn border-0 p-0 text-secondary bg-transparent"
-                style={{
-                  fontSize: 14,
-                }}
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Google Identity Header */}
-            <div className="p-4 p-sm-5 pt-4 pb-3">
-              <div className="d-flex align-items-center gap-2 fw-semibold mb-3 text-white" style={{ fontSize: 14 }}>
-                <div
-                  className="rounded-circle d-flex align-items-center justify-content-center fw-bolder bg-white text-primary"
-                  style={{
-                    width: 24,
-                    height: 24,
-                    fontSize: 14,
-                  }}
-                >
-                  G
-                </div>
-                <span>Đăng nhập bằng Google</span>
-              </div>
-
-              <h2
-                className="fw-normal mb-1 text-white"
-                style={{
-                  fontSize: 24,
-                }}
-              >
-                Chọn tài khoản
-              </h2>
-              <p className="mb-4" style={{ fontSize: 14, color: "#9AA0A6" }}>
-                Tiếp tục tới <span style={{ color: "#8AB4F8", fontWeight: 600 }}>HảiSản.vn</span>
-              </p>
-
-              {/* Accounts List */}
-              <div
-                className="d-flex flex-column border-top border-bottom py-1"
-                style={{
-                  borderColor: "#3C4043 !important",
-                  margin: "0 -2.5rem", // offset the card padding on the list to make active background full-width
-                }}
-              >
-                {[
-                  {
-                    name: "but daudau",
-                    email: "daudaubut@gmail.com",
-                    initial: "b",
-                    color: "#1A73E8",
-                  },
-                  {
-                    name: "Dau Dinh But (K18 HL)",
-                    email: "butddhe186165@fpt.edu.vn",
-                    initial: "D",
-                    color: "#5F6368",
-                    logout: true,
-                  },
-                  {
-                    name: "viet but",
-                    email: "daudinhbutql2003@gmail.com",
-                    initial: "v",
-                    color: "#188038",
-                  },
-                  {
-                    name: "but daudaudaau",
-                    email: "daudaudaubut@gmail.com",
-                    initial: "b",
-                    color: "#8430DE",
-                  },
-                ].map((acc, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => selectMockAccount(acc.email, acc.name)}
-                    className="d-flex align-items-center gap-3 px-5 py-2 cursor-pointer"
-                    style={{
-                      cursor: "pointer",
-                      transition: "background 0.15s",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "#2D2E30";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "transparent";
-                    }}
-                  >
-                    {/* Circle Avatar */}
-                    <div
-                      className="rounded-circle d-flex align-items-center justify-content-center fw-semibold text-uppercase text-white"
-                      style={{
-                        width: 32,
-                        height: 32,
-                        background: acc.color,
-                        fontSize: 14,
-                      }}
-                    >
-                      {acc.initial}
-                    </div>
-
-                    <div className="flex-grow-1">
-                      <div className="fw-semibold text-light" style={{ fontSize: 13 }}>
-                        {acc.name}
-                      </div>
-                      <div style={{ fontSize: 11, color: "#9AA0A6" }}>
-                        {acc.email}
-                      </div>
-                    </div>
-
-                    {acc.logout && (
-                      <span className="fw-normal" style={{ fontSize: 10, color: "#9AA0A6" }}>
-                        Đã đăng xuất
-                      </span>
-                    )}
-                  </div>
-                ))}
-
-                {/* Use another account */}
-                <div
-                  onClick={handleMockOtherAccount}
-                  className="d-flex align-items-center gap-3 px-5 py-2 cursor-pointer"
-                  style={{
-                    cursor: "pointer",
-                    transition: "background 0.15s",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "#2D2E30";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "transparent";
-                  }}
-                >
-                  <div
-                    className="rounded-circle d-flex align-items-center justify-content-center text-secondary border border-secondary"
-                    style={{
-                      width: 32,
-                      height: 32,
-                      background: "transparent",
-                      fontSize: 16,
-                    }}
-                  >
-                    👤
-                  </div>
-                  <span className="fw-normal text-light" style={{ fontSize: 13 }}>
-                    Sử dụng một tài khoản khác
-                  </span>
-                </div>
-              </div>
-
-              {/* Footer Note */}
-              <div
-                className="mt-3 text-secondary"
-                style={{
-                  fontSize: 11,
-                  lineHeight: 1.5,
-                }}
-              >
-                Trước khi sử dụng HảiSản.vn, bạn có thể xem{" "}
-                <span style={{ color: "#8AB4F8", cursor: "pointer" }}>Chính sách quyền riêng tư</span>{" "}
-                và <span style={{ color: "#8AB4F8", cursor: "pointer" }}>Điều khoản dịch vụ</span>{" "}
-                của ứng dụng này.
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -23418,6 +22786,616 @@ export default function App() {
         </AuthProvider>
       </ErrorBoundary>
     </BrowserRouter>
+  );
+}
+</file>
+
+<file path="client/my-app/src/pages/AuthPage.jsx">
+/**
+ * AuthPage.jsx — Minimalist Editorial Version
+ */
+
+import React, { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { api } from "../services/api";
+import { SparklesIcon, AlertCircleIcon } from "../components/icons";
+import { useAuth } from "../context/AuthContext";
+
+export function AuthPage() {
+  const navigate = useNavigate();
+  const { setUser } = useAuth();
+
+  const [mode, setMode] = useState("login");
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
+  const [name, setName] = useState("");
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState(null);
+  const [showMockGooglePopup, setShowMockGooglePopup] = useState(false);
+
+  useEffect(() => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+    if (!clientId) {
+      console.warn("VITE_GOOGLE_CLIENT_ID is missing. Mock Google Sign-In button will be active.");
+      return;
+    }
+
+    const initGoogleGis = () => {
+      if (typeof window.google === "undefined") {
+        setTimeout(initGoogleGis, 100);
+        return;
+      }
+
+      try {
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleGoogleCredentialResponse,
+          auto_select: false,
+        });
+
+        const btnDiv = document.getElementById("google-signin-btn");
+        if (btnDiv) {
+          window.google.accounts.id.renderButton(btnDiv, {
+            theme: "outline",
+            size: "large",
+            width: btnDiv.clientWidth || 336,
+            text: "signin_with",
+            shape: "rectangular",
+          });
+        }
+
+        window.google.accounts.id.prompt((notification) => {
+          if (notification.isNotDisplayed()) {
+            console.log("One Tap not displayed:", notification.getNotDisplayedReason());
+          }
+        });
+      } catch (error) {
+        console.error("Failed to initialize Google Identity Services:", error);
+      }
+    };
+
+    initGoogleGis();
+  }, []);
+
+  const handleGoogleCredentialResponse = async (response) => {
+    setLoading(true);
+    setErr("");
+    try {
+      const data = await api("/auth/google", {
+        method: "POST",
+        body: JSON.stringify({ idToken: response.credential }),
+      });
+      setUser(data.user);
+      navigate(data.user.role === "Admin" ? "/admin" : "/");
+    } catch (e) {
+      setErr(e.message || "Đăng nhập Google thất bại");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMockGoogleLogin = () => {
+    setShowMockGooglePopup(true);
+  };
+
+  const selectMockAccount = async (email, name) => {
+    setShowMockGooglePopup(false);
+    setLoading(true);
+    setErr("");
+    try {
+      const data = await api("/auth/google", {
+        method: "POST",
+        body: JSON.stringify({
+          idToken: `mock_google_token_${email.toLowerCase().trim()}_${Date.now()}`
+        }),
+      });
+      setUser(data.user);
+      navigate(data.user.role === "Admin" ? "/admin" : "/");
+    } catch (e) {
+      setErr(e.message || "Giả lập đăng nhập Google thất bại");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMockOtherAccount = async () => {
+    const mockEmail = window.prompt("Nhập email Google muốn giả lập đăng nhập:", "nguyenvana@gmail.com");
+    if (!mockEmail) return;
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!EMAIL_REGEX.test(mockEmail)) {
+      alert("Email không hợp lệ!");
+      return;
+    }
+    await selectMockAccount(mockEmail, `Mock User (${mockEmail.split("@")[0]})`);
+  };
+
+  const inputStyle = (field) => ({
+    width: "100%",
+    padding: "12px 16px",
+    background: "var(--white)",
+    border: `1.5px solid ${focusedField === field ? "var(--ocean)" : "var(--border)"}`,
+    borderRadius: 8,
+    fontSize: 14,
+    color: "var(--dark)",
+    outline: "none",
+    boxSizing: "border-box",
+    fontFamily: "inherit",
+    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+    boxShadow:
+      focusedField === field ? "0 0 0 3px rgba(8, 29, 44, 0.08)" : "none",
+  });
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setErr("");
+    if (!email || !pw) return setErr("Vui lòng điền đầy đủ thông tin");
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!EMAIL_REGEX.test(email))
+      return setErr("Email không hợp lệ");
+    if (mode === "register" && !name.trim())
+      return setErr("Vui lòng nhập họ tên");
+
+    setLoading(true);
+    try {
+      const endpoint = mode === "login" ? "/auth/login" : "/auth/register";
+      const body =
+        mode === "login"
+          ? { email, password: pw }
+          : { email, password: pw, name: name.trim() };
+      const data = await api(endpoint, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      setUser(data.user);
+      navigate(data.user.role === "Admin" ? "/admin" : "/");
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      className="container-fluid min-vh-100 d-flex align-items-center justify-content-center p-3 p-sm-4"
+      style={{
+        backgroundColor: "var(--bg)",
+      }}
+    >
+      <div
+        className="card border-0 p-4 p-sm-5 w-100"
+        style={{
+          background: "var(--white)",
+          borderRadius: 16,
+          maxWidth: 400,
+          border: "1.5px solid var(--border)",
+          boxShadow: "var(--shadow-lg)",
+          boxSizing: "border-box",
+        }}
+      >
+        {/* ── Header ── */}
+        <div className="text-center mb-4">
+          <div
+            className="d-flex align-items-center justify-content-center mx-auto mb-3"
+            style={{
+              width: 56,
+              height: 56,
+              background: "var(--ocean-p)",
+              color: "var(--ocean)",
+              borderRadius: 12,
+              border: "1px solid rgba(8, 29, 44, 0.08)",
+            }}
+          >
+            <SparklesIcon size={24} />
+          </div>
+
+          <h1
+            className="fw-bold m-0"
+            style={{
+              fontSize: 22,
+              fontWeight: 800,
+              color: "var(--dark)",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            HảiSản.vn
+          </h1>
+          <p
+            className="m-0 mt-1 fw-bold text-uppercase"
+            style={{
+              color: "var(--muted)",
+              fontSize: 9,
+              letterSpacing: "0.15em",
+            }}
+          >
+            Tươi từ đại dương
+          </p>
+
+          <div
+            className="d-flex gap-1 p-1 mt-4"
+            style={{
+              background: "var(--bg-2)",
+              borderRadius: 8,
+            }}
+          >
+            {[
+              ["login", "Đăng nhập"],
+              ["register", "Đăng ký"],
+            ].map(([k, l]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => {
+                  setMode(k);
+                  setErr("");
+                }}
+                className={`btn w-100 fw-bold border-0 py-2 ${mode === k ? "shadow-sm" : ""}`}
+                style={{
+                  flex: 1,
+                  borderRadius: 6,
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontFamily: "inherit",
+                  transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                  background: mode === k ? "var(--white)" : "transparent",
+                  color: mode === k ? "var(--ocean)" : "var(--muted)",
+                }}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Form ── */}
+        <form
+          onSubmit={submit}
+          className="d-flex flex-column gap-3"
+        >
+          {mode === "register" && (
+            <div className="d-flex flex-column gap-1">
+              <label
+                className="fw-bold"
+                style={{ fontSize: 11, color: "var(--muted)" }}
+              >
+                Họ và tên
+              </label>
+              <input
+                className="form-control border-0"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onFocus={() => setFocusedField("name")}
+                onBlur={() => setFocusedField(null)}
+                placeholder="Nguyễn Văn A"
+                style={inputStyle("name")}
+              />
+            </div>
+          )}
+
+          <div className="d-flex flex-column gap-1">
+            <label
+              className="fw-bold"
+              style={{ fontSize: 11, color: "var(--muted)" }}
+            >
+              Địa chỉ Email
+            </label>
+            <input
+              className="form-control border-0"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onFocus={() => setFocusedField("email")}
+              onBlur={() => setFocusedField(null)}
+              placeholder="nguyenvana@gmail.com"
+              style={inputStyle("email")}
+              type="email"
+            />
+          </div>
+
+          <div className="d-flex flex-column gap-1">
+            <div className="d-flex justify-content-between align-items-center">
+              <label
+                className="fw-bold"
+                style={{ fontSize: 11, color: "var(--muted)" }}
+              >
+                Mật khẩu
+              </label>
+              {mode === "login" && (
+                <Link
+                  to="/quen-mat-khau"
+                  className="text-decoration-none fw-semibold"
+                  style={{
+                    fontSize: 11,
+                    color: "var(--ocean)",
+                  }}
+                >
+                  Quên mật khẩu?
+                </Link>
+              )}
+            </div>
+            <input
+              className="form-control border-0"
+              value={pw}
+              onChange={(e) => setPw(e.target.value)}
+              onFocus={() => setFocusedField("password")}
+              onBlur={() => setFocusedField(null)}
+              placeholder="••••••••"
+              style={inputStyle("password")}
+              type="password"
+            />
+          </div>
+
+          {err && (
+            <div
+              className="alert alert-danger border-danger d-flex align-items-center gap-2 py-2 px-3 m-0"
+              style={{
+                color: "#991b1b",
+                fontSize: 12,
+                background: "#fef2f2",
+                borderLeft: "3.5px solid #ef4444",
+                borderRadius: 6,
+                fontWeight: 600,
+                lineHeight: 1.4,
+              }}
+            >
+              <AlertCircleIcon size={14} className="flex-shrink-0" />
+              <span>{err}</span>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn w-100 fw-bold py-2 mt-2"
+            style={{
+              background: loading ? "var(--muted)" : "var(--ocean)",
+              color: "var(--white)",
+              border: "none",
+              borderRadius: 8,
+              cursor: loading ? "not-allowed" : "pointer",
+              fontSize: 14,
+              fontFamily: "inherit",
+              transition: "background 0.2s, transform 0.1s active",
+            }}
+            onMouseEnter={(e) => {
+              if (!loading) e.currentTarget.style.background = "var(--ocean-l)";
+            }}
+            onMouseLeave={(e) => {
+              if (!loading) e.currentTarget.style.background = "var(--ocean)";
+            }}
+          >
+            {loading
+              ? "⏳ Đang xử lý..."
+              : mode === "login"
+                ? "Đăng nhập hệ thống"
+                : "Xác nhận tạo tài khoản"}
+          </button>
+
+          {/* Divider */}
+          <div className="d-flex align-items-center gap-2 my-2">
+            <div className="flex-grow-1" style={{ height: 1, background: "var(--border)" }} />
+            <span className="fw-semibold" style={{ fontSize: 12, color: "var(--muted)" }}>Hoặc</span>
+            <div className="flex-grow-1" style={{ height: 1, background: "var(--border)" }} />
+          </div>
+
+          {/* Google Sign In Container */}
+          <div id="google-signin-btn" className="w-100 d-flex justify-content-center mb-1" />
+
+
+        </form>
+
+        <div className="mt-4 text-center" style={{ color: "var(--muted)", fontSize: 11 }}></div>
+      </div>
+
+      {/* ── HIGH FIDELITY MOCK GOOGLE ACCOUNT CHOOSER POPUP ── */}
+      {showMockGooglePopup && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center p-3"
+          style={{
+            background: "rgba(0, 0, 0, 0.65)",
+            zIndex: 99999,
+            fontFamily: "'Segoe UI', Roboto, sans-serif",
+          }}
+          onClick={() => setShowMockGooglePopup(false)}
+        >
+          <div
+            className="card border-0 w-100"
+            style={{
+              background: "#1E1E1E",
+              color: "#E3E3E3",
+              borderRadius: 8,
+              maxWidth: 440,
+              boxShadow: "0 12px 36px rgba(0, 0, 0, 0.6)",
+              boxSizing: "border-box",
+              overflow: "hidden",
+              border: "1px solid #333333",
+              textAlign: "left",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Edge Window titlebar mockup */}
+            <div
+              className="d-flex align-items-center justify-content-between px-3 py-2"
+              style={{
+                background: "#2D2D2D",
+                fontSize: 12,
+                color: "#CCCCCC",
+                borderBottom: "1px solid #333333",
+              }}
+            >
+              <div className="d-flex align-items-center gap-2">
+                <span className="fw-bolder" style={{ color: "#4285F4" }}>G</span>
+                <span>Đăng nhập - Tài khoản Google - Personal - Microsoft Edge</span>
+              </div>
+              <button
+                onClick={() => setShowMockGooglePopup(false)}
+                className="btn border-0 p-0 text-secondary bg-transparent"
+                style={{
+                  fontSize: 14,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Google Identity Header */}
+            <div className="p-4 p-sm-5 pt-4 pb-3">
+              <div className="d-flex align-items-center gap-2 fw-semibold mb-3 text-white" style={{ fontSize: 14 }}>
+                <div
+                  className="rounded-circle d-flex align-items-center justify-content-center fw-bolder bg-white text-primary"
+                  style={{
+                    width: 24,
+                    height: 24,
+                    fontSize: 14,
+                  }}
+                >
+                  G
+                </div>
+                <span>Đăng nhập bằng Google</span>
+              </div>
+
+              <h2
+                className="fw-normal mb-1 text-white"
+                style={{
+                  fontSize: 24,
+                }}
+              >
+                Chọn tài khoản
+              </h2>
+              <p className="mb-4" style={{ fontSize: 14, color: "#9AA0A6" }}>
+                Tiếp tục tới <span style={{ color: "#8AB4F8", fontWeight: 600 }}>HảiSản.vn</span>
+              </p>
+
+              {/* Accounts List */}
+              <div
+                className="d-flex flex-column border-top border-bottom py-1"
+                style={{
+                  borderColor: "#3C4043 !important",
+                  margin: "0 -2.5rem", // offset the card padding on the list to make active background full-width
+                }}
+              >
+                {[
+                  {
+                    name: "but daudau",
+                    email: "daudaubut@gmail.com",
+                    initial: "b",
+                    color: "#1A73E8",
+                  },
+                  {
+                    name: "Dau Dinh But (K18 HL)",
+                    email: "butddhe186165@fpt.edu.vn",
+                    initial: "D",
+                    color: "#5F6368",
+                    logout: true,
+                  },
+                  {
+                    name: "viet but",
+                    email: "daudinhbutql2003@gmail.com",
+                    initial: "v",
+                    color: "#188038",
+                  },
+                  {
+                    name: "but daudaudaau",
+                    email: "daudaudaubut@gmail.com",
+                    initial: "b",
+                    color: "#8430DE",
+                  },
+                ].map((acc, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => selectMockAccount(acc.email, acc.name)}
+                    className="d-flex align-items-center gap-3 px-5 py-2 cursor-pointer"
+                    style={{
+                      cursor: "pointer",
+                      transition: "background 0.15s",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "#2D2E30";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent";
+                    }}
+                  >
+                    {/* Circle Avatar */}
+                    <div
+                      className="rounded-circle d-flex align-items-center justify-content-center fw-semibold text-uppercase text-white"
+                      style={{
+                        width: 32,
+                        height: 32,
+                        background: acc.color,
+                        fontSize: 14,
+                      }}
+                    >
+                      {acc.initial}
+                    </div>
+
+                    <div className="flex-grow-1">
+                      <div className="fw-semibold text-light" style={{ fontSize: 13 }}>
+                        {acc.name}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#9AA0A6" }}>
+                        {acc.email}
+                      </div>
+                    </div>
+
+                    {acc.logout && (
+                      <span className="fw-normal" style={{ fontSize: 10, color: "#9AA0A6" }}>
+                        Đã đăng xuất
+                      </span>
+                    )}
+                  </div>
+                ))}
+
+                {/* Use another account */}
+                <div
+                  onClick={handleMockOtherAccount}
+                  className="d-flex align-items-center gap-3 px-5 py-2 cursor-pointer"
+                  style={{
+                    cursor: "pointer",
+                    transition: "background 0.15s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#2D2E30";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  <div
+                    className="rounded-circle d-flex align-items-center justify-content-center text-secondary border border-secondary"
+                    style={{
+                      width: 32,
+                      height: 32,
+                      background: "transparent",
+                      fontSize: 16,
+                    }}
+                  >
+                    👤
+                  </div>
+                  <span className="fw-normal text-light" style={{ fontSize: 13 }}>
+                    Sử dụng một tài khoản khác
+                  </span>
+                </div>
+              </div>
+
+              {/* Footer Note */}
+              <div
+                className="mt-3 text-secondary"
+                style={{
+                  fontSize: 11,
+                  lineHeight: 1.5,
+                }}
+              >
+                Trước khi sử dụng HảiSản.vn, bạn có thể xem{" "}
+                <span style={{ color: "#8AB4F8", cursor: "pointer" }}>Chính sách quyền riêng tư</span>{" "}
+                và <span style={{ color: "#8AB4F8", cursor: "pointer" }}>Điều khoản dịch vụ</span>{" "}
+                của ứng dụng này.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 </file>

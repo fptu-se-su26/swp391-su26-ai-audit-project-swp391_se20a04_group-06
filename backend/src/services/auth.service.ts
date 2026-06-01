@@ -44,16 +44,31 @@ export const authService = {
   },
 
   /** Đăng nhập — trả về thông tin user nếu hợp lệ */
+  /** Đăng nhập — trả về thông tin user nếu hợp lệ */
   async login(email: string, password: string): Promise<AuthUserResult> {
     const cleanEmail = email.toLowerCase().trim();
     const user = await userRepository.findByEmail(cleanEmail);
-    if (!user)
+
+    // 1. Phòng ngừa tấn công Timing Attack bằng cách băm giả định khi không tìm thấy Email
+    if (!user) {
+      await bcrypt.compare("dummy_password", "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhy/");
       throw new HttpError(401, "Email hoặc mật khẩu không đúng");
+    }
 
-    // [C-01 FIX & M-01 Standardize] Check isActive as boolean, use camelCase fields.
-    if (user.isActive === false)
+    // 2. Kiểm tra trạng thái hoạt động của tài khoản
+    if (user.isActive === false) {
       throw new HttpError(403, "Tài khoản đã bị khoá. Vui lòng liên hệ admin.");
+    }
 
+    // 3. KIỂM TRA NGỮ CẢNH: Phát hiện tài khoản Google chưa thiết lập mật khẩu gõ tay
+    if (user.passwordHash === "google_oauth_no_password_hash_placeholder") {
+      throw new HttpError(
+        400,
+        "Tài khoản của bạn được thiết lập bằng Google. Vui lòng đăng nhập bằng nút 'Đăng nhập bằng Google' ở bên dưới."
+      );
+    }
+
+    // 4. So sánh mật khẩu thông thường bằng bcrypt nếu tài khoản đã có mật khẩu hợp lệ
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) throw new HttpError(401, "Email hoặc mật khẩu không đúng");
 

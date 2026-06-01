@@ -11,24 +11,38 @@ const RESET_TOKEN_TTL = 10 * 60; // Reset token hết hạn sau 10 phút
 import nodemailer from "nodemailer";
 
 const KEY_OTP = (email: string) => `otp:hash:${email.toLowerCase().trim()}`;
-const KEY_ATTEMPTS = (email: string) => `otp:attempts:${email.toLowerCase().trim()}`;
-const KEY_VERIFY_FAILS = (email: string) => `otp:verify_fails:${email.toLowerCase().trim()}`;
+const KEY_ATTEMPTS = (email: string) =>
+  `otp:attempts:${email.toLowerCase().trim()}`;
+const KEY_VERIFY_FAILS = (email: string) =>
+  `otp:verify_fails:${email.toLowerCase().trim()}`;
 const KEY_RESET = (token: string) => `otp:reset_token:${token}`;
 
 async function sendOtpEmail(email: string, otp: string): Promise<void> {
   const user = process.env.EMAIL_USER;
   const pass = process.env.EMAIL_PASS;
 
-  if (!user || !pass || user.includes("your_email") || pass.includes("your_password")) {
+  if (
+    !user ||
+    !pass ||
+    user.includes("your_email") ||
+    pass.includes("your_password")
+  ) {
     throw new Error("MockMode");
   }
 
+  // Tạo 1 lần, tái sử dụng
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user,
-      pass,
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
     },
+  });
+
+  // Thêm verify khi khởi động để phát hiện sai config sớm
+  transporter.verify((err) => {
+    if (err) logger.error(`[Email] SMTP config lỗi: ${err.message}`);
+    else logger.info("[Email] SMTP Gmail sẵn sàng");
   });
 
   const mailOptions = {
@@ -56,10 +70,7 @@ async function sendOtpEmail(email: string, otp: string): Promise<void> {
 
 function hashOtp(otp: string): string {
   const secret = (process.env.OTP_SECRET || process.env.JWT_SECRET) as string;
-  return crypto
-    .createHmac("sha256", secret)
-    .update(otp)
-    .digest("hex");
+  return crypto.createHmac("sha256", secret).update(otp).digest("hex");
 }
 
 function makeError(message: string, status: number): Error {
@@ -111,7 +122,9 @@ export const otpService = {
         logger.error(
           `[Email] Delivery failed: ${err.message}. Falling back to logging OTP.`,
         );
-        logger.info(`✉️ [EMAIL FALLBACK] Mã OTP cho Email ${cleanEmail}: ${otp}`);
+        logger.info(
+          `✉️ [EMAIL FALLBACK] Mã OTP cho Email ${cleanEmail}: ${otp}`,
+        );
       }
     }
   },
@@ -135,7 +148,10 @@ export const otpService = {
       const otpTtl = await redis.ttl(KEY_OTP(cleanEmail));
       const pipe = redis.pipeline();
       pipe.incr(KEY_VERIFY_FAILS(cleanEmail));
-      pipe.expire(KEY_VERIFY_FAILS(cleanEmail), otpTtl > 0 ? otpTtl : OTP_TTL_SEC);
+      pipe.expire(
+        KEY_VERIFY_FAILS(cleanEmail),
+        otpTtl > 0 ? otpTtl : OTP_TTL_SEC,
+      );
       await pipe.exec();
 
       const remaining = MAX_VERIFY_ATTEMPTS - parseInt(fails ?? "0") - 1;

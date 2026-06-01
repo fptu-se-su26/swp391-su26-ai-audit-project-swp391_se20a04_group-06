@@ -4,31 +4,134 @@
   padding: 0;
 }
 
+<<<<<<< Updated upstream
+=======
+/* ─── CSS CUSTOM PROPERTIES ─────────────────────────────── */
+:root {
+  --ocean: #775a19;
+  --ocean-l: #9a7a2e;
+  --ocean-p: #fef3c7;
+  --ocean-d: #5d4201;
+  --coral: #ba1a1a;
+  --coral-l: #ffdad6;
+  --coral-d: #93000a;
+  --ok: #1e8449;
+  --ok-l: #d5f5e3;
+  --warn: #d68910;
+  --warn-l: #fef3c7;
+  --dark: #1b1c1c;
+  --text: #1b1c1c;
+  --text-2: #444748;
+  --muted: #747878;
+  --border: #c4c7c7;
+  --border-l: #e4e2e2;
+  --bg: #fbf9f8;
+  --bg-2: #f5f3f3;
+  --white: #ffffff;
+  --shadow-sm: 0 1px 2px rgba(27, 28, 28, 0.04);
+  --shadow-md:
+    0 4px 12px rgba(27, 28, 28, 0.06), 0 1px 3px rgba(27, 28, 28, 0.03);
+  --shadow-lg:
+    0 10px 28px rgba(27, 28, 28, 0.08), 0 2px 6px rgba(27, 28, 28, 0.03);
+  --shadow-xl: 0 20px 40px rgba(27, 28, 28, 0.1);
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 4px;
+  --radius-2xl: 4px;
+  --font:
+    "Be Vietnam Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif: "Playfair Display", Georgia, serif;
+  --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+
+  --bp-xs: 380px;
+  --bp-sm: 480px;
+  --bp-md: 640px;
+  --bp-lg: 768px;
+  --bp-xl: 1024px;
+  --bp-2xl: 1280px;
+  --bp-3xl: 1440px;
+}
+
+/* ─── TYPOGRAPHY BASE ───────────────────────────────────── */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+>>>>>>> Stashed changes
 body {
   margin: 0;
   background-color: #f7f9fc; /* Màu nền (C.bg) của app */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+<<<<<<< Updated upstream
 }
 
 /* Ẩn scrollbar trong khung chat cho mượt mà */
 ::-webkit-scrollbar {
   width: 6px;
+=======
+  font-feature-settings:
+    "kern" 1,
+    "liga" 1,
+    "calt" 1;
+  overflow-x: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: var(--font);
+}
+
+/* ─── SCROLLBAR ─────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+>>>>>>> Stashed changes
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
+<<<<<<< Updated upstream
   background: rgba(0, 0, 0, 0.15);
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.3);
+=======
+  background: rgba(119, 90, 25, 0.2);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(119, 90, 25, 0.4);
+}
+
+/* ─── SELECTION ─────────────────────────────────────────── */
+::selection {
+  background: #fed488;
+  color: #5d4201;
+}
+
+/* ─── ANIMATIONS ─────────────────────────────────────────── */
+@keyframes shimmer {
+  0% {
+    background-position: -600px 0;
+  }
+  100% {
+    background-position: 600px 0;
+  }
+>>>>>>> Stashed changes
 }
 
 /* ───────────────── ANIMATIONS ───────────────── */
 @keyframes pulse-danger {
   0% {
+<<<<<<< Updated upstream
     box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
     transform: scale(1);
   }
@@ -45,9 +148,68 @@ body {
   }
 }
 
+=======
+    box-shadow: 0 0 0 0 rgba(186, 26, 26, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(186, 26, 26, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(186, 26, 26, 0);
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── UTILITY CLASSES ───────────────────────────────────── */
+.skeleton-shimmer {
+  background-color: #efeded;
+  background-image: linear-gradient(
+    90deg,
+    #efeded 0%,
+    #e4e2e2 40%,
+    #efeded 80%,
+    #efeded 100%
+  );
+  background-size: 600px 100%;
+  background-repeat: no-repeat;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+>>>>>>> Stashed changes
 .pulse-urgent {
   animation: pulse-danger 1.5s infinite;
 }
+<<<<<<< Updated upstream
 
 @keyframes shimmer {
   0% {
@@ -74,4 +236,236 @@ body {
   animation-iteration-count: infinite;
   animation-name: shimmer;
   animation-timing-function: linear;
+=======
+.fade-up {
+  animation: fadeUp 0.35s ease both;
+}
+
+/* ─── PRODUCT GRID (HomePage) ───────────────────────────── */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 24px;
+}
+
+@media (min-width: 1280px) {
+  .product-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 1279px) and (min-width: 769px) {
+  .product-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) and (min-width: 641px) {
+  .product-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 16px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .product-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .product-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ─── PRODUCT DETAIL GRID ───────────────────────────────── */
+.product-detail-grid {
+  display: grid;
+  gap: 24px;
+}
+
+@media (max-width: 1100px) {
+  .product-detail-grid {
+    grid-template-columns: 1fr 320px !important;
+  }
+}
+@media (max-width: 860px) {
+  .product-detail-grid {
+    grid-template-columns: 1fr 280px !important;
+    gap: 16px !important;
+  }
+}
+@media (max-width: 768px) {
+  .product-detail-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+}
+
+/* ─── PROFILE GRID ──────────────────────────────────────── */
+.profile-grid {
+  display: grid;
+  gap: 32px;
+}
+
+@media (max-width: 1024px) {
+  .profile-grid {
+    grid-template-columns: 220px 1fr !important;
+    gap: 24px !important;
+  }
+}
+@media (max-width: 768px) {
+  .profile-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+}
+
+/* ─── INBOX TAB GRID ────────────────────────────────────── */
+.inbox-tab-grid {
+  display: grid;
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .inbox-tab-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+}
+
+/* ─── DASHBOARD STATS GRID ──────────────────────────────── */
+.dash-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 768px) and (min-width: 641px) {
+  .dash-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+@media (max-width: 640px) {
+  .dash-stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ─── PAGE WRAPPER ───────────────────────────────────────── */
+.page-wrap {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+.page-wrap-sm {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+.page-wrap-lg {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+@media (max-width: 768px) {
+  .page-wrap,
+  .page-wrap-sm,
+  .page-wrap-lg {
+    padding: 20px 16px 60px;
+  }
+}
+@media (max-width: 480px) {
+  .page-wrap,
+  .page-wrap-sm,
+  .page-wrap-lg {
+    padding: 16px 12px 56px;
+  }
+}
+
+/* ─── FORM GRID 2 CỘT ───────────────────────────────────── */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 480px) {
+  .form-grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ─── CSS VIEW TRANSITIONS ──────────────────────────────── */
+::view-transition-old(root) {
+  animation: vtFadeOut 0.18s ease-out both;
+}
+::view-transition-new(root) {
+  animation: vtSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes vtFadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@keyframes vtSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+  .skeleton-shimmer {
+    animation: none;
+    background-image: none;
+  }
+  .fade-up {
+    animation: none;
+  }
+}
+
+/* ─── TOUCH TARGET ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  button,
+  a,
+  [role="button"],
+  [role="tab"] {
+    min-height: 36px;
+  }
+}
+
+/* ─── MODAL MOBILE ──────────────────────────────────────── */
+@media (max-width: 640px) {
+  [role="dialog"] {
+    margin: auto;
+    max-width: calc(100vw - 32px) !important;
+    max-height: 90dvh;
+    overflow-y: auto;
+  }
+}
+
+/* ─── IMAGE RESPONSIVE ──────────────────────────────────── */
+img {
+  max-width: 100%;
+  height: auto;
+>>>>>>> Stashed changes
 }

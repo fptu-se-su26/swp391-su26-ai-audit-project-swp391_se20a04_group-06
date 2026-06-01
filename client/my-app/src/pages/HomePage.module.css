@@ -1,0 +1,688 @@
+/* ─────────────────────────────────────────────
+   HomePage.module.css
+   Phong cách: Editorial · Tối giản · Cao cấp
+   Fonts: Playfair Display + Be Vietnam Pro
+───────────────────────────────────────────── */
+
+/* ── Page root ── */
+.page {
+  min-height: 100vh;
+  background: #fbf9f8;
+  font-family: "Be Vietnam Pro", sans-serif;
+}
+
+/* ── Hero ── */
+.hero {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.heroTrackWrapper {
+  width: 100%;
+  overflow: hidden;
+  aspect-ratio: 21 / 9;
+  background: #efeded;
+}
+
+@media (max-width: 768px) {
+  .heroTrackWrapper {
+    aspect-ratio: 16 / 9;
+  }
+}
+
+.heroTrack {
+  display: flex;
+  height: 100%;
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.heroSlide {
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  flex-shrink: 0;
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(27, 28, 28, 0.55) 0%,
+    rgba(27, 28, 28, 0.2) 60%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* ── Hero arrows ── */
+.heroArrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(27, 28, 28, 0.35);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+
+.heroArrow:hover {
+  background: rgba(27, 28, 28, 0.65);
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+.prev {
+  left: 24px;
+}
+.next {
+  right: 24px;
+}
+
+/* ── Hero dots ── */
+.heroDots {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 10;
+}
+
+.heroDot {
+  height: 7px;
+  border-radius: 99px;
+  border: none;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 0;
+  transition:
+    width 0.3s ease,
+    background 0.3s ease;
+}
+
+.activeDot {
+  background: #fff;
+}
+
+/* ── Hero content overlay ── */
+.heroContent {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 64px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .heroContent {
+    padding: 0 20px;
+  }
+}
+
+.heroCard {
+  max-width: 520px;
+  pointer-events: all;
+}
+
+.heroEyebrow {
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.heroH1 {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(32px, 5vw, 56px);
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: 14px;
+}
+
+.heroAccent {
+  color: #fed488;
+}
+
+.heroLead {
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.7;
+  margin-bottom: 0;
+  max-width: 400px;
+}
+
+/* ── Search in hero ── */
+.searchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 14px;
+  color: #747878;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  max-width: 380px;
+  padding: 11px 14px 11px 38px;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 14px;
+  color: #1b1c1c;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #c4c7c7;
+  border-radius: 0;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.searchInput::placeholder {
+  color: #747878;
+}
+.searchInput:focus {
+  border-color: #775a19;
+}
+
+/* ── Hero GPS button ── */
+.heroActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.heroGpsBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+
+.heroGpsBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #fff;
+}
+
+.heroGpsBtn.gpsOk {
+  border-color: #fed488;
+  color: #fed488;
+}
+
+/* ── Layout wrapper ── */
+.content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 64px 96px;
+}
+
+@media (max-width: 768px) {
+  .content {
+    padding: 32px 16px 64px;
+  }
+}
+
+.layoutWrapper {
+  display: flex;
+  gap: 48px;
+  align-items: flex-start;
+}
+
+@media (max-width: 1024px) {
+  .layoutWrapper {
+    flex-direction: column;
+    gap: 24px;
+  }
+}
+
+/* ── Left sidebar ── */
+.leftSidebar {
+  width: 200px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1024px) {
+  .leftSidebar {
+    width: 100%;
+  }
+}
+
+.sidebarSticky {
+  position: sticky;
+  top: 80px;
+}
+
+.sidebarTitle {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1b1c1c;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #c4c7c7;
+}
+
+.verticalTabGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.verticalTab {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 10px 12px;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 14px;
+  color: #444748;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    background 0.2s;
+  border-radius: 0;
+}
+
+.verticalTab:hover {
+  color: #775a19;
+  background: #fef3c7;
+}
+
+.verticalActive {
+  color: #775a19;
+  font-weight: 600;
+  background: #fef3c7;
+  border-left: 2px solid #775a19;
+}
+
+/* ── Main layout body ── */
+.mainLayoutBody {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Filter row (quick chips) ── */
+.filterRow {
+  margin-bottom: 12px;
+}
+
+.chipGroup {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid #c4c7c7;
+  background: #fbf9f8;
+  color: #444748;
+  cursor: pointer;
+  border-radius: 0;
+  transition: all 0.2s ease;
+}
+
+.chip:hover {
+  border-color: #775a19;
+  color: #775a19;
+}
+
+.activeChip {
+  border-color: #775a19;
+  background: #775a19;
+  color: #fff;
+}
+
+/* ── Advanced filter toggle ── */
+.advancedToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  background: none;
+  border: 1px solid #c4c7c7;
+  color: #444748;
+  cursor: pointer;
+  margin-bottom: 12px;
+  transition: all 0.2s;
+}
+
+.advancedToggle:hover {
+  border-color: #775a19;
+  color: #775a19;
+}
+.advancedToggle.hasFilter {
+  border-color: #775a19;
+  color: #775a19;
+}
+
+.filterDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #775a19;
+}
+
+/* ── Advanced panel ── */
+.advancedPanel {
+  background: #f5f3f3;
+  border: 1px solid #e4e2e2;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-end;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filterGroup label {
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #444748;
+}
+
+.filterInputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterInput {
+  padding: 7px 10px;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 13px;
+  border: 1px solid #c4c7c7;
+  background: #fbf9f8;
+  color: #1b1c1c;
+  outline: none;
+  border-radius: 0;
+  width: 100px;
+  transition: border-color 0.2s;
+}
+
+.filterInput:focus {
+  border-color: #775a19;
+}
+
+.filterSep {
+  font-size: 12px;
+  color: #747878;
+}
+
+.clearBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid #ba1a1a;
+  background: none;
+  color: #ba1a1a;
+  cursor: pointer;
+  border-radius: 0;
+  transition: all 0.2s;
+}
+
+.clearBtn:hover {
+  background: #ffdad6;
+}
+
+/* ── Sort row ── */
+.sortRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #c4c7c7;
+  border-bottom: 1px solid #c4c7c7;
+  padding: 12px 0;
+  margin-bottom: 24px;
+}
+
+.sortLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sortLabel {
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #444748;
+}
+
+.sortSelect {
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1b1c1c;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #747878;
+  padding: 2px 20px 2px 0;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  transition: border-color 0.2s;
+}
+
+.sortSelect:focus {
+  border-color: #775a19;
+}
+
+/* ── View toggle ── */
+.viewToggle {
+  display: flex;
+  border: 1px solid #c4c7c7;
+  overflow: hidden;
+}
+
+.viewBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  background: none;
+  border: none;
+  border-right: 1px solid #c4c7c7;
+  color: #444748;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+
+.viewBtn:last-child {
+  border-right: none;
+}
+.viewBtn:hover {
+  background: #efeded;
+}
+
+.viewBtn.active {
+  background: #1b1c1c;
+  color: #fff;
+}
+
+/* ── Info banner ── */
+.infoBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #efeded;
+  border-left: 2px solid #775a19;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 13px;
+  color: #444748;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+/* ── Error banner ── */
+.errorBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #ffdad6;
+  border-left: 2px solid #ba1a1a;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 13px;
+  color: #93000a;
+  margin-bottom: 20px;
+}
+
+/* ── Product grid ── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 24px;
+}
+
+/* ── Empty state ── */
+.empty {
+  text-align: center;
+  padding: 80px 0;
+}
+
+.emptyIcon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.emptyTitle {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: #1b1c1c;
+  margin-bottom: 8px;
+}
+
+.emptyBody {
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 14px;
+  color: #747878;
+}
+
+/* ── End label ── */
+.endLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #747878;
+  padding: 24px 0;
+  border-top: 1px solid #e4e2e2;
+  margin-top: 24px;
+}
+
+/* ── Category chips row ── */
+.categoryRow {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.categoryRow::-webkit-scrollbar {
+  display: none;
+}
+
+.categoryChip {
+  padding: 7px 16px;
+  border: 1px solid #c4c7c7;
+  background: #fbf9f8;
+  color: #444748;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  border-radius: 0;
+  transition: all 0.2s ease;
+}
+
+.categoryChip:hover {
+  border-color: #775a19;
+  color: #775a19;
+}
+
+.categoryChipActive {
+  border-color: #775a19;
+  background: #775a19;
+  color: #ffffff;
+}

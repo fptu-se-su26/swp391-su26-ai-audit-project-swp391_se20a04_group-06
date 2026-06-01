@@ -1,0 +1,316 @@
+/* ─────────────────────────────────────────────
+   ProductCard.module.css
+   Phong cách: Editorial · Tối giản · Cao cấp
+   Fonts: Playfair Display (tên) + Be Vietnam Pro (body)
+   Palette: Giống file HTML mẫu
+───────────────────────────────────────────── */
+
+/* ── Card wrapper ── */
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #fbf9f8;
+  border: 1px solid transparent;
+  padding: 0;
+  cursor: pointer;
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease;
+  animation: cardFadeIn 0.4s ease both;
+  animation-delay: calc(var(--card-i, 0) * 40ms);
+}
+
+.card:hover {
+  background: #ffffff;
+  border-color: #c4c7c7;
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Badge group (top-left absolute) ── */
+.badgeGroup {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(251, 249, 248, 0.92);
+  color: #1b1c1c;
+  border: 1px solid #c4c7c7;
+  backdrop-filter: blur(4px);
+}
+
+/* ── Fav button ── */
+.favBtn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #c4c7c7;
+  background: rgba(251, 249, 248, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #444748;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    background 0.2s;
+  backdrop-filter: blur(4px);
+}
+
+.favBtn:hover {
+  color: #ba1a1a;
+  border-color: #ba1a1a;
+}
+
+.favBtn.favorited {
+  color: #ba1a1a;
+  border-color: #ba1a1a;
+  background: #ffdad6;
+}
+
+/* ── Image wrap ── */
+.imageWrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  background: #efeded;
+  overflow: hidden;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.7s ease;
+}
+
+.card:hover .image {
+  transform: scale(1.04);
+}
+
+.imagePlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  color: #747878;
+}
+
+.imageOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(27, 28, 28, 0.12) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+}
+
+/* ── Card body ── */
+.body {
+  padding: 20px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+/* ── Product name ── */
+.name {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1b1c1c;
+  line-height: 1.3;
+  margin: 0 0 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Price ── */
+.price {
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #775a19;
+  margin-bottom: 14px;
+}
+
+.priceUnit {
+  font-weight: 400;
+  color: #444748;
+}
+
+/* ── Stats row ── */
+.statsRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 12px;
+  color: #444748;
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.statValue {
+  font-weight: 600;
+  color: #1b1c1c;
+}
+
+/* ── Stock bar ── */
+.stockBar {
+  height: 2px;
+  background: #e4e2e2;
+  border-radius: 99px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.stockFill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.5s ease;
+}
+
+/* ── Origin ── */
+.origin {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 11px;
+  color: #747878;
+  margin-bottom: 0;
+}
+
+/* ── Divider ── */
+.divider {
+  border: none;
+  border-top: 1px solid rgba(196, 199, 199, 0.4);
+  margin: 14px 0;
+}
+
+/* ── Seller row ── */
+.sellerRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.sellerLink {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 12px;
+  color: #444748;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.sellerLink:hover {
+  color: #775a19;
+}
+
+.sellerAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fed488;
+  color: #5d4201;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Countdown badge ── */
+.countdownBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  border-radius: 2px;
+  margin-left: auto;
+}
+
+/* ── Skeleton ── */
+.skeleton {
+  background: #fbf9f8;
+  border: 1px solid #e4e2e2;
+  overflow: hidden;
+}
+
+.skeletonBody {
+  padding: 20px;
+}
+
+.skeletonRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* shimmer animation (global class) */
+:global(.skeleton-shimmer) {
+  background: linear-gradient(90deg, #efeded 25%, #e4e2e2 50%, #efeded 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

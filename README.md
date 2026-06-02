@@ -861,6 +861,258 @@ git push origin feature/ten-tinh-nang
 ```
 
 ---
+# Đặc tả Cơ sở Dữ liệu — Sàn Giao Dịch Hải Sản
+
+> **Công nghệ:** MongoDB + Mongoose  
+> **Phiên bản:** 1.0  
+
+---
+
+## 1. Tổng quan
+
+Hệ thống là một sàn giao dịch hải sản trực tuyến, cho phép người dùng đăng bán và mua các loại hải sản tươi sống hoặc khô. Người bán có thể đăng sản phẩm kèm vị trí địa lý, người mua có thể tìm kiếm theo khoảng cách, nhắn tin trực tiếp với người bán, đánh giá sản phẩm và báo cáo nội dung vi phạm. Hệ thống gồm **7 entity**, trong đó `PRICE_HISTORY` là embedded document (mảng nhúng trong `PRODUCT`, không phải collection riêng).
+
+---
+
+## 2. Danh sách Entity
+
+### 2.1 USER — Người dùng
+
+Đại diện cho tất cả tài khoản trong hệ thống, bao gồm người mua, người bán và quản trị viên. Một tài khoản có thể đồng thời vừa mua vừa bán.
+
+| Thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `_id` | ObjectId | PK, auto | Định danh duy nhất |
+| `name` | String | Required, trim | Tên hiển thị của người dùng |
+| `email` | String | Required, unique, lowercase, index | Email đăng nhập (duy nhất toàn hệ thống) |
+| `passwordHash` | String | Required | Mật khẩu đã được hash (bcrypt) |
+| `role` | Enum | Required, default: `"User"` | `"User"` hoặc `"Admin"` |
+| `isActive` | Boolean | Default: `true` | Tài khoản có đang hoạt động không (Admin có thể khoá) |
+| `isVerified` | Boolean | Default: `false` | Tài khoản đã xác thực email chưa |
+| `isPremium` | Boolean | Default: `false` | Tài khoản premium (được đẩy sản phẩm ưu tiên) |
+| `avatar` | String | Nullable | URL ảnh đại diện |
+| `favorites` | ObjectId[] | Ref: `Product` | Danh sách sản phẩm đã yêu thích (mảng nhúng) |
+| `following` | ObjectId[] | Ref: `User` | Danh sách người dùng đang theo dõi (self-referential) |
+| `createdAt` | Date | Auto (timestamps) | Thời điểm tạo tài khoản |
+| `updatedAt` | Date | Auto (timestamps) | Thời điểm cập nhật gần nhất |
+
+**Index:**
+
+| Tên index | Trường | Loại | Mục đích |
+|---|---|---|---|
+| `email_1` | `email` | Unique | Đăng nhập, tránh trùng email |
+
+---
+
+### 2.2 PRODUCT — Sản phẩm hải sản
+
+Đại diện cho một lô hàng hải sản mà người bán đăng lên sàn. Mỗi sản phẩm thuộc về một người bán duy nhất và có thể có vị trí địa lý để hỗ trợ tìm kiếm theo khoảng cách.
+
+| Thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `_id` | ObjectId | PK, auto | Định danh duy nhất |
+| `sellerId` | ObjectId | Required, FK → User, index | Người đăng bán |
+| `type` | Enum | Required | `"Fresh"` (tươi sống) hoặc `"Dried"` (khô) |
+| `category` | Enum | Required | `"Fish"`, `"Shrimp"`, `"Squid"`, `"Crab"`, `"Shellfish"`, `"Others"` |
+| `name` | String | Required, trim | Tên sản phẩm |
+| `description` | String | Nullable | Mô tả chi tiết |
+| `price` | Number | Required | Giá hiện tại (VNĐ/kg) |
+| `salesType` | Enum | Default: `"Retail"` | `"Retail"` (bán lẻ) hoặc `"Wholesale"` (bán sỉ) |
+| `totalWeight` | Number | Required | Tổng khối lượng ban đầu (kg) |
+| `remainingWeight` | Number | Required | Khối lượng còn lại (kg) |
+| `status` | Enum | Default: `"Active"` | `"Active"`, `"Expired"`, `"Deleted"` |
+| `location` | GeoJSON Point | Optional | Vị trí địa lý `{ type: "Point", coordinates: [lng, lat] }`. Bắt buộc đặt index 2dsphere. Không set `default: "Point"` để tránh lỗi MongoDB khi sản phẩm khô không có toạ độ. |
+| `catchTime` | Date | Optional | Thời điểm đánh bắt |
+| `origin` | String | Optional | Xuất xứ / vùng biển |
+| `expiryDate` | Date | Optional | Hạn sử dụng |
+| `images` | String[] | — | Danh sách URL ảnh sản phẩm |
+| `priceHistory` | PriceHistory[] | Embedded | Lịch sử thay đổi giá (xem mục 2.3) |
+| `viewCount` | Number | Default: `0` | Lượt xem |
+| `bumpedAt` | Date | Default: `now` | Thời điểm đẩy bài gần nhất (dùng để sắp xếp) |
+| `createdAt` | Date | Auto (timestamps) | Thời điểm đăng |
+| `updatedAt` | Date | Auto (timestamps) | Thời điểm cập nhật |
+
+**Index:**
+
+| Tên index | Trường | Loại | Mục đích |
+|---|---|---|---|
+| `location_2dsphere` | `location` | 2dsphere | Tìm kiếm sản phẩm trong bán kính (vd. 20km) |
+| `sellerId_1` | `sellerId` | Thường | Lấy tất cả sản phẩm của một seller |
+| `status_type_bumpedAt_createdAt` | `status, type, bumpedAt DESC, createdAt DESC` | Compound | Sắp xếp feed sản phẩm theo thứ tự hiển thị |
+| `name_text_description_text` | `name, description` | Text | Tìm kiếm full-text theo tên và mô tả |
+
+---
+
+### 2.3 PRICE_HISTORY — Lịch sử giá (Embedded Document)
+
+**Không phải collection riêng.** Được lưu dưới dạng mảng nhúng (`priceHistory[]`) trực tiếp trong mỗi document `PRODUCT`. Mỗi phần tử ghi lại một lần thay đổi giá.
+
+| Thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `oldPrice` | Number | Required | Giá cũ trước khi thay đổi |
+| `newPrice` | Number | Required | Giá mới sau khi thay đổi |
+| `changedAt` | Date | Default: `now` | Thời điểm thay đổi giá |
+
+---
+
+### 2.4 MESSAGE — Tin nhắn
+
+Lưu trữ các tin nhắn được gửi giữa người mua và người bán trong ngữ cảnh của một sản phẩm cụ thể. Một cuộc hội thoại được xác định bởi bộ ba `(productId, senderId, receiverId)`.
+
+| Thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `_id` | ObjectId | PK, auto | Định danh duy nhất |
+| `productId` | ObjectId | Required, FK → Product | Sản phẩm mà cuộc hội thoại liên quan đến |
+| `senderId` | ObjectId | Required, FK → User | Người gửi |
+| `receiverId` | ObjectId | Required, FK → User | Người nhận |
+| `content` | String | Nullable | Nội dung văn bản (null nếu chỉ gửi ảnh) |
+| `imageUrl` | String | Nullable | URL ảnh đính kèm (null nếu chỉ gửi văn bản) |
+| `isRead` | Boolean | Default: `false` | Người nhận đã đọc chưa |
+| `createdAt` | Date | Auto (timestamps) | Thời điểm gửi |
+| `updatedAt` | Date | Auto (timestamps) | Thời điểm cập nhật |
+
+> Mỗi tin nhắn phải có ít nhất một trong hai: `content` hoặc `imageUrl`.
+
+**Index:**
+
+| Tên index | Trường | Loại | Mục đích |
+|---|---|---|---|
+| `productId_senderId_receiverId` | `productId, senderId, receiverId` | Compound | Tải toàn bộ cuộc hội thoại theo ngữ cảnh sản phẩm |
+| `senderId_createdAt` | `senderId, createdAt DESC` | Compound | Lịch sử tin nhắn đã gửi |
+| `receiverId_createdAt` | `receiverId, createdAt DESC` | Compound | Lịch sử tin nhắn đã nhận / hộp thư đến |
+
+---
+
+### 2.5 REVIEW — Đánh giá sản phẩm
+
+Ghi nhận đánh giá của người mua về một sản phẩm và người bán tương ứng. Ràng buộc duy nhất: mỗi người dùng chỉ được đánh giá mỗi sản phẩm **một lần duy nhất**.
+
+| Thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `_id` | ObjectId | PK, auto | Định danh duy nhất |
+| `productId` | ObjectId | Required, FK → Product | Sản phẩm được đánh giá |
+| `reviewerId` | ObjectId | Required, FK → User | Người viết đánh giá |
+| `sellerId` | ObjectId | Required, FK → User, index | Người bán nhận đánh giá (denormalized để truy vấn nhanh hơn) |
+| `rating` | Number | Required, min: 1, max: 5 | Điểm đánh giá (1–5 sao) |
+| `comment` | String | Nullable | Nhận xét văn bản |
+| `imageUrl` | String | Nullable | URL ảnh minh hoạ |
+| `createdAt` | Date | Auto (timestamps) | Thời điểm đánh giá |
+
+**Index:**
+
+| Tên index | Trường | Loại | Mục đích |
+|---|---|---|---|
+| `reviewerId_productId` | `reviewerId, productId` | Unique | Mỗi user chỉ review mỗi sản phẩm 1 lần |
+| `sellerId_1` | `sellerId` | Thường | Lấy tất cả đánh giá nhận được của một seller |
+
+---
+
+### 2.6 REPORT — Báo cáo vi phạm
+
+Cho phép người dùng báo cáo sản phẩm vi phạm quy định. Admin xử lý và ghi chú kết quả vào trường `adminNote`.
+
+| Thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `_id` | ObjectId | PK, auto | Định danh duy nhất |
+| `reporterId` | ObjectId | Required, FK → User | Người gửi báo cáo |
+| `productId` | ObjectId | Required, FK → Product | Sản phẩm bị báo cáo |
+| `reason` | String | Required | Lý do báo cáo |
+| `status` | Enum | Default: `"Pending"` | `"Pending"`, `"Resolved"`, `"Dismissed"` |
+| `adminNote` | String | Nullable | Ghi chú của Admin sau khi xử lý |
+| `createdAt` | Date | Auto (timestamps) | Thời điểm gửi báo cáo |
+
+---
+
+### 2.7 NOTIFICATION — Thông báo
+
+Lưu trữ thông báo gửi đến người dùng. Có thể liên kết tuỳ chọn với một `Product` hoặc một `Review` để tạo deep link điều hướng trong ứng dụng.
+
+| Thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `_id` | ObjectId | PK, auto | Định danh duy nhất |
+| `userId` | ObjectId | Required, FK → User, index | Người nhận thông báo |
+| `type` | String | Required | Loại thông báo (vd. `"new_message"`, `"new_review"`, `"product_reported"`) |
+| `content` | String | Required | Nội dung thông báo hiển thị cho người dùng |
+| `isRead` | Boolean | Default: `false` | Đã đọc chưa |
+| `productId` | ObjectId | Optional, FK → Product | Sản phẩm liên quan (nullable) |
+| `reviewId` | ObjectId | Optional, FK → Review | Đánh giá liên quan (nullable) |
+| `createdAt` | Date | Auto (timestamps) | Thời điểm tạo thông báo |
+
+**Index:**
+
+| Tên index | Trường | Loại | Mục đích |
+|---|---|---|---|
+| `userId_1` | `userId` | Thường | Lấy thông báo của một user |
+| `userId_createdAt` | `userId, createdAt DESC` | Compound | Phân trang thông báo theo thứ tự mới nhất |
+
+---
+
+## 3. Sơ đồ quan hệ
+
+| Từ entity | Quan hệ | Đến entity | Diễn giải |
+|---|---|---|---|
+| USER | `\|\|--o{` | PRODUCT | Một user bán nhiều sản phẩm; mỗi sản phẩm có đúng một seller |
+| USER | `\|\|--o{` | MESSAGE | Một user gửi nhiều tin nhắn (senderId) |
+| USER | `\|\|--o{` | MESSAGE | Một user nhận nhiều tin nhắn (receiverId) |
+| PRODUCT | `\|\|--o{` | MESSAGE | Một sản phẩm có nhiều tin nhắn liên quan |
+| USER | `\|\|--o{` | REVIEW | Một user viết nhiều đánh giá (reviewerId) |
+| USER | `\|\|--o{` | REVIEW | Một user nhận nhiều đánh giá với tư cách seller (sellerId) |
+| PRODUCT | `\|\|--o{` | REVIEW | Một sản phẩm có nhiều đánh giá |
+| USER | `\|\|--o{` | REPORT | Một user gửi nhiều báo cáo |
+| PRODUCT | `\|\|--o{` | REPORT | Một sản phẩm có thể bị báo cáo nhiều lần |
+| USER | `\|\|--o{` | NOTIFICATION | Một user nhận nhiều thông báo |
+| PRODUCT | `\|o--o{` | NOTIFICATION | Một thông báo có thể liên kết đến một sản phẩm (optional) |
+| REVIEW | `\|o--o{` | NOTIFICATION | Một thông báo có thể liên kết đến một review (optional) |
+| USER | `}o--o{` | USER | Quan hệ tự thân N:N — danh sách following (nhúng trong User) |
+| USER | `}o--o{` | PRODUCT | Quan hệ N:N — danh sách yêu thích (nhúng trong User) |
+| PRODUCT | `\|\|--o{` | PRICE_HISTORY | Embedded: lịch sử giá nhúng trong Product |
+
+---
+
+## 4. Ràng buộc nghiệp vụ
+
+### Tài khoản (USER)
+- Email phải duy nhất trong toàn hệ thống, lưu lowercase.
+- Chỉ Admin (`role: "Admin"`) mới được xử lý Report hoặc khoá tài khoản.
+- `isPremium` cho phép sản phẩm được đẩy lên đầu feed (`bumpedAt`).
+
+### Sản phẩm (PRODUCT)
+- `remainingWeight` không được vượt quá `totalWeight`.
+- `remainingWeight == 0` hoặc `expiryDate < now` thì nên chuyển `status` sang `"Expired"`.
+- Trường `location` chỉ nên có mặt khi sản phẩm có toạ độ hợp lệ. Tuyệt đối **không** set `default: "Point"` trên sub-field `type` để tránh MongoDB ghi `{ type: "Point" }` thiếu `coordinates`, gây lỗi index 2dsphere.
+- Khi cập nhật `price`, phải append một bản ghi mới vào mảng `priceHistory`.
+
+### Tin nhắn (MESSAGE)
+- Mỗi tin nhắn phải chứa ít nhất `content` hoặc `imageUrl` (không được null cả hai).
+- `senderId` và `receiverId` phải khác nhau (không tự nhắn cho mình).
+- Cuộc hội thoại được nhóm bởi `(productId, senderId, receiverId)` — cần chuẩn hoá chiều (luôn để `min(userId)` là senderId) nếu muốn tra cứu 2 chiều.
+
+### Đánh giá (REVIEW)
+- Unique index `{ reviewerId, productId }` đảm bảo mỗi user chỉ đánh giá mỗi sản phẩm đúng một lần.
+- `sellerId` được denormalize từ `Product.sellerId` tại thời điểm tạo review để tránh join khi lấy danh sách đánh giá của seller.
+- `rating` hợp lệ: số nguyên từ 1 đến 5.
+
+### Thông báo (NOTIFICATION)
+- `productId` và `reviewId` đều là optional — một thông báo có thể không liên kết với entity nào, liên kết với một trong hai, nhưng không nên liên kết cả hai cùng lúc (tuỳ logic nghiệp vụ).
+
+---
+
+## 5. Tổng hợp index toàn hệ thống
+
+| Collection | Index | Loại | Mục đích |
+|---|---|---|---|
+| `users` | `{ email: 1 }` | Unique | Đăng nhập, kiểm tra trùng |
+| `products` | `{ location: "2dsphere" }` | Địa lý | Tìm kiếm trong bán kính |
+| `products` | `{ sellerId: 1 }` | Thường | Sản phẩm của seller |
+| `products` | `{ status: 1, type: 1, bumpedAt: -1, createdAt: -1 }` | Compound | Feed sản phẩm, sort |
+| `products` | `{ name: "text", description: "text" }` | Text | Tìm kiếm full-text |
+| `messages` | `{ productId: 1, senderId: 1, receiverId: 1 }` | Compound | Tải cuộc hội thoại |
+| `messages` | `{ senderId: 1, createdAt: -1 }` | Compound | Hộp thư đã gửi |
+| `messages` | `{ receiverId: 1, createdAt: -1 }` | Compound | Hộp thư đến |
+| `reviews` | `{ reviewerId: 1, productId: 1 }` | Unique | Chặn review trùng |
+| `reviews` | `{ sellerId: 1 }` | Thường | Đánh giá của seller |
+| `notifications` | `{ userId: 1 }` | Thường | Thông báo của user |
+| `notifications` | `{ userId: 1, createdAt: -1 }` | Compound | Phân trang thông báo |
 
 <p align="center">
   Made with ❤️ by the HảiSản.vn Team · Phase 3 · 2026

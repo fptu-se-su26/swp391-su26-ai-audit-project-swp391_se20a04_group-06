@@ -12670,54 +12670,6 @@ export async function checkFollow(req: Request, res: Response) {
 }
 </file>
 
-<file path="backend/src/controllers/user.controller.ts">
-// Trong tệp: backend/src/controllers/user.controller.ts
-
-import { Request, Response } from "express";
-import { User } from "../models/User";
-import { Review } from "../models/Review"; // 🌟 GIẢI PHÁP: Import thêm Model Review
-import { sendServerError, parseId } from "../helpers/response.helper";
-
-export async function getUserPublicProfile(req: Request, res: Response) {
-  const id = parseId(req.params.id);
-  if (!id) return res.status(400).json({ message: "ID không hợp lệ" });
-
-  try {
-    const user = await User.findOne({ _id: id, isActive: true });
-    if (!user)
-      return res.status(404).json({ message: "Không tìm thấy người dùng" });
-
-    // 🌟 GIẢI PHÁP: Tính toán điểm đánh giá trung bình và số lượng review trực tiếp từ MongoDB
-    const reviewStats = await Review.aggregate([
-      { $match: { sellerId: user._id } },
-      {
-        $group: {
-          _id: null,
-          avgRating: { $avg: "$rating" },
-          totalReviews: { $sum: 1 }
-        }
-      }
-    ]);
-
-    const avgRating = reviewStats[0]?.avgRating ? Math.round(reviewStats[0].avgRating * 10) / 10 : 0;
-    const ratingCount = reviewStats[0]?.totalReviews || 0;
-
-    return res.json({
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      isVerified: !!user.isVerified, // 🌟 Đồng bộ hóa kiểu dữ liệu boolean chuẩn
-      isPremium: !!user.isPremium,
-      createdAt: user.createdAt,
-      avgRating,    // Trả về điểm trung bình thực tế
-      ratingCount,  // Trả về tổng số lượng đánh giá thực tế
-    });
-  } catch (err) {
-    return sendServerError(res, err);
-  }
-}
-</file>
-
 <file path="backend/src/cron.ts">
 import cron from 'node-cron';
 import { Product } from './models/Product';
@@ -15662,683 +15614,6 @@ export function ProfilePage() {
 }
 </file>
 
-<file path="client/my-app/src/pages/SellerProfilePage.jsx">
-/**
- * SellerProfilePage.jsx
- *
- * CHANGES:
- *   - Loại bỏ prop drilling `user`, thay thế bằng hook useAuth() trực tiếp.
- *   - Dọn dẹp import `fmt` không còn sử dụng.
- */
-
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { C } from "../utils/theme";
-import { api } from "../services/api";
-import { ProductCard } from "../components/ProductCard";
-import { ReviewList } from "../components/ReviewList";
-import { VerifiedBadge } from "../components/VerifiedBadge";
-import { useAuth } from "../context/AuthContext";
-
-export function SellerProfilePage({ seller }) {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState("products");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [hoveredFilter, setHoveredFilter] = useState(null);
-
-  useEffect(() => {
-    if (!seller?.id) {
-      navigate("/");
-      return;
-    }
-    api(`/products?sellerId=${seller.id}&limit=100`)
-      .then((data) => setProducts(data.data || []))
-      .catch(() => { })
-      .finally(() => setLoading(false));
-  }, [seller?.id, navigate]);
-
-  const filtered = products.filter((p) => {
-    if (typeFilter === "fresh") return p.type === "Fresh";
-    if (typeFilter === "dried") return p.type === "Dried";
-    return true;
-  });
-
-  const sellerName = seller?.name || products[0]?.sellerName || "...";
-  const sellerRating = seller?.avgRating ? parseFloat(seller.avgRating) : null;
-  const ratingCount = seller?.ratingCount || 0;
-  const freshCount = products.filter((p) => p.type === "Fresh").length;
-  const driedCount = products.filter((p) => p.type === "Dried").length;
-
-  if (!seller?.id) return null;
-
-  return (
-    <div
-      style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px 80px" }}
-    >
-      <button
-        onClick={() => navigate("/")}
-        style={{
-          background: C.white,
-          border: `1px solid ${C.border}`,
-          color: C.ocean,
-          cursor: "pointer",
-          fontWeight: 700,
-          fontSize: 13,
-          marginBottom: 20,
-          padding: "8px 16px",
-          borderRadius: 10,
-          fontFamily: "inherit",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-          boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
-          transition: "all 0.2s ease",
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = "#F1F5F9";
-          e.currentTarget.style.borderColor = C.ocean;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = C.white;
-          e.currentTarget.style.borderColor = C.border;
-        }}
-      >
-        ⟨ Quay lại trang chủ
-      </button>
-
-      <div
-        style={{
-          background: C.white,
-          borderRadius: 20,
-          border: `1px solid ${C.border}`,
-          overflow: "hidden",
-          marginBottom: 28,
-          boxShadow: "0 10px 25px -5px rgba(11, 79, 108, 0.04)",
-        }}
-      >
-        <div
-          style={{
-            height: 110,
-            background: `linear-gradient(135deg, #0B4F6C 0%, #1A7FA0 100%)`,
-            position: "relative",
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              bottom: -28,
-              left: 28,
-              width: 64,
-              height: 64,
-              borderRadius: "50%",
-              background: C.coral,
-              border: "3px solid #fff",
-              display: "flex",
-              alignItems: "center",
-              justifycontent: "center",
-              fontSize: 30,
-              boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
-              zIndex: 3,
-            }}
-          >
-            🧑‍🌾
-          </div>
-        </div>
-
-        <div style={{ padding: "44px 28px 24px" }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              flexWrap: "wrap",
-              gap: 16,
-            }}
-          >
-            <div>
-              <h1
-                style={{
-                  margin: "0 0 8px",
-                  fontSize: 24,
-                  fontWeight: 800,
-                  color: C.dark,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                {sellerName}
-                {seller?.isVerified && <VerifiedBadge size="md" showLabel />}
-                {seller?.isPremium && (
-                  <span
-                    title="Thành viên Premium uy tín"
-                    style={{
-                      fontSize: 18,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      cursor: "help"
-                    }}
-                  >
-                    👑
-                  </span>
-                )}
-              </h1>
-              {sellerRating !== null && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ color: "#F59E0B", fontSize: 16 }}>
-                    {"★".repeat(Math.round(sellerRating))}
-                    {"☆".repeat(5 - Math.round(sellerRating))}
-                  </span>
-                  <span
-                    style={{ fontSize: 14, fontWeight: 800, color: C.dark }}
-                  >
-                    {sellerRating.toFixed(1)}
-                  </span>
-                  <span
-                    style={{ fontSize: 13, color: C.muted, fontWeight: 500 }}
-                  >
-                    ({ratingCount} lượt đánh giá tin cậy)
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              {[
-                { label: "Mẻ đang đăng", value: products.length, emoji: "📦" },
-                { label: "Hải sản tươi", value: freshCount, emoji: "🌊" },
-                { label: "Đồ khô đóng gói", value: driedCount, emoji: "🔥" },
-              ].map((s) => (
-                <div
-                  key={s.label}
-                  style={{
-                    textAlign: "center",
-                    padding: "10px 18px",
-                    background: "#F8FAFC",
-                    borderRadius: 12,
-                    border: "1px solid #F1F5F9",
-                    minWidth: 90,
-                  }}
-                >
-                  <div style={{ fontSize: 22, marginBottom: 2 }}>{s.emoji}</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: C.dark }}>
-                    {s.value}
-                  </div>
-                  <div
-                    style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}
-                  >
-                    {s.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          gap: 4,
-          background: "#E2E8F0",
-          borderRadius: 12,
-          padding: 4,
-          width: "fit-content",
-          marginBottom: 24,
-        }}
-      >
-        {[
-          ["products", "📦 Gian hàng hải sản"],
-          ["reviews", "⭐ Lượt đánh giá"],
-        ].map(([k, l]) => (
-          <button
-            key={k}
-            onClick={() => setTab(k)}
-            style={{
-              padding: "10px 22px",
-              borderRadius: 10,
-              border: "none",
-              cursor: "pointer",
-              fontWeight: 700,
-              fontSize: 13,
-              fontFamily: "inherit",
-              background: tab === k ? C.white : "transparent",
-              color: tab === k ? C.ocean : C.muted,
-              boxShadow: tab === k ? "0 4px 10px rgba(0,0,0,0.06)" : "none",
-              transition: "all 0.2s ease",
-            }}
-          >
-            {l}
-          </button>
-        ))}
-      </div>
-
-      {tab === "products" && (
-        <>
-          <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-            {[
-              { id: "all", label: "Tất cả" },
-              { id: "fresh", label: "🌊 Hải sản tươi sống" },
-              { id: "dried", label: "🔥 Hải sản khô đóng gói" },
-            ].map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setTypeFilter(f.id)}
-                onMouseEnter={() => setHoveredFilter(f.id)}
-                onMouseLeave={() => setHoveredFilter(null)}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: 24,
-                  border: `1.5px solid ${typeFilter === f.id ? C.ocean : "transparent"}`,
-                  background:
-                    typeFilter === f.id
-                      ? C.oceanP
-                      : hoveredFilter === f.id
-                        ? "#EDF2F7"
-                        : C.white,
-                  color: typeFilter === f.id ? C.ocean : C.text,
-                  boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  transition: "all 0.2s ease",
-                }}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-
-          {loading ? (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))",
-                gap: 24,
-              }}
-            >
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="skeleton-shimmer"
-                  style={{ height: 280, borderRadius: 20 }}
-                />
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "64px 20px",
-                color: C.muted,
-                background: C.white,
-                borderRadius: 16,
-                border: `1px solid ${C.border}`,
-              }}
-            >
-              <div style={{ fontSize: 56, marginBottom: 12 }}>📭</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: C.dark }}>
-                Gian hàng hiện chưa bày bán sản phẩm nào
-              </div>
-            </div>
-          ) : (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))",
-                gap: 24,
-              }}
-            >
-              {filtered.map((p) => (
-                <ProductCard key={p.id} product={p} />
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-      {tab === "reviews" && (
-        <ReviewList sellerId={seller.id} user={user} productId={null} />
-      )}
-    </div>
-  );
-}
-</file>
-
-<file path="backend/src/controllers/admin.controller.ts">
-import { Request, Response } from "express";
-import { User } from "../models/User";
-import { Product } from "../models/Product";
-import { Review } from "../models/Review";
-import { Message } from "../models/Message";
-import { sendServerError, parseId } from "../helpers/response.helper";
-import { parsePagination, paginatedResponse } from "../utils/pagination";
-import { fillDays } from "../utils/fillDays";
-import { logger } from "../utils/logger";
-import { productService } from "../services/product.service"; // Đảm bảo đã import
-
-export async function getStats(_req: Request, res: Response) {
-  try {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-    sevenDaysAgo.setHours(0, 0, 0, 0);
-
-    const [
-      totalUsers,
-      verifiedUsers,
-      activeFresh,
-      activeDried,
-      expiredTotal,
-      reviewStats,
-      totalMessages,
-      followStats,
-      postsPerDayRaw,
-      usersPerDayRaw,
-      topSellers,
-    ] = (await Promise.all([
-      User.countDocuments({ role: { $ne: "Admin" } }),
-      User.countDocuments({ isVerified: true, role: { $ne: "Admin" } }),
-      Product.countDocuments({ status: "Active", type: "Fresh" }),
-      Product.countDocuments({ status: "Active", type: "Dried" }),
-      Product.countDocuments({ status: "Expired" }),
-      Review.aggregate([
-        {
-          $group: {
-            _id: null,
-            totalReviews: { $sum: 1 },
-            avgRating: { $avg: "$rating" },
-          },
-        },
-      ]),
-      Message.countDocuments({}),
-      User.aggregate([
-        {
-          $project: {
-            followingCount: {
-              $cond: {
-                if: { $isArray: "$following" },
-                then: { $size: "$following" },
-                else: 0,
-              },
-            },
-          },
-        },
-        { $group: { _id: null, totalFollows: { $sum: "$followingCount" } } },
-      ]),
-      Product.aggregate([
-        { $match: { createdAt: { $gte: sevenDaysAgo } } },
-        {
-          $group: {
-            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-            count: { $sum: 1 },
-          },
-        },
-        { $sort: { _id: 1 } },
-      ]),
-      User.aggregate([
-        {
-          $match: { createdAt: { $gte: sevenDaysAgo }, role: { $ne: "Admin" } },
-        },
-        {
-          $group: {
-            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-            count: { $sum: 1 },
-          },
-        },
-        { $sort: { _id: 1 } },
-      ]),
-      // TỐI ƯU HÓA: Tìm 5 seller có nhiều bài đăng nhất trước, sau đó mới kết hợp các bảng khác
-      Product.aggregate([
-        { $match: { status: { $ne: "Deleted" } } },
-        { $group: { _id: "$sellerId", postCount: { $sum: 1 } } },
-        { $sort: { postCount: -1 } },
-        { $limit: 5 },
-        {
-          $lookup: {
-            from: "users",
-            localField: "_id",
-            foreignField: "_id",
-            as: "user",
-          },
-        },
-        { $unwind: "$user" },
-        {
-          $lookup: {
-            from: "reviews",
-            localField: "_id",
-            foreignField: "sellerId",
-            as: "reviewsList",
-          },
-        },
-        {
-          $project: {
-            id: "$_id",
-            name: "$user.name",
-            isVerified: { $cond: ["$user.isVerified", 1, 0] },
-            postCount: 1,
-            avgRating: { $ifNull: [{ $avg: "$reviewsList.rating" }, 0] },
-          },
-        },
-      ]),
-    ])) as any[];
-
-    const formattedPostsPerDay = postsPerDayRaw.map((p: any) => ({
-      date: p._id,
-      count: p.count,
-    }));
-    const formattedUsersPerDay = usersPerDayRaw.map((u: any) => ({
-      date: u._id,
-      count: u.count,
-    }));
-
-    return res.json({
-      totalUsers,
-      verifiedUsers,
-      activeFresh,
-      activeDried,
-      expiredTotal,
-      totalReviews: reviewStats[0]?.totalReviews || 0,
-      avgRating: reviewStats[0]?.avgRating
-        ? Math.round(reviewStats[0].avgRating * 10) / 10
-        : 0,
-      totalMessages,
-      totalFollows: followStats[0]?.totalFollows || 0,
-      postsPerDay: fillDays(formattedPostsPerDay as any),
-      usersPerDay: fillDays(formattedUsersPerDay as any),
-      topSellers,
-    });
-  } catch (err) {
-    logger.error(`getStats error: ${err instanceof Error ? err.message : err}`);
-    return sendServerError(res, err);
-  }
-}
-
-export async function listUsers(req: Request, res: Response) {
-  const { page, limit, offset } = parsePagination(
-    req.query.page as string,
-    req.query.limit as string,
-  );
-  const search = ((req.query.search as string) || "").trim();
-
-  try {
-    const filter: any = {};
-    if (search) {
-      filter.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-      ];
-    }
-
-    const total = await User.countDocuments(filter);
-    const users = await User.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(offset)
-      .limit(limit);
-
-    const userIds = users.map((u) => u._id);
-    const postCountAgg = await Product.aggregate([
-      { $match: { sellerId: { $in: userIds } } },
-      { $group: { _id: "$sellerId", count: { $sum: 1 } } },
-    ]);
-    const postCountMap = new Map<string, number>(
-      postCountAgg.map((p: any) => [p._id.toString(), p.count as number]),
-    );
-
-    const formattedRows = users.map((u) => ({
-      id: u._id.toString(),
-      name: u.name,
-      email: u.email,
-      role: u.role,
-      isActive: u.isActive ? 1 : 0,
-      isVerified: u.isVerified ? 1 : 0,
-      postCount: postCountMap.get(u._id.toString()) || 0,
-    }));
-
-    return res.json(paginatedResponse(formattedRows, total, page, limit));
-  } catch (err) {
-    logger.error(
-      `listUsers error: ${err instanceof Error ? err.message : err}`,
-    );
-    return sendServerError(res, err);
-  }
-}
-
-export async function toggleUser(req: Request, res: Response) {
-  const id = parseId(req.params.id);
-  if (!id)
-    return res.status(400).json({ message: "ID người dùng không hợp lệ" });
-
-  try {
-    const user = await User.findById(id);
-    if (!user)
-      return res.status(404).json({ message: "Không tìm thấy người dùng" });
-
-    user.isActive = !user.isActive;
-    await user.save();
-
-    logger.info(`Admin toggled UserID=${id} active state to ${user.isActive}`);
-    return res.json({ isActive: user.isActive });
-  } catch (err) {
-    logger.error(
-      `toggleUser error: ${err instanceof Error ? err.message : err}`,
-    );
-    return sendServerError(res, err);
-  }
-}
-
-export async function verifyUser(req: Request, res: Response) {
-  const id = parseId(req.params.id);
-  if (!id)
-    return res.status(400).json({ message: "ID người dùng không hợp lệ" });
-
-  try {
-    const user = await User.findById(id);
-    if (!user)
-      return res.status(404).json({ message: "Không tìm thấy người dùng" });
-
-    user.isVerified = !user.isVerified;
-    await user.save();
-
-    logger.info(
-      `Admin toggled UserID=${id} verification state to ${user.isVerified}`,
-    );
-    return res.json({
-      isVerified: user.isVerified,
-      message: user.isVerified
-        ? "Đã xác minh tài khoản"
-        : "Đã thu hồi xác minh",
-    });
-  } catch (err) {
-    logger.error(
-      `verifyUser error: ${err instanceof Error ? err.message : err}`,
-    );
-    return sendServerError(res, err);
-  }
-}
-
-export async function listAllProducts(req: Request, res: Response) {
-  const { page, limit, offset } = parsePagination(
-    req.query.page as string,
-    req.query.limit as string,
-  );
-  const search = ((req.query.search as string) || "").trim();
-  const status = (req.query.status as string) || "";
-
-  try {
-    const filter: any = {};
-    if (status) {
-      filter.status = status;
-    }
-    if (search) {
-      const matchingUsers = await User.find({
-        name: { $regex: search, $options: "i" },
-      })
-        .select("_id")
-        .limit(100);
-      const userIds = matchingUsers.map((u) => u._id);
-
-      filter.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { sellerId: { $in: userIds } },
-      ];
-    }
-
-    const total = await Product.countDocuments(filter);
-    const products = await Product.find(filter)
-      .populate("sellerId", "name email")
-      .sort({ createdAt: -1 })
-      .skip(offset)
-      .limit(limit);
-
-    const rows = products.map((p: any) => ({
-      id: p._id.toString(),
-      name: p.name,
-      type: p.type,
-      status: p.status,
-      price: p.price,
-      remainingWeight: p.remainingWeight,
-      createdAt: p.createdAt,
-      sellerName: p.sellerId?.name || "Một ngư dân",
-      sellerEmail: p.sellerId?.email || "",
-      coverImg: p.images[0] || null,
-    }));
-
-    return res.json(paginatedResponse(rows, total, page, limit));
-  } catch (err) {
-    logger.error(
-      `listAllProducts error: ${err instanceof Error ? err.message : err}`,
-    );
-    return sendServerError(res, err);
-  }
-}
-
-export async function adminDeleteProduct(req: Request, res: Response) {
-  const id = parseId(req.params.id);
-  if (!id) return res.status(400).json({ message: "ID sản phẩm không hợp lệ" });
-
-  try {
-    // 🌟 GIẢI PHÁP: Gọi trực tiếp productService.delete để thực hiện toàn bộ chuỗi dọn dẹp và giải phóng Cache!
-    await productService.delete(
-      id,
-      req.user.userId,
-      "Admin" // Truyền quyền Admin để vượt qua kiểm tra chủ sở hữu sản phẩm
-    );
-
-    logger.info(`Admin deleted ProductID=${id} and cleaned up all associated resources`);
-    return res.json({ message: "Đã xoá bài đăng và dọn dẹp tài nguyên thành công" });
-  } catch (err) {
-    logger.error(
-      `adminDeleteProduct error: ${err instanceof Error ? err.message : err}`,
-    );
-    return sendServerError(res, err);
-  }
-}
-</file>
-
 <file path="backend/src/controllers/message.controller.ts">
 import { Request, Response } from "express";
 import { Message } from "../models/Message";
@@ -16552,140 +15827,6 @@ export async function getConversations(req: Request, res: Response) {
 }
 </file>
 
-<file path="backend/src/controllers/report.controller.ts">
-import { Request, Response } from 'express';
-import { Report } from '../models/Report';
-import { Product } from '../models/Product';
-import { sendServerError, parseId } from '../helpers/response.helper';
-import { productService } from "../services/product.service";
-import { parsePagination } from '../utils/pagination';
-
-export async function createReport(req: Request, res: Response) {
-  const { userId } = req.user;
-  const productId = req.params.productId;
-  const { reason } = req.body;
-
-  if (!productId || !reason)
-    return res.status(400).json({ message: 'Thiếu thông tin' });
-
-  try {
-    // 🌟 GIẢI PHÁP NGHIỆP VỤ: Xác minh sản phẩm tồn tại và không phải của chính mình
-    const product = await Product.findOne({ _id: productId, status: { $ne: "Deleted" } });
-    if (!product) {
-      return res.status(404).json({ message: "Sản phẩm không tồn tại hoặc đã bị ẩn vĩnh viễn" });
-    }
-
-    if (product.sellerId.toString() === userId.toString()) {
-      return res.status(400).json({ message: "Bạn không thể tự gửi báo cáo sản phẩm của chính mình!" });
-    }
-
-    const existing = await Report.findOne({ reporterId: userId, productId });
-    if (existing)
-      return res.status(400).json({ message: 'Bạn đã báo cáo bài đăng này rồi' });
-
-    // Làm sạch ký tự HTML cơ bản để chống chèn mã độc
-    const cleanReason = reason.trim().replace(/<[^>]*>/g, "").slice(0, 500);
-
-    const newReport = new Report({
-      reporterId: userId,
-      productId,
-      reason: cleanReason,
-    });
-    await newReport.save();
-    return res.json({ message: 'Báo cáo đã gửi thành công' });
-  } catch (err) {
-    return sendServerError(res, err);
-  }
-}
-
-export async function getReports(req: Request, res: Response) {
-  const queryStatus = (req.query.status as string) || 'Pending';
-  if (!['Pending', 'Resolved', 'Dismissed'].includes(queryStatus)) {
-    return res.status(400).json({ message: 'Trạng thái báo cáo không hợp lệ' });
-  }
-  const status = queryStatus as 'Pending' | 'Resolved' | 'Dismissed';
-
-  // 🌟 GIẢI PHÁP: Sử dụng Helper phân trang dùng chung an toàn của dự án
-  const rawPage = typeof req.query.page === "string" ? req.query.page : undefined;
-  const rawLimit = typeof req.query.limit === "string" ? req.query.limit : undefined;
-  const { page, limit, offset } = parsePagination(rawPage, rawLimit, 100);
-
-  try {
-    const total = await Report.countDocuments({ status });
-    const reports = await Report.find({ status })
-      .populate("reporterId", "name")
-      .populate({
-        path: "productId",
-        select: "name sellerId",
-        populate: {
-          path: "sellerId",
-          select: "name"
-        }
-      })
-      .sort({ createdAt: -1 })
-      .skip(offset) // Sử dụng offset an toàn đã sửa lỗi NaN
-      .limit(limit);
-
-    const formattedRows = reports.map((r: any) => ({
-      id: r._id.toString(),
-      reason: r.reason,
-      status: r.status,
-      adminNote: r.adminNote,
-      createdAt: r.createdAt,
-      reporterName: r.reporterId?.name || "Một người dùng",
-      productName: r.productId?.name || "Sản phẩm đã bị xoá",
-      productId: r.productId?._id?.toString() || null,
-      sellerId: r.productId?.sellerId?._id?.toString() || null,
-      sellerName: r.productId?.sellerId?.name || "Một ngư dân"
-    }));
-
-    res.setHeader('X-Total-Count', total.toString());
-    res.setHeader('X-Page', page.toString());
-    res.setHeader('X-Limit', limit.toString());
-
-    return res.json(formattedRows);
-  } catch (err) {
-    return sendServerError(res, err);
-  }
-}
-
-export async function handleReport(req: Request, res: Response) {
-  const reportId = req.params.id;
-  const { action, adminNote } = req.body;
-
-  if (!reportId || !action)
-    return res.status(400).json({ message: 'Thiếu thông tin' });
-
-  if (!['resolve', 'dismiss'].includes(action)) {
-    return res.status(400).json({ message: "Hành động báo cáo không hợp lệ" });
-  }
-
-  const newStatus = action === 'resolve' ? 'Resolved' : 'Dismissed';
-  try {
-    const report = await Report.findById(reportId);
-    if (!report)
-      return res.status(404).json({ message: 'Không tìm thấy báo cáo' });
-
-    // 🌟 GIẢI PHÁP: Gọi hàm Service dọn dẹp cascade đồng bộ nếu Admin duyệt ẩn tin vi phạm
-    if (action === 'resolve' && report.productId) {
-      await productService.delete(
-        report.productId.toString(),
-        req.user.userId,
-        "Admin" // Truyền quyền Admin để vượt qua kiểm tra chủ sở hữu sản phẩm
-      );
-    }
-
-    report.status = newStatus;
-    report.adminNote = adminNote || null;
-    await report.save();
-
-    return res.json({ message: 'Đã xử lý báo cáo và dọn dẹp tài nguyên thành công!' });
-  } catch (err) {
-    return sendServerError(res, err);
-  }
-}
-</file>
-
 <file path="backend/src/controllers/review.controller.ts">
 import { Request, Response } from "express";
 import { Review } from "../models/Review";
@@ -16817,6 +15958,54 @@ export async function getReviewsBySeller(req: Request, res: Response) {
       limit,
       total,
       totalPages: Math.ceil(total / limit),
+    });
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+</file>
+
+<file path="backend/src/controllers/user.controller.ts">
+// Trong tệp: backend/src/controllers/user.controller.ts
+
+import { Request, Response } from "express";
+import { User } from "../models/User";
+import { Review } from "../models/Review"; // 🌟 GIẢI PHÁP: Import thêm Model Review
+import { sendServerError, parseId } from "../helpers/response.helper";
+
+export async function getUserPublicProfile(req: Request, res: Response) {
+  const id = parseId(req.params.id);
+  if (!id) return res.status(400).json({ message: "ID không hợp lệ" });
+
+  try {
+    const user = await User.findOne({ _id: id, isActive: true });
+    if (!user)
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
+
+    // 🌟 GIẢI PHÁP: Tính toán điểm đánh giá trung bình và số lượng review trực tiếp từ MongoDB
+    const reviewStats = await Review.aggregate([
+      { $match: { sellerId: user._id } },
+      {
+        $group: {
+          _id: null,
+          avgRating: { $avg: "$rating" },
+          totalReviews: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const avgRating = reviewStats[0]?.avgRating ? Math.round(reviewStats[0].avgRating * 10) / 10 : 0;
+    const ratingCount = reviewStats[0]?.totalReviews || 0;
+
+    return res.json({
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      isVerified: !!user.isVerified, // 🌟 Đồng bộ hóa kiểu dữ liệu boolean chuẩn
+      isPremium: !!user.isPremium,
+      createdAt: user.createdAt,
+      avgRating,    // Trả về điểm trung bình thực tế
+      ratingCount,  // Trả về tổng số lượng đánh giá thực tế
     });
   } catch (err) {
     return sendServerError(res, err);
@@ -18248,6 +17437,353 @@ export function PostListingPage({ user }) {
 }
 </file>
 
+<file path="client/my-app/src/pages/SellerProfilePage.jsx">
+/**
+ * SellerProfilePage.jsx
+ *
+ * CHANGES:
+ *   - Loại bỏ prop drilling `user`, thay thế bằng hook useAuth() trực tiếp.
+ *   - Dọn dẹp import `fmt` không còn sử dụng.
+ */
+
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { C } from "../utils/theme";
+import { api } from "../services/api";
+import { ProductCard } from "../components/ProductCard";
+import { ReviewList } from "../components/ReviewList";
+import { VerifiedBadge } from "../components/VerifiedBadge";
+import { useAuth } from "../context/AuthContext";
+
+export function SellerProfilePage({ seller }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState("products");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [hoveredFilter, setHoveredFilter] = useState(null);
+
+  useEffect(() => {
+    if (!seller?.id) {
+      navigate("/");
+      return;
+    }
+    api(`/products?sellerId=${seller.id}&limit=100`)
+      .then((data) => setProducts(data.data || []))
+      .catch(() => { })
+      .finally(() => setLoading(false));
+  }, [seller?.id, navigate]);
+
+  const filtered = products.filter((p) => {
+    if (typeFilter === "fresh") return p.type === "Fresh";
+    if (typeFilter === "dried") return p.type === "Dried";
+    return true;
+  });
+
+  const sellerName = seller?.name || products[0]?.sellerName || "...";
+  const sellerRating = seller?.avgRating ? parseFloat(seller.avgRating) : null;
+  const ratingCount = seller?.ratingCount || 0;
+  const freshCount = products.filter((p) => p.type === "Fresh").length;
+  const driedCount = products.filter((p) => p.type === "Dried").length;
+
+  if (!seller?.id) return null;
+
+  return (
+    <div
+      style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px 80px" }}
+    >
+      <button
+        onClick={() => navigate("/")}
+        style={{
+          background: C.white,
+          border: `1px solid ${C.border}`,
+          color: C.ocean,
+          cursor: "pointer",
+          fontWeight: 700,
+          fontSize: 13,
+          marginBottom: 20,
+          padding: "8px 16px",
+          borderRadius: 10,
+          fontFamily: "inherit",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+          transition: "all 0.2s ease",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = "#F1F5F9";
+          e.currentTarget.style.borderColor = C.ocean;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = C.white;
+          e.currentTarget.style.borderColor = C.border;
+        }}
+      >
+        ⟨ Quay lại trang chủ
+      </button>
+
+      <div
+        style={{
+          background: C.white,
+          borderRadius: 20,
+          border: `1px solid ${C.border}`,
+          overflow: "hidden",
+          marginBottom: 28,
+          boxShadow: "0 10px 25px -5px rgba(11, 79, 108, 0.04)",
+        }}
+      >
+        <div
+          style={{
+            height: 110,
+            background: `linear-gradient(135deg, #0B4F6C 0%, #1A7FA0 100%)`,
+            position: "relative",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              bottom: -28,
+              left: 28,
+              width: 64,
+              height: 64,
+              borderRadius: "50%",
+              background: C.coral,
+              border: "3px solid #fff",
+              display: "flex",
+              alignItems: "center",
+              justifycontent: "center",
+              fontSize: 30,
+              boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
+              zIndex: 3,
+            }}
+          >
+            🧑‍🌾
+          </div>
+        </div>
+
+        <div style={{ padding: "44px 28px 24px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              flexWrap: "wrap",
+              gap: 16,
+            }}
+          >
+            <div>
+              <h1
+                style={{
+                  margin: "0 0 8px",
+                  fontSize: 24,
+                  fontWeight: 800,
+                  color: C.dark,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                {sellerName}
+                {seller?.isVerified && <VerifiedBadge size="md" showLabel />}
+                {seller?.isPremium && (
+                  <span
+                    title="Thành viên Premium uy tín"
+                    style={{
+                      fontSize: 18,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      cursor: "help"
+                    }}
+                  >
+                    👑
+                  </span>
+                )}
+              </h1>
+              {sellerRating !== null && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ color: "#F59E0B", fontSize: 16 }}>
+                    {"★".repeat(Math.round(sellerRating))}
+                    {"☆".repeat(5 - Math.round(sellerRating))}
+                  </span>
+                  <span
+                    style={{ fontSize: 14, fontWeight: 800, color: C.dark }}
+                  >
+                    {sellerRating.toFixed(1)}
+                  </span>
+                  <span
+                    style={{ fontSize: 13, color: C.muted, fontWeight: 500 }}
+                  >
+                    ({ratingCount} lượt đánh giá tin cậy)
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              {[
+                { label: "Mẻ đang đăng", value: products.length, emoji: "📦" },
+                { label: "Hải sản tươi", value: freshCount, emoji: "🌊" },
+                { label: "Đồ khô đóng gói", value: driedCount, emoji: "🔥" },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  style={{
+                    textAlign: "center",
+                    padding: "10px 18px",
+                    background: "#F8FAFC",
+                    borderRadius: 12,
+                    border: "1px solid #F1F5F9",
+                    minWidth: 90,
+                  }}
+                >
+                  <div style={{ fontSize: 22, marginBottom: 2 }}>{s.emoji}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: C.dark }}>
+                    {s.value}
+                  </div>
+                  <div
+                    style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}
+                  >
+                    {s.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: 4,
+          background: "#E2E8F0",
+          borderRadius: 12,
+          padding: 4,
+          width: "fit-content",
+          marginBottom: 24,
+        }}
+      >
+        {[
+          ["products", "📦 Gian hàng hải sản"],
+          ["reviews", "⭐ Lượt đánh giá"],
+        ].map(([k, l]) => (
+          <button
+            key={k}
+            onClick={() => setTab(k)}
+            style={{
+              padding: "10px 22px",
+              borderRadius: 10,
+              border: "none",
+              cursor: "pointer",
+              fontWeight: 700,
+              fontSize: 13,
+              fontFamily: "inherit",
+              background: tab === k ? C.white : "transparent",
+              color: tab === k ? C.ocean : C.muted,
+              boxShadow: tab === k ? "0 4px 10px rgba(0,0,0,0.06)" : "none",
+              transition: "all 0.2s ease",
+            }}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+
+      {tab === "products" && (
+        <>
+          <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+            {[
+              { id: "all", label: "Tất cả" },
+              { id: "fresh", label: "🌊 Hải sản tươi sống" },
+              { id: "dried", label: "🔥 Hải sản khô đóng gói" },
+            ].map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setTypeFilter(f.id)}
+                onMouseEnter={() => setHoveredFilter(f.id)}
+                onMouseLeave={() => setHoveredFilter(null)}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 24,
+                  border: `1.5px solid ${typeFilter === f.id ? C.ocean : "transparent"}`,
+                  background:
+                    typeFilter === f.id
+                      ? C.oceanP
+                      : hoveredFilter === f.id
+                        ? "#EDF2F7"
+                        : C.white,
+                  color: typeFilter === f.id ? C.ocean : C.text,
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {loading ? (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))",
+                gap: 24,
+              }}
+            >
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="skeleton-shimmer"
+                  style={{ height: 280, borderRadius: 20 }}
+                />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "64px 20px",
+                color: C.muted,
+                background: C.white,
+                borderRadius: 16,
+                border: `1px solid ${C.border}`,
+              }}
+            >
+              <div style={{ fontSize: 56, marginBottom: 12 }}>📭</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: C.dark }}>
+                Gian hàng hiện chưa bày bán sản phẩm nào
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))",
+                gap: 24,
+              }}
+            >
+              {filtered.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {tab === "reviews" && (
+        <ReviewList sellerId={seller.id} user={user} productId={null} />
+      )}
+    </div>
+  );
+}
+</file>
+
 <file path="client/my-app/src/services/api.js">
 const getCookie = (name) => {
   if (typeof document === "undefined") return null;
@@ -18389,6 +17925,336 @@ EMAIL_USER=daudaubut@gmail.com
 EMAIL_PASS=uezd tktc qysj jlpo
 </file>
 
+<file path="backend/src/controllers/admin.controller.ts">
+import { Request, Response } from "express";
+import { User } from "../models/User";
+import { Product } from "../models/Product";
+import { Review } from "../models/Review";
+import { Message } from "../models/Message";
+import { sendServerError, parseId } from "../helpers/response.helper";
+import { parsePagination, paginatedResponse } from "../utils/pagination";
+import { fillDays } from "../utils/fillDays";
+import { logger } from "../utils/logger";
+import { productService } from "../services/product.service"; // Đảm bảo đã import
+
+export async function getStats(_req: Request, res: Response) {
+  try {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const [
+      totalUsers,
+      verifiedUsers,
+      activeFresh,
+      activeDried,
+      expiredTotal,
+      reviewStats,
+      totalMessages,
+      followStats,
+      postsPerDayRaw,
+      usersPerDayRaw,
+      topSellers,
+    ] = (await Promise.all([
+      User.countDocuments({ role: { $ne: "Admin" } }),
+      User.countDocuments({ isVerified: true, role: { $ne: "Admin" } }),
+      Product.countDocuments({ status: "Active", type: "Fresh" }),
+      Product.countDocuments({ status: "Active", type: "Dried" }),
+      Product.countDocuments({ status: "Expired" }),
+      Review.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalReviews: { $sum: 1 },
+            avgRating: { $avg: "$rating" },
+          },
+        },
+      ]),
+      Message.countDocuments({}),
+      User.aggregate([
+        {
+          $project: {
+            followingCount: {
+              $cond: {
+                if: { $isArray: "$following" },
+                then: { $size: "$following" },
+                else: 0,
+              },
+            },
+          },
+        },
+        { $group: { _id: null, totalFollows: { $sum: "$followingCount" } } },
+      ]),
+      Product.aggregate([
+        { $match: { createdAt: { $gte: sevenDaysAgo } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      User.aggregate([
+        {
+          $match: { createdAt: { $gte: sevenDaysAgo }, role: { $ne: "Admin" } },
+        },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      // TỐI ƯU HÓA: Tìm 5 seller có nhiều bài đăng nhất trước, sau đó mới kết hợp các bảng khác
+      Product.aggregate([
+        { $match: { status: { $ne: "Deleted" } } },
+        { $group: { _id: "$sellerId", postCount: { $sum: 1 } } },
+        { $sort: { postCount: -1 } },
+        { $limit: 5 },
+        {
+          $lookup: {
+            from: "users",
+            localField: "_id",
+            foreignField: "_id",
+            as: "user",
+          },
+        },
+        { $unwind: "$user" },
+        {
+          $lookup: {
+            from: "reviews",
+            localField: "_id",
+            foreignField: "sellerId",
+            as: "reviewsList",
+          },
+        },
+        {
+          $project: {
+            id: "$_id",
+            name: "$user.name",
+            isVerified: { $cond: ["$user.isVerified", 1, 0] },
+            postCount: 1,
+            avgRating: { $ifNull: [{ $avg: "$reviewsList.rating" }, 0] },
+          },
+        },
+      ]),
+    ])) as any[];
+
+    const formattedPostsPerDay = postsPerDayRaw.map((p: any) => ({
+      date: p._id,
+      count: p.count,
+    }));
+    const formattedUsersPerDay = usersPerDayRaw.map((u: any) => ({
+      date: u._id,
+      count: u.count,
+    }));
+
+    return res.json({
+      totalUsers,
+      verifiedUsers,
+      activeFresh,
+      activeDried,
+      expiredTotal,
+      totalReviews: reviewStats[0]?.totalReviews || 0,
+      avgRating: reviewStats[0]?.avgRating
+        ? Math.round(reviewStats[0].avgRating * 10) / 10
+        : 0,
+      totalMessages,
+      totalFollows: followStats[0]?.totalFollows || 0,
+      postsPerDay: fillDays(formattedPostsPerDay as any),
+      usersPerDay: fillDays(formattedUsersPerDay as any),
+      topSellers,
+    });
+  } catch (err) {
+    logger.error(`getStats error: ${err instanceof Error ? err.message : err}`);
+    return sendServerError(res, err);
+  }
+}
+
+export async function listUsers(req: Request, res: Response) {
+  const { page, limit, offset } = parsePagination(
+    req.query.page as string,
+    req.query.limit as string,
+  );
+  const search = ((req.query.search as string) || "").trim();
+
+  try {
+    const filter: any = {};
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const total = await User.countDocuments(filter);
+    const users = await User.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(offset)
+      .limit(limit);
+
+    const userIds = users.map((u) => u._id);
+    const postCountAgg = await Product.aggregate([
+      { $match: { sellerId: { $in: userIds } } },
+      { $group: { _id: "$sellerId", count: { $sum: 1 } } },
+    ]);
+    const postCountMap = new Map<string, number>(
+      postCountAgg.map((p: any) => [p._id.toString(), p.count as number]),
+    );
+
+    const formattedRows = users.map((u) => ({
+      id: u._id.toString(),
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      isActive: u.isActive ? 1 : 0,
+      isVerified: u.isVerified ? 1 : 0,
+      postCount: postCountMap.get(u._id.toString()) || 0,
+    }));
+
+    return res.json(paginatedResponse(formattedRows, total, page, limit));
+  } catch (err) {
+    logger.error(
+      `listUsers error: ${err instanceof Error ? err.message : err}`,
+    );
+    return sendServerError(res, err);
+  }
+}
+
+export async function toggleUser(req: Request, res: Response) {
+  const id = parseId(req.params.id);
+  if (!id)
+    return res.status(400).json({ message: "ID người dùng không hợp lệ" });
+
+  try {
+    const user = await User.findById(id);
+    if (!user)
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
+
+    user.isActive = !user.isActive;
+    await user.save();
+
+    logger.info(`Admin toggled UserID=${id} active state to ${user.isActive}`);
+    return res.json({ isActive: user.isActive });
+  } catch (err) {
+    logger.error(
+      `toggleUser error: ${err instanceof Error ? err.message : err}`,
+    );
+    return sendServerError(res, err);
+  }
+}
+
+export async function verifyUser(req: Request, res: Response) {
+  const id = parseId(req.params.id);
+  if (!id)
+    return res.status(400).json({ message: "ID người dùng không hợp lệ" });
+
+  try {
+    const user = await User.findById(id);
+    if (!user)
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
+
+    user.isVerified = !user.isVerified;
+    await user.save();
+
+    logger.info(
+      `Admin toggled UserID=${id} verification state to ${user.isVerified}`,
+    );
+    return res.json({
+      isVerified: user.isVerified,
+      message: user.isVerified
+        ? "Đã xác minh tài khoản"
+        : "Đã thu hồi xác minh",
+    });
+  } catch (err) {
+    logger.error(
+      `verifyUser error: ${err instanceof Error ? err.message : err}`,
+    );
+    return sendServerError(res, err);
+  }
+}
+
+export async function listAllProducts(req: Request, res: Response) {
+  const { page, limit, offset } = parsePagination(
+    req.query.page as string,
+    req.query.limit as string,
+  );
+  const search = ((req.query.search as string) || "").trim();
+  const status = (req.query.status as string) || "";
+
+  try {
+    const filter: any = {};
+    if (status) {
+      filter.status = status;
+    }
+    if (search) {
+      const matchingUsers = await User.find({
+        name: { $regex: search, $options: "i" },
+      })
+        .select("_id")
+        .limit(100);
+      const userIds = matchingUsers.map((u) => u._id);
+
+      filter.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { sellerId: { $in: userIds } },
+      ];
+    }
+
+    const total = await Product.countDocuments(filter);
+    const products = await Product.find(filter)
+      .populate("sellerId", "name email")
+      .sort({ createdAt: -1 })
+      .skip(offset)
+      .limit(limit);
+
+    const rows = products.map((p: any) => ({
+      id: p._id.toString(),
+      name: p.name,
+      type: p.type,
+      status: p.status,
+      price: p.price,
+      remainingWeight: p.remainingWeight,
+      createdAt: p.createdAt,
+      sellerName: p.sellerId?.name || "Một ngư dân",
+      sellerEmail: p.sellerId?.email || "",
+      coverImg: p.images[0] || null,
+    }));
+
+    return res.json(paginatedResponse(rows, total, page, limit));
+  } catch (err) {
+    logger.error(
+      `listAllProducts error: ${err instanceof Error ? err.message : err}`,
+    );
+    return sendServerError(res, err);
+  }
+}
+
+export async function adminDeleteProduct(req: Request, res: Response) {
+  const id = parseId(req.params.id);
+  if (!id) return res.status(400).json({ message: "ID sản phẩm không hợp lệ" });
+
+  try {
+    // 🌟 GIẢI PHÁP: Gọi trực tiếp productService.delete để thực hiện toàn bộ chuỗi dọn dẹp và giải phóng Cache!
+    await productService.delete(
+      id,
+      req.user.userId,
+      "Admin" // Truyền quyền Admin để vượt qua kiểm tra chủ sở hữu sản phẩm
+    );
+
+    logger.info(`Admin deleted ProductID=${id} and cleaned up all associated resources`);
+    return res.json({ message: "Đã xoá bài đăng và dọn dẹp tài nguyên thành công" });
+  } catch (err) {
+    logger.error(
+      `adminDeleteProduct error: ${err instanceof Error ? err.message : err}`,
+    );
+    return sendServerError(res, err);
+  }
+}
+</file>
+
 <file path="backend/src/controllers/image.controller.ts">
 import { Request, Response } from 'express';
 import { Product } from '../models/Product';
@@ -18517,6 +18383,140 @@ export async function deleteImage(req: Request, res: Response) {
     }
 
     return res.json({ message: 'Đã xoá ảnh' });
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+</file>
+
+<file path="backend/src/controllers/report.controller.ts">
+import { Request, Response } from 'express';
+import { Report } from '../models/Report';
+import { Product } from '../models/Product';
+import { sendServerError, parseId } from '../helpers/response.helper';
+import { productService } from "../services/product.service";
+import { parsePagination } from '../utils/pagination';
+
+export async function createReport(req: Request, res: Response) {
+  const { userId } = req.user;
+  const productId = req.params.productId;
+  const { reason } = req.body;
+
+  if (!productId || !reason)
+    return res.status(400).json({ message: 'Thiếu thông tin' });
+
+  try {
+    // 🌟 GIẢI PHÁP NGHIỆP VỤ: Xác minh sản phẩm tồn tại và không phải của chính mình
+    const product = await Product.findOne({ _id: productId, status: { $ne: "Deleted" } });
+    if (!product) {
+      return res.status(404).json({ message: "Sản phẩm không tồn tại hoặc đã bị ẩn vĩnh viễn" });
+    }
+
+    if (product.sellerId.toString() === userId.toString()) {
+      return res.status(400).json({ message: "Bạn không thể tự gửi báo cáo sản phẩm của chính mình!" });
+    }
+
+    const existing = await Report.findOne({ reporterId: userId, productId });
+    if (existing)
+      return res.status(400).json({ message: 'Bạn đã báo cáo bài đăng này rồi' });
+
+    // Làm sạch ký tự HTML cơ bản để chống chèn mã độc
+    const cleanReason = reason.trim().replace(/<[^>]*>/g, "").slice(0, 500);
+
+    const newReport = new Report({
+      reporterId: userId,
+      productId,
+      reason: cleanReason,
+    });
+    await newReport.save();
+    return res.json({ message: 'Báo cáo đã gửi thành công' });
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+
+export async function getReports(req: Request, res: Response) {
+  const queryStatus = (req.query.status as string) || 'Pending';
+  if (!['Pending', 'Resolved', 'Dismissed'].includes(queryStatus)) {
+    return res.status(400).json({ message: 'Trạng thái báo cáo không hợp lệ' });
+  }
+  const status = queryStatus as 'Pending' | 'Resolved' | 'Dismissed';
+
+  // 🌟 GIẢI PHÁP: Sử dụng Helper phân trang dùng chung an toàn của dự án
+  const rawPage = typeof req.query.page === "string" ? req.query.page : undefined;
+  const rawLimit = typeof req.query.limit === "string" ? req.query.limit : undefined;
+  const { page, limit, offset } = parsePagination(rawPage, rawLimit, 100);
+
+  try {
+    const total = await Report.countDocuments({ status });
+    const reports = await Report.find({ status })
+      .populate("reporterId", "name")
+      .populate({
+        path: "productId",
+        select: "name sellerId",
+        populate: {
+          path: "sellerId",
+          select: "name"
+        }
+      })
+      .sort({ createdAt: -1 })
+      .skip(offset) // Sử dụng offset an toàn đã sửa lỗi NaN
+      .limit(limit);
+
+    const formattedRows = reports.map((r: any) => ({
+      id: r._id.toString(),
+      reason: r.reason,
+      status: r.status,
+      adminNote: r.adminNote,
+      createdAt: r.createdAt,
+      reporterName: r.reporterId?.name || "Một người dùng",
+      productName: r.productId?.name || "Sản phẩm đã bị xoá",
+      productId: r.productId?._id?.toString() || null,
+      sellerId: r.productId?.sellerId?._id?.toString() || null,
+      sellerName: r.productId?.sellerId?.name || "Một ngư dân"
+    }));
+
+    res.setHeader('X-Total-Count', total.toString());
+    res.setHeader('X-Page', page.toString());
+    res.setHeader('X-Limit', limit.toString());
+
+    return res.json(formattedRows);
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+
+export async function handleReport(req: Request, res: Response) {
+  const reportId = req.params.id;
+  const { action, adminNote } = req.body;
+
+  if (!reportId || !action)
+    return res.status(400).json({ message: 'Thiếu thông tin' });
+
+  if (!['resolve', 'dismiss'].includes(action)) {
+    return res.status(400).json({ message: "Hành động báo cáo không hợp lệ" });
+  }
+
+  const newStatus = action === 'resolve' ? 'Resolved' : 'Dismissed';
+  try {
+    const report = await Report.findById(reportId);
+    if (!report)
+      return res.status(404).json({ message: 'Không tìm thấy báo cáo' });
+
+    // 🌟 GIẢI PHÁP: Gọi hàm Service dọn dẹp cascade đồng bộ nếu Admin duyệt ẩn tin vi phạm
+    if (action === 'resolve' && report.productId) {
+      await productService.delete(
+        report.productId.toString(),
+        req.user.userId,
+        "Admin" // Truyền quyền Admin để vượt qua kiểm tra chủ sở hữu sản phẩm
+      );
+    }
+
+    report.status = newStatus;
+    report.adminNote = adminNote || null;
+    await report.save();
+
+    return res.json({ message: 'Đã xử lý báo cáo và dọn dẹp tài nguyên thành công!' });
   } catch (err) {
     return sendServerError(res, err);
   }
@@ -20661,12 +20661,12 @@ export function ProductDetailPage({ product: initialProduct }) {
 
 ### Bài Toán & Giải Pháp
 
-| Bài toán | Giải pháp |
-|---|---|
-| Ngư dân khó tiếp cận thị trường | Đăng bài bán trực tiếp, không qua trung gian |
-| Người mua không biết hải sản tươi ở đâu | Tìm kiếm theo GPS, lọc theo bán kính km |
-| Thiếu tin tưởng giữa hai bên | Hệ thống đánh giá (Review) & huy hiệu xác minh |
-| Liên lạc chậm, bất tiện | Real-time Chat tích hợp theo từng bài đăng |
+| Bài toán                                | Giải pháp                                      |
+| --------------------------------------- | ---------------------------------------------- |
+| Ngư dân khó tiếp cận thị trường         | Đăng bài bán trực tiếp, không qua trung gian   |
+| Người mua không biết hải sản tươi ở đâu | Tìm kiếm theo GPS, lọc theo bán kính km        |
+| Thiếu tin tưởng giữa hai bên            | Hệ thống đánh giá (Review) & huy hiệu xác minh |
+| Liên lạc chậm, bất tiện                 | Real-time Chat tích hợp theo từng bài đăng     |
 
 ### Phạm Vi Chức Năng
 
@@ -20720,6 +20720,7 @@ export function ProductDetailPage({ product: initialProduct }) {
 ### Luồng Xác Thực (Auth Flow)
 
 **Phone/Password:**
+
 ```
 [Client] → POST /api/auth/login
          ← Set-Cookie: token=<JWT>; HttpOnly; SameSite=Strict
@@ -20732,6 +20733,7 @@ export function ProductDetailPage({ product: initialProduct }) {
 ```
 
 **Google OAuth (Sign-in with Google):**
+
 ```
 [Client] → Google Identity Services (One Tap / Button)
          ← Google trả về id_token (JWT)
@@ -20744,44 +20746,46 @@ export function ProductDetailPage({ product: initialProduct }) {
 
 ## 3. Tech Stack
 
-### Backend
+### Backend — Thư viện & lý do chọn
 
-| Thư viện | Phiên bản | Vai trò |
-|---|---|---|
-| Node.js | v20+ | Runtime |
-| TypeScript | ^5.5 | Ngôn ngữ lập trình |
-| Express | ^4.19 | HTTP Framework |
-| Mongoose | ^9.6 | ODM kết nối MongoDB |
-| socket.io | ^4.7 | Real-time WebSocket |
-| jsonwebtoken | ^9.0 | Tạo & xác minh JWT |
-| bcryptjs | ^2.4 | Hash mật khẩu |
-| helmet | ^7.1 | Bảo mật HTTP Headers |
-| express-rate-limit | ^7.4 | Rate Limiting chống spam |
-| multer | ^1.4 | Xử lý file upload |
-| cloudinary | ^2.5 | Lưu trữ ảnh trên cloud |
-| node-cron | ^3.0 | Tác vụ tự động định kỳ |
-| ioredis | — | Redis client (OTP, cache) |
-| cookie-parser | ^1.4 | Đọc cookie |
+| Thư viện / Công nghệ               | Vai trò             | Lý do chọn                                                                                                                                 |
+| ---------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Node.js (v20+)                     | Runtime             | Non-blocking I/O phù hợp cho ứng dụng real-time, hệ sinh thái npm phong phú, cùng ngôn ngữ JS/TS giữa client & server giúp tăng năng suất. |
+| TypeScript                         | Ngôn ngữ            | Kiểm tra kiểu tĩnh, tăng tính an toàn khi refactor, hỗ trợ IDE thông minh, giảm lỗi runtime.                                               |
+| Express                            | HTTP framework      | Nhẹ, linh hoạt, ecosystem middleware rộng, dễ mở rộng cho REST API.                                                                        |
+| Mongoose                           | ODM cho MongoDB     | Định nghĩa schema, validation, hooks và tiện lợi cho thao tác tài liệu (documents).                                                        |
+| socket.io                          | Real-time WebSocket | Cung cấp abstraction cho WebSocket + fallback, rooms, dễ tích hợp chat/notification.                                                       |
+| jsonwebtoken (JWT)                 | Xác thực            | Hỗ trợ auth stateless kết hợp HttpOnly cookie để bảo mật.                                                                                  |
+| bcryptjs                           | Hash mật khẩu       | Mã hóa mật khẩu an toàn, thư viện đơn giản và phổ biến.                                                                                    |
+| helmet, express-rate-limit         | Bảo mật             | Cải thiện HTTP headers, chống brute-force và các tấn công cơ bản.                                                                          |
+| multer, streamifier                | File upload         | Xử lý upload an toàn, stream ảnh trực tiếp lên Cloudinary để giảm I/O trên server.                                                         |
+| cloudinary                         | Lưu ảnh & CDN       | Xử lý ảnh (resize, format), CDN giảm tải cho backend và tăng tốc tải ảnh.                                                                  |
+| ioredis + @socket.io/redis-adapter | Redis & scaling     | Lưu OTP, cache, pub/sub cho socket adapter để scale nhiều instance Socket.IO.                                                              |
+| node-cron                          | Cron job            | Chạy tác vụ định kỳ (auto-expire bài đăng, báo cáo thống kê).                                                                              |
+| winston, winston-daily-rotate-file | Logging             | Ghi log có cấu trúc, rotate theo ngày hỗ trợ vận hành.                                                                                     |
 
-### Frontend
+### Frontend — Thư viện & lý do chọn
 
-| Thư viện | Phiên bản | Vai trò |
-|---|---|---|
-| React | ^19.2 | UI Framework |
-| Vite | ^8.0 | Build tool / Dev server |
-| Bootstrap | 5 | Responsive UI framework |
-| react-router-dom | ^6.30 | Client-side routing |
-| react-leaflet | ^5.0 | Hiển thị bản đồ (OpenStreetMap) |
-| Google Identity Services | CDN | Sign-in with Google / One Tap |
+| Thư viện / Công nghệ          | Vai trò               | Lý do chọn                                                                            |
+| ----------------------------- | --------------------- | ------------------------------------------------------------------------------------- |
+| React (v19)                   | UI Framework          | Component-driven giúp tái sử dụng UI, cộng đồng lớn, phù hợp app SPA.                 |
+| Vite                          | Build tool/dev server | Khởi động nhanh, HMR nhanh, thời gian build ngắn so với bundlers cũ.                  |
+| React-Leaflet (OpenStreetMap) | Bản đồ                | Hỗ trợ hiển thị vị trí sản phẩm, tìm kiếm theo bán kính, không phụ thuộc Google Maps. |
+| Bootstrap                     | UI kit                | Thiết kế responsive nhanh, dễ áp dụng layout sẵn.                                     |
+| Google Identity Services      | OAuth                 | One Tap & OAuth tiêu chuẩn giúp đăng nhập nhanh, giảm friction cho người dùng.        |
 
-### Infrastructure
+### Hạ tầng & lý do chọn
 
-| Công nghệ | Mục đích |
-|---|---|
-| MongoDB | Cơ sở dữ liệu tài liệu (NoSQL) |
-| Redis | Cache OTP, session hỗ trợ |
-| Cloudinary | CDN lưu trữ & xử lý ảnh |
-| Docker + Docker Compose | Container hóa môi trường |
+| Công nghệ               | Vai trò              | Lý do chọn                                                                                                                                     |
+| ----------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| MongoDB                 | Database             | Mô hình document linh hoạt phù hợp dữ liệu sản phẩm thay đổi (images, priceHistory, location); hỗ trợ GeoJSON & tìm kiếm văn bản (text index). |
+| Redis                   | Cache / OTP / PubSub | Lưu trữ tạm thời (OTP), cache kết quả truy vấn, pub/sub giúp scale Socket.IO.                                                                  |
+| Cloudinary              | Image CDN            | Tối ưu hóa ảnh, bảo mật public_id, delivery qua CDN.                                                                                           |
+| Docker + Docker Compose | Container            | Tái tạo môi trường dev/test dễ dàng, triển khai nhất quán giữa máy dev và server.                                                              |
+
+### Tóm tắt lý do phối hợp
+
+Node.js + MongoDB phù hợp cho workload real-time, nhiều kết nối đồng thời, và dữ liệu bán cấu trúc (hải sản có nhiều thuộc tính khác nhau). Redis làm nhiệm vụ giảm độ trễ cho OTP và scale giao tiếp realtime; Cloudinary giảm bẩn tải backend từ xử lý ảnh. TypeScript xuyên suốt giúp giảm lỗi và tăng tốc phát triển tính năng.
 
 ---
 
@@ -20891,61 +20895,65 @@ User ──< Product ──< ProductImage
 ### Collections Chi Tiết
 
 #### `users`
-| Field | Kiểu | Mô tả |
-|---|---|---|
-| `_id` | ObjectId | Khóa chính |
-| `name` | String | Họ tên |
-| `phone` | String (unique) | Số điện thoại (đăng nhập truyền thống) |
-| `googleId` | String | Google Account ID (OAuth) |
-| `email` | String | Email (Google OAuth) |
-| `passwordHash` | String | Mật khẩu đã hash (bcrypt) |
-| `role` | `'User'` \| `'Admin'` | Vai trò, mặc định `'User'` |
-| `isActive` | Boolean | Tài khoản còn hoạt động (Admin toggle) |
-| `isVerified` | Boolean | Huy hiệu xác minh (Admin cấp) |
-| `avatar` | String | URL ảnh đại diện (Cloudinary) |
-| `createdAt` | Date | Thời điểm đăng ký |
+
+| Field          | Kiểu                  | Mô tả                                  |
+| -------------- | --------------------- | -------------------------------------- |
+| `_id`          | ObjectId              | Khóa chính                             |
+| `name`         | String                | Họ tên                                 |
+| `phone`        | String (unique)       | Số điện thoại (đăng nhập truyền thống) |
+| `googleId`     | String                | Google Account ID (OAuth)              |
+| `email`        | String                | Email (Google OAuth)                   |
+| `passwordHash` | String                | Mật khẩu đã hash (bcrypt)              |
+| `role`         | `'User'` \| `'Admin'` | Vai trò, mặc định `'User'`             |
+| `isActive`     | Boolean               | Tài khoản còn hoạt động (Admin toggle) |
+| `isVerified`   | Boolean               | Huy hiệu xác minh (Admin cấp)          |
+| `avatar`       | String                | URL ảnh đại diện (Cloudinary)          |
+| `createdAt`    | Date                  | Thời điểm đăng ký                      |
 
 #### `products`
-| Field | Kiểu | Mô tả |
-|---|---|---|
-| `_id` | ObjectId | Khóa chính |
-| `sellerId` | ObjectId → User | Người bán |
-| `type` | `'Fresh'` \| `'Dried'` | Hải sản tươi / khô |
-| `name` | String | Tên sản phẩm |
-| `description` | String | Mô tả |
-| `price` | Number | Giá (VND/kg) |
-| `salesType` | `'Retail'` \| `'Wholesale'` | Bán lẻ / bán sỉ |
-| `totalWeight` | Number | Tổng trọng lượng (kg) |
-| `remainingWeight` | Number | Còn lại (kg) |
-| `status` | `'Active'` \| `'Expired'` \| `'Deleted'` | Trạng thái bài đăng |
-| `catchTime` | Date | *(Tươi)* Thời điểm đánh bắt/cập bến |
-| `location.lat` | Number | *(Tươi)* Vĩ độ GPS |
-| `location.lng` | Number | *(Tươi)* Kinh độ GPS |
-| `origin` | String | *(Khô)* Xuất xứ |
-| `expiryDate` | Date | *(Khô)* Hạn sử dụng |
-| `images` | Array\<{url, publicId}\> | Danh sách ảnh Cloudinary |
-| `bumpedAt` | Date | Thời điểm đẩy bài đăng gần nhất |
-| `createdAt` | Date | Thời điểm tạo |
+
+| Field             | Kiểu                                     | Mô tả                               |
+| ----------------- | ---------------------------------------- | ----------------------------------- |
+| `_id`             | ObjectId                                 | Khóa chính                          |
+| `sellerId`        | ObjectId → User                          | Người bán                           |
+| `type`            | `'Fresh'` \| `'Dried'`                   | Hải sản tươi / khô                  |
+| `name`            | String                                   | Tên sản phẩm                        |
+| `description`     | String                                   | Mô tả                               |
+| `price`           | Number                                   | Giá (VND/kg)                        |
+| `salesType`       | `'Retail'` \| `'Wholesale'`              | Bán lẻ / bán sỉ                     |
+| `totalWeight`     | Number                                   | Tổng trọng lượng (kg)               |
+| `remainingWeight` | Number                                   | Còn lại (kg)                        |
+| `status`          | `'Active'` \| `'Expired'` \| `'Deleted'` | Trạng thái bài đăng                 |
+| `catchTime`       | Date                                     | _(Tươi)_ Thời điểm đánh bắt/cập bến |
+| `location.lat`    | Number                                   | _(Tươi)_ Vĩ độ GPS                  |
+| `location.lng`    | Number                                   | _(Tươi)_ Kinh độ GPS                |
+| `origin`          | String                                   | _(Khô)_ Xuất xứ                     |
+| `expiryDate`      | Date                                     | _(Khô)_ Hạn sử dụng                 |
+| `images`          | Array\<{url, publicId}\>                 | Danh sách ảnh Cloudinary            |
+| `bumpedAt`        | Date                                     | Thời điểm đẩy bài đăng gần nhất     |
+| `createdAt`       | Date                                     | Thời điểm tạo                       |
 
 #### `messages`
-| Field | Kiểu | Mô tả |
-|---|---|---|
-| `productId` | ObjectId → Product | Cuộc chat gắn với bài đăng |
-| `senderId` | ObjectId → User | Người gửi |
-| `receiverId` | ObjectId → User | Người nhận |
-| `content` | String | Nội dung tin nhắn |
-| `isRead` | Boolean | Đã đọc chưa |
-| `sentAt` | Date | Thời điểm gửi |
+
+| Field        | Kiểu               | Mô tả                      |
+| ------------ | ------------------ | -------------------------- |
+| `productId`  | ObjectId → Product | Cuộc chat gắn với bài đăng |
+| `senderId`   | ObjectId → User    | Người gửi                  |
+| `receiverId` | ObjectId → User    | Người nhận                 |
+| `content`    | String             | Nội dung tin nhắn          |
+| `isRead`     | Boolean            | Đã đọc chưa                |
+| `sentAt`     | Date               | Thời điểm gửi              |
 
 #### `reviews`
-| Field | Kiểu | Mô tả |
-|---|---|---|
-| `productId` | ObjectId → Product | Sản phẩm được đánh giá |
-| `reviewerId` | ObjectId → User | Người viết đánh giá |
-| `sellerId` | ObjectId → User | Người bán được đánh giá |
-| `rating` | Number (1–5) | Số sao |
-| `comment` | String | Nội dung đánh giá |
-| `imageURL` | String | Ảnh đính kèm (Cloudinary) |
+
+| Field        | Kiểu               | Mô tả                     |
+| ------------ | ------------------ | ------------------------- |
+| `productId`  | ObjectId → Product | Sản phẩm được đánh giá    |
+| `reviewerId` | ObjectId → User    | Người viết đánh giá       |
+| `sellerId`   | ObjectId → User    | Người bán được đánh giá   |
+| `rating`     | Number (1–5)       | Số sao                    |
+| `comment`    | String             | Nội dung đánh giá         |
+| `imageURL`   | String             | Ảnh đính kèm (Cloudinary) |
 
 > **Constraint:** `UNIQUE(reviewerId, productId)` — mỗi người chỉ đánh giá một sản phẩm một lần.
 
@@ -20961,19 +20969,20 @@ User ──< Product ──< ProductImage
 
 ### 6.1 Authentication — `/api/auth`
 
-| Method | Path | Mô tả | Auth | Rate Limit |
-|---|---|---|---|---|
-| POST | `/register` | Đăng ký tài khoản mới | ❌ | 5 req/giờ/IP |
-| POST | `/login` | Đăng nhập, set HttpOnly Cookie | ❌ | 10 req/15ph/IP |
-| POST | `/google` | Đăng nhập/đăng ký qua Google OAuth | ❌ | — |
-| POST | `/logout` | Đăng xuất, xóa cookie | ✅ | — |
-| GET | `/me` | Lấy thông tin tài khoản hiện tại | ✅ | — |
-| PUT | `/profile` | Cập nhật tên, ảnh đại diện | ✅ | — |
-| POST | `/change-password` | Đổi mật khẩu | ✅ | — |
+| Method | Path               | Mô tả                              | Auth | Rate Limit     |
+| ------ | ------------------ | ---------------------------------- | ---- | -------------- |
+| POST   | `/register`        | Đăng ký tài khoản mới              | ❌   | 5 req/giờ/IP   |
+| POST   | `/login`           | Đăng nhập, set HttpOnly Cookie     | ❌   | 10 req/15ph/IP |
+| POST   | `/google`          | Đăng nhập/đăng ký qua Google OAuth | ❌   | —              |
+| POST   | `/logout`          | Đăng xuất, xóa cookie              | ✅   | —              |
+| GET    | `/me`              | Lấy thông tin tài khoản hiện tại   | ✅   | —              |
+| PUT    | `/profile`         | Cập nhật tên, ảnh đại diện         | ✅   | —              |
+| POST   | `/change-password` | Đổi mật khẩu                       | ✅   | —              |
 
 #### Request Bodies
 
 **POST `/register`**
+
 ```json
 {
   "name": "Nguyễn Văn A",
@@ -20983,6 +20992,7 @@ User ──< Product ──< ProductImage
 ```
 
 **POST `/login`**
+
 ```json
 {
   "phone": "0901234567",
@@ -20991,6 +21001,7 @@ User ──< Product ──< ProductImage
 ```
 
 **POST `/google`**
+
 ```json
 {
   "id_token": "<Google JWT trả về từ GIS>"
@@ -20998,6 +21009,7 @@ User ──< Product ──< ProductImage
 ```
 
 **PUT `/profile`** — `multipart/form-data`
+
 ```
 name: string (tùy chọn)
 avatar: File (JPEG/PNG/WEBP, tối đa 5MB)
@@ -21007,49 +21019,49 @@ avatar: File (JPEG/PNG/WEBP, tối đa 5MB)
 
 ### 6.2 OTP — `/api/otp`
 
-| Method | Path | Mô tả | Auth |
-|---|---|---|---|
-| POST | `/send` | Gửi OTP về số điện thoại | ❌ |
-| POST | `/verify` | Xác minh OTP | ❌ |
+| Method | Path      | Mô tả                    | Auth |
+| ------ | --------- | ------------------------ | ---- |
+| POST   | `/send`   | Gửi OTP về số điện thoại | ❌   |
+| POST   | `/verify` | Xác minh OTP             | ❌   |
 
 ---
 
 ### 6.3 Products — `/api/products`
 
-| Method | Path | Mô tả | Auth |
-|---|---|---|---|
-| GET | `/` | Danh sách sản phẩm (hỗ trợ lọc đa điều kiện) | ❌ |
-| GET | `/my` | Sản phẩm của người dùng đang đăng nhập | ✅ |
-| GET | `/:id` | Chi tiết một sản phẩm | ❌ |
-| POST | `/` | Đăng bán sản phẩm mới | ✅ |
-| PUT | `/:id` | Cập nhật sản phẩm | ✅ (chủ sở hữu) |
-| DELETE | `/:id` | Xóa sản phẩm | ✅ (chủ sở hữu) |
-| POST | `/:id/bump` | Đẩy bài đăng lên đầu (cooldown 24h) | ✅ (chủ sở hữu) |
+| Method | Path        | Mô tả                                        | Auth            |
+| ------ | ----------- | -------------------------------------------- | --------------- |
+| GET    | `/`         | Danh sách sản phẩm (hỗ trợ lọc đa điều kiện) | ❌              |
+| GET    | `/my`       | Sản phẩm của người dùng đang đăng nhập       | ✅              |
+| GET    | `/:id`      | Chi tiết một sản phẩm                        | ❌              |
+| POST   | `/`         | Đăng bán sản phẩm mới                        | ✅              |
+| PUT    | `/:id`      | Cập nhật sản phẩm                            | ✅ (chủ sở hữu) |
+| DELETE | `/:id`      | Xóa sản phẩm                                 | ✅ (chủ sở hữu) |
+| POST   | `/:id/bump` | Đẩy bài đăng lên đầu (cooldown 24h)          | ✅ (chủ sở hữu) |
 
 #### Query Parameters — `GET /api/products`
 
-| Param | Kiểu | Mô tả |
-|---|---|---|
-| `type` | `Fresh` \| `Dried` | Lọc theo loại hải sản |
-| `search` | string | Full-text search tên/mô tả |
-| `lat` | number | Vĩ độ người dùng (GPS) |
-| `lng` | number | Kinh độ người dùng (GPS) |
-| `radius` | number | Bán kính tìm kiếm (km) |
-| `minPrice` | number | Giá tối thiểu (VND) |
-| `maxPrice` | number | Giá tối đa (VND) |
-| `page` | number | Trang (phân trang) |
-| `limit` | number | Số bài/trang |
+| Param      | Kiểu               | Mô tả                      |
+| ---------- | ------------------ | -------------------------- |
+| `type`     | `Fresh` \| `Dried` | Lọc theo loại hải sản      |
+| `search`   | string             | Full-text search tên/mô tả |
+| `lat`      | number             | Vĩ độ người dùng (GPS)     |
+| `lng`      | number             | Kinh độ người dùng (GPS)   |
+| `radius`   | number             | Bán kính tìm kiếm (km)     |
+| `minPrice` | number             | Giá tối thiểu (VND)        |
+| `maxPrice` | number             | Giá tối đa (VND)           |
+| `page`     | number             | Trang (phân trang)         |
+| `limit`    | number             | Số bài/trang               |
 
 ---
 
 ### 6.4 Messages — `/api/messages`
 
-| Method | Path | Mô tả | Auth |
-|---|---|---|---|
-| GET | `/unread-count` | Số tin nhắn chưa đọc | ✅ |
-| GET | `/conversations` | Danh sách tất cả hội thoại | ✅ |
-| GET | `/:productId` | Lịch sử chat của một sản phẩm | ✅ |
-| POST | `/` | Gửi tin nhắn (REST fallback) | ✅ |
+| Method | Path             | Mô tả                         | Auth |
+| ------ | ---------------- | ----------------------------- | ---- |
+| GET    | `/unread-count`  | Số tin nhắn chưa đọc          | ✅   |
+| GET    | `/conversations` | Danh sách tất cả hội thoại    | ✅   |
+| GET    | `/:productId`    | Lịch sử chat của một sản phẩm | ✅   |
+| POST   | `/`              | Gửi tin nhắn (REST fallback)  | ✅   |
 
 > **Lưu ý:** Luồng chat chính chạy qua Socket.IO. REST endpoint dùng như fallback hoặc load lịch sử.
 
@@ -21057,50 +21069,50 @@ avatar: File (JPEG/PNG/WEBP, tối đa 5MB)
 
 ### 6.5 Reviews — `/api/reviews`
 
-| Method | Path | Mô tả | Auth |
-|---|---|---|---|
-| POST | `/` | Đăng đánh giá người bán (kèm ảnh tùy chọn) | ✅ |
-| GET | `/seller/:sellerId` | Lấy tất cả đánh giá của một người bán | ❌ |
+| Method | Path                | Mô tả                                      | Auth |
+| ------ | ------------------- | ------------------------------------------ | ---- |
+| POST   | `/`                 | Đăng đánh giá người bán (kèm ảnh tùy chọn) | ✅   |
+| GET    | `/seller/:sellerId` | Lấy tất cả đánh giá của một người bán      | ❌   |
 
 ---
 
 ### 6.6 Notifications — `/api/notifications`
 
-| Method | Path | Mô tả | Auth |
-|---|---|---|---|
-| GET | `/` | Lấy danh sách thông báo | ✅ |
-| PUT | `/read` | Đánh dấu tất cả đã đọc | ✅ |
-| PATCH | `/:id` | Đánh dấu một thông báo đã đọc | ✅ |
+| Method | Path    | Mô tả                         | Auth |
+| ------ | ------- | ----------------------------- | ---- |
+| GET    | `/`     | Lấy danh sách thông báo       | ✅   |
+| PUT    | `/read` | Đánh dấu tất cả đã đọc        | ✅   |
+| PATCH  | `/:id`  | Đánh dấu một thông báo đã đọc | ✅   |
 
 ---
 
 ### 6.7 Follow — `/api/follows`
 
-| Method | Path | Mô tả | Auth |
-|---|---|---|---|
-| POST | `/:sellerId` | Follow người bán | ✅ |
-| DELETE | `/:sellerId` | Unfollow người bán | ✅ |
-| GET | `/` | Danh sách người bán đang follow | ✅ |
+| Method | Path         | Mô tả                           | Auth |
+| ------ | ------------ | ------------------------------- | ---- |
+| POST   | `/:sellerId` | Follow người bán                | ✅   |
+| DELETE | `/:sellerId` | Unfollow người bán              | ✅   |
+| GET    | `/`          | Danh sách người bán đang follow | ✅   |
 
 ---
 
 ### 6.8 Favorites — `/api/favorites`
 
-| Method | Path | Mô tả | Auth |
-|---|---|---|---|
-| POST | `/:productId` | Thêm vào yêu thích | ✅ |
-| DELETE | `/:productId` | Xóa khỏi yêu thích | ✅ |
-| GET | `/` | Danh sách bài đăng yêu thích | ✅ |
+| Method | Path          | Mô tả                        | Auth |
+| ------ | ------------- | ---------------------------- | ---- |
+| POST   | `/:productId` | Thêm vào yêu thích           | ✅   |
+| DELETE | `/:productId` | Xóa khỏi yêu thích           | ✅   |
+| GET    | `/`           | Danh sách bài đăng yêu thích | ✅   |
 
 ---
 
 ### 6.9 Reports — `/api/reports`
 
-| Method | Path | Mô tả | Auth |
-|---|---|---|---|
-| POST | `/:productId` | Tạo báo cáo vi phạm | ✅ |
-| GET | `/` | Xem danh sách báo cáo | ✅ Admin only |
-| PATCH | `/:id` | Xử lý báo cáo (resolve/dismiss) | ✅ Admin only |
+| Method | Path          | Mô tả                           | Auth          |
+| ------ | ------------- | ------------------------------- | ------------- |
+| POST   | `/:productId` | Tạo báo cáo vi phạm             | ✅            |
+| GET    | `/`           | Xem danh sách báo cáo           | ✅ Admin only |
+| PATCH  | `/:id`        | Xử lý báo cáo (resolve/dismiss) | ✅ Admin only |
 
 ---
 
@@ -21108,14 +21120,14 @@ avatar: File (JPEG/PNG/WEBP, tối đa 5MB)
 
 > **Yêu cầu:** `role = 'Admin'` — toàn bộ các endpoint dưới đây đều bị chặn nếu không phải Admin.
 
-| Method | Path | Mô tả |
-|---|---|---|
-| GET | `/stats` | Thống kê tổng quan (users, products, reports...) |
-| GET | `/users` | Danh sách tất cả người dùng |
-| PATCH | `/users/:id/toggle` | Kích hoạt / vô hiệu hóa tài khoản |
-| PATCH | `/users/:id/verify` | Cấp huy hiệu xác minh cho người bán |
-| GET | `/listings` | Danh sách tất cả bài đăng |
-| DELETE | `/listings/:id` | Xóa bài đăng vi phạm |
+| Method | Path                | Mô tả                                            |
+| ------ | ------------------- | ------------------------------------------------ |
+| GET    | `/stats`            | Thống kê tổng quan (users, products, reports...) |
+| GET    | `/users`            | Danh sách tất cả người dùng                      |
+| PATCH  | `/users/:id/toggle` | Kích hoạt / vô hiệu hóa tài khoản                |
+| PATCH  | `/users/:id/verify` | Cấp huy hiệu xác minh cho người bán              |
+| GET    | `/listings`         | Danh sách tất cả bài đăng                        |
+| DELETE | `/listings/:id`     | Xóa bài đăng vi phạm                             |
 
 ---
 
@@ -21126,19 +21138,19 @@ avatar: File (JPEG/PNG/WEBP, tối đa 5MB)
 
 #### Client → Server
 
-| Event | Payload | Mô tả |
-|---|---|---|
-| `join_room` | `{ productId: string }` | Tham gia phòng chat của sản phẩm |
-| `leave_room` | `{ productId: string }` | Rời khỏi phòng chat |
-| `send_message` | `{ productId, receiverId, content }` | Gửi tin nhắn |
+| Event          | Payload                              | Mô tả                            |
+| -------------- | ------------------------------------ | -------------------------------- |
+| `join_room`    | `{ productId: string }`              | Tham gia phòng chat của sản phẩm |
+| `leave_room`   | `{ productId: string }`              | Rời khỏi phòng chat              |
+| `send_message` | `{ productId, receiverId, content }` | Gửi tin nhắn                     |
 
 #### Server → Client
 
-| Event | Payload | Mô tả |
-|---|---|---|
-| `receive_message` | `{ message object }` | Nhận tin nhắn mới |
-| `new_notification` | `{ notification object }` | Nhận thông báo mới |
-| `unread_count` | `{ count: number }` | Cập nhật số tin nhắn chưa đọc |
+| Event              | Payload                   | Mô tả                         |
+| ------------------ | ------------------------- | ----------------------------- |
+| `receive_message`  | `{ message object }`      | Nhận tin nhắn mới             |
+| `new_notification` | `{ notification object }` | Nhận thông báo mới            |
+| `unread_count`     | `{ count: number }`       | Cập nhật số tin nhắn chưa đọc |
 
 ---
 
@@ -21153,6 +21165,7 @@ JWT token được lưu trong cookie với cờ `HttpOnly` và `SameSite=Strict`
 Khi server trả về response, nó set thêm một cookie `csrf_token` (không HttpOnly, có thể đọc bởi JS). Với mọi request mutation, frontend đọc cookie đó và đính kèm vào header `X-CSRF-Token`. Backend so sánh giá trị header với cookie — nếu không khớp trả về `403 Forbidden`.
 
 **Các endpoint miễn CSRF** (public, chỉ GET hoặc không cần auth):
+
 - `POST /api/auth/login`
 - `POST /api/auth/register`
 - `POST /api/auth/google`
@@ -21161,16 +21174,17 @@ Khi server trả về response, nó set thêm một cookie `csrf_token` (không 
 
 ### 7.3 Rate Limiting
 
-| Phạm vi | Giới hạn | Mục đích |
-|---|---|---|
-| Toàn bộ `/api/*` | 100 req / 15 phút / IP | Chống spam API |
-| `POST /api/auth/login` | 10 req / 15 phút / IP | Chống brute-force mật khẩu |
-| `POST /api/auth/register` | 5 req / giờ / IP | Chống tạo tài khoản hàng loạt |
-| `POST /:id/bump` | Cooldown 24h / bài | Logic trong controller |
+| Phạm vi                   | Giới hạn               | Mục đích                      |
+| ------------------------- | ---------------------- | ----------------------------- |
+| Toàn bộ `/api/*`          | 100 req / 15 phút / IP | Chống spam API                |
+| `POST /api/auth/login`    | 10 req / 15 phút / IP  | Chống brute-force mật khẩu    |
+| `POST /api/auth/register` | 5 req / giờ / IP       | Chống tạo tài khoản hàng loạt |
+| `POST /:id/bump`          | Cooldown 24h / bài     | Logic trong controller        |
 
 ### 7.4 Upload Validation
 
 Multer middleware kiểm tra chặt chẽ:
+
 - Định dạng cho phép: JPEG, PNG, WEBP (từ chối các định dạng khác)
 - Dung lượng tối đa: 5MB mỗi ảnh
 - Số lượng tối đa: 5 ảnh mỗi request
@@ -21182,6 +21196,7 @@ Khi người dùng đăng nhập bằng Google, `id_token` được gửi lên s
 ### 7.6 Helmet Security Headers
 
 Helmet tự động thiết lập các HTTP security headers:
+
 - `X-Content-Type-Options: nosniff`
 - `X-Frame-Options: DENY`
 - `Strict-Transport-Security`
@@ -21258,12 +21273,12 @@ docker compose up -d
 
 ### Các Container
 
-| Container | Image | Port | Chú thích |
-|---|---|---|---|
-| `seafood_mongo` | `mongo:latest` | 27017 | MongoDB database |
-| `seafood_redis` | `redis:7-alpine` | 6379 | Redis cache |
-| `seafood_backend` | Node.js build | 5000 | Express + Socket.IO |
-| `seafood_frontend` | Node.js build | 3000 | React dev server |
+| Container          | Image            | Port  | Chú thích           |
+| ------------------ | ---------------- | ----- | ------------------- |
+| `seafood_mongo`    | `mongo:latest`   | 27017 | MongoDB database    |
+| `seafood_redis`    | `redis:7-alpine` | 6379  | Redis cache         |
+| `seafood_backend`  | Node.js build    | 5000  | Express + Socket.IO |
+| `seafood_frontend` | Node.js build    | 3000  | React dev server    |
 
 > **Lưu ý:** Trong môi trường Docker, backend nhận `MONGO_URI=mongodb://db:27017/seafood_db` và `REDIS_HOST=redis` — dùng tên service thay vì `localhost`.
 
@@ -21271,7 +21286,7 @@ docker compose up -d
 
 ```yaml
 volumes:
-  mongo_data:  # Dữ liệu MongoDB không bị mất khi restart container
+  mongo_data: # Dữ liệu MongoDB không bị mất khi restart container
 ```
 
 ### Xem Logs
@@ -21317,6 +21332,7 @@ Xác thực Socket.IO: server đọc cookie `token` từ handshake request, xác
 ### 10.5 Google Sign-in (One Tap & Button)
 
 Frontend tích hợp **Google Identity Services** (GIS):
+
 - **One Tap**: tự động hiện popup chọn tài khoản Google đang đăng nhập trên máy
 - **Sign In with Google Button**: nút đăng nhập chuẩn của Google
 
@@ -21381,6 +21397,81 @@ VITE_GOOGLE_CLIENT_ID=<your-google-client-id>.apps.googleusercontent.com
 ---
 
 ## 12. Hướng Dẫn Đóng Góp
+
+## Use Case Specifications (Đặc tả Use Case)
+
+Tài liệu này mô tả các Use Case chính của hệ thống dưới dạng actor / precondition / main flow / alternative / postcondition.
+
+- **Use Case 1 — Đăng ký / Đăng nhập bằng OTP**
+  - Actor: Guest / User
+  - Precondition: Có số điện thoại hợp lệ, không vượt quá giới hạn gửi OTP
+  - Main Flow:
+    1. Client gọi `POST /api/otp/send` với `phone`.
+    2. Server tạo mã OTP, lưu tạm vào Redis với TTL, gửi SMS qua ESMS.
+    3. Client nhập mã OTP và gọi `POST /api/otp/verify`.
+    4. Server kiểm tra mã (Redis), nếu hợp lệ tạo/đăng nhập user, cấp JWT (HttpOnly cookie) và `csrf_token` cookie.
+  - Alternative Flows: OTP sai/timeout → trả lỗi 400, giới hạn gửi vượt quá → trả 429.
+  - Postcondition: Người dùng đã đăng nhập, cookie JWT set.
+
+- **Use Case 2 — Google Sign-in (OAuth)**
+  - Actor: Guest / User
+  - Precondition: Có id_token từ Google Identity Services
+  - Main Flow:
+    1. Frontend nhận `id_token` từ Google.
+    2. Gọi `POST /api/auth/google` gửi `id_token`.
+    3. Backend xác minh token với Google, lấy thông tin email/googleId.
+    4. Tạo hoặc tìm user trong DB, cấp JWT cookie và `csrf_token`.
+  - Postcondition: Người dùng đã đăng nhập (Google account liên kết nếu mới đăng ký).
+
+- **Use Case 3 — Đăng bán sản phẩm**
+  - Actor: Seller (authenticated)
+  - Precondition: Seller đã đăng nhập (JWT cookie hợp lệ)
+  - Main Flow:
+    1. Seller điền thông tin sản phẩm, upload ảnh (multipart/form-data).
+    2. Backend nhận file bằng Multer, stream ảnh lên Cloudinary, nhận `url` & `public_id`.
+    3. Tạo document `Product` trong MongoDB (gồm `location` nếu có GPS).
+    4. Trả về 201 Created và tài liệu sản phẩm.
+  - Alternative Flows: Ảnh quá lớn/định dạng không hợp lệ → trả lỗi 415/400.
+  - Postcondition: Sản phẩm hiển thị trong danh sách; có thể tìm thấy bằng search/GPS.
+
+- **Use Case 4 — Tìm kiếm & Lọc theo GPS (Buyer)**
+  - Actor: Buyer (guest hoặc authenticated)
+  - Precondition: (Tùy chọn) client cung cấp `lat` & `lng`
+  - Main Flow:
+    1. Client gọi `GET /api/products?lat=&lng=&radius=`.
+    2. Backend sử dụng `location` 2dsphere index hoặc Haversine để lọc theo bán kính, hỗ trợ full-text search và các filter khác.
+    3. Trả về danh sách sản phẩm theo trang (pagination) sắp xếp theo `bumpedAt`.
+  - Postcondition: Client nhận danh sách sản phẩm hợp lệ.
+
+- **Use Case 5 — Chat theo sản phẩm (Real-time)**
+  - Actor: Buyer, Seller (authenticated)
+  - Precondition: Kết nối Socket.IO với cookie JWT hợp lệ
+  - Main Flow:
+    1. Client join room `product_<productId>` bằng event `join_room`.
+    2. Người gửi emit `send_message` với payload {productId, receiverId, content}.
+    3. Server xác minh, lưu message vào collection `messages`, emit `receive_message` tới room tương ứng.
+  - Alternative: Kết nối mất, client fallback sử dụng REST `POST /api/messages`.
+  - Postcondition: Tin nhắn được deliver near-real-time và persist trong DB.
+
+- **Use Case 6 — Thanh toán / Nâng cấp Premium (Sepay Webhook)**
+  - Actor: Buyer (who pays), Sepay (payment gateway)
+  - Precondition: Người dùng thực hiện chuyển khoản qua Sepay offsite, Sepay cấu hình webhook tới `/api/payment/sepay-webhook`.
+  - Main Flow:
+    1. Sepay gửi webhook chứa `transferAmount` và `content` (chuỗi mô tả có chứa MongoDB userId).
+    2. Backend kiểm tra Authorization header (API key), trích userId từ `content`, tìm user trong DB.
+    3. Nếu xác thực hợp lệ, cập nhật user lên `isPremium = true`.
+    4. Trả 200 OK cho Sepay.
+  - Postcondition: User được nâng cấp Premium.
+
+- **Use Case 7 — Quản trị / Xử lý báo cáo (Admin)**
+  - Actor: Admin
+  - Precondition: Admin đã đăng nhập và có `role = 'Admin'`.
+  - Main Flow:
+    1. Admin mở `GET /api/admin/reports`, xem danh sách báo cáo.
+    2. Admin có thể `PATCH /api/reports/:id` để resolve/dismiss hoặc `DELETE /api/listings/:id` để gỡ bài.
+  - Postcondition: Báo cáo được xử lý, hệ thống cập nhật trạng thái, có thể gửi notification tới người liên quan.
+
+---
 
 ```bash
 # 1. Fork & clone

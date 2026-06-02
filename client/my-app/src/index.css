@@ -46,7 +46,6 @@
     "Be Vietnam Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* ── Breakpoint tokens (dùng trong JS nếu cần) ── */
   --bp-xs: 380px;
   --bp-sm: 480px;
   --bp-md: 640px;
@@ -75,11 +74,9 @@ body {
     "kern" 1,
     "liga" 1,
     "calt" 1;
-  /* Ngăn overflow ngang trên mobile */
   overflow-x: hidden;
 }
 
-/* Tất cả elements kế thừa font */
 button,
 input,
 select,
@@ -92,13 +89,16 @@ textarea {
   width: 5px;
   height: 5px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: rgba(11, 79, 108, 0.18);
   border-radius: 99px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(11, 79, 108, 0.35);
 }
@@ -110,22 +110,15 @@ textarea {
 }
 
 /* ─── ANIMATIONS ─────────────────────────────────────────── */
-@keyframes shimmer {
-  0% {
-    background-position: -600px 0;
-  }
-  100% {
-    background-position: 600px 0;
-  }
-}
-
 @keyframes pulse-danger {
   0% {
     box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
   }
+
   70% {
     box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
   }
@@ -136,6 +129,7 @@ textarea {
     opacity: 0;
     transform: translateY(12px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -146,6 +140,7 @@ textarea {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -156,6 +151,7 @@ textarea {
     opacity: 0;
     transform: translateY(-8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -163,18 +159,29 @@ textarea {
 }
 
 /* ─── UTILITY CLASSES ───────────────────────────────────── */
+/* Shimmer cao cấp không kích hoạt lại Paint (Reflow) */
 .skeleton-shimmer {
+  position: relative;
   background-color: #ebf0f7;
-  background-image: linear-gradient(
-    90deg,
-    #ebf0f7 0%,
-    #dde3ec 40%,
-    #ebf0f7 80%,
-    #ebf0f7 100%
-  );
-  background-size: 600px 100%;
-  background-repeat: no-repeat;
-  animation: shimmer 1.4s ease-in-out infinite;
+  overflow: hidden;
+}
+
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(90deg,
+      transparent,
+      rgba(221, 227, 236, 0.5),
+      transparent);
+  animation: shimmerGPU 1.4s infinite;
+}
+
+@keyframes shimmerGPU {
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .pulse-urgent {
@@ -187,32 +194,25 @@ textarea {
 
 /* ═══════════════════════════════════════════════════════════
    GLOBAL RESPONSIVE GRID CLASSES
-   Áp dụng cho các trang dùng className + inline style
-   !important cần thiết để override inline style
 ═══════════════════════════════════════════════════════════ */
-
-/* ─── PRODUCT GRID (HomePage) ───────────────────────────── */
 .product-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 20px;
 }
 
-/* 4 cột trên màn hình rộng */
 @media (min-width: 1280px) {
   .product-grid {
     grid-template-columns: repeat(4, 1fr);
   }
 }
 
-/* 3 cột: tablet landscape / laptop nhỏ */
 @media (max-width: 1279px) and (min-width: 769px) {
   .product-grid {
     grid-template-columns: repeat(3, 1fr);
   }
 }
 
-/* 2 cột: tablet portrait */
 @media (max-width: 768px) and (min-width: 641px) {
   .product-grid {
     grid-template-columns: 1fr 1fr !important;
@@ -220,7 +220,6 @@ textarea {
   }
 }
 
-/* 2 cột: phone */
 @media (max-width: 640px) {
   .product-grid {
     grid-template-columns: 1fr 1fr !important;
@@ -228,15 +227,12 @@ textarea {
   }
 }
 
-/* 1 cột: phone siêu nhỏ */
 @media (max-width: 380px) {
   .product-grid {
     grid-template-columns: 1fr !important;
   }
 }
 
-/* ─── PRODUCT DETAIL GRID (ProductDetailPage) ───────────── */
-/* className="product-detail-grid" + inline style: 1fr 380px  */
 .product-detail-grid {
   display: grid;
   gap: 24px;
@@ -262,8 +258,6 @@ textarea {
   }
 }
 
-/* ─── PROFILE GRID (ProfilePage) ────────────────────────── */
-/* className="profile-grid" + inline style: 260px 1fr        */
 .profile-grid {
   display: grid;
   gap: 32px;
@@ -283,8 +277,6 @@ textarea {
   }
 }
 
-/* ─── INBOX TAB GRID (InboxTab) ─────────────────────────── */
-/* className="inbox-tab-grid" + dynamic inline style         */
 .inbox-tab-grid {
   display: grid;
   gap: 24px;
@@ -297,8 +289,6 @@ textarea {
   }
 }
 
-/* ─── DASHBOARD STATS GRID ──────────────────────────────── */
-/* DashboardPage: add className="dash-stats-grid" để dùng */
 .dash-stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -318,8 +308,6 @@ textarea {
   }
 }
 
-/* ─── PAGE WRAPPER ───────────────────────────────────────── */
-/* Dùng chung cho các trang dùng maxWidth + padding inline    */
 .page-wrap {
   max-width: 960px;
   margin: 0 auto;
@@ -339,6 +327,7 @@ textarea {
 }
 
 @media (max-width: 768px) {
+
   .page-wrap,
   .page-wrap-sm,
   .page-wrap-lg {
@@ -347,6 +336,7 @@ textarea {
 }
 
 @media (max-width: 480px) {
+
   .page-wrap,
   .page-wrap-sm,
   .page-wrap-lg {
@@ -354,8 +344,6 @@ textarea {
   }
 }
 
-/* ─── FORM GRID 2 CỘT (PostListingPage) ─────────────────── */
-/* Dùng cho các hàng input 2 cột: price + weight, etc.        */
 .form-grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -368,7 +356,7 @@ textarea {
   }
 }
 
-/* ─── CSS VIEW TRANSITIONS ──────────────────────────────── */
+/* ─── CSS VIEW TRANSITIONS ─── */
 ::view-transition-old(root) {
   animation: vtFadeOut 0.18s ease-out both;
 }
@@ -382,6 +370,7 @@ textarea {
     opacity: 1;
     transform: translateY(0);
   }
+
   to {
     opacity: 0;
     transform: translateY(-6px);
@@ -393,14 +382,15 @@ textarea {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-/* Giảm chuyển động khi người dùng bật prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
+
   ::view-transition-old(root),
   ::view-transition-new(root) {
     animation: none;
@@ -416,9 +406,8 @@ textarea {
   }
 }
 
-/* ─── TOUCH TARGET MINIMUM ──────────────────────────────── */
-/* Đảm bảo mọi button/link có touch area ≥ 44px trên mobile */
 @media (max-width: 768px) {
+
   button,
   a,
   [role="button"],
@@ -427,9 +416,7 @@ textarea {
   }
 }
 
-/* ─── MODAL / OVERLAY FULL SCREEN MOBILE ────────────────── */
 @media (max-width: 640px) {
-  /* Modal căn giữa theo chiều dọc trên mobile */
   [role="dialog"] {
     margin: auto;
     max-width: calc(100vw - 32px) !important;
@@ -438,7 +425,6 @@ textarea {
   }
 }
 
-/* ─── IMAGE RESPONSIVE ──────────────────────────────────── */
 img {
   max-width: 100%;
   height: auto;

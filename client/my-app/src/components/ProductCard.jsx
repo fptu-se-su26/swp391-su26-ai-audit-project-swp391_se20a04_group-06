@@ -1,6 +1,3 @@
-/**
- * ProductCard.jsx — Premium Optimized Component
- */
 import React, { useState, useCallback, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { C } from "../utils/theme";
@@ -13,7 +10,6 @@ import { HeartIcon, WeightIcon, EyeIcon, MapPinIcon, ClockIcon } from "./icons";
 import styles from "./ProductCard.module.css";
 import { useViewTransitionNavigate } from "../hooks/useViewTransitionNavigate";
 
-// ── Countdown Badge ──
 export const CountdownBadge = memo(function CountdownBadge({ catchTime }) {
   const rem = useCountdown(catchTime);
   if (!rem) return null;
@@ -36,7 +32,6 @@ export const CountdownBadge = memo(function CountdownBadge({ catchTime }) {
   );
 });
 
-// ── Main Product Card Component ──
 export const ProductCard = memo(
   function ProductCard({
     product,
@@ -60,7 +55,7 @@ export const ProductCard = memo(
         if (onSellerClick) onSellerClick(e);
         else navigate(`/nguoi-ban/${product.sellerId}`);
       },
-      [onSellerClick, product.sellerId, navigate],
+      [onSellerClick, product.sellerId, navigate]
     );
 
     const isFav = favoriteIds?.includes(product.id) ?? false;
@@ -88,7 +83,7 @@ export const ProductCard = memo(
           setFavLoading(false);
         }
       },
-      [user, product.id, onFavoriteChange, navigate],
+      [user, product.id, onFavoriteChange, navigate]
     );
 
     const typeBadgeStyle =
@@ -98,7 +93,7 @@ export const ProductCard = memo(
     const typeLabel = product.type === "Fresh" ? "Tươi" : "Khô";
 
     const pct = Math.round(
-      (product.remainingWeight / product.totalWeight) * 100,
+      (product.remainingWeight / product.totalWeight) * 100
     );
     const stockColor = pct > 50 ? "#10b981" : pct > 20 ? "#f59e0b" : "#ef4444";
     const optimizedImg = cardImage(product.coverImg);
@@ -171,10 +166,11 @@ export const ProductCard = memo(
           </div>
 
           <div className={styles.stockBar}>
+            {/* Sử dụng scaleX chạy trực tiếp trên GPU thay thế cho width */}
             <div
               className={styles.stockFill}
               style={{
-                width: `${Math.min(100, pct)}%`,
+                transform: `scaleX(${Math.min(100, pct) / 100})`,
                 background: stockColor,
               }}
             />
@@ -204,7 +200,7 @@ export const ProductCard = memo(
                     marginLeft: 2,
                     display: "inline-flex",
                     alignItems: "center",
-                    cursor: "help"
+                    cursor: "help",
                   }}
                 >
                   👑
@@ -220,15 +216,19 @@ export const ProductCard = memo(
       </div>
     );
   },
-  (p, n) =>
-    p.product === n.product &&
-    p.user?.id === n.user?.id &&
-    p.cardIndex === n.cardIndex &&
-    p.favoriteIds?.includes(p.product.id) ===
-      n.favoriteIds?.includes(n.product.id),
+  (p, n) => {
+    const pUserId = p.user?.id || p.user?.userId;
+    const nUserId = n.user?.id || n.user?.userId;
+    return (
+      p.product === n.product &&
+      pUserId === nUserId &&
+      p.cardIndex === n.cardIndex &&
+      p.favoriteIds?.includes(p.product.id) ===
+      n.favoriteIds?.includes(n.product.id)
+    );
+  }
 );
 
-// ── Product Skeleton Component ──
 export function ProductSkeleton() {
   return (
     <div className={styles.skeleton}>

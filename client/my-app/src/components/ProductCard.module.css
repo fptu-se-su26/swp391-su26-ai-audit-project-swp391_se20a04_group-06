@@ -43,6 +43,7 @@
     opacity: 0;
     transform: translateY(12px) scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -84,15 +85,13 @@
 .imageOverlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to top,
-    rgba(15, 27, 41, 0.08) 0%,
-    transparent 60%
-  );
+  background: linear-gradient(to top,
+      rgba(15, 27, 41, 0.08) 0%,
+      transparent 60%);
   pointer-events: none;
 }
 
-/* ─── BADGES (absolute positioned over image) ────────────── */
+/* ─── BADGES ─── */
 .badgeGroup {
   position: absolute;
   top: 10px;
@@ -116,7 +115,7 @@
   white-space: nowrap;
 }
 
-/* ─── FAVORITE BUTTON ────────────────────────────────────── */
+/* ─── FAVORITE BUTTON ─── */
 .favBtn {
   position: absolute;
   top: 10px;
@@ -157,21 +156,25 @@
   0% {
     transform: scale(1);
   }
+
   30% {
     transform: scale(1.35);
   }
+
   55% {
     transform: scale(0.9);
   }
+
   75% {
     transform: scale(1.15);
   }
+
   100% {
     transform: scale(1);
   }
 }
 
-/* ─── BODY ───────────────────────────────────────────────── */
+/* ─── BODY ─── */
 .body {
   padding: 16px;
   position: relative;
@@ -227,7 +230,7 @@
   font-weight: 700;
 }
 
-/* ─── STOCK BAR ──────────────────────────────────────────── */
+/* ─── STOCK BAR ─── */
 .stockBar {
   height: 3px;
   background: #f1f5f9;
@@ -237,12 +240,17 @@
 }
 
 .stockFill {
+  width: 100%;
+  /* Cố định width 100% khi dùng transform scaleX */
   height: 100%;
   border-radius: 4px;
-  transition: width 0.6s ease-out;
+  transform-origin: left;
+  /* Đảm bảo chạy từ trái sang phải */
+  transition: transform 0.6s ease-out;
+  /* Đột phá hiệu năng bằng GPU Composite */
 }
 
-/* ─── ORIGIN ─────────────────────────────────────────────── */
+/* ─── ORIGIN ─── */
 .origin {
   font-size: 11px;
   color: var(--muted);
@@ -252,14 +260,14 @@
   gap: 4px;
 }
 
-/* ─── DIVIDER ────────────────────────────────────────────── */
+/* ─── DIVIDER ─── */
 .divider {
   border: none;
   border-top: 1px solid #f1f5f9;
   margin: 12px 0;
 }
 
-/* ─── SELLER ROW ─────────────────────────────────────────── */
+/* ─── SELLER ROW ─── */
 .sellerRow {
   display: flex;
   justify-content: space-between;
@@ -304,7 +312,7 @@
   color: var(--muted);
 }
 
-/* ─── COUNTDOWN BADGE ────────────────────────────────────── */
+/* ─── COUNTDOWN BADGE ─── */
 .countdownBadge {
   font-size: 10px;
   font-weight: 700;
@@ -315,7 +323,7 @@
   gap: 4px;
 }
 
-/* ─── SKELETON ───────────────────────────────────────────── */
+/* ─── SKELETON ─── */
 .skeleton {
   background: var(--white);
   border-radius: 12px;
@@ -336,147 +344,166 @@
 }
 
 /* ═══════════════════════════════════════════════════════════
-   RESPONSIVE: ProductCard
+   RESPONSIVE
 ═══════════════════════════════════════════════════════════ */
-
-/* ── Large desktop (≥ 1440px): tăng chiều cao ảnh ── */
 @media (min-width: 1440px) {
   .imageWrap {
     height: 220px;
   }
+
   .name {
     font-size: 15px;
   }
+
   .price {
     font-size: 17px;
   }
+
   .body {
     padding: 18px;
   }
 }
 
-/* ── Tablet landscape (769–1024px): ảnh vừa ── */
 @media (max-width: 1024px) and (min-width: 769px) {
   .imageWrap {
     height: 165px;
   }
 }
 
-/* ── Tablet portrait (641–768px): card compact ── */
 @media (max-width: 768px) and (min-width: 641px) {
   .imageWrap {
     height: 155px;
   }
+
   .body {
     padding: 12px 14px;
   }
+
   .name {
     font-size: 13px;
     margin-bottom: 4px;
   }
+
   .price {
     font-size: 15px;
     margin-bottom: 8px;
   }
+
   .statsRow {
     font-size: 11px;
     margin-bottom: 8px;
   }
+
   .origin {
-    display: none; /* Ẩn origin để tiết kiệm chiều cao */
+    display: none;
   }
 }
 
-/* ── Phone (≤ 640px): card siêu compact ── */
 @media (max-width: 640px) {
   .imageWrap {
     height: 140px;
   }
+
   .body {
     padding: 10px 12px 12px;
   }
+
   .name {
     font-size: 12px;
     margin-bottom: 4px;
     -webkit-line-clamp: 2;
   }
+
   .price {
     font-size: 14px;
     font-weight: 800;
     margin-bottom: 8px;
   }
+
   .priceUnit {
     font-size: 10px;
   }
+
   .statsRow {
     font-size: 10px;
     margin-bottom: 6px;
   }
+
   .statValue {
     font-size: 11px;
   }
+
   .stockBar {
     margin-bottom: 8px;
   }
+
   .origin {
     font-size: 10px;
     margin-bottom: 8px;
   }
+
   .divider {
     margin: 8px 0;
   }
+
   .sellerLink {
     font-size: 11px;
     gap: 4px;
   }
+
   .sellerAvatar {
     width: 18px;
     height: 18px;
     font-size: 8px;
   }
+
   .badge {
     font-size: 8px;
     padding: 3px 6px;
   }
+
   .favBtn {
     width: 26px;
     height: 26px;
   }
-  /* Tắt hover lift trên touch ── */
+
   .card:hover {
     transform: none;
   }
-  /* Skeleton compact */
+
   .skeletonBody {
     padding: 10px 12px;
   }
 }
 
-/* ── Phone siêu nhỏ (≤ 380px): ảnh thấp hơn ── */
 @media (max-width: 380px) {
   .imageWrap {
     height: 120px;
   }
+
   .name {
     font-size: 12px;
   }
+
   .body {
     padding: 8px 10px 10px;
   }
+
   .statsRow {
-    display: none; /* Ẩn stats để tránh chật */
+    display: none;
   }
 }
 
-/* ── Touch device: tắt hover lift (performance) ── */
 @media (hover: none) {
   .card:hover {
     transform: none;
     border-color: #eaeaea;
   }
+
   .card:hover .image {
     transform: none;
   }
+
   .card:hover::after {
     opacity: 0;
   }

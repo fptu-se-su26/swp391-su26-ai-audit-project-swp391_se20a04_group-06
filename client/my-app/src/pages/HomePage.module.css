@@ -22,28 +22,39 @@
 }
 
 .heroTrack {
-  display: flex;
+  position: relative;
+  width: 100%;
   height: 100%;
-  transition: transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .heroSlide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
   height: 100%;
-  flex-shrink: 0;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+  will-change: opacity;
+}
+
+.activeSlide {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 1;
 }
 
 .heroOverlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    110deg,
-    rgba(7, 54, 75, 0.58) 0%,
-    rgba(11, 79, 108, 0.3) 55%,
-    rgba(0, 0, 0, 0.1) 100%
-  );
+  background: linear-gradient(110deg,
+      rgba(7, 54, 75, 0.58) 0%,
+      rgba(11, 79, 108, 0.3) 55%,
+      rgba(0, 0, 0, 0.1) 100%);
+  z-index: 1;
 }
 
 /* ─── HERO ARROWS ────────────────────────────────────────── */
@@ -78,6 +89,7 @@
 .heroArrow.prev {
   left: 20px;
 }
+
 .heroArrow.next {
   right: 20px;
 }
@@ -124,9 +136,9 @@
 }
 
 .heroCard {
-  background: rgba(7, 34, 55, 0.45);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  background: rgba(7, 34, 55, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.13);
   padding: 32px 36px;
   border-radius: 20px;
@@ -330,6 +342,7 @@
 .tab.tabFresh.active {
   color: var(--coral);
 }
+
 .tab.tabDried.active {
   color: #92400e;
 }
@@ -377,6 +390,7 @@
   0% {
     transform: scale(0.92);
   }
+
   100% {
     transform: scale(1);
   }
@@ -646,295 +660,6 @@
   gap: 6px;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   RESPONSIVE BREAKPOINTS
-   Strategy:
-   - ≥ 1440px  : large desktop   → 4–5 card columns, tall hero
-   - 1025–1439px: laptop          → 4 columns, content max 1200px
-   - 769–1024px : tablet landscape → 3 columns, tighter padding
-   - 641–768px  : tablet portrait  → 2 columns, hero 320px
-   - 481–640px  : phone landscape  → 2 columns, compact
-   - ≤ 480px   : phone portrait   → 2 columns, minimal
-   - ≤ 380px   : small phone      → 1 column, bare minimum
-═══════════════════════════════════════════════════════════ */
-
-/* ── Large desktop (≥ 1440px) ── */
-@media (min-width: 1440px) {
-  .hero {
-    height: 540px;
-  }
-  .heroH1 {
-    font-size: 40px;
-  }
-  .heroLead {
-    font-size: 15px;
-  }
-  .heroCard {
-    max-width: 580px;
-    padding: 40px 44px;
-  }
-  .content {
-    padding: 0 32px 100px;
-  }
-  .grid {
-    grid-template-columns: repeat(5, 1fr);
-    gap: 24px;
-  }
-}
-
-/* ── Laptop (1025–1439px) ── */
-@media (max-width: 1439px) and (min-width: 1025px) {
-  .hero {
-    height: 480px;
-  }
-  .grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
-  }
-}
-
-/* ── Tablet landscape (769–1024px) ── */
-@media (max-width: 1024px) and (min-width: 769px) {
-  .hero {
-    height: 380px;
-    margin-bottom: 28px;
-  }
-  .heroH1 {
-    font-size: 28px;
-  }
-  .heroCard {
-    padding: 24px 28px;
-    max-width: 440px;
-  }
-  .heroContent {
-    padding: 0 20px;
-  }
-  .content {
-    padding: 0 20px 80px;
-  }
-  .grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-  }
-  .filterRow {
-    gap: 10px;
-  }
-}
-
-/* ── Tablet portrait (641–768px) ── */
-@media (max-width: 768px) and (min-width: 641px) {
-  .hero {
-    height: 320px;
-    margin-bottom: 20px;
-  }
-  .heroArrow {
-    display: none;
-  }
-  .heroH1 {
-    font-size: 24px;
-    line-height: 1.25;
-  }
-  .heroLead {
-    font-size: 13px;
-    margin-bottom: 18px;
-  }
-  .heroCard {
-    padding: 22px 24px;
-    max-width: 100%;
-    border-radius: 16px;
-  }
-  .heroContent {
-    padding: 0 20px;
-    align-items: flex-end;
-    padding-bottom: 36px;
-  }
-  .content {
-    padding: 0 20px 60px;
-  }
-  .grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-  }
-  .filterRow {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-    margin-bottom: 14px;
-  }
-  .tabGroup {
-    width: 100%;
-  }
-  .tab {
-    flex: 1;
-    text-align: center;
-    font-size: 12px;
-    padding: 8px 10px;
-  }
-  .chipGroup {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding: 4px 20px;
-    margin-left: -20px;
-    margin-right: -20px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .chipGroup::-webkit-scrollbar {
-    display: none;
-  }
-  .chip {
-    flex-shrink: 0;
-  }
-}
-
-/* ── Mobile (≤ 768px) ── */
-@media (max-width: 768px) {
-  .hero {
-    height: 340px;
-    margin-bottom: 24px;
-  }
-  .heroArrow {
-    display: none !important;
-  }
-  .heroContent {
-    padding: 0 16px !important;
-  }
-  .heroCard {
-    padding: 18px 20px !important;
-    margin: 0 !important;
-    max-width: 100% !important;
-    border-radius: 14px !important;
-  }
-  .heroH1 {
-    font-size: 22px !important;
-    line-height: 1.25 !important;
-  }
-  .heroLead {
-    font-size: 12px !important;
-    margin-bottom: 16px !important;
-    line-height: 1.5 !important;
-  }
-  .heroGpsBtn {
-    padding: 8px 14px !important;
-    font-size: 12px !important;
-  }
-  .content {
-    padding: 0 16px 60px !important;
-  }
-  .searchWrap {
-    margin-bottom: 16px;
-  }
-  .searchInput {
-    padding: 11px 14px 11px 38px !important;
-    font-size: 13px !important;
-  }
-  .filterRow {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 12px !important;
-    margin-bottom: 16px !important;
-  }
-  .tabGroup {
-    width: 100% !important;
-    display: flex !important;
-  }
-  .tab {
-    flex: 1 !important;
-    text-align: center !important;
-    padding: 8px 10px !important;
-    font-size: 12px !important;
-  }
-  .chipGroup {
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    padding: 4px 16px !important;
-    margin-left: -16px;
-    margin-right: -16px;
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .chipGroup::-webkit-scrollbar {
-    display: none;
-  }
-  .chip {
-    flex-shrink: 0 !important;
-    padding: 6px 14px !important;
-    font-size: 11px !important;
-  }
-  .advancedToggle {
-    margin-bottom: 16px;
-    font-size: 11px !important;
-    padding: 6px 12px !important;
-  }
-  .advancedPanel {
-    padding: 14px 16px;
-    gap: 14px;
-  }
-  .filterInput {
-    width: 90px !important;
-  }
-  .sortRow {
-    margin-bottom: 16px;
-  }
-  .empty {
-    padding: 48px 16px;
-  }
-  .emptyIcon {
-    font-size: 40px;
-  }
-}
-
-/* ── Phone landscape / large phone (481–640px) ── */
-@media (max-width: 640px) {
-  .grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-}
-
-/* ── Phone portrait nhỏ (≤ 480px) ── */
-@media (max-width: 480px) {
-  .hero {
-    height: 300px;
-  }
-  .heroEyebrow {
-    font-size: 10px;
-    margin-bottom: 6px;
-  }
-  .heroH1 {
-    font-size: 20px !important;
-  }
-  .heroLead {
-    display: none; /* Ẩn mô tả trên phone rất nhỏ */
-  }
-  .heroActions {
-    gap: 8px;
-  }
-  .heroRegisterBtn {
-    padding: 8px 14px;
-    font-size: 12px;
-  }
-  .searchInput {
-    font-size: 14px !important; /* iOS auto-zoom prevention: min 16px */
-  }
-}
-
-/* ── Phone siêu nhỏ (≤ 380px) ── */
-@media (max-width: 380px) {
-  .grid {
-    grid-template-columns: 1fr !important;
-  }
-  .hero {
-    height: 260px;
-  }
-  .heroCard {
-    padding: 14px 16px !important;
-  }
-  .heroH1 {
-    font-size: 18px !important;
-  }
-}
 /* ─── LAYOUT CHUNG CHO TRANG ─── */
 .layoutWrapper {
   display: flex;
@@ -947,7 +672,7 @@
 /* Cột bên phải chứa nội dung chính */
 .mainLayoutBody {
   flex: 1;
-  min-width: 0; /* Giúp grid-layout co giãn chính xác */
+  min-width: 0;
 }
 
 /* ─── THANH SIDEBAR DANH MỤC DỌC BÊN TRÁI ─── */
@@ -963,7 +688,7 @@
 
 .sidebarSticky {
   position: sticky;
-  top: 90px; /* Cố định thanh dọc khi cuộn trang, điều chỉnh phù hợp với chiều cao Navbar */
+  top: 90px;
 }
 
 .sidebarTitle {
@@ -1033,10 +758,9 @@
   }
 
   .sidebarTitle {
-    display: none; /* Ẩn tiêu đề khi chuyển sang màn hình nhỏ */
+    display: none;
   }
 
-  /* Chuyển các tab từ chiều dọc thành chiều ngang khi xem trên điện thoại */
   .verticalTabGroup {
     flex-direction: row;
     gap: 6px;
@@ -1051,7 +775,7 @@
 
   .verticalTab.verticalActive {
     box-shadow: none;
-    border-bottom: 3px solid var(--ocean, #0284c7); /* Chỉ hiển thị đường gạch chân nhỏ trên mobile */
+    border-bottom: 3px solid var(--ocean, #0284c7);
     border-radius: 8px 8px 0 0;
   }
 }

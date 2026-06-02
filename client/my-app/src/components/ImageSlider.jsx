@@ -1,7 +1,7 @@
 // Trong tệp: client/my-app/src/components/ImageSlider.jsx
 
-import React, { useState } from 'react';
-import { C } from '../utils/theme';
+import React, { useState } from "react";
+import { C } from "../utils/theme";
 
 export function ImageSlider({ product }) {
   const [idx, setIdx] = useState(0);
@@ -57,7 +57,10 @@ export function ImageSlider({ product }) {
       {n > 1 && (
         <>
           <button
-            onClick={(e) => { e.stopPropagation(); setIdx((idx - 1 + n) % n); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIdx((idx - 1 + n) % n);
+            }}
             style={{
               position: "absolute",
               left: 12,
@@ -78,7 +81,10 @@ export function ImageSlider({ product }) {
             ‹
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); setIdx((idx + 1) % n); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIdx((idx + 1) % n);
+            }}
             style={{
               position: "absolute",
               right: 12,
@@ -112,7 +118,10 @@ export function ImageSlider({ product }) {
             {Array.from({ length: n }).map((_, i) => (
               <div
                 key={i}
-                onClick={(e) => { e.stopPropagation(); setIdx(i); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIdx(i);
+                }}
                 style={{
                   width: 8,
                   height: 8,

@@ -1,21 +1,3 @@
-/**
- * HomePage.jsx
- *
- * FIXES:
- *   1. Loại bỏ prop `user` — dùng `useAuth()` (Context Pattern, consistent với toàn app).
- *      Trước: `export function HomePage({ user })` → mọi nơi truyền user={user} thủ công.
- *      Sau:   `const { user } = useAuth()` — zero prop drilling.
- *
- *   2. Fix `useCallback` thiếu deps: `handleProductClick`, `handleFavoriteChange`
- *      trước đây dùng `vtNavigate` mà không khai báo trong deps array.
- *
- *   3. Fix `fetchNextPage` deps: tham chiếu `tab`, `category`, `gps` qua closure nhưng
- *      không có trong deps → stale closure khi tab/category thay đổi.
- *      Dùng ref pattern để tránh re-create observer mỗi khi deps thay đổi.
- *
- *   4. `fetchPage1` và `fetchNextPage` dùng `useRef` cho dynamic params thay vì
- *      put everything in deps — giảm re-render không cần thiết.
- */
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { C } from "../utils/theme";
 import { api } from "../services/api";
@@ -57,63 +39,9 @@ const CATEGORY_CHIPS = [
   { id: "Others", label: "✨ Loại khác" },
 ];
 
-export function HomePage() {
-  // FIX: Dùng useAuth() thay vì nhận user qua props
-  const { user } = useAuth();
-
-  const vtNavigate = useViewTransitionNavigate();
-  const [search, setSearch] = useState("");
-  const [tab, setTab] = useState("fresh");
-  const [category, setCategory] = useState("All");
-  const [gps, setGps] = useState({ status: "idle", lat: null, lng: null });
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState("");
-  const [filter, setFilter] = useState("all");
-  const [priceMin, setPriceMin] = useState("");
-  const [priceMax, setPriceMax] = useState("");
-  const [minWeight, setMinWeight] = useState("");
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [viewMode, setViewMode] = useState("grid");
-  const [sort, setSort] = useState("newest");
-  const [favoriteIds, setFavoriteIds] = useState([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+function HeroSlider({ search, setSearch, gps, handleGps, gpsLabel }) {
   const [bgIndex, setBgIndex] = useState(0);
-
-  const sentinelRef = useRef(null);
-  const observerRef = useRef(null);
   const timerRef = useRef(null);
-
-  // FIX: Dùng refs cho dynamic values trong fetchNextPage để tránh stale closure
-  const stateRef = useRef({
-    page,
-    hasMore,
-    loadingMore,
-    loading,
-    tab,
-    category,
-    gps,
-    search,
-  });
-  useEffect(() => {
-    stateRef.current = {
-      page,
-      hasMore,
-      loadingMore,
-      loading,
-      tab,
-      category,
-      gps,
-      search,
-    };
-  }, [page, hasMore, loadingMore, loading, tab, category, gps, search]);
-
-  useSEO({
-    title: "Chợ Hải Sản Online — Tươi từ Ngư Dân",
-    description: "Mua bán hải sản tươi & khô trực tiếp từ ngư dân đánh bắt.",
-  });
 
   const resetAutoplay = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -134,11 +62,165 @@ export function HomePage() {
     setBgIndex((prev) => (prev - 1 + HERO_BGS.length) % HERO_BGS.length);
     resetAutoplay();
   };
+
   const handleNext = (e) => {
     e.stopPropagation();
     setBgIndex((prev) => (prev + 1) % HERO_BGS.length);
     resetAutoplay();
   };
+
+  return (
+    <section className={styles.hero} aria-label="Banner">
+      <div className={styles.heroTrackWrapper}>
+        <div className={styles.heroTrack}>
+          {HERO_BGS.map((bg, idx) => (
+            <div
+              key={bg}
+              className={`${styles.heroSlide} ${idx === bgIndex ? styles.activeSlide : ""}`}
+              style={{
+                backgroundImage: `url(${bg})`,
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className={styles.heroOverlay} />
+
+      <button
+        className={`${styles.heroArrow} ${styles.prev}`}
+        onClick={handlePrev}
+        aria-label="Ảnh trước"
+      >
+        <ChevronLeftIcon size={22} />
+      </button>
+      <button
+        className={`${styles.heroArrow} ${styles.next}`}
+        onClick={handleNext}
+        aria-label="Ảnh tiếp theo"
+      >
+        <ChevronRightIcon size={22} />
+      </button>
+
+      <div className={styles.heroDots} role="tablist" aria-label="Slides">
+        {HERO_BGS.map((_, i) => (
+          <button
+            key={i}
+            role="tab"
+            aria-selected={i === bgIndex}
+            aria-label={`Slide ${i + 1}`}
+            className={`${styles.heroDot} ${i === bgIndex ? styles.activeDot : ""}`}
+            style={{ width: i === bgIndex ? 22 : 7 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setBgIndex(i);
+              resetAutoplay();
+            }}
+          />
+        ))}
+      </div>
+
+      <div className={styles.heroContent}>
+        <div className={styles.heroCard}>
+          <p className={styles.heroEyebrow}>
+            <span aria-hidden="true">🐠</span>
+            Chợ Hải Sản Online
+          </p>
+          <h1 className={styles.heroH1}>
+            Tươi Từ Ngư Dân,
+            <br />
+            <span className={styles.heroAccent}>Đến Bàn Của Bạn</span>
+          </h1>
+          <p className={styles.heroLead}>
+            Mua bán hải sản tươi &amp; khô trực tiếp từ ngư dân. Giao tươi
+            trong 20km · Khô giao toàn quốc.
+          </p>
+
+          <div
+            className={styles.searchWrap}
+            style={{ margin: "16px 0 24px 0" }}
+          >
+            <span className={styles.searchIcon}>
+              <SearchIcon size={16} />
+            </span>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Tìm cá thu, tôm hùm, mực khô..."
+              className={styles.searchInput}
+              aria-label="Tìm kiếm sản phẩm"
+            />
+          </div>
+
+          <div className={styles.heroActions}>
+            <button
+              onClick={handleGps}
+              className={`${styles.heroGpsBtn} ${gps.status === "ok" ? styles.gpsOk : ""}`}
+              aria-busy={gps.status === "loading"}
+            >
+              <MapPinIcon size={15} />
+              {gpsLabel}
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function HomePage() {
+  const { user } = useAuth();
+  const vtNavigate = useViewTransitionNavigate();
+  const [search, setSearch] = useState("");
+  const [tab, setTab] = useState("fresh");
+  const [category, setCategory] = useState("All");
+  const [gps, setGps] = useState({ status: "idle", lat: null, lng: null });
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
+  const [minWeight, setMinWeight] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [viewMode, setViewMode] = useState("grid");
+  const [sort, setSort] = useState("newest");
+  const [favoriteIds, setFavoriteIds] = useState([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
+  const sentinelRef = useRef(null);
+  const observerRef = useRef(null);
+
+  const stateRef = useRef({
+    page,
+    hasMore,
+    loadingMore,
+    loading,
+    tab,
+    category,
+    gps,
+    search,
+  });
+
+  useEffect(() => {
+    stateRef.current = {
+      page,
+      hasMore,
+      loadingMore,
+      loading,
+      tab,
+      category,
+      gps,
+      search,
+    };
+  }, [page, hasMore, loadingMore, loading, tab, category, gps, search]);
+
+  useSEO({
+    title: "Chợ Hải Sản Online — Tươi từ Ngư Dân",
+    description: "Mua bán hải sản tươi & khô trực tiếp từ ngư dân đánh bắt.",
+  });
 
   const filteredProducts = useMemo(
     () =>
@@ -165,7 +247,7 @@ export function HomePage() {
           return false;
         return true;
       }),
-    [products, filter, priceMin, priceMax, minWeight],
+    [products, filter, priceMin, priceMax, minWeight]
   );
 
   const hasAdvancedFilter =
@@ -187,7 +269,7 @@ export function HomePage() {
         const aTime = a.bumpedAt ? new Date(a.bumpedAt) : new Date(a.createdAt);
         return bTime - aTime;
       }),
-    [filteredProducts, sort],
+    [filteredProducts, sort]
   );
 
   const handleGps = useCallback(() => {
@@ -206,7 +288,7 @@ export function HomePage() {
           lng: pos.coords.longitude,
         });
       },
-      () => setGps({ status: "denied", lat: null, lng: null }),
+      () => setGps({ status: "denied", lat: null, lng: null })
     );
   }, []);
 
@@ -228,7 +310,7 @@ export function HomePage() {
     if (!user) return;
     api("/favorites/ids")
       .then((ids) => setFavoriteIds(ids))
-      .catch(() => {});
+      .catch(() => { });
   }, [user]);
 
   const buildParams = useCallback(
@@ -246,7 +328,7 @@ export function HomePage() {
       }
       return params;
     },
-    [tab, category, gps.lat, gps.lng],
+    [tab, category, gps.lat, gps.lng]
   );
 
   const fetchPage1 = useCallback(
@@ -266,7 +348,7 @@ export function HomePage() {
         setLoading(false);
       }
     },
-    [buildParams],
+    [buildParams]
   );
 
   useEffect(() => {
@@ -274,7 +356,6 @@ export function HomePage() {
     return () => clearTimeout(t);
   }, [fetchPage1, search]);
 
-  // FIX: fetchNextPage dùng stateRef thay vì deps để tránh re-create observer liên tục
   const fetchNextPage = useCallback(async () => {
     const {
       loadingMore: lm,
@@ -313,7 +394,7 @@ export function HomePage() {
     } finally {
       setLoadingMore(false);
     }
-  }, []); // stable — đọc từ stateRef
+  }, []);
 
   useEffect(() => {
     observerRef.current?.disconnect();
@@ -321,13 +402,12 @@ export function HomePage() {
       (entries) => {
         if (entries[0].isIntersecting) fetchNextPage();
       },
-      { rootMargin: "200px" },
+      { rootMargin: "200px" }
     );
     if (sentinelRef.current) observerRef.current.observe(sentinelRef.current);
     return () => observerRef.current?.disconnect();
   }, [fetchNextPage]);
 
-  // Restore scroll position sau khi load xong
   useEffect(() => {
     if (loading) return;
     const saved = sessionStorage.getItem(SCROLL_KEY);
@@ -337,18 +417,17 @@ export function HomePage() {
     }
   }, [loading]);
 
-  // FIX: thêm vtNavigate vào deps (missing dependency bug)
   const handleProductClick = useCallback(
     (productId) => {
       sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
       vtNavigate(`/san-pham/${productId}`);
     },
-    [vtNavigate],
+    [vtNavigate]
   );
 
   const handleFavoriteChange = useCallback((id, fav) => {
     setFavoriteIds((prev) =>
-      fav ? [...prev, id] : prev.filter((x) => x !== id),
+      fav ? [...prev, id] : prev.filter((x) => x !== id)
     );
   }, []);
 
@@ -362,108 +441,13 @@ export function HomePage() {
 
   return (
     <div className={styles.page}>
-      <section className={styles.hero} aria-label="Banner">
-        <div className={styles.heroTrackWrapper}>
-          <div
-            className={styles.heroTrack}
-            style={{
-              width: `${HERO_BGS.length * 100}%`,
-              transform: `translateX(-${bgIndex * (100 / HERO_BGS.length)}%)`,
-            }}
-          >
-            {HERO_BGS.map((bg) => (
-              <div
-                key={bg}
-                className={styles.heroSlide}
-                style={{
-                  width: `${100 / HERO_BGS.length}%`,
-                  backgroundImage: `url(${bg})`,
-                }}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className={styles.heroOverlay} />
-
-        <button
-          className={`${styles.heroArrow} ${styles.prev}`}
-          onClick={handlePrev}
-          aria-label="Ảnh trước"
-        >
-          <ChevronLeftIcon size={22} />
-        </button>
-        <button
-          className={`${styles.heroArrow} ${styles.next}`}
-          onClick={handleNext}
-          aria-label="Ảnh tiếp theo"
-        >
-          <ChevronRightIcon size={22} />
-        </button>
-
-        <div className={styles.heroDots} role="tablist" aria-label="Slides">
-          {HERO_BGS.map((_, i) => (
-            <button
-              key={i}
-              role="tab"
-              aria-selected={i === bgIndex}
-              aria-label={`Slide ${i + 1}`}
-              className={`${styles.heroDot} ${i === bgIndex ? styles.activeDot : ""}`}
-              style={{ width: i === bgIndex ? 22 : 7 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setBgIndex(i);
-                resetAutoplay();
-              }}
-            />
-          ))}
-        </div>
-
-        <div className={styles.heroContent}>
-          <div className={styles.heroCard}>
-            <p className={styles.heroEyebrow}>
-              <span aria-hidden="true">🐠</span>
-              Chợ Hải Sản Online
-            </p>
-            <h1 className={styles.heroH1}>
-              Tươi Từ Ngư Dân,
-              <br />
-              <span className={styles.heroAccent}>Đến Bàn Của Bạn</span>
-            </h1>
-            <p className={styles.heroLead}>
-              Mua bán hải sản tươi &amp; khô trực tiếp từ ngư dân. Giao tươi
-              trong 20km · Khô giao toàn quốc.
-            </p>
-
-            <div
-              className={styles.searchWrap}
-              style={{ margin: "16px 0 24px 0" }}
-            >
-              <span className={styles.searchIcon}>
-                <SearchIcon size={16} />
-              </span>
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Tìm cá thu, tôm hùm, mực khô..."
-                className={styles.searchInput}
-                aria-label="Tìm kiếm sản phẩm"
-              />
-            </div>
-
-            <div className={styles.heroActions}>
-              <button
-                onClick={handleGps}
-                className={`${styles.heroGpsBtn} ${gps.status === "ok" ? styles.gpsOk : ""}`}
-                aria-busy={gps.status === "loading"}
-              >
-                <MapPinIcon size={15} />
-                {gpsLabel}
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <HeroSlider
+        search={search}
+        setSearch={setSearch}
+        gps={gps}
+        handleGps={handleGps}
+        gpsLabel={gpsLabel}
+      />
 
       <div className={styles.content}>
         <div className={styles.layoutWrapper}>

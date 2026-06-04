@@ -190,11 +190,11 @@ graph TD
     A[Người mua A nhấp Chat trên sản phẩm X] --> B[Frontend tính toán: Room = product_X_BuyerA]
     C[Người mua B nhấp Chat trên sản phẩm X] --> D[Frontend tính toán: Room = product_X_BuyerB]
     
-    B --> E[Frontend A gửi Socket emit join_room {productId: X, buyerId: BuyerA}]
-    D --> F[Frontend B gửi Socket emit join_room {productId: X, buyerId: BuyerB}]
+    B --> E["Frontend A gửi Socket emit join_room {productId: X, buyerId: BuyerA}"]
+    D --> F["Frontend B gửi Socket emit join_room {productId: X, buyerId: BuyerB}"]
     
-    G[Seller mở tab chat với Buyer A] --> H[Frontend Seller gửi Socket emit join_room {productId: X, buyerId: BuyerA}]
-    I[Seller mở tab chat với Buyer B] --> J[Frontend Seller gửi Socket emit join_room {productId: X, buyerId: BuyerB}]
+    G[Seller mở tab chat với Buyer A] --> H["Frontend Seller gửi Socket emit join_room {productId: X, buyerId: BuyerA}"]
+    I[Seller mở tab chat với Buyer B] --> J["Frontend Seller gửi Socket emit join_room {productId: X, buyerId: BuyerB}"]
     
     E & H --> K[Phòng chat BuyerA-Seller riêng tư được khóa]
     F & J --> L[Phòng chat BuyerB-Seller riêng tư được khóa]
@@ -453,6 +453,58 @@ erDiagram
         Date changedAt
     }
 
+    POST {
+        ObjectId id PK
+        ObjectId userId FK
+        String userName
+        String userAvatar
+        String title
+        String content
+        StringArray images
+        ObjectIdArray likes
+        Number viewCount
+        Date createdAt
+        Date updatedAt
+    }
+
+    COMMENT {
+        ObjectId userId FK
+        String userName
+        String userAvatar
+        String text
+        Date createdAt
+    }
+
+    RECIPE {
+        ObjectId id PK
+        String title
+        String description
+        StringArray ingredients
+        StringArray instructions
+        String imageUrl
+        ObjectId authorId FK
+        Enum difficulty
+        Number cookingTime
+        Number servings
+        StringArray tags
+        ObjectIdArray likes
+        Number viewCount
+        Date createdAt
+        Date updatedAt
+    }
+
+    BOAT_LOG {
+        ObjectId id PK
+        ObjectId userId FK
+        String userName
+        String userAvatar
+        String content
+        StringArray images
+        ObjectIdArray likes
+        Date createdAt
+        Date updatedAt
+    }
+
     MESSAGE {
         ObjectId id PK
         ObjectId productId FK
@@ -506,6 +558,15 @@ erDiagram
         Enum status
     }
 
+    BROADCAST_LOG {
+        ObjectId id PK
+        ObjectId adminId FK
+        String content
+        Enum targetRole
+        Number sentCount
+        Date createdAt
+    }
+
     USER ||--o{ PRODUCT : "owns"
     USER ||--o{ MESSAGE : "sends"
     USER ||--o{ MESSAGE : "receives"
@@ -520,11 +581,167 @@ erDiagram
     REVIEW ||--o{ NOTIFICATION : "references"
     USER ||--o{ SUBSCRIPTION : "subscribes"
     PRODUCT ||--o{ PRICE_HISTORY : "embeds"
+    
+    USER ||--o{ POST : "writes"
+    USER ||--o{ RECIPE : "authors"
+    USER ||--o{ BOAT_LOG : "writes"
+    USER ||--o{ BROADCAST_LOG : "creates"
+    POST ||--o{ COMMENT : "contains"
 ```
 
 ---
 
-### 6.2 Cấu trúc các chỉ mục (Indexes Spec) và Mục đích tối ưu
+### 6.2 Đặc tả chi tiết cấu trúc các Collection (Schema Specifications)
+
+#### 1. USER (`users` collection)
+| Thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `_id` | ObjectId | PK, auto | Định danh duy nhất của người dùng |
+| `name` | String | Required | Tên hiển thị của người dùng |
+| `email` | String | Required, UK, lowercase | Email đăng nhập, lưu dưới dạng chữ thường để kiểm tra trùng |
+| `password` | String | Required | Mật khẩu tài khoản (đã hash bằng Bcrypt) |
+| `role` | String | Enum, default: `"User"` | Quyền hạn: `"User"` hoặc `"Admin"` |
+| `isActive` | Boolean | Default: `true` | Trạng thái tài khoản (nếu false tài khoản sẽ bị khóa) |
+| `isVerified` | Boolean | Default: `false` | Đánh dấu ngư dân đã được Admin phê duyệt uy tín |
+| `isPremium` | Boolean | Default: `false` | Đánh dấu người dùng đăng ký Premium |
+| `avatar` | String | Nullable | URL hình đại diện được upload trên Cloudinary |
+| `favorites` | Array[ObjectId] | FK → Product | Danh sách các sản phẩm mà người dùng đã bấm thích/yêu thích |
+| `following` | Array[ObjectId] | FK → User | Danh sách các ngư dân mà người dùng này theo dõi |
+
+#### 2. PRODUCT (`products` collection)
+| Thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `_id` | ObjectId | PK, auto | Định danh duy nhất sản phẩm |
+| `sellerId` | ObjectId | Required, FK → User | ID của ngư dân/người đăng bán sản phẩm |
+| `type` | String | Enum | Loại hải sản: `"Fresh"` (Tươi) hoặc `"Dried"` (Khô) |
+| `category` | String | Enum | Phân loại: `"Fish"`, `"Shrimp"`, `"Crab"`, `"Shellfish"`, `"Squid"`, `"Others"` |
+| `name` | String | Required, trim | Tên sản phẩm hiển thị |
+| `description` | String | Required | Mô tả chi tiết sản phẩm |
+| `price` | Number | Required, min: 0 | Đơn giá bán (VND / kg) |
+| `salesType` | String | Enum | Hình thức: `"Retail"` (Bán lẻ) hoặc `"Wholesale"` (Bán buôn) |
+| `totalWeight` | Number | Required, min: 0.1 | Tổng khối lượng đăng bán ban đầu (kg) |
+| `remainingWeight` | Number | Required, min: 0 | Khối lượng thực tế còn lại (kg) |
+| `status` | String | Enum, default: `"Active"` | Trạng thái: `"Active"`, `"SoldOut"`, hoặc `"Expired"` |
+| `location` | Object (GeoJSON) | Nullable | Tọa độ GPS `{ type: "Point", coordinates: [lng, lat] }` |
+| `catchTime` | Date | Nullable | Thời điểm đánh bắt (chỉ yêu cầu đối với `"Fresh"`) |
+| `origin` | String | Nullable | Xuất xứ địa lý (chỉ dùng cho `"Dried"`) |
+| `expiryDate` | Date | Nullable | Hạn sử dụng (chỉ dùng cho `"Dried"`) |
+| `images` | Array[String] | Required | Danh sách URL ảnh sản phẩm (tối đa 5 hình ảnh) |
+| `priceHistory` | Array[Object] | Embedded | Lịch sử thay đổi giá gồm: `oldPrice`, `newPrice`, `changedAt` |
+| `bumpedAt` | Date | Default: `Date.now` | Thời điểm đẩy bài đăng lên đầu bảng tin gần nhất |
+
+#### 3. POST (`posts` collection)
+| Thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `_id` | ObjectId | PK, auto | Định danh duy nhất của bài viết |
+| `userId` | ObjectId | Required, FK → User | Tác giả viết bài viết cộng đồng |
+| `userName` | String | Required | Tên tác giả (Denormalized để hiển thị nhanh) |
+| `userAvatar` | String | Nullable | Ảnh đại diện tác giả (Denormalized) |
+| `title` | String | Required, trim | Tiêu đề bài viết |
+| `content` | String | Required | Nội dung chi tiết bài viết |
+| `images` | Array[String] | Default: `[]` | Ảnh đính kèm bài viết |
+| `likes` | Array[ObjectId] | FK → User | Danh sách người dùng đã thích bài viết |
+| `comments` | Array[Object] | Embedded | Bình luận nhúng gồm: `userId` (FK → User), `userName`, `userAvatar`, `text`, `createdAt` |
+| `tags` | Array[String] | Default: `[]` | Các thẻ hashtag nội dung |
+| `viewCount` | Number | Default: 0 | Lượt xem bài viết |
+
+#### 4. RECIPE (`recipes` collection)
+| Thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `_id` | ObjectId | PK, auto | Định danh công thức |
+| `title` | String | Required, trim | Tên món ăn / công thức |
+| `description` | String | Required | Mô tả sơ lược |
+| `ingredients` | Array[String] | Default: `[]` | Danh sách các nguyên liệu cần chuẩn bị |
+| `instructions` | Array[String] | Default: `[]` | Các bước thực hiện chi tiết |
+| `imageUrl` | String | Nullable | Ảnh thành phẩm món ăn |
+| `authorId` | ObjectId | Required, FK → User | Người đăng tải công thức nấu ăn |
+| `difficulty` | String | Enum, default: `"Medium"` | Độ khó chế biến: `"Easy"`, `"Medium"`, hoặc `"Hard"` |
+| `cookingTime` | Number | Default: 30 | Thời gian thực hiện (phút) |
+| `servings` | Number | Default: 2 | Khẩu phần ăn cho bao nhiêu người |
+| `tags` | Array[String] | Default: `[]` | Thẻ phân loại nguyên liệu (cá, mực, tôm...) |
+| `likes` | Array[ObjectId] | FK → User | Danh sách người dùng thích công thức nấu ăn này |
+| `viewCount` | Number | Default: 0 | Số lượt xem công thức |
+
+#### 5. BOAT_LOG (`boatlogs` collection)
+| Thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `_id` | ObjectId | PK, auto | Định danh nhật ký cabin |
+| `userId` | ObjectId | Required, FK → User | Ngư dân thực hiện ghi nhật ký hành trình |
+| `userName` | String | Required | Tên tác giả ghi nhật ký (Denormalized) |
+| `userAvatar` | String | Nullable | Ảnh đại diện ngư dân (Denormalized) |
+| `content` | String | Required | Ghi chép nhật ký đi biển hàng ngày |
+| `images` | Array[String] | Default: `[]` | Hình ảnh đánh bắt thực tế ngoài khơi |
+| `likes` | Array[ObjectId] | FK → User | Số lượt yêu thích từ người theo dõi |
+
+#### 6. MESSAGE (`messages` collection)
+| Thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `_id` | ObjectId | PK, auto | Định danh tin nhắn |
+| `productId` | ObjectId | Required, FK → Product | ID sản phẩm liên quan đến cuộc hội thoại trò chuyện |
+| `senderId` | ObjectId | Required, FK → User | ID người gửi tin nhắn |
+| `receiverId` | ObjectId | Required, FK → User | ID người nhận tin nhắn |
+| `content` | String | Required (nếu không ảnh) | Nội dung văn bản của tin nhắn |
+| `imageUrl` | String | Required (nếu không chữ)| URL ảnh hải sản chụp gửi đính kèm |
+| `isRead` | Boolean | Default: `false` | Trạng thái tin nhắn đã được đọc hay chưa |
+
+#### 7. REVIEW (`reviews` collection)
+| Thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `_id` | ObjectId | PK, auto | Định danh review |
+| `productId` | ObjectId | Required, FK → Product | Sản phẩm được đánh giá |
+| `reviewerId` | ObjectId | Required, FK → User | ID người viết đánh giá (Buyer) |
+| `sellerId` | ObjectId | Required, FK → User | ID ngư dân nhận đánh giá (Denormalized để truy vấn xếp hạng nhanh) |
+| `rating` | Number | Required, 1 - 5 | Điểm xếp hạng từ 1 đến 5 sao |
+| `comment` | String | Nullable | Nhận xét chi tiết của người mua |
+| `imageUrl` | String | Nullable | Ảnh chụp thực tế của sản phẩm nhận được |
+
+#### 8. REPORT (`reports` collection)
+| Thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `_id` | ObjectId | PK, auto | Định danh báo cáo |
+| `reporterId` | ObjectId | Required, FK → User | Người gửi báo cáo vi phạm |
+| `productId` | ObjectId | Required, FK → Product | Sản phẩm bị báo cáo vi phạm |
+| `reason` | String | Required | Lý do báo cáo vi phạm |
+| `status` | String | Enum, default: `"Pending"` | Trạng thái: `"Pending"`, `"Resolved"`, hoặc `"Dismissed"` |
+| `adminNote` | String | Nullable | Ghi chú phản hồi của Admin sau khi xem xét báo cáo |
+
+#### 9. NOTIFICATION (`notifications` collection)
+| Thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `_id` | ObjectId | PK, auto | Định danh thông báo |
+| `userId` | ObjectId | Required, FK → User | Người nhận thông báo |
+| `type` | String | Required | Loại: `"new_message"`, `"new_review"`, `"system"` |
+| `content` | String | Required | Nội dung thông báo hiển thị |
+| `isRead` | Boolean | Default: `false` | Trạng thái thông báo đã được đọc hay chưa |
+| `productId` | ObjectId | Optional, FK → Product | Liên kết sản phẩm liên quan (nếu có) |
+| `reviewId` | ObjectId | Optional, FK → Review | Liên kết đánh giá liên quan (nếu có) |
+
+#### 10. SUBSCRIPTION (`subscriptions` collection)
+| Thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `_id` | ObjectId | PK, auto | Định danh gói đăng ký định kỳ |
+| `userId` | ObjectId | Required, FK → User | Người đăng ký mua gói hải sản định kỳ Omakase |
+| `packageType` | String | Enum | Gói hải sản: `"Small"`, `"Medium"`, hoặc `"Large"` |
+| `price` | Number | Required | Đơn giá thanh toán chu kỳ của gói |
+| `frequency` | String | Enum | Tần suất giao: `"Weekly"`, `"BiWeekly"`, hoặc `"Monthly"` |
+| `preferredDay` | String | Required | Ngày nhận hàng trong tuần mong muốn (Thứ 2 - Chủ Nhật) |
+| `shippingAddress` | String | Required | Địa chỉ nhận hàng của người đăng ký |
+| `phone` | String | Required | Số điện thoại liên hệ nhận hàng |
+| `note` | String | Nullable | Ghi chú yêu cầu riêng của Buyer |
+| `status` | String | Enum, default: `"Pending"` | Trạng thái: `"Pending"`, `"Active"`, hoặc `"Cancelled"` |
+
+#### 11. BROADCAST_LOG (`broadcastlogs` collection)
+| Thuộc tính | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| `_id` | ObjectId | PK, auto | Định danh bản ghi phát tin hệ thống của Admin |
+| `adminId` | ObjectId | Required, FK → User | ID Admin thực hiện phát tin nhắn |
+| `content` | String | Required, max: 200 ký tự | Nội dung tin phát toàn trang |
+| `targetRole` | String | Enum, default: `"all"` | Đối tượng nhận tin: `"all"`, `"Seller"`, hoặc `"Buyer"` |
+| `sentCount` | Number | Default: 0 | Tổng số tài khoản được phân phối tin nhắn thành công |
+
+---
+
+### 6.3 Cấu trúc các chỉ mục (Indexes Spec) và Mục đích tối ưu
 Để đảm bảo hệ thống có thể phản hồi nhanh dưới 100ms khi lượng bản ghi lên tới hàng triệu, các chỉ mục sau được thiết lập tối ưu:
 
 | Collection | Định nghĩa Chỉ mục (Index Key) | Loại | Mục đích & Tình huống ứng dụng |
@@ -702,7 +919,7 @@ EMAIL_USER=daudaubut@gmail.com
 EMAIL_PASS=uezd tktc qysj jlpo
 
 # ─── AI Chatbot Config (Groq Cloud) ──────────────────
-GROQ_API_KEY=...
+GROQ_API_KEY=your
 ```
 
 ### 11.2 Frontend Configuration (`client/my-app/.env`)

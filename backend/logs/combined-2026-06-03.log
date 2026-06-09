@@ -1,0 +1,3 @@
+{"level":"info","message":"✅ MongoDB connected successfully via Mongoose","timestamp":"2026-06-03 15:49:36"}
+{"level":"info","message":"✅ Redis connected","timestamp":"2026-06-03 15:49:36"}
+{"level":"info","message":"Socket.IO Redis Adapter configured successfully","timestamp":"2026-06-03 15:49:36"}

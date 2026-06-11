@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { z } from "zod";
 import rateLimit from "express-rate-limit";
 import { validateSchema } from "../middlewares/validate";
 import {
@@ -14,90 +13,205 @@ import {
   getTodayCount,
 } from "../controllers/product.controller";
 import { authenticate } from "../middlewares/auth";
+import {
+  productCreateSchema,
+  productUpdateSchema,
+} from "../validations/product.validation";
 
 const router = Router();
 
-// ─── Shared field definitions ─────────────────────────────────
-// Trong tệp: backend/src/routes/product.routes.ts
-
-const productBodyFields = {
-  type: z.enum(["Fresh", "Dried"] as const, {
-    error: "Loại hải sản tươi hoặc khô là bắt buộc",
-  }),
-  category: z.enum(
-    ["Fish", "Shrimp", "Squid", "Crab", "Shellfish", "Others"] as const,
-    { error: "Nhãn phân loại chi tiết là bắt buộc" },
-  ),
-  name: z
-    .string({ error: "Tên mẻ hàng bắt buộc nhập" })
-    .min(2, "Tên quá ngắn")
-    .max(150, "Tên quá dài"),
-  price: z.preprocess(
-    (val) => Number(val),
-    z.number().positive("Đơn giá phải lớn hơn 0"),
-  ),
-  totalWeight: z.preprocess(
-    (val) => Number(val),
-    z.number().positive("Khối lượng phải lớn hơn 0"),
-  ),
-  salesType: z.enum(["Retail", "Wholesale"] as const).optional(),
-  description: z.string().optional(),
-  catchTime: z.string().optional().nullable(),
-  lat: z.preprocess(
-    (val) => (val ? Number(val) : undefined),
-    z.number().min(-90).max(90).optional(),
-  ),
-  lng: z.preprocess(
-    (val) => (val ? Number(val) : undefined),
-    z.number().min(-180).max(180).optional(),
-  ),
-  origin: z.string().optional(),
-  expiryDate: z.string().optional(),
-
-  // Chỉ dùng khi update
-  remainingWeight: z.preprocess(
-    (val) => (val !== undefined ? Number(val) : undefined),
-    z.number().positive("Khối lượng còn lại phải lớn hơn 0").optional(),
-  ),
-  status: z.enum(["Active", "Expired", "Deleted"] as const).optional(),
-
-  // 🌟 GIẢI PHÁP: Khai báo mảng URL ảnh cho phép vượt qua bộ lọc của Zod
-  images: z.array(z.string()).optional(),
-};
-
-// ─── POST /api/products — các trường bắt buộc đầy đủ ──────────
-const productCreateSchema = z.object({
-  body: z.object(productBodyFields),
-});
-
-// ─── PUT /api/products/:id — tất cả optional, chỉ validate trường được gửi lên
-// FIX: Trước đây dùng cùng productSchema → PUT phải gửi type/category/name/price/totalWeight
-// dù chỉ muốn cập nhật description. Dùng .partial() để mọi field đều optional khi update.
-const productUpdateSchema = z.object({
-  body: z.object(productBodyFields).partial(),
-});
-
 const priceHistoryLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 phút
-  max: 60, // tối đa 60 yêu cầu mỗi IP
-  message: { message: "Quá nhiều yêu cầu xem lịch sử giá. Vui lòng thử lại sau." },
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  message: {
+    message: "Quá nhiều yêu cầu xem lịch sử giá. Vui lòng thử lại sau.",
+  },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// ─── Routes ───────────────────────────────────────────────────
+/**
+ * @openapi
+ * /api/products:
+ *   get:
+ *     summary: Lấy danh sách sản phẩm hoặc tìm kiếm theo GPS, từ khóa
+ *     tags: [Products]
+ *     parameters:
+ *       - in: query
+ *         name: lat
+ *         schema:
+ *           type: number
+ *         description: Vĩ độ GPS để lọc theo khoảng cách
+ *       - in: query
+ *         name: lng
+ *         schema:
+ *           type: number
+ *         description: Kinh độ GPS để lọc theo khoảng cách
+ *       - in: query
+ *         name: distance
+ *         schema:
+ *           type: number
+ *           default: 10
+ *         description: Khoảng cách bán kính lọc (km)
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Từ khóa tìm kiếm tên sản phẩm
+ *     responses:
+ *       200:
+ *         description: Trả về danh sách sản phẩm thỏa mãn điều kiện
+ */
 router.get("/", getProducts);
+
+/**
+ * @openapi
+ * /api/products/my:
+ *   get:
+ *     summary: Lấy danh sách sản phẩm của người bán hiện tại
+ *     tags: [Products]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Trả về danh sách sản phẩm của tôi
+ *       401:
+ *         description: Chưa đăng nhập
+ */
 router.get("/my", authenticate, getMyProducts);
+
+/**
+ * @openapi
+ * /api/products/today-count:
+ *   get:
+ *     summary: Đếm số lượng sản phẩm đăng hôm nay của người dùng
+ *     tags: [Products]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Trả về số lượng sản phẩm đăng hôm nay
+ */
 router.get("/today-count", authenticate, getTodayCount);
+
+/**
+ * @openapi
+ * /api/products/{id}:
+ *   get:
+ *     summary: Lấy thông tin chi tiết một sản phẩm theo ID
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID sản phẩm MongoDB Object ID
+ *     responses:
+ *       200:
+ *         description: Trả về thông tin chi tiết sản phẩm
+ *       404:
+ *         description: Không tìm thấy sản phẩm
+ */
 router.get("/:id", getProductById);
+
+/**
+ * @openapi
+ * /api/products/{id}/price-history:
+ *   get:
+ *     summary: Lấy lịch sử biến động giá của một sản phẩm
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID sản phẩm
+ *     responses:
+ *       200:
+ *         description: Trả về lịch sử biến động giá
+ */
 router.get("/:id/price-history", priceHistoryLimiter, getProductPriceHistory);
 
+/**
+ * @openapi
+ * /api/products:
+ *   post:
+ *     summary: Đăng bán một sản phẩm hải sản mới
+ *     tags: [Products]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, price, category, unit, location]
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Cua biển Cà Mau
+ *               price:
+ *                 type: number
+ *                 example: 350000
+ *               category:
+ *                 type: string
+ *                 example: Cua, Ghẹ
+ *               unit:
+ *                 type: string
+ *                 example: kg
+ *               location:
+ *                 type: object
+ *                 properties:
+ *                   type:
+ *                     type: string
+ *                     enum: [Point]
+ *                     example: Point
+ *                   coordinates:
+ *                     type: array
+ *                     items:
+ *                       type: number
+ *                     example: [106.660172, 10.762622]
+ *                     description: Mảng chứa [lng, lat]
+ *     responses:
+ *       201:
+ *         description: Đăng bán sản phẩm thành công
+ *       401:
+ *         description: Chưa đăng nhập
+ */
 router.post(
   "/",
   authenticate,
   validateSchema(productCreateSchema),
   createProduct,
 );
+
+/**
+ * @openapi
+ * /api/products/{id}:
+ *   put:
+ *     summary: Cập nhật thông tin sản phẩm
+ *     tags: [Products]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Cập nhật sản phẩm thành công
+ */
 router.put(
   "/:id",
   authenticate,
@@ -105,7 +219,46 @@ router.put(
   updateProduct,
 );
 
+/**
+ * @openapi
+ * /api/products/{id}:
+ *   delete:
+ *     summary: Xóa một sản phẩm
+ *     tags: [Products]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Xóa sản phẩm thành công
+ */
 router.delete("/:id", authenticate, deleteProduct);
+
+/**
+ * @openapi
+ * /api/products/{id}/bump:
+ *   post:
+ *     summary: Đẩy bài đăng sản phẩm lên đầu trang
+ *     tags: [Products]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Đẩy bài thành công
+ *       400:
+ *         description: Chưa hết thời gian cooldown để tiếp tục đẩy bài
+ */
 router.post("/:id/bump", authenticate, bumpProduct);
 
 export default router;

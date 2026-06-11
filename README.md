@@ -111,11 +111,11 @@ Docker Compose giúp tự động dựng toàn bộ môi trường (gồm cả M
    ```
 
 ---
-
+ 
 ## 🧪 Hướng Dẫn Chạy Kiểm Thử Tự Động (Tests)
-
+ 
 Hệ thống backend tích hợp bộ kiểm thử đơn vị (Unit Tests) toàn diện sử dụng Jest:
-
+ 
 1. Di chuyển vào thư mục backend:
    ```bash
    cd backend
@@ -129,6 +129,24 @@ Hệ thống backend tích hợp bộ kiểm thử đơn vị (Unit Tests) toàn
    npm run test:cov
    ```
    *Báo cáo HTML sẽ được xuất ra thư mục `backend/coverage/lcov-report/index.html`. Bạn có thể mở tệp này bằng trình duyệt để xem tỷ lệ bao phủ của code.*
+ 
+---
+ 
+## 📖 Tài Liệu Hóa API Tương Tác (Swagger UI)
+ 
+Hệ thống cung cấp giao diện tài liệu API tự động và tương tác trực tiếp sử dụng **Swagger UI (OpenAPI 3.0)**:
+1. Đảm bảo Backend đang khởi chạy (`npm run dev` hoặc Docker).
+2. Truy cập đường dẫn: [http://localhost:5000/api-docs](http://localhost:5000/api-docs) trên trình duyệt.
+3. Tại đây, bạn có thể xem chi tiết các endpoint của Authentication (`/api/auth`) và Products (`/api/products`) cùng cấu trúc Request/Response và thực hiện test trực quan.
+ 
+---
+ 
+## 🚀 Tự động hóa Tích hợp liên tục (CI/CD - GitHub Actions)
+ 
+Dự án cấu hình quy trình kiểm tra chất lượng mã nguồn tự động thông qua **GitHub Actions** được định nghĩa tại [.github/workflows/ci.yml](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/.github/workflows/ci.yml):
+* **Cơ chế kích hoạt:** Tự động chạy khi có hành động `push` hoặc `pull_request` lên nhánh `main` và nhánh làm việc `docs/HE186165-add-personal-folder`.
+* **Luồng chạy Backend (backend-ci):** Cài đặt dependencies (`npm ci --ignore-scripts`), biên dịch TypeScript (`npm run build`), chạy toàn bộ Unit Tests kèm báo cáo Coverage (`npm run test:cov`) và tải báo cáo này làm Artifact của workflow.
+* **Luồng chạy Frontend (client-ci):** Cài đặt dependencies (`npm ci`), kiểm tra chất lượng định dạng code (`npm run lint`), và chạy build biên dịch production (`npm run build`).
 
 ---
 

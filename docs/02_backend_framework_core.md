@@ -39,8 +39,10 @@ Tệp [backend/src/app.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_sho
   - **CORS**: Chỉ định nguồn gốc từ biến môi trường `CLIENT_URL` (hoặc mặc định `http://localhost:3000`), bắt buộc cấu hình `credentials: true` để truyền cookies an toàn.
   - **Express JSON & URL Encoded parser**: Phân tích cú pháp HTTP Body định dạng JSON và URL encoded, thiết lập giới hạn payload tối đa `2mb` chống tấn công từ chối dịch vụ (DoS) bằng payload khổng lồ.
 
-* **Dòng 58-61: HTTP Request Logger**
-  - Mỗi request gọi lên sẽ đi qua middleware ghi log sử dụng thư viện `winston` (thực thể `logger`), ghi lại phương thức HTTP, đường dẫn và IP của Client.
+* **Dòng 58-71: Nâng cấp HTTP Request & Response Logger (Đo lường hiệu năng)**
+  - Sử dụng sự kiện `res.on("finish")` để ghi lại nhật ký sau khi HTTP request được xử lý xong.
+  - Ghi vết phương thức HTTP, đường dẫn, địa chỉ IP của client, mã trạng thái HTTP phản hồi (`res.statusCode`) và thời gian thực thi xử lý (tính bằng mili-giây - ms) giúp nhà quản trị dễ dàng phát hiện các API hoạt động chậm để tối ưu hóa.
+  - Tự động gọi hàm cấu hình khởi tạo tài liệu Swagger UI (`setupSwagger`).
 
 * **Dòng 63-117: Thiết lập phân tầng Rate Limiters (Chống Brute-force & DDoS)**
   - Tách biệt 4 bộ cấu hình rate limiter:
@@ -54,10 +56,11 @@ Tệp [backend/src/app.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_sho
   - Bộ kiểm tra `validateCsrf` được áp dụng cho mọi đường dẫn bắt đầu bằng `/api`.
   - **Logic loại trừ (Exclusion Logic):** Khởi tạo danh sách `publicPaths` (như đăng nhập, đăng xuất, sức khỏe hệ thống `/health`, chatbot) và các request có phương thức đọc dữ liệu `GET` (vốn an toàn) để bỏ qua không yêu cầu kiểm tra token CSRF.
 
-* **Dòng 172-186: Bộ Xử Lý Lỗi Tập Trung (Global Error Handler)**
+* **Dòng 172-192: Bộ Xử Lý Lỗi Tập Trung (Global Error Handler) & Sentry Integration**
   - Bắt toàn bộ lỗi phát sinh không mong muốn trong chu kỳ sống của Request.
   - Ghi nhận lỗi chi tiết kèm call-stack qua Winston Logger.
-  - Phản hồi mã lỗi chuẩn `HTTP 500 Internal Server Error` với thông điệp chung để bảo vệ mã nguồn, tránh rò rỉ thông tin hạ tầng ra bên ngoài.
+  - **Giám sát thời gian thực Sentry:** Bổ sung hook tự động kiểm tra biến môi trường `SENTRY_DSN` và chuyển tiếp lỗi runtime nghiêm trọng trực tiếp lên hệ thống quản lý lỗi tập trung Sentry.
+  - Phản hồi mã lỗi chuẩn HTTP 500 Internal Server Error với thông điệp chung để bảo vệ mã nguồn, tránh rò rỉ thông tin hạ tầng ra bên ngoài.
 
 * **Dòng 204-227: Quy trình bootstrap khởi chạy ứng dụng**
   - **Bước 1**: Kiểm tra các biến môi trường cấu hình bắt buộc (`MONGO_URI`, `JWT_SECRET`, `OTP_SECRET`). Nếu thiếu, máy chủ sẽ ghi log lỗi CRITICAL và lập tức thoát chương trình (`process.exit(1)`).
@@ -186,3 +189,12 @@ Tệp [backend/src/middlewares/csrf.ts](file:///c:/Users/PC/OneDrive/Desktop/sea
     ```
     *(Tấn công Timing Attack đo lường thời gian xử lý so sánh chuỗi của CPU để đoán các ký tự đúng. safeCompare thực hiện so sánh có thời gian cố định bất kể chuỗi khớp bao nhiêu ký tự).*
   - Nếu không khớp hoặc thiếu token, lập tức chặn đứng request và trả về lỗi `403 Forbidden`.
+
+---
+
+## 6. swagger.ts — Tài Liệu Hóa API Tự Động (Swagger / OpenAPI 3.0)
+
+Tệp [backend/src/config/swagger.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/config/swagger.ts) cấu hình tự động quét mã nguồn các route để hiển thị tài liệu tương tác Swagger UI:
+* Sử dụng `swagger-jsdoc` để định nghĩa cấu hình OpenAPI 3.0 bao gồm tiêu đề, phiên bản, server thử nghiệm và các sơ đồ bảo mật (Security Schemes) sử dụng cookie chứa JWT token.
+* Chỉ dẫn đường dẫn quét JSDoc tại `./src/routes/*.ts` và các tệp tin JS tương ứng sau khi biên dịch giúp Swagger UI luôn hoạt động chính xác cả ở môi trường local development và production.
+* Tích hợp Route `/api-docs` phục vụ giao diện HTML trực quan.

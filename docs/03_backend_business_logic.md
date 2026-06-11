@@ -317,3 +317,31 @@ File này thực hiện kiểm thử logic bật/tắt kích hoạt tài khoản
   - Giả lập hàm lưu trạng thái mới `updateActiveStatus` trả về kết quả `isActive = false`.
   - Gọi thực thi hàm. Kỳ vọng kết quả đầu ra nhận được là trạng thái mới của user (`false`).
   - Sử dụng `toHaveBeenCalledWith` kiểm chứng xem hàm update trong database thực tế có được gọi đúng tham số ID người dùng và cờ trạng thái mới `false` hay không.
+
+### 3.3 Phân tích kiểm thử định vị GPS và cooldown đẩy bài: [product.service.test.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/product.service.test.ts)
+
+Tệp tin này thực hiện kiểm thử ba logic nghiệp vụ cốt lõi:
+1. **Giới hạn số lượng bài đăng:** Chặn tài khoản thường không cho đăng quá 5 bài/ngày nhưng cho phép tài khoản Premium đăng không giới hạn.
+2. **Thời gian chờ (cooldown) đẩy bài (bump):** Chỉ cho phép đẩy bài viết lên đầu trang nếu khoảng cách giữa 2 lần đẩy lớn hơn 24 giờ.
+3. **Bộ lọc định vị địa lý GPS:** Tự động áp dụng `$geoWithin` để truy vấn hải sản tươi sống (`Fresh`) dựa trên tọa độ mặt cầu.
+
+* **Kiểm thử bộ lọc GPS:**
+  ```typescript
+  it("Nên áp dụng bộ lọc $geoWithin khi truy vấn sản phẩm loại Fresh với lat và lng hợp lệ", async () => {
+    ...
+    await productService.list({ type: "Fresh", lat: "20.8449", lng: "106.6881" });
+    expect(productRepository.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "Fresh",
+        location: expect.objectContaining({
+          $geoWithin: expect.objectContaining({
+            $centerSphere: expect.any(Array),
+          }),
+        }),
+      }),
+      expect.any(Object),
+      expect.any(Object)
+    );
+  });
+  ```
+  - `expect.objectContaining`: Sử dụng matcher của Jest để đảm bảo filter truyền vào repository chứa đúng toán tử địa lý `$geoWithin` với tâm và bán kính được tính toán chính xác mà không cần so khớp toàn bộ object.

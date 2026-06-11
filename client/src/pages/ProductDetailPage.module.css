@@ -1,0 +1,1205 @@
+/* ═══════════════════════════════════════════════════
+   ProductDetailPage.module.css
+   Premium Japanese seafood marketplace design
+   Inspired by umai.fish
+   ═══════════════════════════════════════════════════ */
+
+/* ── Full-width background wrapper ── */
+.pageWrapper {
+  width: 100%;
+  min-height: 100vh;
+  background: #f5f0dc;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ── Centered and compact container ── */
+.container {
+  width: 100%;
+  max-width: 980px; /* Thu hẹp từ 1140px để gọn gàng hơn */
+  margin: 0 auto;
+  padding: 24px 16px 80px;
+  animation: fadeInUp 0.5s ease-out;
+  box-sizing: border-box;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Breadcrumb ── */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #8b7d5e;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.breadcrumb a {
+  color: #6b5e3e;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.breadcrumb a:hover {
+  color: #0b4f6c;
+}
+
+.breadcrumbCurrent {
+  color: #333;
+  font-weight: 700;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Main Grid ── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 340px; /* Thu nhỏ sidebar từ 400px xuống 340px */
+  grid-template-rows: auto auto;
+  grid-template-areas:
+    "gallery sidebar"
+    "desc sidebar";
+  gap: 24px; /* Giảm nhẹ khoảng cách giữa các phần */
+  margin-bottom: 24px;
+  align-items: start;
+}
+
+.galleryArea {
+  grid-area: gallery;
+}
+
+.descArea {
+  grid-area: desc;
+}
+
+.infoArea {
+  grid-area: sidebar;
+  position: sticky;
+  top: 74px;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      "gallery"
+      "sidebar"
+      "desc";
+    gap: 20px;
+  }
+  .infoArea {
+    position: static;
+  }
+}
+
+/* ── Enhanced Image Gallery ── */
+.gallery {
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0f172a;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+.mainImage {
+  position: relative;
+  height: 380px; /* Giảm chiều cao từ 440px xuống để tiết kiệm không gian */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-in;
+  overflow: hidden;
+}
+
+.mainImage img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.mainImage:hover img {
+  transform: scale(1.03);
+}
+
+.imgCounter {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  z-index: 10;
+}
+
+.navBtn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  z-index: 10;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.navBtn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.navPrev {
+  left: 14px;
+}
+.navNext {
+  right: 14px;
+}
+
+/* Thumbnail strip */
+.thumbStrip {
+  display: flex;
+  gap: 0;
+  background: #1e293b;
+  padding: 6px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.thumbStrip::-webkit-scrollbar {
+  display: none;
+}
+
+.thumb {
+  flex: 0 0 64px; /* Thu gọn chiều rộng thumbnail */
+  height: 48px; /* Thu gọn chiều cao thumbnail */
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  opacity: 0.5;
+  transition: all 0.25s ease;
+  margin: 0 3px;
+}
+
+.thumb:hover {
+  opacity: 0.85;
+}
+
+.thumbActive {
+  opacity: 1;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.3);
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  background: linear-gradient(135deg, #0b4f6c, #1a7fa0);
+}
+
+/* ── Right Sidebar Card ── */
+.sidebar {
+  position: sticky;
+  top: 74px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.infoCard {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 20px; /* Giảm padding từ 24px xuống 20px */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.3s ease;
+}
+
+.infoCard:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+}
+
+/* ── Badges Row ── */
+.badges {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.badgeFresh {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  color: #0369a1;
+}
+
+.badgeDried {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+}
+
+.badgeCategory {
+  background: #f0f9ff;
+  color: #0b4f6c;
+}
+
+.badgeWholesale {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+/* ── Product Title ── */
+.productTitle {
+  font-size: 20px; /* Giảm nhẹ cỡ chữ tiêu đề */
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 10px 0;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+/* ── Price ── */
+.priceBlock {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 12px;
+  border: 1px solid #bae6fd;
+}
+
+.price {
+  font-size: 28px; /* Giảm nhẹ cỡ chữ giá bán */
+  font-weight: 900;
+  color: #0b4f6c;
+  letter-spacing: -0.02em;
+}
+
+.priceUnit {
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.priceTax {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-left: auto;
+}
+
+/* ── Stock meter ── */
+.stockSection {
+  margin-bottom: 14px;
+}
+
+.stockHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.stockBar {
+  height: 8px;
+  background: #f1f5f9;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.stockFill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Info Table (umai-style) ── */
+.infoTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  margin: 12px 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.infoTable tr {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.infoTable tr:last-child {
+  border-bottom: none;
+}
+
+.infoTable th {
+  text-align: left;
+  padding: 6px 10px;
+  color: #64748b;
+  font-weight: 600;
+  width: 100px;
+  background: #f8fafc;
+  border-right: 1px solid #e2e8f0;
+  font-size: 11.5px;
+  vertical-align: middle;
+}
+
+.infoTable td {
+  padding: 6px 10px;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+/* ── Seller Card ── */
+.sellerCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+}
+
+.sellerCard:hover {
+  background: #f8fafc;
+  border-color: #0b4f6c;
+  box-shadow: 0 4px 16px rgba(11, 79, 108, 0.08);
+  transform: translateY(-1px);
+}
+
+.sellerAvatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0b4f6c 0%, #0ea5e9 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(11, 79, 108, 0.2);
+}
+
+.sellerInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.sellerName {
+  font-weight: 800;
+  color: #0f172a;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sellerCta {
+  font-size: 11.5px;
+  color: #0b4f6c;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.sellerArrow {
+  font-size: 16px;
+  color: #94a3b8;
+  transition: transform 0.2s;
+}
+
+.sellerCard:hover .sellerArrow {
+  transform: translateX(4px);
+  color: #0b4f6c;
+}
+
+/* ── Fisherman Badges ── */
+.fishBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.fishBadge {
+  background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
+  border: 1px solid #99f6e4;
+  color: #0f766e;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: transform 0.15s;
+}
+
+.fishBadge:hover {
+  transform: scale(1.05);
+}
+
+/* ── CTA Buttons ── */
+.ctaGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ctaPrimary {
+  padding: 12px 0;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #208f67 0%, #1a9c6d 100%);
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(32, 143, 103, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.ctaPrimary::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.ctaPrimary:hover::after {
+  left: 100%;
+}
+
+.ctaPrimary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(32, 143, 103, 0.35);
+}
+
+.ctaSecondary {
+  padding: 10px 0;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.25s ease;
+}
+
+.ctaSecondary:hover {
+  transform: translateY(-1px);
+}
+
+/* ── Description Section ── */
+.descSection {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 24px; /* Giảm padding từ 28px xuống 24px */
+  margin-top: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
+}
+
+.sectionTitle {
+  font-weight: 800;
+  font-size: 15px;
+  color: #0f172a;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #f1f5f9;
+}
+
+.sectionTitleAccent {
+  width: 4px;
+  height: 18px;
+  background: linear-gradient(180deg, #0b4f6c, #0ea5e9);
+  border-radius: 4px;
+}
+
+.descText {
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.8;
+  margin: 0 0 16px;
+  white-space: pre-line;
+}
+
+/* ── Map Section ── */
+.mapSection {
+  margin-top: 16px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
+}
+
+/* ── Price History Accordion ── */
+.priceHistoryBtn {
+  background: none;
+  border: none;
+  color: #0b4f6c;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 6px;
+  transition: background 0.2s;
+  font-family: inherit;
+}
+
+.priceHistoryBtn:hover {
+  background: #f0f9ff;
+}
+
+.priceHistoryPanel {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: slideDown 0.25s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.priceHistoryItem {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  border-left: 3px solid #0b4f6c;
+  padding-left: 10px;
+  padding: 4px 0 4px 10px;
+}
+
+/* ── Report Modal ── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modalCard {
+  background: #fff;
+  border-radius: 20px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+  animation: modalIn 0.3s ease;
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ── Loading skeleton ── */
+.loadingShimmer {
+  text-align: center;
+  padding: 100px 20px;
+  color: #94a3b8;
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.loadingShimmer::after {
+  content: "";
+  display: block;
+  width: 48px;
+  height: 48px;
+  margin: 16px auto 0;
+  border: 3px solid #e2e8f0;
+  border-top-color: #0b4f6c;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .container {
+    padding: 16px 12px 60px;
+  }
+
+  .mainImage {
+    height: 280px;
+  }
+
+  .productTitle {
+    font-size: 18px;
+  }
+
+  .price {
+    font-size: 24px;
+  }
+
+  .sidebar {
+    position: static;
+  }
+}
+
+/* ── Report link ── */
+.reportLink {
+  font-size: 12px;
+  color: #94a3b8;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 4px 0;
+  transition: color 0.2s;
+  text-align: center;
+}
+
+.reportLink:hover {
+  color: #ef4444;
+}
+
+/* ── Divider ── */
+.divider {
+  border: none;
+  border-top: 1.5px solid #f1f5f9;
+  margin: 14px 0;
+}
+
+/* ── Section label ── */
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 800;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+
+/* ── Umai.fish Inspired Custom Styles ── */
+
+/* highlights list */
+.highlightsList {
+  list-style: none;
+  padding: 14px;
+  margin: 14px 0;
+  background: #fdfaf2;
+  border: 1.5px dashed #ecd223;
+  border-radius: 12px;
+}
+
+.highlightsHeader {
+  font-size: 12px;
+  font-weight: 800;
+  color: #c94f27;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.highlightsLi {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.highlightsLi:last-child {
+  margin-bottom: 0;
+}
+
+/* alternating detail rows */
+.detailsSection {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.detailRow {
+  display: flex;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+  align-items: center;
+}
+
+.rowNormal {
+  flex-direction: row;
+}
+
+.rowReverse {
+  flex-direction: row-reverse;
+}
+
+.detailImage {
+  flex: 1;
+  min-height: 220px; /* Giảm chiều cao tối thiểu từ 280px để gọn gàng hơn */
+  align-self: stretch;
+  background: #f8fafc;
+}
+
+.detailImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.detailContent {
+  flex: 1;
+  padding: 24px; /* Giảm đệm từ 36px để bớt rỗng */
+}
+
+.detailRowTitle {
+  font-size: 16px; /* Giảm nhẹ kích cỡ tiêu đề */
+  font-weight: 800;
+  color: #0b4f6c;
+  margin: 0 0 10px 0;
+  border-bottom: 2px solid #ecd223;
+  padding-bottom: 4px;
+  display: inline-block;
+}
+
+.detailRowText {
+  font-size: 13.5px;
+  color: #475569;
+  line-height: 1.7;
+  margin: 0;
+  white-space: pre-line;
+}
+
+@media (max-width: 768px) {
+  .detailRow {
+    flex-direction: column !important;
+  }
+  .detailImage {
+    width: 100%;
+    height: 180px;
+    min-height: 180px;
+  }
+  .detailContent {
+    padding: 16px;
+  }
+}
+
+/* producer card */
+.producerCard {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 24px; /* Giảm padding từ 32px để vừa vặn hơn */
+  margin-top: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+}
+
+.producerHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #f1f5f9;
+}
+
+.producerHeader h2 {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.producerBody {
+  display: grid;
+  grid-template-columns: 200px 1fr; /* Thu hẹp cột bên trái để nhường không gian */
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .producerBody {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .producerLeft {
+    text-align: center;
+    align-items: center;
+  }
+}
+
+.producerLeft {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-right: 1px solid #f1f5f9;
+  padding-right: 16px;
+}
+
+@media (max-width: 768px) {
+  .producerLeft {
+    border-right: none;
+    padding-right: 0;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 16px;
+  }
+}
+
+.producerAvatarLarge {
+  width: 72px; /* Giảm kích cỡ vòng tròn đại diện */
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0b4f6c 0%, #0ea5e9 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  font-weight: 800;
+  margin-bottom: 10px;
+  box-shadow: 0 6px 18px rgba(11, 79, 108, 0.15);
+}
+
+.producerLeft h3 {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+}
+
+.producerLeft p {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0 0 10px 0;
+}
+
+.producerBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.producerBadge {
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  color: #0f766e;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.producerRight {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.producerQuote {
+  font-size: 15px;
+  font-weight: 700;
+  color: #c94f27;
+  font-style: italic;
+  margin: 0 0 10px 0;
+  line-height: 1.5;
+}
+
+.producerBio {
+  font-size: 13.5px;
+  color: #475569;
+  line-height: 1.7;
+  margin: 0 0 16px 0;
+}
+
+.producerStats {
+  display: flex;
+  gap: 16px;
+}
+
+.producerStats div {
+  background: #f8fafc;
+  padding: 8px 12px;
+  border-radius: 10px;
+  flex: 1;
+  text-align: center;
+  border: 1px solid #f1f5f9;
+}
+
+.producerStats strong {
+  display: block;
+  font-size: 14.5px;
+  color: #0b4f6c;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.producerStats span {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+/* seasonal catch */
+.seasonalCard {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  margin-top: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+}
+
+.seasonalGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .seasonalGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.seasonBox {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+
+.spring {
+  background: #fff5f5;
+  border-color: #fee2e2;
+}
+.spring .seasonTitle {
+  color: #e11d48;
+}
+
+.summer {
+  background: #f0fdf4;
+  border-color: #dcfce7;
+}
+.summer .seasonTitle {
+  color: #16a34a;
+}
+
+.autumn {
+  background: #fffbeb;
+  border-color: #fef3c7;
+}
+.autumn .seasonTitle {
+  color: #d97706;
+}
+
+.winter {
+  background: #f0f9ff;
+  border-color: #e0f2fe;
+}
+.winter .seasonTitle {
+  color: #0284c7;
+}
+
+.seasonTitle {
+  font-weight: 800;
+  font-size: 13.5px;
+  margin-bottom: 4px;
+}
+
+.seasonBox p {
+  font-size: 12.5px;
+  color: #475569;
+  margin: 0;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+/* schedule */
+.scheduleCard {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  margin-top: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+}
+
+.scheduleDesc {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.scheduleTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  text-align: center;
+  min-width: 580px;
+}
+
+.scheduleTable th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 700;
+  padding: 10px 8px;
+  border-bottom: 1.5px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+}
+
+.scheduleTable td {
+  padding: 12px 8px;
+  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  font-weight: 600;
+}
+
+.scheduleTable th:last-child,
+.scheduleTable td:last-child {
+  border-right: none;
+}
+
+.fishermanName {
+  text-align: left;
+  color: #0b4f6c;
+  font-weight: 700;
+  padding-left: 14px !important;
+}
+
+.statusCell {
+  font-size: 14px;
+}
+
+/* commitment banner */
+.commitmentBanner {
+  background: #208f67;
+  color: #fff;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 13.5px;
+  text-align: center;
+  margin: 24px 0 10px 0;
+  box-shadow: 0 4px 16px rgba(32, 143, 103, 0.25);
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}

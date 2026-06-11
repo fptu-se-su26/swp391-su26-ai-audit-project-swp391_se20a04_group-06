@@ -16,6 +16,7 @@ import { generateCsrfToken, validateCsrf } from "./middlewares/csrf";
 import authRoutes, { userRouter } from "./routes/auth.routes";
 import otpRoutes from "./routes/otp.routes";
 import productRoutes from "./routes/product.routes";
+import fishermanRoutes from "./routes/fisherman.routes";
 import imageRoutes from "./routes/image.routes";
 import messageRoutes from "./routes/message.routes";
 import adminRoutes from "./routes/admin.routes";
@@ -25,6 +26,12 @@ import notificationRoutes from "./routes/notification.routes";
 import favoriteRoutes from "./routes/favorite.routes";
 import reportRoutes from "./routes/report.routes";
 import paymentRoutes from "./routes/payment.routes";
+import chatbotRoutes from "./routes/chatbot.routes"; // ← thêm dòng này
+import subscriptionRoutes from "./routes/subscription.routes";
+import recipeRoutes from "./routes/recipe.routes";
+import postRoutes from "./routes/post.routes";
+import boatLogRoutes from "./routes/boatLog.routes";
+
 
 const app = express();
 const server = http.createServer(app);
@@ -69,6 +76,7 @@ app.use("/api", (req, res, next) => {
     "/auth/refresh",
     "/auth/google",
     "/payment/webhook",
+    "/chatbot",
   ];
 
   const cleanPath = req.path.replace(/\/$/, "");
@@ -88,6 +96,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/auth", otpRoutes);
 app.use("/api/users", userRouter);
 app.use("/api/products", productRoutes);
+app.use("/api/fishermen", fishermanRoutes);
 app.use("/api", imageRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/admin", adminRoutes);
@@ -97,6 +106,12 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/chatbot", chatbotRoutes); // ← DI CHUYỂN XUỐNG ĐÂY
+app.use("/api/subscriptions", subscriptionRoutes);
+app.use("/api/recipes", recipeRoutes);
+app.use("/api/posts", postRoutes);
+app.use("/api/boat-logs", boatLogRoutes);
+
 
 app.use((_req, res) =>
   res.status(404).json({ message: "Không tìm thấy endpoint này" }),

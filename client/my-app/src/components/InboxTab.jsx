@@ -346,6 +346,8 @@ export function InboxTab({ user }) {
               name: activeChat.productName,
               sellerId: activeChat.otherUserId,
               sellerName: activeChat.otherUserName,
+              productSellerId: activeChat.productSellerId,
+              otherUserId: activeChat.otherUserId,
             }}
             user={user}
             onClose={() => setActiveChat(null)}

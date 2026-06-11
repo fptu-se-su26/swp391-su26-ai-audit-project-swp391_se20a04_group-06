@@ -1,0 +1,535 @@
+@charset "utf-8";
+
+/**************************************************************************************/
+
+/*　sp.css　→　画面の横幅が750px以下↓　*/
+
+/**************************************************************************************/
+
+
+@media screen and (max-width:750px){
+img{
+max-width: 100%;
+height: auto;
+width /***/:auto;　
+}
+
+/*********   service サービス紹介   **********/
+
+
+.service .A_waku {
+	background-image: url(../images//base/back02.png);
+	background-repeat: repeat-x;
+	background-position: center bottom;
+        overflow-x: hidden;
+}
+.service .A01 {
+width: 90%;
+margin-left: auto;
+margin-right: auto;
+color: #FFFFFF;
+font-size: 16px;
+line-height: 180%;
+padding-bottom: 70px;
+position: relative;
+}
+.service .A01 .img01 {
+max-width: 350px;
+margin-left: auto;
+margin-right: auto;
+z-index: 1;
+}
+.service .A01 .img02 {
+margin-top: -280px;
+position: relative;
+z-index: 10;
+}
+.service .A01 .img03 {
+	margin-top: 37px;
+
+}
+.service .A01 .img04 {
+	margin-top: 7px;
+
+}
+.service .A01 .img05 {
+	margin-top: 15px;
+
+}
+.service .A01 .text01 {
+margin-top: 10px;
+}
+.service .A01 .text02 {
+	margin-top: 15px;
+text-align: justify;
+}
+
+.service .A01 .text02 br {
+display: none;
+}
+
+
+
+.service .B_waku {
+	background-image: url(../images//base/back05.png);
+	background-repeat: repeat-x;
+	background-position: center bottom;
+	background-color: #ECD223;
+        overflow-x: hidden;
+}
+
+.service .B01 {
+	width: 90%;
+	position: relative;
+	margin-left: auto;
+	margin-right: auto;
+	padding-bottom: 70px;
+	font-size: 16px;
+	line-height: 180%;
+}
+.service .B01 .img01 {
+position: relative;
+z-index: 1;
+width: 350px;
+margin-left: auto;
+margin-right: auto;
+}
+.service .B01 .img02 {
+margin-top: -290px;
+position: relative;
+z-index: 10;
+}
+.service .B01 .img03 {
+	margin-top: 7px;
+
+}
+.service .B01 .img04 {
+	margin-top: 15px;
+
+}
+.service .B01 .img05 {
+	margin-top: 15px;
+
+}
+.service .B01 .text01 {
+margin-top: 15px;
+text-align: justify;
+}
+.service .B01 .text01 br {
+display: none;
+}
+
+
+.service .C_waku {
+	background-image: url(../images//base/back02.png);
+	background-repeat: repeat-x;
+	background-position: center bottom;
+        overflow-x: hidden;
+}
+
+.service .C01 {
+	width: 90%;
+	position: relative;
+	margin-left: auto;
+	margin-right: auto;
+	padding-bottom: 60px;
+	font-size: 16px;
+	line-height: 180%;
+	color: #FFFFFF;
+}
+.service .C01 .img01 {
+position: relative;
+z-index: 1;
+width: 350px;
+margin-left: auto;
+margin-right: auto;
+}
+.service .C01 .img02 {
+margin-top: -290px;
+position: relative;
+z-index: 10;
+}
+.service .C01 .img03 {
+	margin-top: 7px;
+
+}
+.service .C01 .img04 {
+	margin-top: 25px;
+
+}
+.service .C01 .text01 {
+margin-top: 2px;
+text-align: justify;
+}
+.service .C01 .text01 br {
+display: none;
+}
+
+
+
+.service .D_waku {
+	background-image: url(../images//base/back05.png);
+	background-repeat: repeat-x;
+	background-position: center bottom;
+	background-color: #ECD223;
+        overflow-x: hidden;
+}
+
+.service .D01 {
+	width: 90%;
+	position: relative;
+	margin-left: auto;
+	margin-right: auto;
+	padding-bottom: 85px;
+	font-size: 16px;
+	line-height: 180%;
+}
+.service .D01 .img01 {
+position: relative;
+z-index: 1;
+width: 350px;
+margin-left: auto;
+margin-right: auto;
+}
+.service .D01 .img02 {
+margin-top: -290px;
+position: relative;
+z-index: 10;
+}
+.service .D01 .img03 {
+	margin-top: 7px;
+}
+.service .D01 .img04 {
+	margin-top: 12px;
+}
+.service .D01 .text01 {
+	margin-top: 12px;
+	text-align: justify;
+}
+.service .D01 .text01 br {
+display: none;
+}
+
+
+.service .E_waku {
+	background-image: url(../images//base/back02.png);
+	background-repeat: repeat-x;
+	background-position: center bottom;
+        overflow-x: hidden;
+}
+
+.service .E01 {
+	width: 90%;
+	position: relative;
+	margin-left: auto;
+	margin-right: auto;
+	padding-bottom: 72px;
+	font-size: 16px;
+	line-height: 180%;
+	color: #FFFFFF;
+}
+.service .E01 .img01 {
+position: relative;
+z-index: 1;
+width: 350px;
+margin-left: auto;
+margin-right: auto;
+}
+.service .E01 .img02 {
+margin-top: -290px;
+position: relative;
+z-index: 10;
+}
+.service .E01 .img03 {
+	margin-top: 7px;
+
+}
+.service .E01 .img04 {
+	margin-top: 15px;
+
+}
+.service .E01 .text01 {
+margin-top: 5px;
+text-align: justify;
+}
+.service .E01 .text01 br {
+display: none;
+}
+.service .E01 .ul01 {
+list-style-type: none;
+text-align: justify;
+font-size: 14px;
+width: 100%;
+-webkit-box-sizing: border-box;
+-moz-box-sizing: border-box;
+box-sizing: border-box;
+margin-left: auto;
+margin-right: auto;
+background-color: #EEEEEE;
+line-height: 160%;
+color: #212121;
+padding-left: 40px;
+padding-top: 30px;
+padding-right: 40px;
+padding-bottom: 20px;
+margin-top: 27px;
+letter-spacing: 0px;
+}
+.service .E01 .ul01 li {
+	margin-right: 5px;
+	margin-bottom: 5px;
+}
+
+
+.service .F_waku {
+	background-image: url(../images//base/back05.png);
+	background-repeat: repeat-x;
+	background-position: center bottom;
+	background-color: #ECD223;
+        overflow-x: hidden;
+}
+.service .F01 {
+	width: 90%;
+	position: relative;
+	margin-left: auto;
+	margin-right: auto;
+	padding-bottom: 70px;
+	font-size: 16px;
+	line-height: 180%;
+}
+.service .F01 .img01 {
+position: relative;
+z-index: 1;
+width: 350px;
+margin-left: auto;
+margin-right: auto;
+}
+.service .F01 .img02 {
+margin-top: -290px;
+position: relative;
+z-index: 10;
+}
+.service .F01 .img03 {
+	margin-top: 7px;
+
+}
+.service .F01 .img04 {
+	margin-top: 15px;
+}
+.service .F01 .img05 {
+	margin-top: 15px;
+
+}
+.service .F01 .text01 {
+	margin-top: 15px;
+text-align: justify;
+}
+.service .F01 .text01 br {
+display: none;
+}
+
+
+
+.service .G_waku {
+	background-image: url(../images//base/back02.png);
+	background-repeat: repeat-x;
+	background-position: center bottom;
+        overflow-x: hidden;
+}
+
+.service .G01 {
+	width: 90%;
+	position: relative;
+	margin-left: auto;
+	margin-right: auto;
+	padding-bottom: 72px;
+	font-size: 16px;
+	line-height: 180%;
+	color: #FFFFFF;
+}
+.service .G01 .img01 {
+position: relative;
+z-index: 1;
+width: 350px;
+margin-left: auto;
+margin-right: auto;
+}
+.service .G01 .img02 {
+margin-top: -290px;
+position: relative;
+z-index: 10;
+}
+.service .G01 .img03 {
+	margin-top: 5px;
+
+}
+.service .G01 .img04 {
+	margin-top: 5px;
+
+}
+.service .G01 .img05 {
+	margin-top: 20px;
+	padding-top: 0px;
+
+}
+.service .G01 .img05 img {
+-webkit-box-sizing: border-box;
+-moz-box-sizing: border-box;
+box-sizing: border-box;
+padding-left: 5%;
+padding-right: 5%;
+}
+
+.service .G01 .text01 {
+	margin-top: 15px;
+text-align: justify;
+}
+.service .G01 .text01 br {
+display: none;
+}
+
+
+
+.service .H_waku {
+        background-image: url(../images//base/back03.png);
+        background-repeat: repeat-x;
+        background-position: center bottom;
+        background-color: #ECD223;
+}
+.service .H01 {
+        width: 90%;
+        position: relative;
+        margin-left: auto;
+        margin-right: auto;
+        padding-top: 58px;
+}
+
+.service .H01 .img01 {
+}
+
+.service .H01 .ul01 {
+display: flex;
+justify-content: center;
+flex-wrap: wrap;
+margin-top: 20px;
+text-align: justify;
+-webkit-box-sizing: border-box;
+-moz-box-sizing: border-box;
+box-sizing: border-box;
+padding-bottom: 50px;
+}
+.service .H01 .ul01 li {
+width: 46%;
+margin-left: 2%;
+margin-right: 2%;
+margin-bottom: 25px;
+}
+
+
+.service .H01 .ul01 li img {
+width: 100%;
+margin-left: 2%;
+margin-right: 2%;
+margin-bottom: 25px;
+}
+
+
+.service .H01 .ul01 li .li_text01 {
+        font-size: 12px;
+        line-height: 120%;
+        padding-left: 2px;
+        margin-top: 2px;
+}
+.service .H01 .ul01 li .li_text02 {
+        font-size: 12px;
+        line-height: 150%;
+        margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.service .H01 .ul01 li .li_text03 {
+        position: relative;
+        height: 96px;
+        overflow: hidden;
+        font-size: 12px;
+        line-height: 1.6em;
+        padding-top: 0px;
+}
+.service .H01 .ul01 li .li_text03:before, .index .D01 .ul01 li .li_text03:after {
+        position: absolute;
+        background-color: #ECD223;
+        padding-left: 5px;
+}
+.service .H01 .ul01 li .li_text03:before {
+        content: "  …　";
+        bottom: 0;
+        right: 0;
+}
+.service .H01 .ul01 li .li_text03:after {
+        content: "";
+        width: 100%;
+        height: 100%;
+}
+
+
+
+.service .H01 a:visited {
+        color: #202020;
+        text-decoration: underline;
+}
+.service .H01 a:link {
+        color: #202020;
+        text-decoration: underline;
+        font-weight: bold;
+}
+.service .H01 a:active {
+        color: #444444;
+        text-decoration: none;
+}
+.service .H01 a:hover {
+        color: #444444;
+        text-decoration: none;
+}
+
+
+
+
+.service .I_waku {
+	background-repeat: repeat-x;
+	background-position: center bottom;
+	background-color: #FFFFFF;
+	clear: both;
+}
+.service .I01 {
+	width: 90%;
+	margin-left: auto;
+	margin-right: auto;
+	padding-top: 70px;
+}
+.service .J_waku {
+	background-color: #FFFFFF;
+}
+.service .J01 {
+	width: 90%;
+	margin-left: auto;
+	margin-right: auto;
+	padding-top: 45px;
+	padding-bottom: 50px;
+}
+.service .J01 .text01 {
+	color: #E7510C;
+	font-weight: bold;
+	width: 90%;
+	margin-left: auto;
+	margin-right: auto;
+	border-bottom: 2px solid #CCCCCC;
+	font-size: 16px;
+	line-height: 140%;
+	margin-top: 13px;
+	padding-bottom: 21px;
+	margin-bottom: 25px;
+}
+
+
+}

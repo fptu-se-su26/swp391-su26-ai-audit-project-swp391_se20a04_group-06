@@ -1,0 +1,13 @@
+          <li><a href="https://umai.fish/%E3%83%AC%E3%82%B7%E3%83%94%E3%82%84%E8%B1%86%E7%9F%A5%E8%AD%98"><img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/menu03.png" alt="魚介類のレシピや豆知識" border="0" class="ov" data-anijs="if: mouseover, do: pulse animated"></a></li>
+          <li><a href="https://umai.fish/%E3%81%94%E5%88%A9%E7%94%A8%E3%81%AE%E6%B5%81%E3%82%8C"><img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/menu04.png" alt="鮮魚通販・海鮮ギフトのご利用の流れ" border="0" class="ov" data-anijs="if: mouseover, do: pulse animated"></a></li>
+  <img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/03.png" alt="新鮮な魚(マダイ)の通販・ギフト" data-anijs="if: mouseover, do: rubberBand animated">
+  <img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/04.png" alt="新鮮な魚(マアジ)の通販・ギフト" data-anijs="if: mouseover, do: rubberBand animated" class="rubberBand animated">
+  <img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/05.png" alt="新鮮な魚(カマス)の通販・ギフト" data-anijs="if: mouseover, do: rubberBand animated">
+  <img loading="lazy" src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/n_ryo03.png" alt="漁師直送魚なら 和歌山 はまかぜ通信 金栄丸">
+  <img loading="lazy" src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/n_ryo04.png" alt="三崎漁協">
+  <img loading="lazy" src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/n_ryo05.png" alt="ハモ・海苔の通販なら 玉野 邦美丸">
+  <img loading="lazy" src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/set04.png" alt="カニ・エビの通販・海鮮ギフト。ズワイガニ オス(松葉ガニ、加能ガニ)、ズワイガニ メス(セコガニ、コウバコガニ)など。" data-anijs="if: mouseover, do: pulse animated" class="ov">
+  <img loading="lazy" src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/set03.png" alt="貝類セット" data-anijs="if: mouseover, do: pulse animated" class="ov">
+          <img loading="lazy" src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/top.png" alt=""><p></p>
+  <p><img loading="lazy" src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/thankyou03.png" width="564" height="383" alt="THANK YOU!　漁師さん直送市場はプロの料理人も使用中です業務用会員&gt;数300店舗突破!出荷実績3,000件を突破!　ありがとうございます"></p>
+    <div id="pagetop"><img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/pagetop.png" alt="ページの上部へ↑" class="animated fadeInRight"></div>

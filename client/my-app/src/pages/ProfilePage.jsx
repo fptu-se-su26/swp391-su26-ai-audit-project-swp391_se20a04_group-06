@@ -3,14 +3,10 @@
  *
  * FIXES:
  *   1. Thay `window.confirm()` và `window.prompt()` bằng ConfirmDialog + input modal.
- *      Trước: window.confirm/prompt block UI thread, style không match, không mobile-friendly.
- *      Sau:   Custom modal với animation, accessible, consistent với phần còn lại của app.
- *
- *   2. `useAuth()` đã được dùng đúng — giữ nguyên, không cần nhận user qua props.
- *
+ *   2. `useAuth()` đã được dùng đúng — giữ nguyên.
  *   3. Thêm cleanup cho URL.createObjectURL để tránh memory leak.
- *
- *   4. Thêm useToast() đã được dùng — giữ nguyên.
+ *   4. useToast() đã được dùng — giữ nguyên.
+ *   5. [NEW] Render <FollowManagement> vào đúng vị trí trong layout.
  */
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -18,22 +14,15 @@ import { C } from "../utils/theme";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import { FollowManagement } from "../components/FollowManagement";
 
-// ── DeleteAccountModal — thay thế window.confirm + window.prompt ──────────────
-/**
- * TRƯỚC:
- *   window.confirm("CẢNH BÁO...")   → block UI, không mobile-friendly
- *   window.prompt("Nhập XOA TAI KHOAN") → không có trên mobile Safari nhiều trường hợp
- *
- * SAU: Modal 2 bước với text input xác nhận
- */
+// ── DeleteAccountModal ────────────────────────────────────────────────────────
 function DeleteAccountModal({ onConfirm, onCancel }) {
   const [confirmText, setConfirmText] = useState("");
   const inputRef = useRef(null);
   const REQUIRED = "XOA TAI KHOAN";
 
   useEffect(() => {
-    // Focus input ngay khi modal mở
     setTimeout(() => inputRef.current?.focus(), 50);
   }, []);
 
@@ -181,7 +170,7 @@ export function ProfilePage() {
   const navigate = useNavigate();
 
   const [focusedField, setFocusedField] = useState(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false); // FIX: thay window.confirm/prompt
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const [name, setName] = useState(initialUser?.name || "");
   const [email, setEmail] = useState(initialUser?.email || "");
@@ -199,7 +188,6 @@ export function ProfilePage() {
 
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // Cleanup object URL khi unmount hoặc avatarFile thay đổi
   const prevPreviewUrl = useRef(null);
   useEffect(() => {
     if (prevPreviewUrl.current && prevPreviewUrl.current.startsWith("blob:")) {
@@ -216,7 +204,6 @@ export function ProfilePage() {
     }
   }, [initialUser]);
 
-  // Tự động thăm dò trạng thái Premium mỗi 5 giây nếu chưa nâng cấp
   useEffect(() => {
     const finalUserId = initialUser?.id || initialUser?.userId;
     if (initialUser && !initialUser.isPremium && finalUserId) {
@@ -225,7 +212,9 @@ export function ProfilePage() {
           const res = await api("/auth/me");
           if (res && res.isPremium) {
             setUser(res);
-            toast.success("🎉 NÂNG CẤP THÀNH CÔNG! Tài khoản của bạn đã được kích hoạt PREMIUM!");
+            toast.success(
+              "🎉 NÂNG CẤP THÀNH CÔNG! Tài khoản của bạn đã được kích hoạt PREMIUM!",
+            );
           }
         } catch (e) {}
       }, 5000);
@@ -255,12 +244,10 @@ export function ProfilePage() {
       return;
     }
     setProfileLoading(true);
-
     const fd = new FormData();
     fd.append("name", name);
     fd.append("email", email);
     if (avatarFile) fd.append("avatar", avatarFile);
-
     try {
       const res = await api("/auth/profile", { method: "PUT", body: fd });
       setUser({
@@ -301,7 +288,6 @@ export function ProfilePage() {
     }
   };
 
-  // FIX: Thay window.confirm/prompt bằng modal
   const handleDeleteAccount = async () => {
     setDeleteLoading(true);
     setShowDeleteModal(false);
@@ -341,10 +327,15 @@ export function ProfilePage() {
     marginBottom: 6,
     color: "#4B5563",
   };
+  const sectionCardStyle = {
+    background: C.white,
+    borderRadius: 16,
+    border: `1.5px solid ${C.border}`,
+    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
+  };
 
   return (
     <div className="container py-5" style={{ maxWidth: 840 }}>
-      {/* FIX: Modal xóa tài khoản thay thế window.confirm + window.prompt */}
       {showDeleteModal && (
         <DeleteAccountModal
           onConfirm={handleDeleteAccount}
@@ -374,35 +365,20 @@ export function ProfilePage() {
         ⟨ Quay lại
       </button>
 
-      <h1
-        className="fw-bold mb-4"
-        style={{
-          fontSize: 24,
-          color: C.dark,
-        }}
-      >
+      <h1 className="fw-bold mb-4" style={{ fontSize: 24, color: C.dark }}>
         ⚙️ Thiết Lập Hồ Sơ Cá Nhân
       </h1>
 
       <div className="row g-4">
-        {/* Avatar sidebar */}
+        {/* ── Avatar sidebar ── */}
         <div className="col-12 col-md-4 col-lg-3">
           <div
             className="card border-0 p-4 text-center"
-            style={{
-              background: C.white,
-              borderRadius: 16,
-              border: `1.5px solid ${C.border}`,
-              height: "fit-content",
-              boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
-            }}
+            style={{ ...sectionCardStyle, height: "fit-content" }}
           >
             <div
               className="position-relative mx-auto mb-3"
-              style={{
-                width: 110,
-                height: 110,
-              }}
+              style={{ width: 110, height: 110 }}
             >
               {avatarPreview ? (
                 <img
@@ -441,7 +417,9 @@ export function ProfilePage() {
                 borderRadius: 8,
                 transition: "all 0.2s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = C.oceanP)}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.background = C.oceanP)
+              }
               onMouseLeave={(e) => (e.currentTarget.style.background = C.white)}
             >
               Tải ảnh đại diện mới
@@ -458,9 +436,9 @@ export function ProfilePage() {
           </div>
         </div>
 
-        {/* Forms */}
+        {/* ── Right column ── */}
         <div className="col-12 col-md-8 col-lg-9 d-flex flex-column gap-4">
-          {/* 👑 KHU VỰC NÂNG CẤP PREMIUM */}
+          {/* Premium section — unchanged */}
           <div
             className="card border-0 p-4 position-relative overflow-hidden"
             style={{
@@ -472,49 +450,153 @@ export function ProfilePage() {
                 ? "2px solid #F59E0B"
                 : `1.5px solid ${C.border}`,
               boxShadow: initialUser?.isPremium
-                ? "0 10px 25px -5px rgba(245, 158, 11, 0.15), 0 8px 10px -6px rgba(245, 158, 11, 0.1)"
+                ? "0 10px 25px -5px rgba(245, 158, 11, 0.15)"
                 : "0 4px 6px -1px rgba(0,0,0,0.01)",
               transition: "all 0.3s ease",
             }}
           >
             {initialUser?.isPremium ? (
               <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    marginBottom: 12,
+                  }}
+                >
                   <span style={{ fontSize: 24 }}>👑</span>
-                  <h3 style={{ fontSize: 18, fontWeight: 900, color: "#92400E", margin: 0 }}>
+                  <h3
+                    style={{
+                      fontSize: 18,
+                      fontWeight: 900,
+                      color: "#92400E",
+                      margin: 0,
+                    }}
+                  >
                     TÀI KHOẢN PREMIUM ĐÃ KÍCH HOẠT
                   </h3>
                 </div>
-                <p style={{ fontSize: 13, color: "#B45309", lineHeight: 1.5, margin: "0 0 16px 0", fontWeight: 500 }}>
-                  Tuyệt vời! Bạn đang sở hữu những đặc quyền cao cấp nhất tại HảiSản.vn. Tài khoản của bạn được đánh dấu biểu tượng Premium uy tín.
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: "#B45309",
+                    lineHeight: 1.5,
+                    margin: "0 0 16px 0",
+                    fontWeight: 500,
+                  }}
+                >
+                  Tuyệt vời! Bạn đang sở hữu những đặc quyền cao cấp nhất tại
+                  HảiSản.vn.
                 </p>
-                <div style={{ background: "rgba(245, 158, 11, 0.08)", padding: 16, borderRadius: 12, border: "1px dashed rgba(245, 158, 11, 0.3)" }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#92400E", marginBottom: 8, textTransform: "uppercase" }}>
+                <div
+                  style={{
+                    background: "rgba(245,158,11,0.08)",
+                    padding: 16,
+                    borderRadius: 12,
+                    border: "1px dashed rgba(245,158,11,0.3)",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "#92400E",
+                      marginBottom: 8,
+                      textTransform: "uppercase",
+                    }}
+                  >
                     Đặc quyền Premium của bạn:
                   </div>
-                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "#78350F", display: "grid", gap: 6 }}>
-                    <li>🚀 <strong>Đăng tin không giới hạn</strong> bài viết mỗi ngày (Tài khoản thường chỉ 5 bài).</li>
-                    <li>💎 <strong>Huy hiệu Premium</strong> hiển thị bên cạnh tên trên trang cá nhân và mọi tin đăng.</li>
-                    <li>📈 <strong>Độ hiển thị ưu tiên</strong> cao hơn giúp tiếp cận hàng nghìn khách hàng nhanh hơn.</li>
+                  <ul
+                    style={{
+                      margin: 0,
+                      paddingLeft: 18,
+                      fontSize: 13,
+                      color: "#78350F",
+                      display: "grid",
+                      gap: 6,
+                    }}
+                  >
+                    <li>
+                      🚀 <strong>Đăng tin không giới hạn</strong> bài viết mỗi
+                      ngày.
+                    </li>
+                    <li>
+                      💎 <strong>Huy hiệu Premium</strong> hiển thị bên cạnh
+                      tên.
+                    </li>
+                    <li>
+                      📈 <strong>Độ hiển thị ưu tiên</strong> cao hơn tiếp cận
+                      khách hàng nhanh hơn.
+                    </li>
                   </ul>
                 </div>
               </div>
             ) : (
               <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    marginBottom: 12,
+                  }}
+                >
                   <span style={{ fontSize: 24 }}>🌟</span>
-                  <h3 style={{ fontSize: 18, fontWeight: 900, color: C.ocean, margin: 0 }}>
+                  <h3
+                    style={{
+                      fontSize: 18,
+                      fontWeight: 900,
+                      color: C.ocean,
+                      margin: 0,
+                    }}
+                  >
                     NÂNG CẤP PREMIUM — ĐĂNG TIN KHÔNG GIỚI HẠN
                   </h3>
                 </div>
-                <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.5, margin: "0 0 16px 0", fontWeight: 500 }}>
-                  Chỉ với <strong>2.000đ</strong>, nâng cấp tài khoản của bạn lên Premium để đăng không giới hạn bài viết trên ngày (tài khoản thường chỉ được đăng 5 bài/ngày) và nhận được các đặc quyền ưu tiên nổi bật.
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: C.muted,
+                    lineHeight: 1.5,
+                    margin: "0 0 16px 0",
+                    fontWeight: 500,
+                  }}
+                >
+                  Chỉ với <strong>2.000đ</strong>, nâng cấp lên Premium để đăng
+                  không giới hạn bài viết mỗi ngày.
                 </p>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20, marginTop: 16 }}>
-                  {/* Cột 1: Mã QR VietQR */}
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#F8FAFC", padding: 16, borderRadius: 16, border: "1px solid #E2E8F0" }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: C.muted, marginBottom: 10, textAlign: "center" }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+                    gap: 20,
+                    marginTop: 16,
+                  }}
+                >
+                  {/* QR */}
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "#F8FAFC",
+                      padding: 16,
+                      borderRadius: 16,
+                      border: "1px solid #E2E8F0",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 800,
+                        color: C.muted,
+                        marginBottom: 10,
+                        textAlign: "center",
+                      }}
+                    >
                       QUÉT MÃ QR BẰNG APP NGÂN HÀNG
                     </div>
                     <img
@@ -525,66 +607,226 @@ export function ProfilePage() {
                         height: 190,
                         borderRadius: 12,
                         border: "3px solid #F59E0B",
-                        boxShadow: "0 4px 12px rgba(245, 158, 11, 0.15)",
+                        boxShadow: "0 4px 12px rgba(245,158,11,0.15)",
                         background: "#fff",
                       }}
                     />
-                    <div style={{ fontSize: 11, color: "#D97706", fontWeight: 700, marginTop: 10, display: "flex", alignItems: "center", gap: 6 }}>
-                      <span className="spinner-border spinner-border-sm" style={{ width: 12, height: 12 }}></span>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "#D97706",
+                        fontWeight: 700,
+                        marginTop: 10,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <span
+                        className="spinner-border spinner-border-sm"
+                        style={{ width: 12, height: 12 }}
+                      ></span>
                       Đang đợi thanh toán...
                     </div>
                   </div>
-
-                  {/* Cột 2: Thông tin chuyển khoản */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: C.muted, textTransform: "uppercase" }}>
+                  {/* Manual transfer */}
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 10,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 800,
+                        color: C.muted,
+                        textTransform: "uppercase",
+                      }}
+                    >
                       Hoặc chuyển khoản thủ công
                     </div>
-                    
-                    <div style={{ background: "#F1F5F9", padding: 12, borderRadius: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                    <div
+                      style={{
+                        background: "#F1F5F9",
+                        padding: 12,
+                        borderRadius: 12,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                      }}
+                    >
                       <div>
-                        <div style={{ fontSize: 10, color: C.muted, fontWeight: 700 }}>NGÂN HÀNG NHẬN</div>
-                        <div style={{ fontSize: 12, fontWeight: 800, color: C.dark }}>MB Bank (Ngân hàng Quân Đội)</div>
+                        <div
+                          style={{
+                            fontSize: 10,
+                            color: C.muted,
+                            fontWeight: 700,
+                          }}
+                        >
+                          NGÂN HÀNG NHẬN
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 800,
+                            color: C.dark,
+                          }}
+                        >
+                          MB Bank (Ngân hàng Quân Đội)
+                        </div>
                       </div>
-
-                      <div style={{ borderTop: "1px solid #E2E8F0", paddingTop: 6 }}>
-                        <div style={{ fontSize: 10, color: C.muted, fontWeight: 700 }}>SỐ TÀI KHOẢN</div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span style={{ fontSize: 13, fontWeight: 800, color: C.dark, fontFamily: "monospace" }}>0362614906</span>
+                      <div
+                        style={{
+                          borderTop: "1px solid #E2E8F0",
+                          paddingTop: 6,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 10,
+                            color: C.muted,
+                            fontWeight: 700,
+                          }}
+                        >
+                          SỐ TÀI KHOẢN
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 800,
+                              color: C.dark,
+                              fontFamily: "monospace",
+                            }}
+                          >
+                            0362614906
+                          </span>
                           <button
                             type="button"
-                            onClick={() => handleCopy("0362614906", "Đã sao chép số tài khoản!")}
-                            style={{ padding: "2px 8px", fontSize: 10, fontWeight: 700, color: C.ocean, border: `1px solid ${C.border}`, borderRadius: 6, background: "#fff", cursor: "pointer" }}
+                            onClick={() =>
+                              handleCopy(
+                                "0362614906",
+                                "Đã sao chép số tài khoản!",
+                              )
+                            }
+                            style={{
+                              padding: "2px 8px",
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: C.ocean,
+                              border: `1px solid ${C.border}`,
+                              borderRadius: 6,
+                              background: "#fff",
+                              cursor: "pointer",
+                            }}
                           >
                             Copy
                           </button>
                         </div>
                       </div>
-
-                      <div style={{ borderTop: "1px solid #E2E8F0", paddingTop: 6 }}>
-                        <div style={{ fontSize: 10, color: C.muted, fontWeight: 700 }}>SỐ TIỀN CẦN NẠP</div>
-                        <div style={{ fontSize: 13, fontWeight: 900, color: "#D97706" }}>2.000đ</div>
+                      <div
+                        style={{
+                          borderTop: "1px solid #E2E8F0",
+                          paddingTop: 6,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 10,
+                            color: C.muted,
+                            fontWeight: 700,
+                          }}
+                        >
+                          SỐ TIỀN CẦN NẠP
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 900,
+                            color: "#D97706",
+                          }}
+                        >
+                          2.000đ
+                        </div>
                       </div>
-
-                      <div style={{ borderTop: "1px solid #E2E8F0", paddingTop: 6 }}>
-                        <div style={{ fontSize: 10, color: C.muted, fontWeight: 700 }}>NỘI DUNG CHUYỂN KHOẢN (MEMO)</div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#FEF3C7", padding: "4px 8px", borderRadius: 6, border: "1px solid #FDE68A" }}>
-                          <span style={{ fontSize: 11, fontWeight: 900, color: "#B45309", fontFamily: "monospace" }}>
+                      <div
+                        style={{
+                          borderTop: "1px solid #E2E8F0",
+                          paddingTop: 6,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 10,
+                            color: C.muted,
+                            fontWeight: 700,
+                          }}
+                        >
+                          NỘI DUNG CHUYỂN KHOẢN (MEMO)
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            background: "#FEF3C7",
+                            padding: "4px 8px",
+                            borderRadius: 6,
+                            border: "1px solid #FDE68A",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 900,
+                              color: "#B45309",
+                              fontFamily: "monospace",
+                            }}
+                          >
                             SF {initialUser?.id || initialUser?.userId}
                           </span>
                           <button
                             type="button"
-                            onClick={() => handleCopy(`SF ${initialUser?.id || initialUser?.userId}`, "Đã sao chép nội dung chuyển khoản!")}
-                            style={{ padding: "2px 6px", fontSize: 9, fontWeight: 800, color: "#92400E", border: "1px solid #FDE68A", borderRadius: 4, background: "#FFFBEB", cursor: "pointer" }}
+                            onClick={() =>
+                              handleCopy(
+                                `SF ${initialUser?.id || initialUser?.userId}`,
+                                "Đã sao chép nội dung chuyển khoản!",
+                              )
+                            }
+                            style={{
+                              padding: "2px 6px",
+                              fontSize: 9,
+                              fontWeight: 800,
+                              color: "#92400E",
+                              border: "1px solid #FDE68A",
+                              borderRadius: 4,
+                              background: "#FFFBEB",
+                              cursor: "pointer",
+                            }}
                           >
                             Copy
                           </button>
                         </div>
                       </div>
                     </div>
-
-                    <div style={{ fontSize: 10.5, color: "#C53030", fontWeight: 700, lineHeight: 1.4 }}>
-                      ⚠️ Lưu ý: Nội dung chuyển khoản phải viết đúng chính xác mã trên để hệ thống tự động nhận diện và kích hoạt ngay lập tức!
+                    <div
+                      style={{
+                        fontSize: 10.5,
+                        color: "#C53030",
+                        fontWeight: 700,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      ⚠️ Nội dung chuyển khoản phải viết đúng chính xác mã trên
+                      để hệ thống tự động nhận diện.
                     </div>
                   </div>
                 </div>
@@ -592,22 +834,9 @@ export function ProfilePage() {
             )}
           </div>
 
-          {/* Thông tin tài khoản */}
-          <div
-            className="card border-0 p-4"
-            style={{
-              background: C.white,
-              borderRadius: 16,
-              border: `1.5px solid ${C.border}`,
-              boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
-            }}
-          >
-            <h3
-              className="fw-bold mb-4 fs-6"
-              style={{
-                color: C.dark,
-              }}
-            >
+          {/* ── Thông tin tài khoản ── */}
+          <div className="card border-0 p-4" style={sectionCardStyle}>
+            <h3 className="fw-bold mb-4 fs-6" style={{ color: C.dark }}>
               👤 Thông tin tài khoản
             </h3>
             <form
@@ -647,7 +876,7 @@ export function ProfilePage() {
                     color: "#991B1B",
                     fontSize: 13,
                     background: "#FEE2E2",
-                    borderLeft: `4px solid #EF4444`,
+                    borderLeft: "4px solid #EF4444",
                     borderRadius: 8,
                     fontWeight: 600,
                   }}
@@ -666,7 +895,7 @@ export function ProfilePage() {
                   fontSize: 14,
                   cursor: profileLoading ? "not-allowed" : "pointer",
                   width: "fit-content",
-                  boxShadow: "0 4px 12px rgba(11, 79, 108, 0.2)",
+                  boxShadow: "0 4px 12px rgba(11,79,108,0.2)",
                   opacity: profileLoading ? 0.7 : 1,
                 }}
               >
@@ -675,22 +904,9 @@ export function ProfilePage() {
             </form>
           </div>
 
-          {/* Đổi mật khẩu */}
-          <div
-            className="card border-0 p-4"
-            style={{
-              background: C.white,
-              borderRadius: 16,
-              border: `1.5px solid ${C.border}`,
-              boxShadow: "0 4px 6px -1px rgba(0,0,0,0.01)",
-            }}
-          >
-            <h3
-              className="fw-bold mb-4 fs-6"
-              style={{
-                color: C.dark,
-              }}
-            >
+          {/* ── Đổi mật khẩu ── */}
+          <div className="card border-0 p-4" style={sectionCardStyle}>
+            <h3 className="fw-bold mb-4 fs-6" style={{ color: C.dark }}>
               🔑 Thay đổi mật khẩu bảo mật
             </h3>
             <form
@@ -731,7 +947,7 @@ export function ProfilePage() {
                     color: "#991B1B",
                     fontSize: 13,
                     background: "#FEE2E2",
-                    borderLeft: `4px solid #EF4444`,
+                    borderLeft: "4px solid #EF4444",
                     borderRadius: 8,
                     fontWeight: 600,
                   }}
@@ -750,7 +966,7 @@ export function ProfilePage() {
                   fontSize: 14,
                   cursor: pwLoading ? "not-allowed" : "pointer",
                   width: "fit-content",
-                  boxShadow: "0 4px 12px rgba(232, 100, 58, 0.2)",
+                  boxShadow: "0 4px 12px rgba(232,100,58,0.2)",
                   opacity: pwLoading ? 0.7 : 1,
                 }}
               >
@@ -759,22 +975,51 @@ export function ProfilePage() {
             </form>
           </div>
 
-          {/* Danger Zone */}
+          {/* ── [NEW] Quản lý theo dõi ── */}
+          <div>
+            {/* Section header — nằm ngoài component để nhất quán với các section khác */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 12,
+                padding: "0 2px",
+              }}
+            >
+              <div>
+                <h3
+                  className="fw-bold m-0 fs-6"
+                  style={{
+                    color: C.dark,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  👥 Quản lý theo dõi
+                </h3>
+                <p style={{ margin: "3px 0 0", fontSize: 12, color: C.muted }}>
+                  Ngư dân bạn đang theo dõi và người đang theo dõi bạn.
+                </p>
+              </div>
+            </div>
+
+            {/* Component render danh sách — tự xử lý fetch, tab, search, unfollow */}
+            <FollowManagement user={initialUser} />
+          </div>
+
+          {/* ── Danger Zone ── */}
           <div
             className="alert alert-danger border-danger p-4 m-0"
             style={{
               borderRadius: 16,
               border: "1.5px solid #FEB2B2",
-              boxShadow: "0 4px 6px -1px rgba(220, 38, 38, 0.03)",
               background: "#FFF5F5",
+              boxShadow: "0 4px 6px -1px rgba(220,38,38,0.03)",
             }}
           >
-            <h3
-              className="fw-bold mb-2 fs-6 text-danger"
-              style={{
-                color: "#C53030 !important",
-              }}
-            >
+            <h3 className="fw-bold mb-2 fs-6 text-danger">
               🛑 Vùng nguy hiểm (Danger Zone)
             </h3>
             <p
@@ -790,7 +1035,6 @@ export function ProfilePage() {
               lịch sử trò chuyện sẽ bị xóa vĩnh viễn. Hành động này không thể
               khôi phục dưới bất kỳ hình thức nào.
             </p>
-            {/* FIX: Dùng modal thay vì window.confirm + window.prompt */}
             <button
               type="button"
               onClick={() => setShowDeleteModal(true)}
@@ -802,7 +1046,7 @@ export function ProfilePage() {
                 borderRadius: 10,
                 fontSize: 13,
                 cursor: deleteLoading ? "not-allowed" : "pointer",
-                boxShadow: "0 4px 12px rgba(229, 62, 62, 0.25)",
+                boxShadow: "0 4px 12px rgba(229,62,62,0.25)",
                 transition: "background 0.2s",
                 opacity: deleteLoading ? 0.7 : 1,
               }}
@@ -821,7 +1065,9 @@ export function ProfilePage() {
             </button>
           </div>
         </div>
+        {/* end right column */}
       </div>
+      {/* end row */}
     </div>
   );
 }

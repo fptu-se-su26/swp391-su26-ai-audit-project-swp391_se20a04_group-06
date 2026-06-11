@@ -22,6 +22,10 @@ export interface IProduct extends Document {
     type: "Point";
     coordinates: [number, number]; // [Kinh độ, Vĩ độ] - chuẩn GeoJSON bắt buộc
   };
+  catchLocation?: {
+    type: "Point";
+    coordinates: [number, number]; // [Kinh độ, Vĩ độ] - chuẩn GeoJSON bắt buộc
+  };
   catchTime?: Date;
   origin?: string;
   expiryDate?: Date;
@@ -75,6 +79,11 @@ const productSchema = new Schema<IProduct>(
       coordinates: { type: [Number] }, // Mảng lưu trữ: [Kinh độ (lng), Vĩ độ (lat)] theo chuẩn bắt buộc của GeoJSON
     },
 
+    catchLocation: {
+      type: { type: String, enum: ["Point"] },
+      coordinates: { type: [Number] }, // Mảng lưu trữ: [Kinh độ (lng), Vĩ độ (lat)] theo chuẩn bắt buộc của GeoJSON
+    },
+
     catchTime: { type: Date },
     origin: { type: String },
     expiryDate: { type: Date },
@@ -98,7 +107,7 @@ const productSchema = new Schema<IProduct>(
 // 🌟 Thiết lập chỉ mục địa lý gốc 2dsphere hỗ trợ tìm kiếm khoảng cách cực nhanh
 productSchema.index({ location: "2dsphere" });
 productSchema.index({ status: 1, type: 1, bumpedAt: -1, createdAt: -1 });
-
+productSchema.index({ sellerId: 1, bumpedAt: -1, createdAt: -1 });
 
 // Thiết lập chỉ mục tìm kiếm văn bản toàn diện (MATCH...AGAINST replacement)
 productSchema.index({ name: "text", description: "text" });

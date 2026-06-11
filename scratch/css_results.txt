@@ -1,0 +1,255 @@
+.index .A_waku {
+
+	background-image: url(https://umai.fish/images/base/back02.png);
+
+	background-repeat: repeat-x;
+
+	background-position: center bottom;
+
+}
+
+.index .A01 {
+
+	width: 1000px;
+
+	min-height: 775px;
+
+	position: relative;
+
+	margin-left: auto;
+
+	margin-right: auto;
+
+}
+
+.index .A01 .img01 {
+
+	position: absolute;
+
+	top: 19px;
+
+	left: 84px;
+
+}
+
+.index .A01 .img02 {
+
+	position: absolute;
+
+	top: 118px;
+
+	left: 631px;
+
+	z-index: 4;
+
+}
+
+.index .A01 .img03 {
+
+	position: absolute;
+
+	top: 360px;
+
+	left: 697px;
+
+	width: 254px;
+
+	text-align: left;
+
+	font-weight: bold;
+
+	line-height: 140%;
+
+	color: #FFFF00;
+
+	letter-spacing: 0px;
+
+}
+
+.index .A01 .img04 {
+
+	position: absolute;
+
+	top: 159px;
+
+	left: 38px;
+
+	z-index: 3;
+
+}
+
+.index .A01 .img05 {
+
+	position: absolute;
+
+	top: 87px;
+
+	left: 299px;
+
+	z-index: 2;
+
+}
+
+.index .A01 .img06 {
+
+	position: absolute;
+
+	top: 329px;
+
+	left: 374px;
+
+	z-index: 1;
+
+}
+
+.index .A01 .img07 {
+
+	position: absolute;
+
+	top: 543px;
+
+	left: 110px;
+
+}
+
+.index .A01 .img08 {
+
+	position: absolute;
+
+	top: 543px;
+
+	left: 310px;
+
+}
+
+.index .A01 .img09 {
+
+	position: absolute;
+
+	top: 571px;
+
+	left: 518px;
+
+}
+
+.index .A01 .img10 {
+
+	position: absolute;
+
+	top: 571px;
+
+	left: 718px;
+
+}
+
+.index .A02 .img01 {
+
+	position: absolute;
+
+	top: 181px;
+
+	left: 82px;
+
+}
+
+.index .A02 .img02 {
+
+	position: absolute;
+
+	top: 235px;
+
+	left: 279px;
+
+}
+
+.index .B01 .img01 {
+
+	position: absolute;
+
+	top: 43px;
+
+	left: 38px;
+
+}
+
+.index .B02 .img01 {
+
+        position: absolute;
+
+        left: 3px;
+
+        top: 0px;
+
+}
+
+.index .D01 .img01 {
+
+	position: absolute;
+
+	left: 3px;
+
+	top: 45px;
+
+}
+
+.index .E01 .img01 {
+
+	position: absolute;
+
+	left: 3px;
+
+	top: 45px;
+
+}
+
+.index .F01 .img01 {
+
+	position: absolute;
+
+	left: 112px;
+
+	top: 0px;
+
+}
+
+.index .F01 .img02 {
+
+	position: absolute;
+
+	left: 671px;
+
+	top: 0px;
+
+	z-index: 2;
+
+}
+
+.index .F01 .img03 {
+
+	position: absolute;
+
+	left: 549px;
+
+	top: 640px;
+
+}
+
+.index .G02 .img02 {
+
+        text-align: center;
+
+        width: 864px;
+
+        margin-left: auto;
+
+        margin-right: auto;
+
+        border-top: 1px solid #000000;
+
+        margin-top: 70px;
+
+        padding-top: 45px;
+
+        padding-bottom: 24px;
+
+}

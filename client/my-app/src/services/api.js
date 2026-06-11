@@ -22,7 +22,12 @@ function onRefreshed(err) {
 export async function api(path, options = {}) {
   const csrfToken = getCookie("csrfToken");
 
-  const isFormData = options.body instanceof FormData;
+  let body = options.body;
+  const isFormData = body instanceof FormData;
+  if (body && typeof body === "object" && !isFormData) {
+    body = JSON.stringify(body);
+  }
+
   const headers = {
     ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
@@ -31,6 +36,7 @@ export async function api(path, options = {}) {
 
   const config = {
     ...options,
+    body,
     headers,
     credentials: "include",
   };

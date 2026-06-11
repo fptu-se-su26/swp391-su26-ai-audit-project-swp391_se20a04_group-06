@@ -4,6 +4,8 @@ import { userRepository } from "../repositories/user.repository";
 import { cloudinary } from "../config/cloudinary";
 import { HttpError } from "../errors/HttpError";
 import { User } from "../models/User";
+import { Post } from "../models/Post";
+import { BoatLog } from "../models/BoatLog";
 import { deleteFromCloudinary } from "../middlewares/upload";
 import { extractPublicId } from "../controllers/image.controller";
 import { logger } from "../utils/logger";
@@ -133,6 +135,36 @@ export const authService = {
 
     // Gọi hàm repository đã cập nhật ở Bước 1
     await userRepository.updateProfile(userId, updates);
+
+    // Cascade update to other collections (Post, Comments in Post, and BoatLog)
+    try {
+      const cascadeObj: any = { userName: updates.name };
+      if (updates.avatar !== undefined) {
+        cascadeObj.userAvatar = updates.avatar;
+      }
+
+      // Update creator in Post
+      await Post.updateMany({ userId } as any, { $set: cascadeObj });
+
+      // Update commenters in Post
+      const commentUpdate: any = {};
+      commentUpdate["comments.$[elem].userName"] = updates.name;
+      if (updates.avatar !== undefined) {
+        commentUpdate["comments.$[elem].userAvatar"] = updates.avatar;
+      }
+      await Post.updateMany(
+        { "comments.userId": userId } as any,
+        { $set: commentUpdate },
+        { arrayFilters: [{ "elem.userId": userId }] } as any
+      );
+
+      // Update creator in BoatLog
+      await BoatLog.updateMany({ userId } as any, { $set: cascadeObj });
+
+      logger.info(`Cascade updated UserID=${userId} details (name/avatar) in Post, Comments, and BoatLog`);
+    } catch (err: any) {
+      logger.error(`Failed to cascade update profile details for UserID=${userId}: ${err.message}`);
+    }
 
     return {
       name: data.name,

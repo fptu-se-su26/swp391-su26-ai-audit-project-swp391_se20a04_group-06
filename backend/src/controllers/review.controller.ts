@@ -6,6 +6,7 @@ import { Message } from "../models/Message";
 import { uploadToCloudinary } from "../middlewares/upload";
 import { sendServerError } from "../helpers/response.helper";
 import { notifySellerNewReview } from "../services/notification.service";
+import { updateUserBadges } from "../services/badge.service";
 import mongoose from "mongoose";
 
 export async function addReview(req: Request, res: Response) {
@@ -67,6 +68,8 @@ export async function addReview(req: Request, res: Response) {
     });
 
     await newReview.save();
+    updateUserBadges(sellerId).catch(() => {});
+    updateUserBadges(reviewerId).catch(() => {});
 
     const reviewer = await User.findById(reviewerId);
     const product = await Product.findById(productId);

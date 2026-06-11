@@ -13,7 +13,7 @@ import {
 } from "../controllers/auth.controller";
 import { authenticate } from "../middlewares/auth";
 import { upload, handleUploadError } from "../middlewares/upload";
-import { getUserPublicProfile } from "../controllers/user.controller";
+import { getUserPublicProfile, getFishermanLeaderboard } from "../controllers/user.controller";
 
 const router = Router();
 
@@ -54,4 +54,5 @@ router.delete("/account", authenticate, deleteAccount);
 export default router;
 
 export const userRouter = Router();
+userRouter.get("/fishermen/leaderboard", getFishermanLeaderboard);
 userRouter.get("/:id", getUserPublicProfile);

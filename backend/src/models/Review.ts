@@ -29,5 +29,6 @@ const reviewSchema = new Schema<IReview>(
 
 // Ràng buộc duy nhất: Một người dùng chỉ đánh giá một sản phẩm một lần
 reviewSchema.index({ reviewerId: 1, productId: 1 }, { unique: true });
+reviewSchema.index({ sellerId: 1, createdAt: -1 });
 
 export const Review = model<IReview>("Review", reviewSchema);

@@ -1,0 +1,472 @@
+@charset "utf-8";
+
+/**************************************************************************************/
+
+/*　sp.css　→　画面の横幅が750px以下↓　*/
+
+/**************************************************************************************/
+
+
+@media screen and (max-width:750px){
+img{
+max-width: 100%;
+height: auto;
+width /***/:auto;　
+}
+
+/*********   recipe　レシピ・豆知識   **********/
+
+
+
+.recipe .A_waku {
+	background-image: url(../images//base/back02.png);
+	background-repeat: repeat-x;
+	background-position: center bottom;
+        overflow-x: hidden;
+}
+.recipe .A01 {
+	width: 90%;
+	margin-left: auto;
+	margin-right: auto;
+	color: #FFFFFF;
+	font-size: 16px;
+	line-height: 180%;
+	padding-bottom: 7px;
+}
+.recipe .A01 .img01 {
+position: relative;
+width: 350px;
+margin-left: auto;
+margin-right: auto;
+z-index: 1;
+}
+.recipe .A01 .img02 {
+position: relative;
+margin-top: -290px;
+z-index: 10;
+}
+.recipe .A01 .text01 {
+position: relative;
+z-index: 10;
+}
+
+
+.recipe .B_waku {
+background-image: url(../images//base/back05.png);
+background-repeat: repeat-x;
+background-position: center bottom;
+background-color: #ECD223;
+}
+.recipe .B01 {
+	width: 90%;
+	margin-left: auto;
+	margin-right: auto;
+	padding-bottom: 15px;
+	padding-top: 46px;
+	overflow-y: hidden;
+	display: flex;
+	flex-direction: column-reverse;
+}
+.recipe .B01 a:visited {
+	color: #202020;
+	text-decoration: underline;
+}
+.recipe .B01 a:link {
+	color: #202020;
+	text-decoration: underline;
+}
+.recipe .B01 a:active {
+	color: #444444;
+	text-decoration: none;
+}
+.recipe .B01 a:hover {
+	color: #444444;
+	text-decoration: none;
+}
+
+
+.recipe .B01 .left {
+width: 100%;
+text-align: justify;
+font-size: 12px;
+line-height: 160%;
+margin-bottom: 50px;
+margin-left: auto;
+margin-right: auto;
+}
+.recipe .B01 .left .img01 {
+margin-top: 40px;
+margin-left: auto;
+margin-right: auto;
+}
+.recipe .B01 .left .img02 {
+	margin-top: 12px;
+}
+.recipe .B01 .left .ul01 {
+	list-style-type: none;
+}
+.recipe .B01 .left .ul01 li {
+	padding-left: 5px;
+	padding-top: 6px;
+	padding-bottom: 6px;
+}
+
+
+.recipe .B01 .right {
+	width: 100%;
+	float: right;
+	text-align: left;
+	margin-bottom: 50px;
+	position: relative;
+z-index: 10;
+}
+.recipe .B01 .right .waku01 {
+width: 100%;
+background-color: #FFFFFF;
+margin-bottom: 30px;
+padding-top: 10px;
+padding-right: 10px;
+padding-bottom: 10px;
+padding-left: 10px;
+-webkit-box-sizing: border-box;
+-moz-box-sizing: border-box;
+box-sizing: border-box;
+}
+.recipe .B01 .right .waku01 .photo {
+	width: 100%;
+	margin-top: 0px;
+	margin-bottom: 15px;
+}
+.recipe .B01 .right .waku01 .photo img {
+	width: 100%;
+
+}
+
+.recipe .B01 .right .waku01 .data {
+	margin-top: 20px;
+	margin-bottom: 15px;
+}
+.recipe .B01 .right .waku01 .data2 {
+	margin-bottom: 15px;
+}
+
+.recipe .data2 img {
+margin-top: 10px;
+margin-bottom: 8px;
+width: 100%;
+}
+
+
+.waku_top {
+display: none;
+}
+.waku_bottom {
+display: none;
+}
+
+
+
+.recipe .cat1      {
+background-color: #34B4D1;
+font-size: 12px;
+color: #FFFFFF;
+padding-left: 15px;
+padding-right: 15px;
+padding-top: 6px;
+padding-bottom: 6px;
+font-weight: bold;
+line-height: 120%;
+margin-right: 10px;
+width: 100%;
+-webkit-box-sizing: border-box;
+-moz-box-sizing: border-box;
+box-sizing: border-box;
+}
+.recipe .cat2      {
+	background-color: #FF8686;
+	font-size: 12px;
+	color: #FFFFFF;
+	padding-left: 15px;
+	padding-right: 15px;
+	padding-top: 6px;
+	padding-bottom: 6px;
+	font-weight: bold;
+	line-height: 120%;
+	margin-right: 10px;
+}
+.recipe .day     {
+	font-size: 14px;
+	line-height: 140%;
+	padding-top: 4px;
+}
+.recipe .title {
+	font-size: 14px;
+	line-height: 160%;
+	margin-bottom: 6px;
+	clear: both;
+	font-weight: bold;
+	padding-top: 8px;
+}
+.recipe .title2 {
+	font-size: 16px;
+	line-height: 160%;
+	margin-bottom: 8px;
+	overflow: hidden;
+	clear: both;
+	font-weight: bold;
+	padding-top: 8px;
+}
+.recipe .tx1  {
+	font-size: 14px;
+	line-height: 150%;
+}
+
+
+
+
+
+.recipe .C_waku {
+	background-image: url(../images//base/back02.png);
+	background-repeat: repeat-x;
+	background-position: center bottom;
+	background-color: #208F67;
+	padding-top: 42px;
+	padding-bottom: 60px;
+}
+.recipe .C01 {
+	width: 90%;
+	margin-left: auto;
+	margin-right: auto;
+	background-repeat: repeat-y;
+	background-position: center top;
+	min-height: 750px;
+text-align: center;
+
+}
+.recipe .C01 .img01 {
+text-align: center;
+position:relative;
+}
+.recipe .C01 .img02 {
+text-align: center;
+margin-top: 65px;
+}
+.recipe .C01 .img03 {
+
+}
+.recipe .C01 .fb-page {
+width: 100%;
+max-width: 450px;
+min-height: 676px;
+margin-left: auto;
+margin-right: auto;
+overflow-y: hidden;
+}
+
+
+.recipe .C01 .tw {
+width: 100%;
+max-width: 450px;
+margin-left: auto;
+margin-right: auto;
+}
+
+
+.recipe .D_waku {
+	background-image: url(../images//base/back03.png);
+	background-repeat: repeat-x;
+	background-position: center bottom;
+	background-color: #ECD223;
+}
+.recipe .D01 {
+width: 90%;
+margin-left: auto;
+margin-right: auto;
+-webkit-box-sizing: border-box;
+-moz-box-sizing: border-box;
+box-sizing: border-box;
+padding-top: 50px;
+padding-bottom: 50px;
+}
+
+
+.recipe .E_waku {
+	background-color: #FFFFFF;
+}
+.recipe .E01 {
+width: 90%;
+-webkit-box-sizing: border-box;
+-moz-box-sizing: border-box;
+box-sizing: border-box;
+padding-top: 40px;
+padding-bottom: 50px;
+margin-left: auto;
+margin-right: auto;
+}
+.recipe .E01 .text01 {
+	color: #E7510C;
+	font-weight: bold;
+	width: 100%;
+	margin-left: auto;
+	margin-right: auto;
+	border-bottom: 2px solid #CCCCCC;
+	font-size: 16px;
+	line-height: 140%;
+	margin-top: 13px;
+	padding-bottom: 21px;
+	margin-bottom: 25px;
+}
+
+.ryoshi_list {
+        color:white;
+        position:static;
+        width:600px;
+}
+
+.ryoshi_list table{
+        border:solid 1px #ECD223;
+        margin:0px 20px;
+        padding:10px 10px;
+        width:600px;
+}
+
+.ryoshi_list tr td{
+        border: solid 1px  #ECD223;
+        padding:10px 20px;
+        color:white;
+        font-size:18px;
+}
+
+.ryoshi_list th{
+        border: solid 1px  #ECD223;
+        padding:10px 20px;
+        color:white;
+        font-size:20px;
+}
+
+.ryoshi_list a:hover {
+        color:white;
+        font-size:20px;
+}
+
+
+.ryoshi2 img{
+position:relative;
+}
+
+.fisher_list{
+width:100%;
+position:static;
+}
+
+.fisher_list li{
+float:left;
+width: 46%;
+margin-left: 2%;
+margin-right: 2%;
+}
+
+
+
+.tokutei_col1 {
+width: 30%;
+}
+
+
+.pagination li{
+ width:40px;
+ margin:5px;
+ float:left;
+ background: whitesmoke;
+ text-align:center;
+ display:inline-block;
+}
+
+.page-numbers{
+    display:block;
+    width:100%;
+    padding:10px 0px;
+}
+
+.page-numbers a{
+    display:block;
+    width:100%;
+    padding:10px 0px;
+}
+
+
+
+#toiawase{
+        width:100%;
+-webkit-box-sizing: border-box;
+-moz-box-sizing: border-box;
+box-sizing: border-box;
+padding-left: 4%;
+padding-right: 4%;
+margin-top:50px;
+}
+
+#toiawase table {
+        width:100%;
+        border-collapse: collapse;
+        margin:0 auto;
+        padding:0;
+}
+#toiawase table td{
+        display: block;
+        margin:0 auto;
+        padding:0;
+}
+
+#toiawase input{
+        width:100%;
+        margin:0 auto;
+        padding:0;
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+}
+
+#toiawase select{
+        width:100%;
+        margin:0 auto;
+        padding:0;
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+}
+
+#toiawase textarea{
+        width:100%;
+        margin:0 auto;
+        padding:0;
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+}
+
+#toiawase input[type="submit"] {
+        width:100%;
+        height:40px;
+        margin:0 auto;
+        padding:0;
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+}
+
+#toiawase .toiawase_left{
+        width:100%;
+        background-color:whitesmoke;
+        margin:0 auto;
+        padding:0;
+}
+
+#toiawase .toiawase_right{
+        width:100%;
+        margin-bottom:20px;
+        padding:0;
+}
+
+
+}

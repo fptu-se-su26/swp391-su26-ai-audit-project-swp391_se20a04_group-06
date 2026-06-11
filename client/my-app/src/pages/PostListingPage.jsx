@@ -75,6 +75,8 @@ export function PostListingPage({ user }) {
   const [origin, setOrigin] = useState("");
   const [expiry, setExpiry] = useState("");
   const [catchTime, setCatchTime] = useState("");
+  const [catchLat, setCatchLat] = useState("");
+  const [catchLng, setCatchLng] = useState("");
   const [gps, setGps] = useState({ status: "idle", lat: null, lng: null });
   const [address, setAddress] = useState("");
   const [images, setImages] = useState([]);
@@ -198,6 +200,8 @@ export function PostListingPage({ user }) {
             : {}),
         ...(expiry ? { expiryDate: expiry } : {}),
         ...(gps.status === "ok" ? { lat: gps.lat, lng: gps.lng } : {}),
+        ...(catchLat ? { catchLat: parseFloat(catchLat) } : {}),
+        ...(catchLng ? { catchLng: parseFloat(catchLng) } : {}),
       };
 
       await api("/products", {

@@ -19,7 +19,9 @@ export async function sepayWebhook(req: Request, res: Response) {
     }
     token = token.trim();
 
-    if (token !== "seafood-secret-key-1052003") {
+    const expectedKey = process.env.SEPAY_WEBHOOK_KEY || (process.env.NODE_ENV !== "production" ? "seafood-secret-key-1052003" : "");
+
+    if (!expectedKey || token !== expectedKey) {
       logger.warn(`[Sepay Webhook] Unauthorized request. Invalid API Key: ${token}`);
       return res.status(401).json({ message: "Invalid API Key" });
     }

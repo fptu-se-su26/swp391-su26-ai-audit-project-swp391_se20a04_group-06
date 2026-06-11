@@ -1,9 +1,5 @@
 /**
  * SellerProfilePage.jsx
- *
- * CHANGES:
- *   - Loại bỏ prop drilling `user`, thay thế bằng hook useAuth() trực tiếp.
- *   - Dọn dẹp import `fmt` không còn sử dụng.
  */
 
 import React, { useState, useEffect } from "react";
@@ -12,8 +8,19 @@ import { C } from "../utils/theme";
 import { api } from "../services/api";
 import { ProductCard } from "../components/ProductCard";
 import { ReviewList } from "../components/ReviewList";
-import { VerifiedBadge } from "../components/VerifiedBadge";
 import { useAuth } from "../context/AuthContext";
+import { useApiFetch } from "../hooks/useApiFetch";
+import { FishermanProfileHeader } from "../components/FishermanProfileHeader";
+import { FishermanRecipesTab } from "./tabs/FishermanRecipesTab";
+import { FishermanPostsTab } from "./tabs/FishermanPostsTab";
+import { FishermanBoatLogsTab } from "./tabs/FishermanBoatLogsTab";
+
+function LazyTab({ active, children }) {
+  const hasBeenActive = React.useRef(false);
+  if (active) hasBeenActive.current = true;
+  if (!hasBeenActive.current) return null;
+  return <div style={{ display: active ? "block" : "none" }}>{children}</div>;
+}
 
 export function SellerProfilePage({ seller }) {
   const { user } = useAuth();
@@ -23,6 +30,12 @@ export function SellerProfilePage({ seller }) {
   const [tab, setTab] = useState("products");
   const [typeFilter, setTypeFilter] = useState("all");
   const [hoveredFilter, setHoveredFilter] = useState(null);
+
+  // Fetch profile tổng hợp — stats đầy đủ
+  const { data: profile, loading: profileLoading } = useApiFetch(
+    `/fishermen/${seller.id}/profile`,
+    [seller.id]
+  );
 
   useEffect(() => {
     if (!seller?.id) {
@@ -40,12 +53,6 @@ export function SellerProfilePage({ seller }) {
     if (typeFilter === "dried") return p.type === "Dried";
     return true;
   });
-
-  const sellerName = seller?.name || products[0]?.sellerName || "...";
-  const sellerRating = seller?.avgRating ? parseFloat(seller.avgRating) : null;
-  const ratingCount = seller?.ratingCount || 0;
-  const freshCount = products.filter((p) => p.type === "Fresh").length;
-  const driedCount = products.filter((p) => p.type === "Dried").length;
 
   if (!seller?.id) return null;
 
@@ -84,173 +91,38 @@ export function SellerProfilePage({ seller }) {
         ⟨ Quay lại trang chủ
       </button>
 
-      <div
-        style={{
-          background: C.white,
-          borderRadius: 20,
-          border: `1px solid ${C.border}`,
-          overflow: "hidden",
-          marginBottom: 28,
-          boxShadow: "0 10px 25px -5px rgba(11, 79, 108, 0.04)",
-        }}
-      >
-        <div
-          style={{
-            height: 110,
-            background: `linear-gradient(135deg, #0B4F6C 0%, #1A7FA0 100%)`,
-            position: "relative",
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              bottom: -28,
-              left: 28,
-              width: 64,
-              height: 64,
-              borderRadius: "50%",
-              background: C.coral,
-              border: "3px solid #fff",
-              display: "flex",
-              alignItems: "center",
-              justifycontent: "center",
-              fontSize: 30,
-              boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
-              zIndex: 3,
-            }}
-          >
-            🧑‍🌾
-          </div>
-        </div>
+      {/* Header */}
+      <FishermanProfileHeader
+        profile={profile}
+        isLoading={profileLoading}
+        sellerId={seller.id}
+      />
 
-        <div style={{ padding: "44px 28px 24px" }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              flexWrap: "wrap",
-              gap: 16,
-            }}
-          >
-            <div>
-              <h1
-                style={{
-                  margin: "0 0 8px",
-                  fontSize: 24,
-                  fontWeight: 800,
-                  color: C.dark,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                {sellerName}
-                {seller?.isVerified && <VerifiedBadge size="md" showLabel />}
-                {seller?.isPremium && (
-                  <span
-                    title="Thành viên Premium uy tín"
-                    style={{
-                      fontSize: 18,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      cursor: "help"
-                    }}
-                  >
-                    👑
-                  </span>
-                )}
-              </h1>
-              {sellerRating !== null && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ color: "#F59E0B", fontSize: 16 }}>
-                    {"★".repeat(Math.round(sellerRating))}
-                    {"☆".repeat(5 - Math.round(sellerRating))}
-                  </span>
-                  <span
-                    style={{ fontSize: 14, fontWeight: 800, color: C.dark }}
-                  >
-                    {sellerRating.toFixed(1)}
-                  </span>
-                  <span
-                    style={{ fontSize: 13, color: C.muted, fontWeight: 500 }}
-                  >
-                    ({ratingCount} lượt đánh giá tin cậy)
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              {[
-                { label: "Mẻ đang đăng", value: products.length, emoji: "📦" },
-                { label: "Hải sản tươi", value: freshCount, emoji: "🌊" },
-                { label: "Đồ khô đóng gói", value: driedCount, emoji: "🔥" },
-              ].map((s) => (
-                <div
-                  key={s.label}
-                  style={{
-                    textAlign: "center",
-                    padding: "10px 18px",
-                    background: "#F8FAFC",
-                    borderRadius: 12,
-                    border: "1px solid #F1F5F9",
-                    minWidth: 90,
-                  }}
-                >
-                  <div style={{ fontSize: 22, marginBottom: 2 }}>{s.emoji}</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: C.dark }}>
-                    {s.value}
-                  </div>
-                  <div
-                    style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}
-                  >
-                    {s.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          gap: 4,
-          background: "#E2E8F0",
-          borderRadius: 12,
-          padding: 4,
-          width: "fit-content",
-          marginBottom: 24,
-        }}
-      >
+      {/* Tab bar */}
+      <div style={{ display: "flex", gap: 4, background: "#E2E8F0",
+        borderRadius: 12, padding: 4, width: "fit-content",
+        marginBottom: 24, flexWrap: "wrap" }}>
         {[
-          ["products", "📦 Gian hàng hải sản"],
-          ["reviews", "⭐ Lượt đánh giá"],
+          ["products",  `🐟 Gian hàng (${products.length})`],
+          ["recipes",   `🍳 Công thức (${profile?.stats?.totalRecipes ?? "..."})`],
+          ["posts",     `💬 Cộng đồng (${profile?.stats?.totalPosts ?? "..."})`],
+          ["boatlogs",  `⛵ Nhật ký (${profile?.stats?.totalBoatLogs ?? "..."})`],
+          ["reviews",   `⭐ Đánh giá (${profile?.stats?.ratingCount ?? "..."})`],
         ].map(([k, l]) => (
-          <button
-            key={k}
-            onClick={() => setTab(k)}
-            style={{
-              padding: "10px 22px",
-              borderRadius: 10,
-              border: "none",
-              cursor: "pointer",
-              fontWeight: 700,
-              fontSize: 13,
+          <button key={k} onClick={() => setTab(k)}
+            style={{ padding: "10px 18px", borderRadius: 10, border: "none",
+              cursor: "pointer", fontWeight: 700, fontSize: 13,
               fontFamily: "inherit",
               background: tab === k ? C.white : "transparent",
               color: tab === k ? C.ocean : C.muted,
               boxShadow: tab === k ? "0 4px 10px rgba(0,0,0,0.06)" : "none",
-              transition: "all 0.2s ease",
-            }}
-          >
+              transition: "all 0.2s" }}>
             {l}
           </button>
         ))}
       </div>
 
+      {/* Tab: Sản phẩm */}
       {tab === "products" && (
         <>
           <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
@@ -289,13 +161,7 @@ export function SellerProfilePage({ seller }) {
           </div>
 
           {loading ? (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))",
-                gap: 24,
-              }}
-            >
+            <div className="product-grid">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div
                   key={i}
@@ -321,13 +187,7 @@ export function SellerProfilePage({ seller }) {
               </div>
             </div>
           ) : (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))",
-                gap: 24,
-              }}
-            >
+            <div className="product-grid">
               {filtered.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
@@ -336,6 +196,22 @@ export function SellerProfilePage({ seller }) {
         </>
       )}
 
+      {/* Tab: Công thức */}
+      <LazyTab active={tab === "recipes"}>
+        <FishermanRecipesTab sellerId={seller.id} />
+      </LazyTab>
+
+      {/* Tab: Bài đăng cộng đồng */}
+      <LazyTab active={tab === "posts"}>
+        <FishermanPostsTab sellerId={seller.id} />
+      </LazyTab>
+
+      {/* Tab: Nhật ký cabin */}
+      <LazyTab active={tab === "boatlogs"}>
+        <FishermanBoatLogsTab sellerId={seller.id} />
+      </LazyTab>
+
+      {/* Tab: Đánh giá */}
       {tab === "reviews" && (
         <ReviewList sellerId={seller.id} user={user} productId={null} />
       )}

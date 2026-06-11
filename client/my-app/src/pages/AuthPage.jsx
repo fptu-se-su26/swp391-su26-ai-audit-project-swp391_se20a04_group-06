@@ -1,30 +1,55 @@
 /**
- * AuthPage.jsx — Minimalist Editorial Version
+ * AuthPage.jsx — Google-Only Auth
  */
 
 import React, { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { SparklesIcon, AlertCircleIcon } from "../components/icons";
 import { useAuth } from "../context/AuthContext";
+
+const GoogleLogo = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 18 18"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908C16.658 14.148 17.64 11.84 17.64 9.2z"
+      fill="#4285F4"
+    />
+    <path
+      d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
+      fill="#34A853"
+    />
+    <path
+      d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
+      fill="#FBBC05"
+    />
+    <path
+      d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
+      fill="#EA4335"
+    />
+  </svg>
+);
 
 export function AuthPage() {
   const navigate = useNavigate();
   const { setUser } = useAuth();
 
-  const [mode, setMode] = useState("login");
-  const [email, setEmail] = useState("");
-  const [pw, setPw] = useState("");
-  const [name, setName] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
-  const [focusedField, setFocusedField] = useState(null);
   const [showMockGooglePopup, setShowMockGooglePopup] = useState(false);
+  const [hasMockMode, setHasMockMode] = useState(false);
 
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
     if (!clientId) {
-      console.warn("VITE_GOOGLE_CLIENT_ID is missing. Mock Google Sign-In button will be active.");
+      console.warn(
+        "VITE_GOOGLE_CLIENT_ID is missing. Mock Google Sign-In will be active.",
+      );
+      setHasMockMode(true);
       return;
     }
 
@@ -33,14 +58,12 @@ export function AuthPage() {
         setTimeout(initGoogleGis, 100);
         return;
       }
-
       try {
         window.google.accounts.id.initialize({
           client_id: clientId,
           callback: handleGoogleCredentialResponse,
           auto_select: false,
         });
-
         const btnDiv = document.getElementById("google-signin-btn");
         if (btnDiv) {
           window.google.accounts.id.renderButton(btnDiv, {
@@ -51,14 +74,17 @@ export function AuthPage() {
             shape: "rectangular",
           });
         }
-
         window.google.accounts.id.prompt((notification) => {
           if (notification.isNotDisplayed()) {
-            console.log("One Tap not displayed:", notification.getNotDisplayedReason());
+            console.log(
+              "One Tap not displayed:",
+              notification.getNotDisplayedReason(),
+            );
           }
         });
       } catch (error) {
         console.error("Failed to initialize Google Identity Services:", error);
+        setHasMockMode(true);
       }
     };
 
@@ -82,10 +108,6 @@ export function AuthPage() {
     }
   };
 
-  const handleMockGoogleLogin = () => {
-    setShowMockGooglePopup(true);
-  };
-
   const selectMockAccount = async (email, name) => {
     setShowMockGooglePopup(false);
     setLoading(true);
@@ -94,7 +116,7 @@ export function AuthPage() {
       const data = await api("/auth/google", {
         method: "POST",
         body: JSON.stringify({
-          idToken: `mock_google_token_${email.toLowerCase().trim()}_${Date.now()}`
+          idToken: `mock_google_token_${email.toLowerCase().trim()}_${Date.now()}`,
         }),
       });
       setUser(data.user);
@@ -107,71 +129,26 @@ export function AuthPage() {
   };
 
   const handleMockOtherAccount = async () => {
-    const mockEmail = window.prompt("Nhập email Google muốn giả lập đăng nhập:", "nguyenvana@gmail.com");
+    const mockEmail = window.prompt(
+      "Nhập email Google muốn giả lập đăng nhập:",
+      "nguyenvana@gmail.com",
+    );
     if (!mockEmail) return;
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!EMAIL_REGEX.test(mockEmail)) {
       alert("Email không hợp lệ!");
       return;
     }
-    await selectMockAccount(mockEmail, `Mock User (${mockEmail.split("@")[0]})`);
-  };
-
-  const inputStyle = (field) => ({
-    width: "100%",
-    padding: "12px 16px",
-    background: "var(--white)",
-    border: `1.5px solid ${focusedField === field ? "var(--ocean)" : "var(--border)"}`,
-    borderRadius: 8,
-    fontSize: 14,
-    color: "var(--dark)",
-    outline: "none",
-    boxSizing: "border-box",
-    fontFamily: "inherit",
-    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-    boxShadow:
-      focusedField === field ? "0 0 0 3px rgba(8, 29, 44, 0.08)" : "none",
-  });
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setErr("");
-    if (pw.length < 6) {
-      return setErr("Mật khẩu tối thiểu phải từ 6 ký tự");
-    }
-    if (!email || !pw) return setErr("Vui lòng điền đầy đủ thông tin");
-    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!EMAIL_REGEX.test(email))
-      return setErr("Email không hợp lệ");
-    if (mode === "register" && !name.trim())
-      return setErr("Vui lòng nhập họ tên");
-
-    setLoading(true);
-    try {
-      const endpoint = mode === "login" ? "/auth/login" : "/auth/register";
-      const body =
-        mode === "login"
-          ? { email, password: pw }
-          : { email, password: pw, name: name.trim() };
-      const data = await api(endpoint, {
-        method: "POST",
-        body: JSON.stringify(body),
-      });
-      setUser(data.user);
-      navigate(data.user.role === "Admin" ? "/admin" : "/");
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setLoading(false);
-    }
+    await selectMockAccount(
+      mockEmail,
+      `Mock User (${mockEmail.split("@")[0]})`,
+    );
   };
 
   return (
     <div
       className="container-fluid min-vh-100 d-flex align-items-center justify-content-center p-3 p-sm-4"
-      style={{
-        backgroundColor: "var(--bg)",
-      }}
+      style={{ backgroundColor: "var(--bg)" }}
     >
       <div
         className="card border-0 p-4 p-sm-5 w-100"
@@ -185,7 +162,7 @@ export function AuthPage() {
         }}
       >
         {/* ── Header ── */}
-        <div className="text-center mb-4">
+        <div className="text-center mb-5">
           <div
             className="d-flex align-items-center justify-content-center mx-auto mb-3"
             style={{
@@ -222,179 +199,108 @@ export function AuthPage() {
             Tươi từ đại dương
           </p>
 
-          <div
-            className="d-flex gap-1 p-1 mt-4"
-            style={{
-              background: "var(--bg-2)",
-              borderRadius: 8,
-            }}
+          <p
+            className="mt-3 mb-0"
+            style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.6 }}
           >
-            {[
-              ["login", "Đăng nhập"],
-              ["register", "Đăng ký"],
-            ].map(([k, l]) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => {
-                  setMode(k);
-                  setErr("");
-                }}
-                className={`btn w-100 fw-bold border-0 py-2 ${mode === k ? "shadow-sm" : ""}`}
-                style={{
-                  flex: 1,
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  fontSize: 12,
-                  fontFamily: "inherit",
-                  transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-                  background: mode === k ? "var(--white)" : "transparent",
-                  color: mode === k ? "var(--ocean)" : "var(--muted)",
-                }}
-              >
-                {l}
-              </button>
-            ))}
-          </div>
+            Đăng nhập hoặc tạo tài khoản <br /> chỉ với một bước duy nhất
+          </p>
         </div>
 
-        {/* ── Form ── */}
-        <form
-          onSubmit={submit}
-          className="d-flex flex-column gap-3"
-        >
-          {mode === "register" && (
-            <div className="d-flex flex-column gap-1">
-              <label
-                className="fw-bold"
-                style={{ fontSize: 11, color: "var(--muted)" }}
-              >
-                Họ và tên
-              </label>
-              <input
-                className="form-control border-0"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onFocus={() => setFocusedField("name")}
-                onBlur={() => setFocusedField(null)}
-                placeholder="Nguyễn Văn A"
-                style={inputStyle("name")}
-              />
-            </div>
-          )}
-
-          <div className="d-flex flex-column gap-1">
-            <label
-              className="fw-bold"
-              style={{ fontSize: 11, color: "var(--muted)" }}
-            >
-              Địa chỉ Email
-            </label>
-            <input
-              className="form-control border-0"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onFocus={() => setFocusedField("email")}
-              onBlur={() => setFocusedField(null)}
-              placeholder="nguyenvana@gmail.com"
-              style={inputStyle("email")}
-              type="email"
-            />
-          </div>
-
-          <div className="d-flex flex-column gap-1">
-            <div className="d-flex justify-content-between align-items-center">
-              <label
-                className="fw-bold"
-                style={{ fontSize: 11, color: "var(--muted)" }}
-              >
-                Mật khẩu
-              </label>
-              {mode === "login" && (
-                <Link
-                  to="/quen-mat-khau"
-                  className="text-decoration-none fw-semibold"
-                  style={{
-                    fontSize: 11,
-                    color: "var(--ocean)",
-                  }}
-                >
-                  Quên mật khẩu?
-                </Link>
-              )}
-            </div>
-            <input
-              className="form-control border-0"
-              value={pw}
-              onChange={(e) => setPw(e.target.value)}
-              onFocus={() => setFocusedField("password")}
-              onBlur={() => setFocusedField(null)}
-              placeholder="••••••••"
-              style={inputStyle("password")}
-              type="password"
-            />
-          </div>
-
-          {err && (
-            <div
-              className="alert alert-danger border-danger d-flex align-items-center gap-2 py-2 px-3 m-0"
-              style={{
-                color: "#991b1b",
-                fontSize: 12,
-                background: "#fef2f2",
-                borderLeft: "3.5px solid #ef4444",
-                borderRadius: 6,
-                fontWeight: 600,
-                lineHeight: 1.4,
-              }}
-            >
-              <AlertCircleIcon size={14} className="flex-shrink-0" />
-              <span>{err}</span>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn w-100 fw-bold py-2 mt-2"
+        {/* ── Error ── */}
+        {err && (
+          <div
+            className="alert alert-danger border-danger d-flex align-items-center gap-2 py-2 px-3 mb-3"
             style={{
-              background: loading ? "var(--muted)" : "var(--ocean)",
-              color: "var(--white)",
-              border: "none",
-              borderRadius: 8,
-              cursor: loading ? "not-allowed" : "pointer",
-              fontSize: 14,
-              fontFamily: "inherit",
-              transition: "background 0.2s, transform 0.1s active",
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) e.currentTarget.style.background = "var(--ocean-l)";
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) e.currentTarget.style.background = "var(--ocean)";
+              color: "#991b1b",
+              fontSize: 12,
+              background: "#fef2f2",
+              borderLeft: "3.5px solid #ef4444",
+              borderRadius: 6,
+              fontWeight: 600,
+              lineHeight: 1.4,
             }}
           >
-            {loading
-              ? "⏳ Đang xử lý..."
-              : mode === "login"
-                ? "Đăng nhập hệ thống"
-                : "Xác nhận tạo tài khoản"}
-          </button>
-
-          {/* Divider */}
-          <div className="d-flex align-items-center gap-2 my-2">
-            <div className="flex-grow-1" style={{ height: 1, background: "var(--border)" }} />
-            <span className="fw-semibold" style={{ fontSize: 12, color: "var(--muted)" }}>Hoặc</span>
-            <div className="flex-grow-1" style={{ height: 1, background: "var(--border)" }} />
+            <AlertCircleIcon size={14} className="flex-shrink-0" />
+            <span>{err}</span>
           </div>
+        )}
 
-          {/* Google Sign In Container */}
-          <div id="google-signin-btn" className="w-100 d-flex justify-content-center mb-1" />
+        {/* ── Google Button ── */}
+        {hasMockMode ? (
+          <button
+            onClick={() => setShowMockGooglePopup(true)}
+            disabled={loading}
+            className="btn w-100 d-flex align-items-center justify-content-center gap-2 fw-semibold"
+            style={{
+              background: "var(--white)",
+              color: "var(--dark)",
+              border: "1.5px solid var(--border)",
+              borderRadius: 8,
+              padding: "11px 16px",
+              fontSize: 14,
+              fontFamily: "inherit",
+              cursor: loading ? "not-allowed" : "pointer",
+              transition: "box-shadow 0.2s, border-color 0.2s",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+            }}
+            onMouseEnter={(e) => {
+              if (!loading) {
+                e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.13)";
+                e.currentTarget.style.borderColor = "#aaa";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)";
+              e.currentTarget.style.borderColor = "var(--border)";
+            }}
+          >
+            {loading ? (
+              "⏳ Đang xử lý..."
+            ) : (
+              <>
+                <GoogleLogo />
+                Đăng nhập bằng Google
+              </>
+            )}
+          </button>
+        ) : (
+          <div className="w-100">
+            <div
+              id="google-signin-btn"
+              className="w-100 d-flex justify-content-center"
+            />
+            {(window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (
+              <div className="text-center mt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowMockGooglePopup(true)}
+                  disabled={loading}
+                  className="btn border-0 bg-transparent text-decoration-underline text-muted"
+                  style={{ fontSize: 12, cursor: "pointer" }}
+                >
+                  [Dev Mode] Sử dụng tài khoản giả lập
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
-
-        </form>
-
-        <div className="mt-4 text-center" style={{ color: "var(--muted)", fontSize: 11 }}></div>
+        {/* ── Footer Note ── */}
+        <p
+          className="text-center mt-4 mb-0"
+          style={{ color: "var(--muted)", fontSize: 11, lineHeight: 1.7 }}
+        >
+          Bằng cách tiếp tục, bạn đồng ý với{" "}
+          <span style={{ color: "var(--ocean)", cursor: "pointer" }}>
+            Điều khoản dịch vụ
+          </span>{" "}
+          và{" "}
+          <span style={{ color: "var(--ocean)", cursor: "pointer" }}>
+            Chính sách quyền riêng tư
+          </span>{" "}
+          của HảiSản.vn.
+        </p>
       </div>
 
       {/* ── HIGH FIDELITY MOCK GOOGLE ACCOUNT CHOOSER POPUP ── */}
@@ -434,15 +340,17 @@ export function AuthPage() {
               }}
             >
               <div className="d-flex align-items-center gap-2">
-                <span className="fw-bolder" style={{ color: "#4285F4" }}>G</span>
-                <span>Đăng nhập - Tài khoản Google - Personal - Microsoft Edge</span>
+                <span className="fw-bolder" style={{ color: "#4285F4" }}>
+                  G
+                </span>
+                <span>
+                  Đăng nhập - Tài khoản Google - Personal - Microsoft Edge
+                </span>
               </div>
               <button
                 onClick={() => setShowMockGooglePopup(false)}
                 className="btn border-0 p-0 text-secondary bg-transparent"
-                style={{
-                  fontSize: 14,
-                }}
+                style={{ fontSize: 14 }}
               >
                 ✕
               </button>
@@ -450,14 +358,13 @@ export function AuthPage() {
 
             {/* Google Identity Header */}
             <div className="p-4 p-sm-5 pt-4 pb-3">
-              <div className="d-flex align-items-center gap-2 fw-semibold mb-3 text-white" style={{ fontSize: 14 }}>
+              <div
+                className="d-flex align-items-center gap-2 fw-semibold mb-3 text-white"
+                style={{ fontSize: 14 }}
+              >
                 <div
                   className="rounded-circle d-flex align-items-center justify-content-center fw-bolder bg-white text-primary"
-                  style={{
-                    width: 24,
-                    height: 24,
-                    fontSize: 14,
-                  }}
+                  style={{ width: 24, height: 24, fontSize: 14 }}
                 >
                   G
                 </div>
@@ -466,14 +373,15 @@ export function AuthPage() {
 
               <h2
                 className="fw-normal mb-1 text-white"
-                style={{
-                  fontSize: 24,
-                }}
+                style={{ fontSize: 24 }}
               >
                 Chọn tài khoản
               </h2>
               <p className="mb-4" style={{ fontSize: 14, color: "#9AA0A6" }}>
-                Tiếp tục tới <span style={{ color: "#8AB4F8", fontWeight: 600 }}>HảiSản.vn</span>
+                Tiếp tục tới{" "}
+                <span style={{ color: "#8AB4F8", fontWeight: 600 }}>
+                  HảiSản.vn
+                </span>
               </p>
 
               {/* Accounts List */}
@@ -481,7 +389,7 @@ export function AuthPage() {
                 className="d-flex flex-column border-top border-bottom py-1"
                 style={{
                   borderColor: "#3C4043 !important",
-                  margin: "0 -2.5rem", // offset the card padding on the list to make active background full-width
+                  margin: "0 -2.5rem",
                 }}
               >
                 {[
@@ -514,7 +422,7 @@ export function AuthPage() {
                   <div
                     key={idx}
                     onClick={() => selectMockAccount(acc.email, acc.name)}
-                    className="d-flex align-items-center gap-3 px-5 py-2 cursor-pointer"
+                    className="d-flex align-items-center gap-3 px-5 py-2"
                     style={{
                       cursor: "pointer",
                       transition: "background 0.15s",
@@ -526,7 +434,6 @@ export function AuthPage() {
                       e.currentTarget.style.background = "transparent";
                     }}
                   >
-                    {/* Circle Avatar */}
                     <div
                       className="rounded-circle d-flex align-items-center justify-content-center fw-semibold text-uppercase text-white"
                       style={{
@@ -534,22 +441,27 @@ export function AuthPage() {
                         height: 32,
                         background: acc.color,
                         fontSize: 14,
+                        flexShrink: 0,
                       }}
                     >
                       {acc.initial}
                     </div>
-
                     <div className="flex-grow-1">
-                      <div className="fw-semibold text-light" style={{ fontSize: 13 }}>
+                      <div
+                        className="fw-semibold text-light"
+                        style={{ fontSize: 13 }}
+                      >
                         {acc.name}
                       </div>
                       <div style={{ fontSize: 11, color: "#9AA0A6" }}>
                         {acc.email}
                       </div>
                     </div>
-
                     {acc.logout && (
-                      <span className="fw-normal" style={{ fontSize: 10, color: "#9AA0A6" }}>
+                      <span
+                        className="fw-normal"
+                        style={{ fontSize: 10, color: "#9AA0A6" }}
+                      >
                         Đã đăng xuất
                       </span>
                     )}
@@ -559,11 +471,8 @@ export function AuthPage() {
                 {/* Use another account */}
                 <div
                   onClick={handleMockOtherAccount}
-                  className="d-flex align-items-center gap-3 px-5 py-2 cursor-pointer"
-                  style={{
-                    cursor: "pointer",
-                    transition: "background 0.15s",
-                  }}
+                  className="d-flex align-items-center gap-3 px-5 py-2"
+                  style={{ cursor: "pointer", transition: "background 0.15s" }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = "#2D2E30";
                   }}
@@ -578,11 +487,15 @@ export function AuthPage() {
                       height: 32,
                       background: "transparent",
                       fontSize: 16,
+                      flexShrink: 0,
                     }}
                   >
                     👤
                   </div>
-                  <span className="fw-normal text-light" style={{ fontSize: 13 }}>
+                  <span
+                    className="fw-normal text-light"
+                    style={{ fontSize: 13 }}
+                  >
                     Sử dụng một tài khoản khác
                   </span>
                 </div>
@@ -591,14 +504,16 @@ export function AuthPage() {
               {/* Footer Note */}
               <div
                 className="mt-3 text-secondary"
-                style={{
-                  fontSize: 11,
-                  lineHeight: 1.5,
-                }}
+                style={{ fontSize: 11, lineHeight: 1.5 }}
               >
                 Trước khi sử dụng HảiSản.vn, bạn có thể xem{" "}
-                <span style={{ color: "#8AB4F8", cursor: "pointer" }}>Chính sách quyền riêng tư</span>{" "}
-                và <span style={{ color: "#8AB4F8", cursor: "pointer" }}>Điều khoản dịch vụ</span>{" "}
+                <span style={{ color: "#8AB4F8", cursor: "pointer" }}>
+                  Chính sách quyền riêng tư
+                </span>{" "}
+                và{" "}
+                <span style={{ color: "#8AB4F8", cursor: "pointer" }}>
+                  Điều khoản dịch vụ
+                </span>{" "}
                 của ứng dụng này.
               </div>
             </div>

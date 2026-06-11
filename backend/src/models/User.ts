@@ -11,6 +11,7 @@ export interface IUser extends Document {
   favorites: Types.ObjectId[];
   following: Types.ObjectId[];
   isPremium: boolean;
+  badges?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,6 +28,7 @@ const userSchema = new Schema<IUser>(
     favorites: [{ type: Schema.Types.ObjectId, ref: "Product" }],
     following: [{ type: Schema.Types.ObjectId, ref: "User" }],
     isPremium: { type: Boolean, default: false },
+    badges: [{ type: String }],
   },
   { timestamps: true },
 );

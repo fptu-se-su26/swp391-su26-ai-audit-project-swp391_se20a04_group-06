@@ -1,16 +1,5 @@
 /**
- * Navbar.jsx — Refactored + Fixed
- *
- * FIXES:
- *   1. FIX CRITICAL TYPO: `onMarkRead` → `onMarkAllRead` khi truyền vào NotificationBell.
- *      Bug: NotificationBell nhận prop `onMarkAllRead` nhưng Navbar truyền `onMarkRead`
- *      → notifications không bao giờ được đánh dấu đã đọc khi mở dropdown.
- *
- *   2. Thêm cleanup cho event listener IntersectionObserver (đã có nhưng cần verify).
- *
- *   3. Loại bỏ `disconnectSocket` import thừa (logout đã được handle trong AuthContext).
- *
- *   4. `handleLogout` không cần async/await — `logout()` từ AuthContext đã handle internally.
+ * Navbar.jsx
  */
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -27,10 +16,9 @@ import {
   MenuIcon,
   XIcon,
   PlusIcon,
-  TruckIcon,
-  PhoneIcon,
   ChevronDownIcon,
   SparklesIcon,
+  SearchIcon,
 } from "../components/icons";
 import styles from "./Navbar.module.css";
 
@@ -46,9 +34,27 @@ export function Navbar({ unread, onOpenGlobalChat }) {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  const { notifs, unreadCount, markAllRead, markSingleRead } = useNotifications(user);
+  const urlSearch = new URLSearchParams(location.search).get("search") || "";
+  const [searchQuery, setSearchQuery] = useState(urlSearch);
 
-  // Đóng profile dropdown khi click ra ngoài
+  useEffect(() => {
+    setSearchQuery(urlSearch);
+  }, [urlSearch]);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/san-pham?search=${encodeURIComponent(searchQuery.trim())}`);
+      setMenuOpen(false);
+    } else {
+      navigate(`/san-pham`);
+      setMenuOpen(false);
+    }
+  };
+
+  const { notifs, unreadCount, markAllRead, markSingleRead } =
+    useNotifications(user);
+
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -59,7 +65,6 @@ export function Navbar({ unread, onOpenGlobalChat }) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Detect scroll để thu nhỏ navbar
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
@@ -71,7 +76,6 @@ export function Navbar({ unread, onOpenGlobalChat }) {
     return () => observer.disconnect();
   }, []);
 
-  // Đóng mobile menu khi route thay đổi
   useEffect(() => {
     setMenuOpen(false);
     setShowChatPopover(false);
@@ -80,15 +84,12 @@ export function Navbar({ unread, onOpenGlobalChat }) {
 
   const handleNotifClick = useCallback(
     (n) => {
-      if (!n.isRead) {
-        markSingleRead(n.id);
-      }
+      if (!n.isRead) markSingleRead(n.id);
       if (n.productId) navigate(`/san-pham/${n.productId}`);
     },
-    [navigate, markSingleRead]
+    [navigate, markSingleRead],
   );
 
-  // FIX: Không cần async/await — logout() trong AuthContext tự handle
   const handleLogout = useCallback(async () => {
     await logout();
     navigate("/");
@@ -111,6 +112,7 @@ export function Navbar({ unread, onOpenGlobalChat }) {
 
   return (
     <>
+      {/* Scroll sentinel */}
       <div
         ref={sentinelRef}
         style={{
@@ -122,27 +124,15 @@ export function Navbar({ unread, onOpenGlobalChat }) {
         }}
       />
 
-      <div
-        className={`${styles.topBar} ${scrolled ? styles.topBarHidden : ""}`}
-      >
-        <span className={styles.topBarItem}>
-          <TruckIcon size={12} />
-          Giao tươi trong 20km · Khô giao toàn quốc
-        </span>
-        <span className={styles.topBarItem}>
-          <PhoneIcon size={12} />
-          Hỗ trợ kỹ thuật: 1800 6688
-        </span>
-      </div>
-
       <nav className={`${styles.nav} ${scrolled ? styles.navScrolled : ""}`}>
+        {/* ─── Logo ─── */}
         <button
           className={styles.logo}
           onClick={() => navTo("/")}
           aria-label="Trang chủ"
         >
           <span className={styles.logoMark}>
-            <SparklesIcon size={18} style={{ color: "var(--ocean)" }} />
+            <SparklesIcon size={18} />
           </span>
           <span>
             <span className={styles.logoName}>
@@ -152,6 +142,7 @@ export function Navbar({ unread, onOpenGlobalChat }) {
           </span>
         </button>
 
+        {/* ─── Nav Links ─── */}
         <div className={styles.navLinks}>
           <button
             className={`${styles.navBtn} ${isActive("/") ? styles.active : ""}`}
@@ -159,6 +150,31 @@ export function Navbar({ unread, onOpenGlobalChat }) {
           >
             <HomeIcon size={14} />
             Trang chủ
+          </button>
+
+          <button
+            className={`${styles.navBtn} ${isActive("/san-pham") ? styles.active : ""}`}
+            onClick={() => navTo("/san-pham")}
+          >
+            🐟 Sản phẩm
+          </button>
+          <button
+            className={`${styles.navBtn} ${isActive("/cong-thuc") ? styles.active : ""}`}
+            onClick={() => navTo("/cong-thuc")}
+          >
+            🍳 Bí quyết
+          </button>
+          <button
+            className={`${styles.navBtn} ${isActive("/cong-dong") ? styles.active : ""}`}
+            onClick={() => navTo("/cong-dong")}
+          >
+            💬 Cộng đồng
+          </button>
+          <button
+            className={`${styles.navBtn} ${isActive("/ngu-dan") ? styles.active : ""}`}
+            onClick={() => navTo("/ngu-dan")}
+          >
+            🚢 Ngư dân
           </button>
           {user && (
             <>
@@ -182,6 +198,26 @@ export function Navbar({ unread, onOpenGlobalChat }) {
           )}
         </div>
 
+
+        {/* ─── Search ─── */}
+        <form className={styles.searchForm} onSubmit={handleSearchSubmit}>
+          <button
+            type="submit"
+            className={styles.searchIcon}
+            aria-label="Tìm kiếm"
+          >
+            <SearchIcon size={15} />
+          </button>
+          <input
+            type="text"
+            placeholder="Tìm cá, mực, tôm..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={styles.searchInput}
+          />
+        </form>
+
+        {/* ─── Actions ─── */}
         <div className={styles.actions}>
           {user ? (
             <>
@@ -210,7 +246,6 @@ export function Navbar({ unread, onOpenGlobalChat }) {
                 )}
               </div>
 
-              {/* FIX: prop onMarkRead → onMarkAllRead */}
               <NotificationBell
                 notifs={notifs}
                 unreadCount={unreadCount}
@@ -308,6 +343,7 @@ export function Navbar({ unread, onOpenGlobalChat }) {
           )}
         </div>
 
+        {/* ─── Mobile toggle ─── */}
         <div className={styles.mobileActions}>
           <button
             className={styles.hamburger}
@@ -330,6 +366,19 @@ export function Navbar({ unread, onOpenGlobalChat }) {
             <HomeIcon size={14} />
             Trang chủ
           </button>
+
+          <button className={styles.mobileMenuItem} onClick={() => navTo("/san-pham")}>
+            🐟 Sản phẩm bản địa
+          </button>
+          <button className={styles.mobileMenuItem} onClick={() => navTo("/cong-thuc")}>
+            🍳 Bí quyết nấu nướng
+          </button>
+          <button className={styles.mobileMenuItem} onClick={() => navTo("/cong-dong")}>
+            💬 Cộng đồng thảo luận
+          </button>
+          <button className={styles.mobileMenuItem} onClick={() => navTo("/ngu-dan")}>
+            🚢 Ngư dân bản địa
+          </button>
           {user && (
             <button
               className={styles.mobileMenuItem}
@@ -339,6 +388,7 @@ export function Navbar({ unread, onOpenGlobalChat }) {
               Quản lý bán hàng
             </button>
           )}
+
           <button
             className={styles.mobileMenuItem}
             onClick={() => navTo("/dang-bai")}

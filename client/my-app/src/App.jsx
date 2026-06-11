@@ -31,7 +31,9 @@ import {
 } from "./components/PrivateRoute";
 import { useApiFetch } from "./hooks/useApiFetch";
 import { Navbar } from "./layout/Navbar";
+import { Footer } from "./layout/Footer";
 import { ChatBox } from "./components/ChatBox";
+import { AIChatbot } from "./components/AIChatbot";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useViewTransitionNavigate } from "./hooks/useViewTransitionNavigate";
 import { disconnectSocket, getSocket } from "./services/socket";
@@ -72,8 +74,32 @@ const SellerProfilePage = lazy(() =>
     default: m.SellerProfilePage,
   })),
 );
+
+const FishermanListPage = lazy(() =>
+  import("./pages/FishermanListPage").then((m) => ({
+    default: m.FishermanListPage,
+  }))
+);
 const ProfilePage = lazy(() =>
   import("./pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
+);
+const ProductListPage = lazy(() =>
+  import("./pages/ProductListPage").then((m) => ({ default: m.ProductListPage })),
+);
+const RecipeListPage = lazy(() =>
+  import("./pages/RecipeListPage").then((m) => ({ default: m.RecipeListPage })),
+);
+const RecipeDetailPage = lazy(() =>
+  import("./pages/RecipeDetailPage").then((m) => ({ default: m.RecipeDetailPage })),
+);
+const CommunityPage = lazy(() =>
+  import("./pages/CommunityPage").then((m) => ({ default: m.CommunityPage })),
+);
+const SubscriptionPage = lazy(() =>
+  import("./pages/SubscriptionPage").then((m) => ({ default: m.SubscriptionPage })),
+);
+const GuidePage = lazy(() =>
+  import("./pages/GuidePage").then((m) => ({ default: m.GuidePage })),
 );
 
 // ── Shared loading UI ───────────────────────────────────────
@@ -233,7 +259,7 @@ function AppShell() {
     <div
       style={{
         fontFamily: "var(--font)",
-        background: "var(--bg)",
+        background: "transparent",
         minHeight: "100vh",
       }}
     >
@@ -249,10 +275,16 @@ function AppShell() {
         <Routes>
           {/* ── Public routes ─────────────────────────── */}
           <Route path="/" element={<HomePage />} />
+          <Route path="/san-pham" element={<ProductListPage />} />
           <Route
             path="/san-pham/:productId"
             element={<ProductDetailPageRoute />}
           />
+          <Route path="/cong-thuc" element={<RecipeListPage />} />
+          <Route path="/cong-thuc/:id" element={<RecipeDetailPage />} />
+          <Route path="/cong-dong" element={<CommunityPage />} />
+          <Route path="/dinh-ky" element={<SubscriptionPage />} />
+          <Route path="/quy-trinh" element={<GuidePage />} />
           <Route
             path="/quen-mat-khau"
             element={
@@ -265,6 +297,7 @@ function AppShell() {
             path="/nguoi-ban/:sellerId"
             element={<SellerProfilePageRoute />}
           />
+          <Route path="/ngu-dan" element={<FishermanListPage />} />
 
           {/* ── Guest only (redirect nếu đã login) ────── */}
           <Route
@@ -316,6 +349,9 @@ function AppShell() {
         </Routes>
       </Suspense>
 
+      {!isAuthPage && <Footer />}
+      {!isAuthPage && <AIChatbot />}
+
       {/* Floating Chat Box */}
       {globalChat && (
         <div
@@ -337,6 +373,8 @@ function AppShell() {
               name: globalChat.productName,
               sellerId: globalChat.otherUserId,
               sellerName: globalChat.otherUserName,
+              productSellerId: globalChat.productSellerId,
+              otherUserId: globalChat.otherUserId,
             }}
             user={user}
             onClose={() => setGlobalChat(null)}

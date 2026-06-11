@@ -3,6 +3,7 @@ import { C } from "../utils/theme";
 import { api } from "../services/api";
 import { fmt } from "../utils/format";
 import { VerifiedBadge } from "../components/VerifiedBadge";
+import { AdminBroadcastTab } from "../components/AdminBroadcastTab"; // ← MỚI
 import { useToast } from "../context/ToastContext";
 
 /* ─── Hộp thoại xác nhận tùy chỉnh ConfirmDialog ─── */
@@ -85,7 +86,7 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
   );
 }
 
-/* ─── HÀM HOOK XÁC MINH NGƯỜI DÙNG MERGED CHUẨN VITE HMR ─── */
+/* ─── Hook xác minh người dùng ─── */
 function useVerifyUser(users, setUsers) {
   const toast = useToast();
   const [verifyingId, setVerifyingId] = useState(null);
@@ -112,7 +113,7 @@ function useVerifyUser(users, setUsers) {
   return { toggleVerify, verifyingId };
 }
 
-/* ─── COMPONENT HÀNG NGƯỜI DÙNG TRONG BẢNG MERGED CHUẨN VITE HMR ─── */
+/* ─── Hàng người dùng trong bảng ─── */
 function AdminUserRow({
   user,
   onToggleActive,
@@ -395,7 +396,6 @@ export function AdminPage() {
   const [confirmDelete, setConfirmDelete] = useState(null);
 
   const loadReports = (status) => {
-    // 🌟 KHẮC PHỤC CASCADING RENDER: Đưa việc cập nhật trạng thái loading ra ngoài chu kỳ render đồng bộ bằng microtask
     Promise.resolve().then(() => {
       setReportsLoading(true);
     });
@@ -532,17 +532,10 @@ export function AdminPage() {
           onCancel={() => setConfirmDelete(null)}
         />
       )}
-
-      <h1
-        className="fw-bold mb-4"
-        style={{
-          fontSize: 24,
-          color: C.dark,
-        }}
-      >
+      <h1 className="fw-bold mb-4" style={{ fontSize: 24, color: C.dark }}>
         ⚙️ Trang Quản Trị Hệ Thống Admin
       </h1>
-
+      {/* ── Stat Cards ────────────────────────────────────────────── */}
       {stats && (
         <div className="row g-3 mb-4">
           <div className="col-6 col-sm-4 col-md-3 col-lg-3">
@@ -612,19 +605,17 @@ export function AdminPage() {
           </div>
         </div>
       )}
-
+      {/* ── Tab bar ───────────────────────────────────────────────── */}
       <div
         className="d-inline-flex gap-1 p-1 mb-4"
-        style={{
-          background: "#E2E8F0",
-          borderRadius: 12,
-        }}
+        style={{ background: "#E2E8F0", borderRadius: 12 }}
       >
         {[
           ["stats", "📊 Thống kê"],
           ["users", "👥 Người dùng"],
           ["listings", "📋 Bài đăng"],
           ["reports", "🚩 Báo cáo"],
+          ["broadcast", "📢 Thông báo"], // ← MỚI
         ].map(([k, l]) => (
           <button
             key={k}
@@ -645,7 +636,7 @@ export function AdminPage() {
           </button>
         ))}
       </div>
-
+      {/* ── Tab: Thống kê ─────────────────────────────────────────── */}
       {tab === "stats" && stats && (
         <div className="d-flex flex-column gap-4">
           <div className="row g-4">
@@ -661,10 +652,7 @@ export function AdminPage() {
               >
                 <div
                   className="fw-bold mb-1"
-                  style={{
-                    fontSize: 14,
-                    color: C.dark,
-                  }}
+                  style={{ fontSize: 14, color: C.dark }}
                 >
                   📋 Tin đăng mới — 7 ngày gần nhất
                 </div>
@@ -691,10 +679,7 @@ export function AdminPage() {
               >
                 <div
                   className="fw-bold mb-1"
-                  style={{
-                    fontSize: 14,
-                    color: C.dark,
-                  }}
+                  style={{ fontSize: 14, color: C.dark }}
                 >
                   👥 Đăng ký mới — 7 ngày gần nhất
                 </div>
@@ -723,10 +708,7 @@ export function AdminPage() {
               >
                 <div
                   className="fw-bold mb-3"
-                  style={{
-                    fontSize: 14,
-                    color: C.dark,
-                  }}
+                  style={{ fontSize: 14, color: C.dark }}
                 >
                   🐟 Phân bố loại sản phẩm hoạt động
                 </div>
@@ -740,9 +722,7 @@ export function AdminPage() {
                     <div key={lbl} className="mb-3">
                       <div
                         className="d-flex justify-content-between mb-2"
-                        style={{
-                          fontSize: 13,
-                        }}
+                        style={{ fontSize: 13 }}
                       >
                         <span className="fw-bold" style={{ color: C.text }}>
                           {ico} {lbl}
@@ -764,7 +744,8 @@ export function AdminPage() {
                             width: `${pct}%`,
                             background: col,
                             borderRadius: 10,
-                            transition: "width 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+                            transition:
+                              "width 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
                           }}
                         />
                       </div>
@@ -774,9 +755,7 @@ export function AdminPage() {
 
                 <div
                   className="d-flex flex-column gap-2 mt-4 pt-3 border-top"
-                  style={{
-                    borderColor: `${C.border} !important`,
-                  }}
+                  style={{ borderColor: `${C.border} !important` }}
                 >
                   {[
                     ["Tổng bài đang rao bán", totalActive, C.dark],
@@ -799,13 +778,9 @@ export function AdminPage() {
                     <div
                       key={lbl}
                       className="d-flex justify-content-between"
-                      style={{
-                        fontSize: 13,
-                      }}
+                      style={{ fontSize: 13 }}
                     >
-                      <span className="fw-medium text-muted">
-                        {lbl}
-                      </span>
+                      <span className="fw-medium text-muted">{lbl}</span>
                       <strong className="fw-bold" style={{ color: col }}>
                         {val}
                       </strong>
@@ -827,10 +802,7 @@ export function AdminPage() {
               >
                 <div
                   className="fw-bold mb-3"
-                  style={{
-                    fontSize: 14,
-                    color: C.dark,
-                  }}
+                  style={{ fontSize: 14, color: C.dark }}
                 >
                   🏆 Top 5 người bán tích cực nhất
                 </div>
@@ -848,34 +820,24 @@ export function AdminPage() {
                   const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"];
                   return (
                     <div key={seller.id} className="mb-3">
-                      <div
-                        className="d-flex align-items-center justify-content-between mb-2"
-                      >
-                        <div
-                          className="d-flex align-items-center gap-2"
-                        >
+                      <div className="d-flex align-items-center justify-content-between mb-2">
+                        <div className="d-flex align-items-center gap-2">
                           <span style={{ fontSize: 16 }}>{medals[idx]}</span>
                           <span
                             className="fw-bold text-dark"
-                            style={{
-                              fontSize: 13,
-                            }}
+                            style={{ fontSize: 13 }}
                           >
                             {seller.name}
                           </span>
                         </div>
-                        <div
-                          className="d-flex align-items-center gap-2"
-                        >
+                        <div className="d-flex align-items-center gap-2">
                           <Stars value={seller.avgRating} />
                           <Pill bg="#FDE8E0" color="#C0401A">
                             {seller.postCount} bài
                           </Pill>
                         </div>
                       </div>
-                      <div
-                        className="d-flex align-items-center gap-2"
-                      >
+                      <div className="d-flex align-items-center gap-2">
                         <div
                           className="flex-grow-1"
                           style={{
@@ -897,9 +859,7 @@ export function AdminPage() {
                         </div>
                         <span
                           className="text-muted text-nowrap fw-medium"
-                          style={{
-                            fontSize: 11,
-                          }}
+                          style={{ fontSize: 11 }}
                         >
                           {seller.followers} followers
                         </span>
@@ -912,7 +872,7 @@ export function AdminPage() {
           </div>
         </div>
       )}
-
+      {/* ── Tab: Người dùng ───────────────────────────────────────── */}
       {tab === "users" && (
         <div
           className="card border-0"
@@ -925,13 +885,14 @@ export function AdminPage() {
           }}
         >
           <div className="table-responsive">
-            <table className="table table-hover align-middle mb-0" style={{ borderCollapse: "collapse" }}>
+            <table
+              className="table table-hover align-middle mb-0"
+              style={{ borderCollapse: "collapse" }}
+            >
               <thead>
                 <tr
                   className="table-light"
-                  style={{
-                    borderBottom: `1px solid ${C.border}`,
-                  }}
+                  style={{ borderBottom: `1px solid ${C.border}` }}
                 >
                   {[
                     "Người dùng",
@@ -970,7 +931,7 @@ export function AdminPage() {
           </div>
         </div>
       )}
-
+      {/* ── Tab: Bài đăng ─────────────────────────────────────────── */}
       {tab === "listings" && (
         <div
           className="card border-0"
@@ -983,13 +944,14 @@ export function AdminPage() {
           }}
         >
           <div className="table-responsive">
-            <table className="table table-hover align-middle mb-0" style={{ borderCollapse: "collapse" }}>
+            <table
+              className="table table-hover align-middle mb-0"
+              style={{ borderCollapse: "collapse" }}
+            >
               <thead>
                 <tr
                   className="table-light"
-                  style={{
-                    borderBottom: `1px solid ${C.border}`,
-                  }}
+                  style={{ borderBottom: `1px solid ${C.border}` }}
                 >
                   {[
                     "Sản phẩm",
@@ -1018,9 +980,7 @@ export function AdminPage() {
                 {listings.map((p) => (
                   <tr
                     key={p.id}
-                    style={{
-                      borderBottom: `1px solid ${C.border}`,
-                    }}
+                    style={{ borderBottom: `1px solid ${C.border}` }}
                   >
                     <td
                       style={{
@@ -1123,7 +1083,7 @@ export function AdminPage() {
           </div>
         </div>
       )}
-
+      {/* ── Tab: Báo cáo ──────────────────────────────────────────── */}
       {tab === "reports" && (
         <div>
           <div className="d-flex gap-2 mb-4">
@@ -1173,33 +1133,22 @@ export function AdminPage() {
                 <div
                   key={r.id}
                   className="card border-0 p-4 d-flex flex-row flex-wrap align-items-start justify-content-between gap-3"
-                  style={{
-                    borderRadius: 16,
-                    border: "1px solid #e5e7eb",
-                  }}
+                  style={{ borderRadius: 16, border: "1px solid #e5e7eb" }}
                 >
                   <div className="flex-grow-1">
                     <div
                       className="fw-bold text-danger mb-2"
-                      style={{
-                        fontSize: 15,
-                      }}
+                      style={{ fontSize: 15 }}
                     >
                       🚩 Lý do: {r.reason}
                     </div>
-                    <div
-                      className="text-dark"
-                      style={{ fontSize: 13 }}
-                    >
+                    <div className="text-dark" style={{ fontSize: 13 }}>
                       Sản phẩm vi phạm:{" "}
                       <strong style={{ color: C.ocean }}>
                         {r.productName}
                       </strong>
                     </div>
-                    <div
-                      className="text-muted mt-2"
-                      style={{ fontSize: 11 }}
-                    >
+                    <div className="text-muted mt-2" style={{ fontSize: 11 }}>
                       🕒 Gửi lúc:{" "}
                       {new Date(r.createdAt).toLocaleString("vi-VN")}
                     </div>
@@ -1238,6 +1187,8 @@ export function AdminPage() {
           )}
         </div>
       )}
+      {/* ── Tab: Thông báo broadcast ──────────────────────────────── */}
+      {tab === "broadcast" && <AdminBroadcastTab />} {/* ← MỚI */}
     </div>
   );
 }

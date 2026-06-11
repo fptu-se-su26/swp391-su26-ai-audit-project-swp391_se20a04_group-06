@@ -86,10 +86,15 @@ export const ProductCard = memo(
       [user, product.id, onFavoriteChange, navigate]
     );
 
+    const handleCtaClick = useCallback((e) => {
+      e.stopPropagation();
+      handleClick();
+    }, [handleClick]);
+
     const typeBadgeStyle =
       product.type === "Fresh"
-        ? { background: "#e0f2fe", color: "#0369a1" }
-        : { background: "#fef3c7", color: "#92400e" };
+        ? { background: "rgba(14, 165, 233, 0.2)", color: "#7dd3fc" }
+        : { background: "rgba(251, 191, 36, 0.2)", color: "#fcd34d" };
     const typeLabel = product.type === "Fresh" ? "Tươi" : "Khô";
 
     const pct = Math.round(
@@ -98,37 +103,46 @@ export const ProductCard = memo(
     const stockColor = pct > 50 ? "#10b981" : pct > 20 ? "#f59e0b" : "#ef4444";
     const optimizedImg = cardImage(product.coverImg);
 
+    /* Build short description */
+    const shortDesc = product.description
+      ? product.description.slice(0, 120) + (product.description.length > 120 ? "…" : "")
+      : `Hải sản tươi sống ${product.remainingWeight}kg, đánh bắt tự nhiên từ vùng biển ${product.origin || "Việt Nam"}.`;
+
     return (
       <div
         className={styles.card}
         onClick={handleClick}
         style={{ "--card-i": Math.min(cardIndex, 15) }}
       >
-        <div className={styles.badgeGroup}>
-          <span className={styles.badge} style={typeBadgeStyle}>
-            {typeLabel}
-          </span>
-          {product.salesType === "Wholesale" && (
-            <span
-              className={styles.badge}
-              style={{ background: "#f1f5f9", color: "#334155" }}
-            >
-              Sỉ
-            </span>
-          )}
-        </div>
-
-        <button
-          key={currentFav ? `fav-${popKey}` : "unfav"}
-          className={`${styles.favBtn} ${currentFav ? styles.favorited : ""}`}
-          onClick={toggleFav}
-          disabled={favLoading}
-          aria-label="Lưu yêu thích"
-        >
-          <HeartIcon size={14} filled={currentFav} />
-        </button>
-
+        {/* ── Image Section ── */}
         <div className={styles.imageWrap}>
+          {/* Badges */}
+          <div className={styles.badgeGroup}>
+            <span className={styles.badge} style={typeBadgeStyle}>
+              {typeLabel}
+            </span>
+            {product.salesType === "Wholesale" && (
+              <span
+                className={styles.badge}
+                style={{ background: "rgba(255,255,255,0.15)", color: "#e2e8f0" }}
+              >
+                Sỉ
+              </span>
+            )}
+          </div>
+
+          {/* Fav button */}
+          <button
+            key={currentFav ? `fav-${popKey}` : "unfav"}
+            className={`${styles.favBtn} ${currentFav ? styles.favorited : ""}`}
+            onClick={toggleFav}
+            disabled={favLoading}
+            aria-label="Lưu yêu thích"
+          >
+            <HeartIcon size={14} filled={currentFav} />
+          </button>
+
+          {/* Product Image */}
           {optimizedImg ? (
             <img
               src={optimizedImg}
@@ -140,33 +154,53 @@ export const ProductCard = memo(
             <div className={styles.imagePlaceholder}>🐟</div>
           )}
           <div className={styles.imageOverlay} />
+
+          {/* Seller Avatar Overlay */}
+          <div className={styles.sellerOverlay}>
+            <button className={styles.sellerAvatarCircle} onClick={handleSellerClick}>
+              {(product.sellerName || "?").charAt(0).toUpperCase()}
+            </button>
+            <button className={styles.sellerOverlayName} onClick={handleSellerClick} style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}>
+              {product.sellerName}
+              {product.sellerIsVerified && <VerifiedBadge />}
+              {product.sellerIsPremium ? (
+                <span title="Premium" style={{ fontSize: 11 }}>👑</span>
+              ) : null}
+            </button>
+          </div>
         </div>
 
+        {/* ── Body ── */}
         <div className={styles.body}>
           <h3 className={styles.name}>{product.name}</h3>
 
           <div className={styles.price}>
             {fmt(product.price)}
             <span className={styles.priceUnit}>/kg</span>
+            <span className={styles.priceTaxLabel}>(VAT & Ship込)</span>
           </div>
 
+          {/* Short description */}
+          <div className={styles.descSnippet}>{shortDesc}</div>
+
+          {/* Stats Row */}
           <div className={styles.statsRow}>
             <span className={styles.statItem}>
-              <WeightIcon size={13} />
+              <WeightIcon size={12} />
               <strong className={styles.statValue}>
                 {product.remainingWeight} kg
               </strong>
             </span>
             {product.viewCount > 0 && (
               <span className={styles.statItem}>
-                <EyeIcon size={13} />
-                {product.viewCount} lượt xem
+                <EyeIcon size={12} />
+                {product.viewCount}
               </span>
             )}
           </div>
 
+          {/* Stock Bar */}
           <div className={styles.stockBar}>
-            {/* Sử dụng scaleX chạy trực tiếp trên GPU thay thế cho width */}
             <div
               className={styles.stockFill}
               style={{
@@ -176,42 +210,18 @@ export const ProductCard = memo(
             />
           </div>
 
-          {product.origin && (
-            <div className={styles.origin}>
-              <MapPinIcon size={12} />
-              <span>{product.origin}</span>
+          {/* Countdown */}
+          {product.type === "Fresh" && product.catchTime && (
+            <div className={styles.countdownRow}>
+              <CountdownBadge catchTime={product.catchTime} />
             </div>
           )}
 
-          <hr className={styles.divider} />
-
-          <div className={styles.sellerRow}>
-            <button className={styles.sellerLink} onClick={handleSellerClick}>
-              <span className={styles.sellerAvatar}>
-                {(product.sellerName || "?").charAt(0).toUpperCase()}
-              </span>
-              <span>{product.sellerName?.split(" ").pop()}</span>
-              {product.sellerIsVerified && <VerifiedBadge />}
-              {product.sellerIsPremium ? (
-                <span
-                  title="Thành viên Premium uy tín"
-                  style={{
-                    fontSize: 12,
-                    marginLeft: 2,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    cursor: "help",
-                  }}
-                >
-                  👑
-                </span>
-              ) : null}
-            </button>
-
-            {product.type === "Fresh" && product.catchTime && (
-              <CountdownBadge catchTime={product.catchTime} />
-            )}
-          </div>
+          {/* CTA Button */}
+          <button className={styles.ctaBtn} onClick={handleCtaClick}>
+            🛒 Xem chi tiết
+            <span className={styles.ctaArrow}>➔</span>
+          </button>
         </div>
       </div>
     );
@@ -234,50 +244,29 @@ export function ProductSkeleton() {
     <div className={styles.skeleton}>
       <div
         className="skeleton-shimmer"
-        style={{ height: 180, width: "100%" }}
+        style={{ height: 220, width: "100%", borderRadius: 10 }}
       />
       <div className={styles.skeletonBody}>
         <div
           className="skeleton-shimmer"
-          style={{
-            width: "75%",
-            height: 14,
-            borderRadius: 4,
-            marginBottom: 10,
-          }}
+          style={{ width: "75%", height: 14, borderRadius: 4, marginBottom: 10 }}
         />
         <div
           className="skeleton-shimmer"
-          style={{
-            width: "45%",
-            height: 18,
-            borderRadius: 4,
-            marginBottom: 12,
-          }}
+          style={{ width: "45%", height: 18, borderRadius: 4, marginBottom: 10 }}
         />
         <div
           className="skeleton-shimmer"
-          style={{ width: "55%", height: 10, borderRadius: 4, marginBottom: 8 }}
+          style={{ width: "100%", height: 10, borderRadius: 4, marginBottom: 8 }}
         />
         <div
           className="skeleton-shimmer"
-          style={{
-            width: "100%",
-            height: 3,
-            borderRadius: 99,
-            marginBottom: 16,
-          }}
+          style={{ width: "100%", height: 3, borderRadius: 99, marginBottom: 12 }}
         />
-        <div className={styles.skeletonRow}>
-          <div
-            className="skeleton-shimmer"
-            style={{ width: 64, height: 12, borderRadius: 4 }}
-          />
-          <div
-            className="skeleton-shimmer"
-            style={{ width: 80, height: 14, borderRadius: 4 }}
-          />
-        </div>
+        <div
+          className="skeleton-shimmer"
+          style={{ width: "100%", height: 34, borderRadius: 8 }}
+        />
       </div>
     </div>
   );

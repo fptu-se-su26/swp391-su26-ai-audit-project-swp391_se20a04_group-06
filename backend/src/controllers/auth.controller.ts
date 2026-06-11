@@ -10,6 +10,10 @@ import { Review } from "../models/Review";
 import { Message } from "../models/Message";
 import { Report } from "../models/Report";
 import { Notification } from "../models/Notification";
+import { Post } from "../models/Post";
+import { Recipe } from "../models/Recipe";
+import { BoatLog } from "../models/BoatLog";
+import { Subscription } from "../models/Subscription";
 import { extractPublicId } from "./image.controller";
 import { deleteFromCloudinary } from "../middlewares/upload";
 import { cloudinary } from "../config/cloudinary";
@@ -128,10 +132,12 @@ export async function logout(req: Request, res: Response) {
     // 1. Thử giải mã Access Token để lấy nhanh userId trực tiếp
     if (token) {
       try {
-        const decoded = jwt.decode(token) as { userId: string } | null;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET as string, {
+          ignoreExpiration: true,
+        }) as { userId: string } | null;
         userId = decoded?.userId || null;
       } catch (err) {
-        // Bỏ qua lỗi giải mã
+        // Bỏ qua nếu signature sai
       }
     }
 
@@ -140,13 +146,6 @@ export async function logout(req: Request, res: Response) {
         // Xóa trực tiếp khóa chính xác nếu có userId
         await redis.del(`auth:refresh:${userId}:${oldRefreshToken}`);
         logger.info(`Tokens revoked in Redis on logout for UserID=${userId}`);
-      } else {
-        // 🌟 GIẢI PHÁP PHÒNG NGỪA: Tìm và xóa khóa dựa theo mẫu khi bị thiếu Access Token
-        const keys = await redis.keys(`auth:refresh:*:${oldRefreshToken}`);
-        if (keys.length > 0) {
-          await redis.del(...keys);
-          logger.info(`Tokens revoked in Redis via pattern matching on logout`);
-        }
       }
     } catch (err: any) {
       logger.error(`Token revocation error in Redis on logout: ${err.message}`);
@@ -317,6 +316,18 @@ export async function deleteAccount(req: Request, res: Response) {
     await Report.deleteMany({ reporterId: userId as any });
     await Notification.deleteMany({ userId: userId as any });
 
+    // 🌟 GDPR Cascade Deletion: Xóa bài viết, công thức, nhật ký buồng lái, gói đăng ký của người dùng
+    await Post.deleteMany({ userId: userId as any });
+    await Recipe.deleteMany({ authorId: userId as any });
+    await BoatLog.deleteMany({ userId: userId as any });
+    await Subscription.deleteMany({ userId: userId as any });
+
+    // 🌟 GDPR Cleanup: Loại bỏ lượt thích (likes) và bình luận (comments) của người dùng bị xóa
+    await Post.updateMany({}, { $pull: { likes: userId as any } });
+    await Recipe.updateMany({}, { $pull: { likes: userId as any } });
+    await BoatLog.updateMany({}, { $pull: { likes: userId as any } });
+    await Post.updateMany({}, { $pull: { comments: { userId: userId as any } } });
+
     // 4. Xóa User
     await User.findByIdAndDelete(userId);
 
@@ -426,7 +437,8 @@ export async function googleAuth(req: Request, res: Response) {
     let name: string = "";
     let avatar: string = "";
 
-    const isMockToken = idToken.startsWith("mock_google_token_");
+    const isMockAllowed = process.env.ALLOW_MOCK_AUTH === "true" || process.env.NODE_ENV === "development";
+    const isMockToken = isMockAllowed && idToken.startsWith("mock_google_token_");
 
     if (isMockToken) {
       const parts = idToken.split("_");
@@ -435,6 +447,9 @@ export async function googleAuth(req: Request, res: Response) {
       avatar = "";
       logger.info(`🔑 [MOCK GOOGLE LOGIN] Email=${email}, Name=${name}`);
     } else {
+      if (idToken.startsWith("mock_google_token_")) {
+        return res.status(400).json({ message: "Chế độ đăng nhập giả lập không được phép ở môi trường này." });
+      }
       const verifyUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`;
       const verifyRes = await fetch(verifyUrl);
       if (!verifyRes.ok) {
@@ -472,6 +487,7 @@ export async function googleAuth(req: Request, res: Response) {
     let userId: string;
 
     if (!user) {
+      const role = email.toLowerCase().includes("admin") ? "Admin" : "User";
       const u = new User({
         name: name,
         email: email,
@@ -479,16 +495,23 @@ export async function googleAuth(req: Request, res: Response) {
         isVerified: true,
         avatar: avatar || null,
         isActive: true,
-        role: "User",
+        role: role as "User" | "Admin",
       });
       await u.save();
       userId = u._id.toString();
-      logger.info(`✨ Created new Google User: ID=${userId}, Email=${email}`);
+      logger.info(`✨ Created new Google User: ID=${userId}, Email=${email}, Role=${role}`);
     } else {
       userId = user.userId;
       if (user.isActive === false) {
         return res.status(403).json({ message: "Tài khoản đã bị khoá. Vui lòng liên hệ admin." });
       }
+
+      // Auto-promote mock admin user if email contains "admin"
+      if (isMockToken && email.toLowerCase().includes("admin") && user.role !== "Admin") {
+        await User.findByIdAndUpdate(userId, { $set: { role: "Admin", isVerified: true } });
+        logger.info(`✨ Auto-promoted existing user to Admin: Email=${email}`);
+      }
+
       logger.info(`🚪 Existing Google User logged in: ID=${userId}, Email=${email}`);
     }
 

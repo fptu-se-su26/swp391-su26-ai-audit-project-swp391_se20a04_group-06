@@ -1,0 +1,164 @@
+=== Match for 03.png at line 79 ===
+64:       </div>
+65: 
+66: <!--  オーバーレイ　モーダルウインドウ(2)　クリックする部分 -->
+67: <div id="menusp">
+68: <p class="spmenu_img ov"><img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/spmenu.png" alt="メニューを開く"></p>
+69: </div>
+70: <!--  オーバーレイ　モーダルウインドウ(2)　クリックする部分 -->
+71: 
+72: <!--  オーバーレイ　モーダルウインドウ(3)　表示内容 -->
+73: <nav id="overlay01">
+74:       <nav id="nav_global">
+75:         <ul class="menu_ul">
+76:           <li><a href="https://umai.fish/%E3%81%93%E3%81%A0%E3%82%8F%E3%82%8A"><img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/menu01.png" alt="鮮魚の通販・海鮮ギフトのサービス紹介" border="0" class="ov" data-anijs="if: mouseover, do: pulse animated"></a></li>
+77:           <li><a href="https://umai.fish/%E6%BC%81%E5%B8%AB%E3%81%95%E3%82%93"><img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/menu02.png" alt="漁師紹介" border="0" class="ov" data-anijs="if: mouseover, do: pulse animated"></a></li>
+78: 
+79:           <li><a href="https://umai.fish/%E3%83%AC%E3%82%B7%E3%83%94%E3%82%84%E8%B1%86%E7%9F%A5%E8%AD%98"><img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/menu03.png" alt="魚介類のレシピや豆知識" border="0" class="ov" data-anijs="if: mouseover, do: pulse animated"></a></li>
+80: 
+81:           <li><a href="https://umai.fish/community"><img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/community.png" alt="コミュニティ投稿" border="0" class="ov" data-anijs="if: mouseover, do: pulse animated"></a></li>
+82: 
+83:           <li><a href="https://umai.fish/%E3%81%94%E5%88%A9%E7%94%A8%E3%81%AE%E6%B5%81%E3%82%8C"><img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/menu04.png" alt="鮮魚通販・海鮮ギフトのご利用の流れ" border="0" class="ov" data-anijs="if: mouseover, do: pulse animated"></a></li>
+84:         </ul>
+85:       </nav>
+86:       
+87:       <ul class="bt_ul">
+88:      <li class="ov"><a href="https://umai.fish/product-date">     <img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/product_list_date.png" alt="販売商品一覧(日付指定OK)" border="0"></a></li>
+89:      <li class="ov"><a href="https://umai.fish/product-condition"><img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/product_list_condition.png" alt="販売商品一覧(水揚次第発送)" border="0"></a></li>
+90:      <li class="ov"><a href="https://umai.fish/teikibin"><img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/product_list_teikibin.png" alt="販売商品一覧(定期便)" border="0"></a></li>
+91:         <li class="ov"><a href="https://umai.fish/%E4%BC%9A%E5%93%A1%E7%99%BB%E9%8C%B2"><img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/bt02.png" alt="魚介類の通販・海鮮ギフトのための無料会員登録" border="0"></a></li>
+92: <li class="ov"><a href="https://fish.valuedata.co.jp/consumer_login_judgement.php"><img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/mypage.png" alt="会員様ページ(ログイン)" border="0"></a></li>
+93:       </ul>
+============================
+
+=== Match for 03.png at line 122 ===
+107: 
+108:  
+109:   
+110:   <div id="contents">
+111:     
+112:     <div class="A_waku">
+113:       <div class="A01 wow fadeIn animated" data-wow-offset="300" style="visibility: visible; animation-name: fadeIn;">
+114:         <p class="img01 wow rotateIn animated" data-wow-delay="0s" data-wow-duration="" style="visibility: visible; animation-delay: 0s; animation-name: rotateIn;"><img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/0001.png" alt="漁師直送通販" width="836" height="827"></p>
+115:         <span class="img02"><img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/01.png" alt="鮮魚通販・海鮮ギフト。新鮮な魚介をご家庭に直送"></span>
+116:         <p class="img03"><a href="https://umai.fish/%E4%BC%9A%E5%93%A1%E7%99%BB%E9%8C%B2"><img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/02.png" alt="24時間受付／鮮魚通販・海鮮ギフトの無料　会員登録はこちら→" style="margin: 0 0 3px 0" data-anijs="if: mouseover, do: pulse animated" class="ov pulse animated"></a><br>
+117:           今なら登録特典として「季節のおすすめ魚介類 無料レポート」プレゼント中！
+118: </p>
+119:         <p class="img04 wow rubberBand animated" data-wow-delay="" style="visibility: visible; animation-name: rubberBand;">
+120: <picture>
+121:   <source srcset="images/index/03.webp" type="image/webp" media="(max-width: 750px)"><!-- 750px以下&WebP対応で表示する画像 -->
+122:   <img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/03.png" alt="新鮮な魚(マダイ)の通販・ギフト" data-anijs="if: mouseover, do: rubberBand animated">
+123: </picture>
+124: </p>
+125:         <p class="img05 wow rubberBand animated" data-wow-delay="" style="visibility: visible; animation-name: rubberBand;">
+126: <picture>
+127:   <source srcset="images/index/04.webp" type="image/webp" media="(max-width: 750px)"><!-- 750px以下&WebP対応で表示する画像 -->
+128:   <img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/04.png" alt="新鮮な魚(マアジ)の通販・ギフト" data-anijs="if: mouseover, do: rubberBand animated" class="rubberBand animated">
+129: </picture>
+130: </p>
+131:         <p class="img06 wow rubberBand animated" data-wow-delay="" style="visibility: visible; animation-name: rubberBand;">
+132: <picture>
+133:   <source srcset="images/index/05.webp" type="image/webp" media="(max-width: 750px)"><!-- 750px以下&WebP対応で表示する画像 -->
+134:   <img src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/05.png" alt="新鮮な魚(カマス)の通販・ギフト" data-anijs="if: mouseover, do: rubberBand animated">
+135: </picture>
+136: </p>
+============================
+
+=== Match for 03.png at line 187 ===
+172: <li class="ov" data-anijs="if: mouseover, do: pulse animated"><a href="https://umai.fish/fisherman/kuishiooshiki-union">
+173: <picture>
+174:   <source srcset="images/index/n_ryo01.webp" type="image/webp" media="(max-width: 750px)"><!-- 750px以下&WebP対応で表示する画像 -->
+175:   <img loading="lazy" src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/n_ryo01.png" alt="魚介通販なら 高知県  九石大敷">
+176: </picture>
+177: </a></li>
+178: <li class="ov" data-anijs="if: mouseover, do: pulse animated"><a href="https://umai.fish/fisherman/kadoshima-teichi">
+179: <picture>
+180:   <source srcset="images/index/n_ryo02.webp" type="image/webp" media="(max-width: 750px)"><!-- 750px以下&WebP対応で表示する画像 -->
+181:   <img loading="lazy" src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/n_ryo02.png" alt="鮮魚通販なら 七尾 鹿渡島定置">
+182: </picture>
+183: </a></li>
+184: <li class="ov" data-anijs="if: mouseover, do: pulse animated"><a href="https://umai.fish/fisherman/hamakaze-tuushin-kineimaru">
+185: <picture>
+186:   <source srcset="images/index/n_ryo03.webp" type="image/webp" media="(max-width: 750px)"><!-- 750px以下&WebP対応で表示する画像 -->
+187:   <img loading="lazy" src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/n_ryo03.png" alt="漁師直送魚なら 和歌山 はまかぜ通信 金栄丸">
+188: </picture>
+189: </a></li>
+190: <li class="ov" data-anijs="if: mouseover, do: pulse animated"><a href="https://umai.fish/fisherman/misaki-fishery-cooperative">
+191: <picture>
+192:   <source srcset="images/index/n_ryo04.webp" type="image/webp" media="(max-width: 750px)"><!-- 750px以下&WebP対応で表示する画像 -->
+193:   <img loading="lazy" src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/n_ryo04.png" alt="三崎漁協">
+194: </picture>
+195: </a></li>
+196: <li class="ov" data-anijs="if: mouseover, do: pulse animated"><a href="https://umai.fish/fisherman/kunimimaru">
+197: <picture>
+198:   <source srcset="images/index/n_ryo05.webp" type="image/webp" media="(max-width: 750px)"><!-- 750px以下&WebP対応で表示する画像 -->
+199:   <img loading="lazy" src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/n_ryo05.png" alt="ハモ・海苔の通販なら 玉野 邦美丸">
+200: </picture>
+201: </a></li>
+============================
+
+=== Match for 03.png at line 332 ===
+317: </picture>
+318: </a>
+319:             <p class="li_text">鮮魚セット(海鮮ボックス)は人気No1の通販商品(ギフト)です。水揚げされたおススメの鮮魚を厳選し販売します。天然鮮魚を中心におすすめの魚介類を詰め合わせ、産地直送します。</p>
+320:           </li>
+321:           <li><a href="https://umai.fish/product-condition?product_class_cd=0020">
+322: <picture>
+323:   <source srcset="images/index/set04.webp" type="image/webp" media="(max-width: 750px)"><!-- 750px以下&WebP対応で表示する画像 -->
+324:   <img loading="lazy" src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/set04.png" alt="カニ・エビの通販・海鮮ギフト。ズワイガニ オス(松葉ガニ、加能ガニ)、ズワイガニ メス(セコガニ、コウバコガニ)など。" data-anijs="if: mouseover, do: pulse animated" class="ov">
+325: </picture>
+326: </a>
+327:             <p class="li_text">ズワイガニ、紅ズワイガニ、足赤えび、などの新鮮な海鮮を販売します。活ズワイガニ・活紅ズワイガニは活きた状態で産地直送します。海鮮ギフトとしてもご好評頂いております。</p>
+328:           </li>
+329:           <li><a href="https://umai.fish/product-date?product_class_cd=0030">
+330: <picture>
+331:   <source srcset="images/index/set03.webp" type="image/webp" media="(max-width: 750px)"><!-- 750px以下&WebP対応で表示する画像 -->
+332:   <img loading="lazy" src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/set03.png" alt="貝類セット" data-anijs="if: mouseover, do: pulse animated" class="ov">
+333: </picture>
+334: </a>
+335:             <p class="li_text">ホタテ、アワビ、サザエ、トコブシ、ホラ貝、牡蠣など、活きた状態の新鮮な海鮮を詰め合わせ販売・産地直送します。通常活きた状態で届き、海鮮バーベキューにもおすすめです。</p>
+336:           </li>
+337:           <li><a href="https://umai.fish/product-condition-new">
+338: <picture>
+339:   <source srcset="images/index/set02-01.webp" type="image/webp" media="(max-width: 750px)"><!-- 750px以下&WebP対応で表示する画像 -->
+340:   <img loading="lazy" src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/set02-01.png" alt="新着商品" data-anijs="if: mouseover, do: pulse animated" class="ov">
+341: </picture>
+342: </a>
+343:             <p class="li_text">全国の漁師さんが旬の魚介を出品中です。こだわりの海鮮商品・海鮮ギフトを産地直送(産直)しています。新着商品はこちらからご確認頂けます。</p>
+344:           </li>
+345:         </ul>
+346:         
+============================
+
+=== Match for 03.png at line 1127 ===
+1112:         </ul>
+1113:       </div>
+1114:     </div>
+1115:     
+1116: 
+1117: <!--    
+1118:     <div class="H_waku">
+1119:       <div class="H01">
+1120:   <p><img  loading="lazy" src="/images/base/thankyou01.png" width="564" height="383" alt="THANK YOU!　漁師さん直送市場はプロの料理人も使用中です業務用会員数300店舗突破!出荷実績3,000件を突破!　ありがとうございます"/></p>
+1121:       </div>
+1122:     </div>
+1123: -->  
+1124: 
+1125:     <div class="H_waku">
+1126:       <div class="H01">
+1127:   <p><img loading="lazy" src="./鮮魚通販、海鮮ギフト_漁師から鮮魚を産直_漁師さん直送市場_files/thankyou03.png" width="564" height="383" alt="THANK YOU!　漁師さん直送市場はプロの料理人も使用中です業務用会員&gt;数300店舗突破!出荷実績3,000件を突破!　ありがとうございます"></p>
+1128: 
+1129: 漁師さん直送市場は<span class="color2">プロの料理人</span>も使用中です<br>
+1130: 業務用会員数<span class="color2">1,000店舗</span>突破!<br>
+1131: 出荷実績<span class="color2">50,000件</span>を突破!<br>　
+1132: <span class="color3">ありがとうございます</span><br>
+1133:       </div>
+1134:     </div>
+1135: 
+1136:     
+1137:     <div class="I_waku">
+1138: 
+1139: 
+1140: <div class="top_message">
+1141: <h2>魚介のオンライン直売所 漁師さん直送市場  代表 ご挨拶 「想い」</h2>
+============================

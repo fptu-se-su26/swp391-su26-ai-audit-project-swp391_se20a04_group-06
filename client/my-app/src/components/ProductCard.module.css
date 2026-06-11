@@ -1,61 +1,42 @@
-/* ProductCard.module.css */
+/* ═══════════════════════════════════════════
+   ProductCard.module.css
+   Umai.fish-inspired vertical card on teal bg
+   ═══════════════════════════════════════════ */
+
+/* ─── CARD ─── */
 .card {
-  background: var(--white);
-  border-radius: 12px;
-  border: 1.5px solid #eaeaea;
-  overflow: hidden;
-  cursor: pointer;
   position: relative;
-  will-change: transform, border-color;
-  contain: content;
-  content-visibility: auto;
-  contain-intrinsic-size: 0 320px;
+  cursor: pointer;
   animation: cardAppear 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: calc(var(--card-i, 0) * 45ms);
-  transition:
-    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 0.25s ease;
+  transition: transform 0.3s ease;
+  contain: content;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 420px;
 }
 
 .card:hover {
-  transform: translateY(-4px);
-  border-color: var(--ocean);
-}
-
-.card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 12px;
-  box-shadow: 0 12px 30px rgba(11, 79, 108, 0.06);
-  opacity: 0;
-  transition: opacity 0.25s ease;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.card:hover::after {
-  opacity: 1;
+  transform: translateY(-6px);
 }
 
 @keyframes cardAppear {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.98);
+    transform: translateY(14px) scale(0.97);
   }
-
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
 }
 
-/* ─── IMAGE ──────────────────────────────────────────────── */
+/* ─── IMAGE ─── */
 .imageWrap {
   position: relative;
   overflow: hidden;
-  height: 180px;
-  background: #f8fafc;
+  height: 220px;
+  border-radius: 10px;
+  background: #1a7060;
 }
 
 .image {
@@ -63,13 +44,11 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  will-change: transform;
-  transform-origin: center;
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .card:hover .image {
-  transform: scale(1.05);
+  transform: scale(1.06);
 }
 
 .imagePlaceholder {
@@ -77,28 +56,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--ocean) 0%, var(--ocean-l) 100%);
-  font-size: 40px;
-  opacity: 0.85;
+  background: linear-gradient(135deg, #1a7060, #208f67);
+  font-size: 48px;
+  opacity: 0.9;
 }
 
 .imageOverlay {
   position: absolute;
   inset: 0;
   background: linear-gradient(to top,
-      rgba(15, 27, 41, 0.08) 0%,
-      transparent 60%);
+      rgba(0, 0, 0, 0.25) 0%,
+      transparent 50%);
   pointer-events: none;
 }
 
-/* ─── BADGES ─── */
+/* ─── BADGES (top-left over image) ─── */
 .badgeGroup {
   position: absolute;
   top: 10px;
   left: 10px;
-  z-index: 2;
+  z-index: 3;
   display: flex;
-  gap: 4px;
+  gap: 5px;
   flex-wrap: wrap;
   max-width: calc(100% - 50px);
 }
@@ -106,25 +85,27 @@
 .badge {
   font-size: 9px;
   font-weight: 700;
-  padding: 4px 8px;
+  padding: 3px 8px;
   border-radius: 4px;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   white-space: nowrap;
 }
 
-/* ─── FAVORITE BUTTON ─── */
+/* ─── FAVORITE BUTTON (top-right over image) ─── */
 .favBtn {
   position: absolute;
   top: 10px;
   right: 10px;
-  z-index: 2;
-  background: rgba(255, 255, 255, 0.9);
+  z-index: 3;
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   width: 30px;
   height: 30px;
@@ -132,59 +113,82 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-  transition:
-    transform 0.2s ease,
-    background 0.2s,
-    color 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease, background 0.2s, color 0.2s;
   color: #94a3b8;
 }
 
 .favBtn:hover {
-  transform: scale(1.1);
+  transform: scale(1.12);
   color: #ef4444;
 }
 
 .favBtn.favorited {
   background: #fff5f5;
-  border-color: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.15);
   color: #ef4444;
   animation: heartPop 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
 @keyframes heartPop {
-  0% {
-    transform: scale(1);
-  }
-
-  30% {
-    transform: scale(1.35);
-  }
-
-  55% {
-    transform: scale(0.9);
-  }
-
-  75% {
-    transform: scale(1.15);
-  }
-
-  100% {
-    transform: scale(1);
-  }
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.35); }
+  55%  { transform: scale(0.9); }
+  75%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
 }
 
-/* ─── BODY ─── */
+/* ─── SELLER AVATAR OVERLAY (bottom-left of image) ─── */
+.sellerOverlay {
+  position: absolute;
+  bottom: -20px;
+  left: 12px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sellerAvatarCircle {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0b4f6c 0%, #0ea5e9 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 800;
+  flex-shrink: 0;
+  border: 3px solid #fff;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+}
+
+.sellerOverlayName {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── BODY (text content below image) ─── */
 .body {
-  padding: 16px;
+  padding: 24px 6px 8px;
   position: relative;
-  z-index: 1;
 }
 
 .name {
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 700;
-  color: var(--dark);
+  color: #fff;
   margin: 0 0 6px;
   line-height: 1.4;
   display: -webkit-box;
@@ -195,28 +199,48 @@
 }
 
 .price {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 800;
-  color: var(--coral);
-  margin-bottom: 12px;
+  color: #ECD223;
+  margin-bottom: 4px;
   display: flex;
   align-items: baseline;
-  gap: 1px;
+  gap: 2px;
 }
 
 .priceUnit {
   font-size: 11px;
-  font-weight: 500;
-  color: var(--muted);
+  font-weight: 600;
+  color: rgba(236, 210, 35, 0.7);
   margin-left: 2px;
 }
 
+.priceTaxLabel {
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.55);
+  margin-left: 6px;
+}
+
+/* ─── DESCRIPTION SNIPPET ─── */
+.descSnippet {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.55;
+  margin-bottom: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ─── STATS ROW ─── */
 .statsRow {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 10px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 8px;
 }
 
 .statItem {
@@ -226,35 +250,32 @@
 }
 
 .statValue {
-  color: var(--dark);
+  color: #fff;
   font-weight: 700;
 }
 
 /* ─── STOCK BAR ─── */
 .stockBar {
   height: 3px;
-  background: #f1f5f9;
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 4px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   overflow: hidden;
 }
 
 .stockFill {
   width: 100%;
-  /* Cố định width 100% khi dùng transform scaleX */
   height: 100%;
   border-radius: 4px;
   transform-origin: left;
-  /* Đảm bảo chạy từ trái sang phải */
   transition: transform 0.6s ease-out;
-  /* Đột phá hiệu năng bằng GPU Composite */
 }
 
 /* ─── ORIGIN ─── */
 .origin {
   font-size: 11px;
-  color: var(--muted);
-  margin-bottom: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -263,53 +284,63 @@
 /* ─── DIVIDER ─── */
 .divider {
   border: none;
-  border-top: 1px solid #f1f5f9;
-  margin: 12px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  margin: 8px 0;
 }
 
-/* ─── SELLER ROW ─── */
-.sellerRow {
+/* ─── CTA BUTTON (Order Now) ─── */
+.ctaBtn {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-}
-
-.sellerLink {
-  font-size: 12px;
-  color: var(--ocean);
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 0;
+  border-radius: 8px;
+  border: 2px solid #ECD223;
+  background: #ECD223;
+  color: #1a1a1a;
+  font-weight: 800;
+  font-size: 13px;
   cursor: pointer;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: color 0.15s;
-  background: none;
-  border: none;
-  padding: 0;
+  font-family: inherit;
+  transition: all 0.25s ease;
+  margin-top: 4px;
+  box-shadow: 0 3px 10px rgba(236, 210, 35, 0.2);
 }
 
-.sellerLink:hover {
-  color: var(--ocean-l);
+.ctaBtn:hover {
+  background: #f5e030;
+  border-color: #f5e030;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 16px rgba(236, 210, 35, 0.35);
 }
 
-.sellerAvatar {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: #e0f2fe;
+.ctaArrow {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 9px;
-  color: var(--ocean);
-  font-weight: 800;
+  width: 22px;
+  height: 22px;
+  background: #fff;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 900;
+  color: #1a1a1a;
   flex-shrink: 0;
-  border: 1px solid rgba(14, 165, 233, 0.15);
 }
 
-.originRegion {
-  font-size: 11px;
-  color: var(--muted);
+/* ─── SELLER ROW (hidden - replaced by overlay) ─── */
+.sellerRow {
+  display: none;
+}
+
+.sellerLink {
+  display: none;
+}
+
+.sellerAvatar {
+  display: none;
 }
 
 /* ─── COUNTDOWN BADGE ─── */
@@ -323,17 +354,20 @@
   gap: 4px;
 }
 
+.countdownRow {
+  margin-bottom: 6px;
+}
+
 /* ─── SKELETON ─── */
 .skeleton {
-  background: var(--white);
-  border-radius: 12px;
-  border: 1.5px solid #eaeaea;
+  border-radius: 10px;
   overflow: hidden;
   position: relative;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .skeletonBody {
-  padding: 16px;
+  padding: 24px 6px 8px;
 }
 
 .skeletonRow {
@@ -343,153 +377,167 @@
   margin-top: 12px;
 }
 
-/* ═══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════
    RESPONSIVE
-═══════════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════ */
 @media (min-width: 1440px) {
   .imageWrap {
-    height: 220px;
+    height: 260px;
   }
-
   .name {
-    font-size: 15px;
+    font-size: 15.5px;
   }
-
   .price {
-    font-size: 17px;
+    font-size: 18px;
   }
-
   .body {
-    padding: 18px;
+    padding: 26px 8px 10px;
   }
 }
 
 @media (max-width: 1024px) and (min-width: 769px) {
   .imageWrap {
-    height: 165px;
+    height: 200px;
   }
 }
 
 @media (max-width: 768px) and (min-width: 641px) {
   .imageWrap {
-    height: 155px;
+    height: 180px;
   }
-
   .body {
-    padding: 12px 14px;
+    padding: 22px 4px 6px;
   }
-
   .name {
     font-size: 13px;
     margin-bottom: 4px;
   }
-
   .price {
     font-size: 15px;
-    margin-bottom: 8px;
+    margin-bottom: 3px;
   }
-
   .statsRow {
-    font-size: 11px;
-    margin-bottom: 8px;
+    font-size: 10px;
+    margin-bottom: 6px;
   }
-
   .origin {
     display: none;
+  }
+  .descSnippet {
+    -webkit-line-clamp: 2;
+    font-size: 11px;
+  }
+  .sellerAvatarCircle {
+    width: 38px;
+    height: 38px;
+    font-size: 13px;
+    border-width: 2px;
+  }
+  .sellerOverlay {
+    bottom: -16px;
+    left: 8px;
+  }
+  .ctaBtn {
+    font-size: 12px;
+    padding: 8px 0;
   }
 }
 
 @media (max-width: 640px) {
   .imageWrap {
-    height: 140px;
+    height: 160px;
   }
-
   .body {
-    padding: 10px 12px 12px;
+    padding: 20px 4px 4px;
   }
-
   .name {
     font-size: 12px;
-    margin-bottom: 4px;
-    -webkit-line-clamp: 2;
+    margin-bottom: 3px;
   }
-
   .price {
     font-size: 14px;
     font-weight: 800;
-    margin-bottom: 8px;
+    margin-bottom: 3px;
   }
-
   .priceUnit {
     font-size: 10px;
   }
-
   .statsRow {
     font-size: 10px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
-
   .statValue {
     font-size: 11px;
   }
-
   .stockBar {
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
-
   .origin {
     font-size: 10px;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
-
   .divider {
-    margin: 8px 0;
+    margin: 6px 0;
   }
-
-  .sellerLink {
-    font-size: 11px;
-    gap: 4px;
-  }
-
-  .sellerAvatar {
-    width: 18px;
-    height: 18px;
-    font-size: 8px;
-  }
-
   .badge {
     font-size: 8px;
-    padding: 3px 6px;
+    padding: 2px 5px;
   }
-
   .favBtn {
     width: 26px;
     height: 26px;
   }
-
   .card:hover {
     transform: none;
   }
-
+  .sellerAvatarCircle {
+    width: 34px;
+    height: 34px;
+    font-size: 12px;
+    border-width: 2px;
+  }
+  .sellerOverlay {
+    bottom: -14px;
+    left: 6px;
+  }
+  .sellerOverlayName {
+    font-size: 10px;
+    max-width: 80px;
+  }
+  .descSnippet {
+    -webkit-line-clamp: 2;
+    font-size: 10.5px;
+    margin-bottom: 6px;
+  }
+  .ctaBtn {
+    font-size: 11px;
+    padding: 7px 0;
+    border-radius: 6px;
+  }
+  .ctaArrow {
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+  }
   .skeletonBody {
-    padding: 10px 12px;
+    padding: 18px 4px 6px;
   }
 }
 
 @media (max-width: 380px) {
   .imageWrap {
-    height: 120px;
+    height: 140px;
   }
-
   .name {
     font-size: 12px;
   }
-
   .body {
-    padding: 8px 10px 10px;
+    padding: 18px 2px 4px;
   }
-
   .statsRow {
+    display: none;
+  }
+  .descSnippet {
     display: none;
   }
 }
@@ -497,14 +545,8 @@
 @media (hover: none) {
   .card:hover {
     transform: none;
-    border-color: #eaeaea;
   }
-
   .card:hover .image {
     transform: none;
-  }
-
-  .card:hover::after {
-    opacity: 0;
   }
 }

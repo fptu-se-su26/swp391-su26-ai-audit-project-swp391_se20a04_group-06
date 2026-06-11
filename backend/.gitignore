@@ -4,3 +4,7 @@ dist/
 .env
 .env.*
 .env.local
+coverage/
+logs/
+repomix-output.xml
+system.docx

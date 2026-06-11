@@ -1,5 +1,7 @@
-import { Product, IProduct } from "../models/Product";
-import { User } from "../models/User";
+import { productRepository } from "../repositories/product.repository";
+import { userRepository } from "../repositories/user.repository";
+import { notificationRepository } from "../repositories/notification.repository";
+import { reportRepository } from "../repositories/report.repository";
 import { redis } from "../config/redis";
 import { MAX_FRESH_DISTANCE_KM } from "../utils/haversine";
 import { parsePagination, paginatedResponse } from "../utils/pagination";
@@ -7,22 +9,11 @@ import { notifyFollowersNewProduct } from "./notification.service";
 import { logger } from "../utils/logger";
 import mongoose from "mongoose";
 import { HttpError } from "../errors/HttpError";
-import { extractPublicId } from "../controllers/image.controller";
 import { cloudinary } from "../config/cloudinary";
-import { Report } from "../models/Report";
-import { Notification } from "../models/Notification";
 import { updateUserBadges } from "./badge.service";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 🛡️ REDIS RESILIENCE HELPERS
-//
-// ROOT CAUSE của 502: ioredis mặc định bật enableOfflineQueue=true, nghĩa là
-// khi Redis không kết nối được, mọi lệnh bị QUEUE vô thời hạn thay vì throw.
-// Request treo → Nginx/proxy timeout → 502.
-//
-// Fix: Bọc mọi lệnh redis trong Promise.race với timeout 1500ms.
-// Nếu Redis chậm / down → fallback về null/void, service vẫn chạy từ DB.
-// ─────────────────────────────────────────────────────────────────────────────
+import { extractPublicId } from "../utils/cloudinary";
+import { User } from "../models/User";
+import crypto from "crypto";
 
 const REDIS_TIMEOUT_MS = 1500;
 
@@ -75,13 +66,10 @@ async function redisDel(key: string): Promise<void> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 export const productService = {
   async list(query: Record<string, string | undefined>) {
     const queryType = query.type;
 
-    // 🛡️ Redis resilient — trả "0" nếu timeout/down
     const [freshVer, driedVer] = await Promise.all([
       redisGet("product:list:version:Fresh").then((v) => v ?? "0"),
       redisGet("product:list:version:Dried").then((v) => v ?? "0"),
@@ -94,29 +82,29 @@ export const productService = {
           ? driedVer
           : `${freshVer}_${driedVer}`;
 
-    // Làm tròn GPS ~110m để tránh cache pollution
     const normalizedQuery: any = { ...query };
     if (normalizedQuery.lat)
       normalizedQuery.lat = parseFloat(normalizedQuery.lat).toFixed(3);
     if (normalizedQuery.lng)
       normalizedQuery.lng = parseFloat(normalizedQuery.lng).toFixed(3);
 
-    const cacheKey = `product:list:v${listVersion}:${JSON.stringify(normalizedQuery)}`;
+    const queryHash = crypto
+      .createHash("sha256")
+      .update(JSON.stringify(normalizedQuery))
+      .digest("hex");
+
+    const cacheKey = `product:list:v${listVersion}:${queryHash}`;
     const isSearching = !!(query.search && query.search.trim());
 
-    // 🛡️ Safe cache read
     if (!isSearching) {
       const cached = await redisGet(cacheKey);
       if (cached) {
         try {
           return JSON.parse(cached);
-        } catch {
-          // Dữ liệu cache bị corrupt → tiếp tục query DB
-        }
+        } catch {}
       }
     }
 
-    // Ép kiểu tường minh để ngăn NoSQL Injection
     const type = typeof query.type === "string" ? query.type : undefined;
     const category =
       typeof query.category === "string" ? query.category : undefined;
@@ -145,7 +133,6 @@ export const productService = {
     if (search && search.trim()) {
       filter.$text = { $search: search.trim() };
       projection.score = { $meta: "textScore" };
-      // Sort by relevance score first when searching
       sortOption.score = { $meta: "textScore" };
     }
 
@@ -161,46 +148,54 @@ export const productService = {
       }
     }
 
-    const total = await Product.countDocuments(filter);
-    const rows = await Product.find(filter, projection)
-      .populate("sellerId", "name isVerified isPremium badges")
-      .sort(sortOption)
-      .skip(skip)
-      .limit(limit);
+    const total = await productRepository.countDocuments(filter);
+    const rows = await productRepository.find(filter, projection, {
+      skip,
+      limit,
+      sort: sortOption,
+    });
 
-    const formattedRows = rows.map((p: any) => ({
-      id: p._id,
-      sellerId: p.sellerId?._id || null,
-      sellerName: p.sellerId?.name || "Một ngư dân",
-      sellerIsVerified: p.sellerId?.isVerified ? 1 : 0,
-      sellerIsPremium: p.sellerId?.isPremium ? 1 : 0,
-      sellerBadges: p.sellerId?.badges || [],
-      type: p.type,
-      category: p.category,
-      name: p.name,
-      description: p.description,
-      price: p.price,
-      salesType: p.salesType,
-      totalWeight: p.totalWeight,
-      remainingWeight: p.remainingWeight,
-      status: p.status,
-      catchTime: p.catchTime,
-      lat: p.location?.coordinates?.[1] || null,
-      lng: p.location?.coordinates?.[0] || null,
-      catchLat: p.catchLocation?.coordinates?.[1] || null,
-      catchLng: p.catchLocation?.coordinates?.[0] || null,
-      origin: p.origin,
-      expiryDate: p.expiryDate,
-      createdAt: p.createdAt,
-      viewCount: p.viewCount,
-      bumpedAt: p.bumpedAt,
-      coverImg: p.images?.[0] || null,
-      imgCount: p.images?.length || 0,
-    }));
+    const sellerIds = Array.from(
+      new Set(rows.map((p) => p.sellerId.toString())),
+    );
+    const sellers = await User.find({ _id: { $in: sellerIds } }).lean();
+    const sellerMap = new Map(sellers.map((u) => [u._id.toString(), u]));
+
+    const formattedRows = rows.map((p: any) => {
+      const seller: any = sellerMap.get(p.sellerId.toString());
+      return {
+        id: p._id,
+        sellerId: seller?._id?.toString() || null,
+        sellerName: seller?.name || "Một ngư dân",
+        sellerIsVerified: seller?.isVerified ? 1 : 0,
+        sellerIsPremium: seller?.isPremium ? 1 : 0,
+        sellerBadges: seller?.badges || [],
+        type: p.type,
+        category: p.category,
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        salesType: p.salesType,
+        totalWeight: p.totalWeight,
+        remainingWeight: p.remainingWeight,
+        status: p.status,
+        catchTime: p.catchTime,
+        lat: p.location?.coordinates?.[1] || null,
+        lng: p.location?.coordinates?.[0] || null,
+        catchLat: p.catchLocation?.coordinates?.[1] || null,
+        catchLng: p.catchLocation?.coordinates?.[0] || null,
+        origin: p.origin,
+        expiryDate: p.expiryDate,
+        createdAt: p.createdAt,
+        viewCount: p.viewCount,
+        bumpedAt: p.bumpedAt,
+        coverImg: p.images?.[0] || null,
+        imgCount: p.images?.length || 0,
+      };
+    });
 
     const finalResponse = paginatedResponse(formattedRows, total, page, limit);
 
-    // 🛡️ Safe cache write — không block response nếu Redis down
     if (!isSearching) {
       redisSet(cacheKey, JSON.stringify(finalResponse), "EX", 600).catch(
         () => {},
@@ -218,34 +213,29 @@ export const productService = {
     const detailCacheKey = `product:detail:${id}`;
     const viewsCacheKey = `product:views:count:${id}`;
 
-    // 🛡️ Safe cache read
     const cachedDetail = await redisGet(detailCacheKey);
     if (cachedDetail) {
       try {
         const parsed = JSON.parse(cachedDetail);
 
-        // Tăng lượt xem ngầm trong MongoDB (fire-and-forget)
-        Product.findByIdAndUpdate(id, { $inc: { viewCount: 1 } }).catch(
-          () => {},
-        );
+        productRepository
+          .findByIdAndUpdate(id, { $inc: { viewCount: 1 } })
+          .catch(() => {});
 
-        // 🛡️ Tăng view count trong Redis an toàn
         const rawViews = await withTimeout(
           redis.incr(viewsCacheKey).catch(() => null),
         );
         if (rawViews !== null) parsed.viewCount = rawViews;
 
         return parsed;
-      } catch {
-        // Cache corrupt → tiếp tục query DB
-      }
+      } catch {}
     }
 
-    const p: any = await Product.findByIdAndUpdate(
+    const p: any = await productRepository.findByIdAndUpdate(
       id,
       { $inc: { viewCount: 1 } },
       { new: true },
-    ).populate("sellerId", "name isVerified isPremium badges");
+    );
 
     if (!p || p.status === "Deleted") {
       throw new HttpError(
@@ -254,13 +244,15 @@ export const productService = {
       );
     }
 
+    const seller = await userRepository.findById(p.sellerId.toString());
+
     const finalDetail = {
       id: p._id,
-      sellerId: p.sellerId?._id,
-      sellerName: p.sellerId?.name || "Một ngư dân",
-      sellerIsVerified: p.sellerId?.isVerified ? 1 : 0,
-      sellerIsPremium: p.sellerId?.isPremium ? 1 : 0,
-      sellerBadges: p.sellerId?.badges || [],
+      sellerId: p.sellerId,
+      sellerName: seller?.name || "Một ngư dân",
+      sellerIsVerified: seller?.isVerified ? 1 : 0,
+      sellerIsPremium: seller?.isPremium ? 1 : 0,
+      sellerBadges: seller?.badges || [],
       type: p.type,
       category: p.category,
       name: p.name,
@@ -286,13 +278,55 @@ export const productService = {
       })),
     };
 
-    // 🛡️ Safe cache writes — fire-and-forget, không block response
     redisSet(viewsCacheKey, p.viewCount, "EX", 1800).catch(() => {});
     redisSet(detailCacheKey, JSON.stringify(finalDetail), "EX", 1800).catch(
       () => {},
     );
 
     return finalDetail;
+  },
+
+  // Sửa đổi phương thức này để giải quyết triệt để lỗi TS2339
+  async getProducts(sellerId: string, pageStr?: string, limitStr?: string) {
+    const { page, limit, offset } = parsePagination(pageStr, limitStr, 50);
+    const { data, total } = await productRepository.findByOwner(
+      sellerId,
+      offset,
+      limit,
+    );
+    return { products: data, total, page, limit };
+  },
+
+  async getPriceHistory(id: string) {
+    const product = await productRepository.findOne({
+      _id: id,
+      status: { $ne: "Deleted" },
+    });
+
+    if (!product) throw new HttpError(404, "Không tìm thấy sản phẩm");
+
+    return (product.priceHistory || []).sort(
+      (a: any, b: any) =>
+        new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime(),
+    );
+  },
+
+  async getTodayCount(userId: string) {
+    const user = await userRepository.findRawById(userId);
+    if (!user) throw new HttpError(404, "Không tìm thấy người dùng");
+
+    const nowVN = new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
+    const dateKey = `${nowVN.getUTCFullYear()}-${String(nowVN.getUTCMonth() + 1).padStart(2, "0")}-${String(nowVN.getUTCDate()).padStart(2, "0")}`;
+    const limitKey = `product:limit:${userId}:${dateKey}`;
+
+    const countStr = await redis.get(limitKey);
+    const count = countStr ? parseInt(countStr, 10) : 0;
+
+    return {
+      count,
+      max: 5,
+      isPremium: !!user.isPremium,
+    };
   },
 
   async create(
@@ -315,29 +349,28 @@ export const productService = {
       images,
     } = body;
 
-    if (type === "Fresh" && (!lat || !lng)) {
+    if (type === "Fresh" && (lat == null || lng == null)) {
       throw new HttpError(
         400,
         "Tọa độ vị trí GPS là bắt buộc đối với hải sản tươi sống!",
       );
     }
 
-    const user = await User.findById(userId);
+    const user = await userRepository.findRawById(userId);
     if (!user) throw new HttpError(404, "Không tìm thấy người dùng");
 
+    const nowVN = new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
+    const dateKey = `${nowVN.getUTCFullYear()}-${String(nowVN.getUTCMonth() + 1).padStart(2, "0")}-${String(nowVN.getUTCDate()).padStart(2, "0")}`;
+    const limitKey = `product:limit:${userId}:${dateKey}`;
+
     if (!user.isPremium && user.role !== "Admin") {
-      const nowVN = new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
-      nowVN.setUTCHours(0, 0, 0, 0);
-      const startOfDay = new Date(nowVN.getTime() - 7 * 60 * 60 * 1000);
-      const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000 - 1);
+      const currentCount = await redis.incr(limitKey);
+      if (currentCount === 1) {
+        await redis.expire(limitKey, 24 * 3600);
+      }
 
-      const countToday = await Product.countDocuments({
-        sellerId: userId,
-        createdAt: { $gte: startOfDay, $lte: endOfDay },
-        status: { $ne: "Deleted" },
-      });
-
-      if (countToday >= 5) {
+      if (currentCount > 5) {
+        await redis.decr(limitKey);
         throw new HttpError(
           403,
           "Tài khoản thường chỉ được phép đăng tối đa 5 bài viết mỗi ngày. Vui lòng nâng cấp lên Premium để đăng không giới hạn!",
@@ -357,62 +390,74 @@ export const productService = {
       typeof totalWeight === "number" ? totalWeight : parseFloat(totalWeight);
 
     if (isNaN(parsedPrice) || isNaN(parsedWeight)) {
+      if (!user.isPremium && user.role !== "Admin") {
+        await redis.decr(limitKey);
+      }
       throw new HttpError(400, "Thông tin giá cả hoặc khối lượng không hợp lệ");
     }
 
-    const newProduct = new Product({
-      sellerId: userId,
-      type,
-      category,
-      name: name.trim(),
-      description: cleanDesc,
-      price: parsedPrice,
-      salesType: salesType ?? "Retail",
-      totalWeight: parsedWeight,
-      remainingWeight: parsedWeight,
-      catchTime,
-      origin,
-      expiryDate,
-      images: Array.isArray(images) ? images : [],
-      ...(lat && lng
-        ? {
-            location: {
-              type: "Point",
-              coordinates: [
-                typeof lng === "number" ? lng : parseFloat(lng),
-                typeof lat === "number" ? lat : parseFloat(lat),
-              ],
-            },
-          }
-        : {}),
-      ...(body.catchLat && body.catchLng
-        ? {
-            catchLocation: {
-              type: "Point",
-              coordinates: [
-                typeof body.catchLng === "number" ? body.catchLng : parseFloat(body.catchLng),
-                typeof body.catchLat === "number" ? body.catchLat : parseFloat(body.catchLat),
-              ],
-            },
-          }
-        : {}),
+    const coordinates =
+      lat != null && lng != null
+        ? [
+            typeof lng === "number" ? lng : parseFloat(lng),
+            typeof lat === "number" ? lat : parseFloat(lat),
+          ]
+        : undefined;
+    const catchCoordinates =
+      body.catchLat != null && body.catchLng != null
+        ? [
+            typeof body.catchLng === "number"
+              ? body.catchLng
+              : parseFloat(body.catchLng),
+            typeof body.catchLat === "number"
+              ? body.catchLat
+              : parseFloat(body.catchLat),
+          ]
+        : undefined;
+
+    let savedProduct;
+    try {
+      savedProduct = await productRepository.create({
+        sellerId: userId,
+        type,
+        category,
+        name: name.trim(),
+        description: cleanDesc,
+        price: parsedPrice,
+        salesType: salesType ?? "Retail",
+        totalWeight: parsedWeight,
+        remainingWeight: parsedWeight,
+        catchTime,
+        origin,
+        expiryDate,
+        images: Array.isArray(images) ? images : [],
+        location: coordinates ? { type: "Point", coordinates } : undefined,
+        catchLocation: catchCoordinates
+          ? { type: "Point", coordinates: catchCoordinates }
+          : undefined,
+      });
+    } catch (saveErr) {
+      if (!user.isPremium && user.role !== "Admin") {
+        await redis.decr(limitKey);
+      }
+      throw saveErr;
+    }
+
+    updateUserBadges(userId).catch((err) => {
+      logger.error(
+        `[Badge Award Error] Không thể cập nhật danh hiệu cho UserID=${userId}: ${err.message}`,
+      );
     });
+    await redisIncr(`product:list:version:${type}`);
 
-    await newProduct.save();
-    updateUserBadges(userId).catch(() => {});
-
-    // 🛡️ Safe cache invalidation
-    await redisIncr(`product:list:version:${newProduct.type}`);
-
-    User.findById(userId)
-      .select("name")
-      .lean()
+    userRepository
+      .findRawById(userId)
       .then((seller: any) =>
         notifyFollowersNewProduct(
           userId,
           seller?.name || "Một ngư dân",
-          newProduct._id.toString(),
-          newProduct.name,
+          savedProduct._id.toString(),
+          savedProduct.name,
         ),
       )
       .catch((err: any) =>
@@ -421,7 +466,7 @@ export const productService = {
         ),
       );
 
-    return { productId: newProduct._id.toString() };
+    return { productId: savedProduct._id.toString() };
   },
 
   async update(
@@ -431,13 +476,29 @@ export const productService = {
     body: Record<string, any>,
   ): Promise<void> {
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw new HttpError(400, "ID sản phẩm không hợp lệ");
+      throw new HttpError(400, "ID mẻ hàng không hợp lệ");
     }
 
-    const currentProduct = await Product.findById(id);
+    const currentProduct = await productRepository.findById(id);
     if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
     if (role !== "Admin" && currentProduct.sellerId.toString() !== userId)
       throw new HttpError(403, "Bạn không có quyền chỉnh sửa bài đăng này");
+
+    const finalTotalWeight =
+      body.totalWeight !== undefined
+        ? parseFloat(body.totalWeight)
+        : currentProduct.totalWeight;
+    const finalRemainingWeight =
+      body.remainingWeight !== undefined
+        ? parseFloat(body.remainingWeight)
+        : currentProduct.remainingWeight;
+
+    if (finalRemainingWeight > finalTotalWeight) {
+      throw new HttpError(
+        400,
+        "Khối lượng còn lại không thể lớn hơn tổng khối lượng của mẻ hàng.",
+      );
+    }
 
     const targetType =
       body.type !== undefined ? body.type : currentProduct.type;
@@ -450,7 +511,7 @@ export const productService = {
         ? body.lng
         : currentProduct.location?.coordinates?.[0];
 
-    if (targetType === "Fresh" && (!targetLat || !targetLng)) {
+    if (targetType === "Fresh" && (targetLat == null || targetLng == null)) {
       throw new HttpError(
         400,
         "Tọa độ GPS vị trí mẻ hàng là bắt buộc đối với hải sản tươi sống!",
@@ -464,6 +525,8 @@ export const productService = {
     }
 
     const updateFields: any = {};
+    const unsetFields: any = {};
+
     if (body.name !== undefined) updateFields.name = body.name.trim();
     if (body.description !== undefined)
       updateFields.description = body.description
@@ -491,7 +554,7 @@ export const productService = {
             .delete_resources(removedPublicIds)
             .catch((err: any) => {
               logger.error(
-                `Cloudinary cleanup failed during product update: ${err.message}`,
+                `Cloudinary cleanup failed during update: ${err.message}`,
               );
             });
         }
@@ -508,12 +571,10 @@ export const productService = {
       updateFields.expiryDate = body.expiryDate
         ? new Date(body.expiryDate)
         : null;
-    if (
-      body.lat !== undefined &&
-      body.lng !== undefined &&
-      body.lat !== null &&
-      body.lng !== null
-    ) {
+
+    if (body.lat === null || body.lng === null) {
+      unsetFields.location = "";
+    } else if (body.lat != null && body.lng != null) {
       const latVal = parseFloat(body.lat);
       const lngVal = parseFloat(body.lng);
       if (!isNaN(latVal) && !isNaN(lngVal)) {
@@ -524,12 +585,9 @@ export const productService = {
       }
     }
 
-    if (
-      body.catchLat !== undefined &&
-      body.catchLng !== undefined &&
-      body.catchLat !== null &&
-      body.catchLng !== null
-    ) {
+    if (body.catchLocation === null || body.catchLng === null) {
+      unsetFields.catchLocation = "";
+    } else if (body.catchLat != null && body.catchLng != null) {
       const cLatVal = parseFloat(body.catchLat);
       const cLngVal = parseFloat(body.catchLng);
       if (!isNaN(cLatVal) && !isNaN(cLngVal)) {
@@ -541,6 +599,10 @@ export const productService = {
     }
 
     const updateQuery: any = { $set: updateFields };
+    if (Object.keys(unsetFields).length > 0) {
+      updateQuery.$unset = unsetFields;
+    }
+
     if (newPrice !== undefined && newPrice !== currentProduct.price) {
       updateQuery.$push = {
         priceHistory: {
@@ -549,13 +611,15 @@ export const productService = {
           changedAt: new Date(),
         },
       };
-      logger.info(`Price change logged for ProductID=${id}`);
     }
 
-    await Product.findByIdAndUpdate(id, updateQuery);
-    updateUserBadges(currentProduct.sellerId).catch(() => {});
+    await productRepository.findByIdAndUpdate(id, updateQuery);
+    updateUserBadges(currentProduct.sellerId).catch((err) => {
+      logger.error(
+        `[Badge Award Error] Không thể cập nhật danh hiệu cho UserID=${currentProduct.sellerId}: ${err.message}`,
+      );
+    });
 
-    // 🛡️ Safe cache invalidation
     await redisDel(`product:detail:${id}`);
     await redisIncr(`product:list:version:${currentProduct.type}`);
   },
@@ -565,7 +629,7 @@ export const productService = {
       throw new HttpError(400, "ID sản phẩm không hợp lệ");
     }
 
-    const currentProduct = await Product.findById(id);
+    const currentProduct = await productRepository.findById(id);
     if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
     if (role !== "Admin" && currentProduct.sellerId.toString() !== userId)
       throw new HttpError(403, "Bạn không có quyền xoá bài đăng này");
@@ -577,19 +641,25 @@ export const productService = {
       if (publicIds.length > 0) {
         cloudinary.api.delete_resources(publicIds).catch((err: any) => {
           logger.error(
-            `Cloudinary cleanup failed during product deletion: ${err.message}`,
+            `Cloudinary cleanup failed during deletion: ${err.message}`,
           );
         });
       }
     }
 
-    await Product.findByIdAndUpdate(id, { $set: { status: "Deleted" } });
-    updateUserBadges(currentProduct.sellerId).catch(() => {});
-    await Notification.deleteMany({ productId: id as any });
-    await User.updateMany({}, { $pull: { favorites: id as any } });
-    await Report.deleteMany({ productId: id as any });
+    await productRepository.findByIdAndUpdate(id, {
+      $set: { status: "Deleted" },
+    });
+    updateUserBadges(currentProduct.sellerId).catch((err) => {
+      logger.error(
+        `[Badge Award Error] Không thể cập nhật danh hiệu cho UserID=${currentProduct.sellerId}: ${err.message}`,
+      );
+    });
 
-    // 🛡️ Safe cache invalidation
+    await notificationRepository.deleteByProductId(id);
+    await userRepository.updateMany({}, { $pull: { favorites: id as any } });
+    await reportRepository.deleteByProductId(id as any);
+
     await redisDel(`product:detail:${id}`);
     await redisIncr(`product:list:version:${currentProduct.type}`);
   },
@@ -599,22 +669,32 @@ export const productService = {
       throw new HttpError(400, "ID sản phẩm không hợp lệ");
     }
 
-    const currentProduct = await Product.findById(id);
+    const currentProduct = await productRepository.findById(id);
     if (!currentProduct) throw new HttpError(404, "Không tìm thấy sản phẩm");
     if (currentProduct.sellerId.toString() !== userId)
       throw new HttpError(403, "Không có quyền");
 
-    if (currentProduct.bumpedAt) {
-      const diffMs = Date.now() - new Date(currentProduct.bumpedAt).getTime();
-      if (diffMs < 24 * 3600 * 1000) {
-        const remaining = Math.ceil((24 * 3600 * 1000 - diffMs) / 3600000);
-        throw new HttpError(429, `Đẩy tin lại sau ${remaining} giờ nữa`);
-      }
+    const cutoffTime = new Date(Date.now() - 24 * 3600 * 1000);
+
+    const updated = await productRepository.findOneAndUpdate(
+      {
+        _id: id,
+        sellerId: userId,
+        $or: [
+          { bumpedAt: { $lte: cutoffTime } },
+          { bumpedAt: { $exists: false } },
+        ],
+      },
+      { $set: { bumpedAt: new Date() } },
+    );
+
+    if (!updated) {
+      throw new HttpError(
+        429,
+        `Sản phẩm này đã được đẩy lên gần đây. Vui lòng đẩy tin lại sau.`,
+      );
     }
 
-    await Product.findByIdAndUpdate(id, { $set: { bumpedAt: new Date() } });
-
-    // 🛡️ Safe cache invalidation
     await redisDel(`product:detail:${id}`);
     await redisIncr(`product:list:version:${currentProduct.type}`);
   },

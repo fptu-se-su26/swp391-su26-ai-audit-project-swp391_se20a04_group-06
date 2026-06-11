@@ -4,8 +4,9 @@ import { Server as IOServer, Socket } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
 import jwt from "jsonwebtoken";
 import cookie from "cookie";
-import { Message } from "./models/Message";
-import { Product } from "./models/Product";
+import { messageRepository } from "./repositories/message.repository";
+import { productRepository } from "./repositories/product.repository";
+import { userRepository } from "./repositories/user.repository";
 import { redis } from "./config/redis";
 import { logger } from "./utils/logger";
 
@@ -15,6 +16,8 @@ interface AuthPayload {
 }
 
 let ioInstance: IOServer;
+let pubClientInstance: any;
+let subClientInstance: any;
 
 function getTokenFromCookie(headers: any): string | null {
   const cookieHeader = headers.cookie;
@@ -33,23 +36,29 @@ export function initSocket(server: HttpServer) {
   });
 
   try {
-    const pubClient = redis.duplicate();
-    const subClient = redis.duplicate();
+    pubClientInstance = redis.duplicate();
+    subClientInstance = redis.duplicate();
 
-    pubClient.connect().catch(() => {});
-    subClient.connect().catch(() => {});
+    pubClientInstance.connect().catch(() => {});
+    subClientInstance.connect().catch(() => {});
 
-    io.adapter(createAdapter(pubClient, subClient));
+    io.adapter(createAdapter(pubClientInstance, subClientInstance));
     logger.info("Socket.IO Redis Adapter configured successfully");
   } catch (err: any) {
     logger.error(`Failed to configure Socket.IO Redis Adapter: ${err.message}`);
   }
 
-  io.use((socket: Socket, next) => {
-    const token = getTokenFromCookie(socket.handshake.headers);
+  io.use(async (socket: Socket, next) => {
+    let token = getTokenFromCookie(socket.handshake.headers);
+    if (!token) {
+      token = (socket.handshake.query?.token as string) || null;
+    }
+
     if (!token) {
       return next(
-        new Error("Chưa đăng nhập (không tìm thấy token trong cookie)"),
+        new Error(
+          "Chưa đăng nhập (không tìm thấy token trong cookie hoặc query)",
+        ),
       );
     }
     try {
@@ -57,6 +66,14 @@ export function initSocket(server: HttpServer) {
         token,
         process.env.JWT_SECRET as string,
       ) as AuthPayload;
+
+      const user = await userRepository.findRawById(payload.userId);
+      if (!user || !user.isActive) {
+        return next(
+          new Error("Tài khoản của bạn đã bị khóa hoặc không tồn tại"),
+        );
+      }
+
       (socket as any).user = payload;
       next();
     } catch (err) {
@@ -68,26 +85,23 @@ export function initSocket(server: HttpServer) {
     const { userId } = (socket as any).user as AuthPayload;
 
     socket.on("join_room", async (data: any) => {
-      let productId: string;
-      let buyerId: string;
-      if (typeof data === "string") {
-        productId = data;
-        buyerId = userId;
-      } else {
-        productId = data?.productId;
-        buyerId = data?.buyerId;
-      }
+      let productId: string =
+        data?.productId || (typeof data === "string" ? data : "");
+      let buyerId: string =
+        data?.buyerId || (typeof data === "string" ? userId : "");
 
       if (!productId || !buyerId) return;
       try {
-        const prod = await Product.findById(productId);
+        const prod = await productRepository.findById(productId);
         if (!prod) return;
         const isSeller = prod.sellerId.toString() === userId;
         const isBuyer = buyerId === userId;
 
         if (isSeller || isBuyer) {
           socket.join(`product_${productId}_${buyerId}`);
-          logger.info(`Socket User ${userId} joined room product_${productId}_${buyerId}`);
+          logger.info(
+            `Socket User ${userId} joined room product_${productId}_${buyerId}`,
+          );
         }
       } catch (err: any) {
         logger.error(`Socket join_room error: ${err.message}`);
@@ -95,18 +109,15 @@ export function initSocket(server: HttpServer) {
     });
 
     socket.on("leave_room", (data: any) => {
-      let productId: string;
-      let buyerId: string;
-      if (typeof data === "string") {
-        productId = data;
-        buyerId = userId;
-      } else {
-        productId = data?.productId;
-        buyerId = data?.buyerId;
-      }
+      let productId: string =
+        data?.productId || (typeof data === "string" ? data : "");
+      let buyerId: string =
+        data?.buyerId || (typeof data === "string" ? userId : "");
       if (productId && buyerId) {
         socket.leave(`product_${productId}_${buyerId}`);
-        logger.info(`Socket User ${userId} left room product_${productId}_${buyerId}`);
+        logger.info(
+          `Socket User ${userId} left room product_${productId}_${buyerId}`,
+        );
       }
     });
 
@@ -135,14 +146,32 @@ export function initSocket(server: HttpServer) {
           return;
         }
 
+        try {
+          const sender = await userRepository.findRawById(userId);
+          if (!sender || !sender.isActive) {
+            socket.emit("error", {
+              message: "Tài khoản của bạn đã bị khóa hoặc không hoạt động.",
+            });
+            socket.disconnect(true);
+            return;
+          }
+        } catch (dbErr: any) {
+          logger.error(`Socket state verification error: ${dbErr.message}`);
+          socket.emit("error", { message: "Lỗi xác thực hệ thống" });
+          return;
+        }
+
         const rateLimitKey = `ratelimit:socket:msg:${userId}`;
         try {
           const pipe = redis.pipeline();
           pipe.incr(rateLimitKey);
-          pipe.expire(rateLimitKey, 2);
+          pipe.expire(rateLimitKey, 2, "NX");
           const results = await pipe.exec();
 
-          const currentCount = (results?.[0]?.[1] as number) ?? 0;
+          const currentCount =
+            results && results[0] && results[0][1]
+              ? (results[0][1] as number)
+              : 0;
 
           if (currentCount > 5) {
             socket.emit("error", {
@@ -156,12 +185,23 @@ export function initSocket(server: HttpServer) {
         }
 
         try {
-          const prod = await Product.findById(productId);
+          const prod = await productRepository.findById(productId);
           if (!prod) {
             socket.emit("error", { message: "Sản phẩm không tồn tại" });
             return;
           }
+
           const isSeller = prod.sellerId.toString() === userId;
+          const isReceiverSeller = prod.sellerId.toString() === receiverId;
+
+          if (!isSeller && !isReceiverSeller) {
+            socket.emit("error", {
+              message:
+                "Bạn không thể gửi tin nhắn cho sản phẩm không liên quan",
+            });
+            return;
+          }
+
           const buyerId = isSeller ? receiverId : userId;
 
           const cleanContent = content
@@ -171,7 +211,7 @@ export function initSocket(server: HttpServer) {
                 .slice(0, 1000)
             : null;
 
-          const newMsg = new Message({
+          const newMsg = await messageRepository.create({
             productId,
             senderId: userId,
             receiverId,
@@ -179,8 +219,6 @@ export function initSocket(server: HttpServer) {
             imageUrl: imageUrl || null,
             location: location || null,
           });
-
-          await newMsg.save();
 
           const messageResponse = {
             id: newMsg._id.toString(),
@@ -218,25 +256,35 @@ export function initSocket(server: HttpServer) {
         }
       },
     );
-    /* ─── VIDEO CALL EVENTS (MỚI) ─── */
 
-    // 1. Gửi yêu cầu gọi (Truyền kèm callerName sang cho Callee)
     socket.on(
       "call_user",
-      (data: { to: string; offer: any; callerName?: string }) => {
+      async (data: { to: string; offer: any; callerName?: string }) => {
         const { to, offer, callerName } = data;
-        logger.info(
-          `[Socket Call] User ${userId} (${callerName || "Không tên"}) is calling User ${to}`,
-        );
-        socket.to(`user_${to}`).emit("incoming_call", {
-          from: userId,
-          offer,
-          callerName: callerName || "Một người dùng",
-        });
+
+        try {
+          const recipient = await userRepository.findRawById(to);
+          if (!recipient || !recipient.isActive) {
+            socket.emit("error", {
+              message: "Người nhận cuộc gọi không khả dụng.",
+            });
+            return;
+          }
+
+          logger.info(`[Socket Call] User ${userId} is calling User ${to}`);
+          socket.to(`user_${to}`).emit("incoming_call", {
+            from: userId,
+            offer,
+            callerName: callerName || "Một người dùng",
+          });
+        } catch (err) {
+          socket.emit("error", {
+            message: "Không thể khởi tạo tín hiệu cuộc gọi.",
+          });
+        }
       },
     );
 
-    // 2. Chấp nhận cuộc gọi
     socket.on("answer_call", (data: { to: string; answer: any }) => {
       const { to, answer } = data;
       logger.info(`[Socket Call] User ${userId} accepted call from User ${to}`);
@@ -245,7 +293,6 @@ export function initSocket(server: HttpServer) {
       });
     });
 
-    // 3. Trao đổi cấu hình mạng ICE Candidates
     socket.on("ice_candidate", (data: { to: string; candidate: any }) => {
       const { to, candidate } = data;
       socket.to(`user_${to}`).emit("ice_candidate", {
@@ -253,7 +300,6 @@ export function initSocket(server: HttpServer) {
       });
     });
 
-    // 4. Kết thúc/Từ chối cuộc gọi
     socket.on("end_call", (data: { to: string }) => {
       const { to } = data;
       logger.info(
@@ -272,4 +318,20 @@ export function initSocket(server: HttpServer) {
 export function getIO() {
   if (!ioInstance) throw new Error("Socket.io chưa được khởi tạo");
   return ioInstance;
+}
+
+export async function closeSocketRedisClients() {
+  try {
+    const promises: Promise<void>[] = [];
+    if (pubClientInstance)
+      promises.push(pubClientInstance.quit().then(() => undefined));
+    if (subClientInstance)
+      promises.push(subClientInstance.quit().then(() => undefined));
+    await Promise.all(promises);
+    logger.info("✅ Socket.IO Adapter Redis clients closed cleanly.");
+  } catch (err: any) {
+    logger.error(
+      `Error closing Socket.IO Adapter Redis clients: ${err.message}`,
+    );
+  }
 }

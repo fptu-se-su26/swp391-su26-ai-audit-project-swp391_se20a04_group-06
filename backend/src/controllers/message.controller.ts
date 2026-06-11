@@ -1,216 +1,165 @@
 import { Request, Response } from "express";
-import { Message } from "../models/Message";
-import { User } from "../models/User";
-import { Product } from "../models/Product";
+import { messageService } from "../services/message.service";
+import { messageRepository } from "../repositories/message.repository";
 import { sendServerError, parseId } from "../helpers/response.helper";
 import { uploadToCloudinary } from "../middlewares/upload";
-import mongoose from "mongoose";
+import { parsePagination } from "../utils/pagination"; // [FIX PERFORMANCE 2]
+import { Message } from "../models/Message";
+import { getIO } from "../socket";
+// 1. Thu hồi tin nhắn
+export async function recallMessage(req: Request, res: Response) {
+  const { id } = req.params;
+  const { userId } = req.user;
 
-// 🌟 Get messages with location-awareness (isolated by buyerId)
+  try {
+    const msg = await Message.findById(id);
+    if (!msg)
+      return res.status(404).json({ message: "Không tìm thấy tin nhắn" });
+    if (msg.senderId.toString() !== userId) {
+      return res
+        .status(403)
+        .json({ message: "Bạn không có quyền thu hồi tin nhắn này" });
+    }
+
+    msg.isRecalled = true;
+    await msg.save();
+
+    // Đồng bộ Realtime qua Socket
+    getIO()
+      .to(`product_${msg.productId}_${msg.senderId}`)
+      .emit("message_recalled", { id });
+    getIO()
+      .to(`product_${msg.productId}_${msg.receiverId}`)
+      .emit("message_recalled", { id });
+
+    return res.json({ success: true, message: "Thu hồi thành công" });
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+
+// 2. Thả cảm xúc tin nhắn
+export async function reactMessage(req: Request, res: Response) {
+  const { id } = req.params;
+  const { reaction } = req.body;
+
+  try {
+    const msg = await Message.findById(id);
+    if (!msg)
+      return res.status(404).json({ message: "Không tìm thấy tin nhắn" });
+
+    msg.reaction = reaction || null;
+    await msg.save();
+
+    // Đồng bộ Realtime cảm xúc qua Socket
+    const eventData = { id, reaction: msg.reaction };
+    getIO()
+      .to(`product_${msg.productId}_${msg.senderId}`)
+      .emit("message_reacted", eventData);
+    getIO()
+      .to(`product_${msg.productId}_${msg.receiverId}`)
+      .emit("message_reacted", eventData);
+
+    return res.json({ success: true, reaction: msg.reaction });
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+
+// 3. Chỉnh sửa tin nhắn
+export async function editMessage(req: Request, res: Response) {
+  const { id } = req.params;
+  const { content } = req.body;
+  const { userId } = req.user;
+
+  try {
+    const msg = await Message.findById(id);
+    if (!msg)
+      return res.status(404).json({ message: "Không tìm thấy tin nhắn" });
+    if (msg.senderId.toString() !== userId) {
+      return res
+        .status(403)
+        .json({ message: "Bạn không thể chỉnh sửa tin nhắn của người khác" });
+    }
+
+    msg.content = content;
+    await msg.save();
+
+    // Đồng bộ nội dung sửa qua Socket
+    const eventData = { id, content };
+    getIO()
+      .to(`product_${msg.productId}_${msg.senderId}`)
+      .emit("message_edited", eventData);
+    getIO()
+      .to(`product_${msg.productId}_${msg.receiverId}`)
+      .emit("message_edited", eventData);
+
+    return res.json({ success: true, content });
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
 export async function getMessages(req: Request, res: Response) {
   const { userId, role } = req.user;
   const productId = parseId(req.params.productId);
+  const buyerIdStr = req.query.buyerId as string;
+
   if (!productId)
     return res.status(400).json({ message: "ID sản phẩm không hợp lệ" });
 
-  const buyerIdStr = req.query.buyerId as string;
-
   try {
-    const filter: any = { productId };
-    if (role !== "Admin") {
-      const prod = await Product.findById(productId);
-      if (!prod) {
-        return res.status(404).json({ message: "Sản phẩm không tồn tại" });
-      }
-      const isSeller = prod.sellerId.toString() === userId;
-      const buyerId = isSeller ? buyerIdStr : userId;
-      if (!buyerId) {
-        return res.status(400).json({ message: "Thiếu thông tin người mua (buyerId)" });
-      }
-      filter.$or = [
-        { senderId: buyerId, receiverId: prod.sellerId.toString() },
-        { senderId: prod.sellerId.toString(), receiverId: buyerId }
-      ];
-
-      // Update unread status first to ensure synchronicity for this specific conversation
-      const partnerId = isSeller ? buyerId : prod.sellerId.toString();
-      await Message.updateMany(
-        { productId, senderId: partnerId, receiverId: userId, isRead: false } as any,
-        { $set: { isRead: true } },
-      );
-    } else if (buyerIdStr) {
-      const prod = await Product.findById(productId);
-      if (prod) {
-        filter.$or = [
-          { senderId: buyerIdStr, receiverId: prod.sellerId.toString() },
-          { senderId: prod.sellerId.toString(), receiverId: buyerIdStr }
-        ];
-      }
-    }
-
-    const messages = await Message.find(filter)
-      .populate("senderId", "name")
-      .sort({ createdAt: 1 });
-
-    const formattedRows = messages.map((m: any) => ({
-      id: m._id.toString(),
-      senderId: m.senderId?._id.toString(),
-      senderName: m.senderId?.name || "Một người dùng",
-      receiverId: m.receiverId.toString(),
-      content: m.content,
-      imageUrl: m.imageUrl,
-      location: m.location, // 🌟 Return location details to client
-      isRead: m.isRead,
-      sentAt: m.createdAt,
-    }));
-
-    return res.json(formattedRows);
-  } catch (err) {
+    const messages = await messageService.getMessages(
+      productId,
+      userId,
+      role,
+      buyerIdStr,
+    );
+    return res.json(messages);
+  } catch (err: any) {
+    if (err.status)
+      return res.status(err.status).json({ message: err.message });
     return sendServerError(res, err);
   }
 }
 
-// 🌟 Send message with location support
 export async function sendMessage(req: Request, res: Response) {
   const { userId } = req.user;
-  const { productId, receiverId, content, imageUrl, location } = req.body; // 🌟 Accept location
-
-  if (!productId || !receiverId)
-    return res.status(400).json({ message: "Thiếu thông tin nhận tin" });
-
-  if (!content?.trim() && !imageUrl && !location)
-    return res.status(400).json({ message: "Nội dung tin nhắn trống" });
-
-  if (receiverId === userId)
-    return res
-      .status(400)
-      .json({ message: "Không thể tự gửi tin nhắn cho chính mình" });
-
   try {
-    const cleanContent = content
-      ? content
-          .trim()
-          .replace(/<[^>]*>/g, "")
-          .slice(0, 1000)
-      : null;
-
-    const newMsg = new Message({
-      productId,
-      senderId: userId,
-      receiverId,
-      content: cleanContent,
-      imageUrl: imageUrl || null,
-      location: location || null, // 🌟 Save location
-    });
-
-    await newMsg.save();
-
+    const newMsg = await messageService.sendMessage(userId, req.body);
     return res.status(201).json({
       id: newMsg._id.toString(),
-      location: newMsg.location, // Return location to display on client immediately
+      location: newMsg.location,
       message: "Gửi thành công",
     });
+  } catch (err: any) {
+    if (err.status)
+      return res.status(err.status).json({ message: err.message });
+    return sendServerError(res, err);
+  }
+}
+
+export async function getConversations(req: Request, res: Response) {
+  const { userId } = req.user;
+  // [FIX PERFORMANCE 2] Phân trang aggregation
+  const { limit, offset } = parsePagination(
+    req.query.page as string,
+    req.query.limit as string,
+    50,
+  );
+
+  try {
+    const list = await messageService.getConversations(userId, offset, limit);
+    return res.json(list);
   } catch (err) {
     return sendServerError(res, err);
   }
 }
 
-// 🌟 Get conversations list with unread counts and last location
-export async function getConversations(req: Request, res: Response) {
+export async function unreadCount(req: Request, res: Response) {
   const { userId } = req.user;
   try {
-    const conversations = await Message.aggregate([
-      {
-        $match: {
-          $or: [
-            { senderId: new mongoose.Types.ObjectId(userId) },
-            { receiverId: new mongoose.Types.ObjectId(userId) },
-          ],
-        },
-      },
-      { $sort: { createdAt: -1 } },
-      {
-        $group: {
-          _id: {
-            productId: "$productId",
-            otherUserId: {
-              $cond: [
-                { $eq: ["$senderId", new mongoose.Types.ObjectId(userId)] },
-                "$receiverId",
-                "$senderId",
-              ],
-            },
-          },
-          lastMessage: { $first: "$content" },
-          lastMessageImageUrl: { $first: "$imageUrl" },
-          lastLocation: { $first: "$location" }, // 🌟 Get last location
-          lastSentAt: { $first: "$createdAt" },
-          unreadCount: {
-            $sum: {
-              $cond: [
-                {
-                  $and: [
-                    { $eq: ["$isRead", false] },
-                    {
-                      $eq: ["$receiverId", new mongoose.Types.ObjectId(userId)],
-                    },
-                  ],
-                },
-                1,
-                0,
-              ],
-            },
-          },
-        },
-      },
-      {
-        $lookup: {
-          from: "products",
-          localField: "_id.productId",
-          foreignField: "_id",
-          as: "product",
-        },
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "_id.otherUserId",
-          foreignField: "_id",
-          as: "otherUser",
-        },
-      },
-      { $unwind: { path: "$product", preserveNullAndEmptyArrays: true } },
-      { $unwind: { path: "$otherUser", preserveNullAndEmptyArrays: true } },
-      { $sort: { lastSentAt: -1 } },
-    ]);
-
-    const formattedRows = conversations.map((conv: any) => {
-      let displayMessage = conv.lastMessage;
-      if (!displayMessage) {
-        if (conv.lastMessageImageUrl) {
-          displayMessage = "📷 [Hình ảnh]";
-        } else if (conv.lastLocation) {
-          displayMessage = "📍 [Vị trí]";
-        } else {
-          displayMessage = "";
-        }
-      }
-
-      return {
-        productId: conv._id.productId?.toString() || "",
-        otherUserId: conv._id.otherUserId?.toString() || "",
-        productSellerId: conv.product?.sellerId?.toString() || "",
-        productName: conv.product?.name || "Sản phẩm đã bị xóa",
-        otherUserName: conv.otherUser?.name || "Một người dùng",
-        otherUserIsVerified: conv.otherUser?.isVerified ? 1 : 0,
-        lastMessage: displayMessage,
-        lastMessageImageUrl: conv.lastMessageImageUrl,
-        lastSentAt: conv.lastSentAt,
-        unread: conv.unreadCount || 0,
-      };
-    });
-
-    return res.json(formattedRows);
+    const count = await messageRepository.countUnread(userId);
+    return res.json({ count });
   } catch (err) {
     return sendServerError(res, err);
   }
@@ -223,19 +172,6 @@ export async function uploadChatImage(req: Request, res: Response) {
   try {
     const { url } = await uploadToCloudinary(req.file.buffer, "chat_images");
     return res.json({ imageUrl: url });
-  } catch (err) {
-    return sendServerError(res, err);
-  }
-}
-
-export async function unreadCount(req: Request, res: Response) {
-  const { userId } = req.user;
-  try {
-    const count = await Message.countDocuments({
-      receiverId: userId,
-      isRead: false,
-    } as any);
-    return res.json({ count });
   } catch (err) {
     return sendServerError(res, err);
   }

@@ -3,8 +3,8 @@ import Groq from "groq-sdk";
 import { logger } from "../utils/logger";
 
 const groq = process.env.GROQ_API_KEY
-    ? new Groq({ apiKey: process.env.GROQ_API_KEY })
-    : null;
+  ? new Groq({ apiKey: process.env.GROQ_API_KEY })
+  : null;
 
 const SYSTEM_INSTRUCTION = `
 Bạn là "Trợ lý hải sản" - trợ lý AI thông thái và thân thiện của trang web HảiSản.vn.
@@ -24,59 +24,68 @@ Trả lời bằng tiếng Việt, ngắn gọn, dễ hiểu, dùng emoji thân 
 `;
 
 export async function askChatbot(req: Request, res: Response) {
-    const { message, history } = req.body;
+  const { message, history } = req.body;
 
-    if (!message || typeof message !== "string" || !message.trim()) {
-        return res.status(400).json({ message: "Nội dung tin nhắn không được để trống." });
+  if (!message || typeof message !== "string" || !message.trim()) {
+    return res
+      .status(400)
+      .json({ message: "Nội dung tin nhắn không được để trống." });
+  }
+
+  if (!groq) {
+    logger.warn("[ChatbotAI] GROQ_API_KEY chưa được cấu hình.");
+    return res.status(503).json({ message: "Hệ thống AI đang bảo trì." });
+  }
+
+  try {
+    const cleanedHistory: { role: "user" | "assistant"; content: string }[] =
+      Array.isArray(history)
+        ? history
+            .filter((m: any) => m?.role && m?.parts?.[0]?.text)
+            .map((m: any) => ({
+              role: m.role === "model" ? "assistant" : "user",
+              content: m.parts[0].text,
+            }))
+        : [];
+
+    // [FIX MEDIUM] Giảm xuống 15s để tránh Nginx/Trình duyệt văng lỗi 504 Gateway Timeout
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("timeout")), 15_000),
+    );
+
+    const completionPromise = groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [
+        { role: "system", content: SYSTEM_INSTRUCTION },
+        ...cleanedHistory,
+        { role: "user", content: message.trim() },
+      ],
+      max_tokens: 1024,
+      temperature: 0.7,
+    });
+
+    const completion = await Promise.race([completionPromise, timeoutPromise]);
+    const replyText =
+      completion.choices[0]?.message?.content ||
+      "Xin lỗi, tôi không thể trả lời lúc này.";
+
+    return res.json({ reply: replyText });
+  } catch (err: any) {
+    logger.error(`[ChatbotAI Error] ${err.message}`);
+
+    if (err.message === "timeout") {
+      return res
+        .status(503)
+        .json({ message: "AI đang bận, vui lòng thử lại sau." });
+    }
+    if (err.status === 429) {
+      return res
+        .status(429)
+        .json({ message: "Hệ thống đang quá tải. Vui lòng thử lại sau." });
     }
 
-    if (!groq) {
-        logger.warn("[ChatbotAI] GROQ_API_KEY chưa được cấu hình.");
-        return res.status(503).json({ message: "Hệ thống AI đang bảo trì." });
-    }
-
-    try {
-        // Chuyển đổi history từ Gemini format → OpenAI format (Groq dùng OpenAI format)
-        const cleanedHistory: { role: "user" | "assistant"; content: string }[] =
-            Array.isArray(history)
-                ? history
-                    .filter((m: any) => m?.role && m?.parts?.[0]?.text)
-                    .map((m: any) => ({
-                        role: m.role === "model" ? "assistant" : "user",
-                        content: m.parts[0].text,
-                    }))
-                : [];
-
-        const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("timeout")), 25_000)
-        );
-
-        const completionPromise = groq.chat.completions.create({
-            model: "llama-3.1-8b-instant", // Free, rất nhanh
-            messages: [
-                { role: "system", content: SYSTEM_INSTRUCTION },
-                ...cleanedHistory,
-                { role: "user", content: message.trim() },
-            ],
-            max_tokens: 1024,
-            temperature: 0.7,
-        });
-
-        const completion = await Promise.race([completionPromise, timeoutPromise]);
-        const replyText = completion.choices[0]?.message?.content || "Xin lỗi, tôi không thể trả lời lúc này.";
-
-        return res.json({ reply: replyText });
-
-    } catch (err: any) {
-        logger.error(`[ChatbotAI Error] ${err.message}`);
-
-        if (err.message === "timeout") {
-            return res.status(503).json({ message: "AI đang bận, vui lòng thử lại sau." });
-        }
-        if (err.status === 429) {
-            return res.status(429).json({ message: "Hệ thống đang quá tải. Vui lòng thử lại sau." });
-        }
-
-        return res.status(500).json({ message: "Trợ lý AI tạm thời không khả dụng." });
-    }
+    return res
+      .status(500)
+      .json({ message: "Trợ lý AI tạm thời không khả dụng." });
+  }
 }

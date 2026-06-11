@@ -19,7 +19,14 @@ export interface IUser extends Document {
 const userSchema = new Schema<IUser>(
   {
     name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, index: true, trim: true, lowercase: true },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+      trim: true,
+      lowercase: true,
+    },
     passwordHash: { type: String, required: true },
     role: { type: String, enum: ["User", "Admin"], default: "User" },
     isActive: { type: Boolean, default: true },
@@ -32,5 +39,8 @@ const userSchema = new Schema<IUser>(
   },
   { timestamps: true },
 );
+
+userSchema.index({ following: 1 });
+userSchema.index({ favorites: 1 });
 
 export const User = model<IUser>("User", userSchema);

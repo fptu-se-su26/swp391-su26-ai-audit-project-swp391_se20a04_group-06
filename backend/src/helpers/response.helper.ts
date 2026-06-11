@@ -1,14 +1,15 @@
-import { Response } from 'express';
-import mongoose from 'mongoose';
+import { Response } from "express";
+import mongoose from "mongoose";
+import { logger } from "../utils/logger";
 
 /**
- * Ghi log lỗi server và trả về HTTP 500 chuẩn.
- * Dùng thay cho pattern lặp lại:
- *   console.error(err); return res.status(500).json({ message: 'Lỗi máy chủ' });
+ * Ghi log lỗi server qua Winston logger và trả về HTTP 500 chuẩn.
  */
 export function sendServerError(res: Response, err: unknown): Response {
-  console.error(err);
-  return res.status(500).json({ message: 'Lỗi máy chủ' });
+  logger.error(
+    `Internal Server Error: ${err instanceof Error ? err.stack || err.message : String(err)}`,
+  );
+  return res.status(500).json({ message: "Lỗi máy chủ" });
 }
 
 /**

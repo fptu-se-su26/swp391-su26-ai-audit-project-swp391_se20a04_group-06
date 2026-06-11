@@ -9,8 +9,14 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "types": ["jest", "node"]
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules",
+    "dist"
+    // "src/**/*.test.ts", // Loại bỏ file test khỏi bản build sản phẩm
+    // "src/**/*.spec.ts" // Loại bỏ file spec khỏi bản build sản phẩm
+  ]
 }

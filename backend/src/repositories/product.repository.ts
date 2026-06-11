@@ -1,26 +1,76 @@
-// Trong tệp: backend/src/repositories/product.repository.ts
-
-import { Product } from "../models/Product";
+import { Product, IProduct } from "../models/Product";
+import mongoose from "mongoose";
 
 export const productRepository = {
-  // Cập nhật hàm để nhận thêm hai tham số phân trang skip và limit
-  async findByOwner(sellerId: string, skip: number, limit: number) {
-    // 1. Tính tổng số bài đăng hoạt động để làm siêu dữ liệu phân trang (metadata)
-    const total = await Product.countDocuments({
-      sellerId: sellerId as any,
-      status: { $ne: "Deleted" }
-    } as any);
+  async findById(id: string): Promise<IProduct | null> {
+    if (!mongoose.Types.ObjectId.isValid(id)) return null;
+    return Product.findById(id);
+  },
 
-    // 2. Thực hiện truy vấn MongoDB giới hạn phân đoạn bằng .skip().limit()
+  async findOne(query: any): Promise<IProduct | null> {
+    return Product.findOne(query);
+  },
+
+  async exists(query: any): Promise<boolean> {
+    return !!(await Product.exists(query));
+  },
+
+  async countDocuments(filter: any): Promise<number> {
+    return Product.countDocuments(filter);
+  },
+
+  async find(
+    filter: any,
+    projection: any = {},
+    options: any = {},
+  ): Promise<IProduct[]> {
+    return Product.find(filter, projection, options);
+  },
+
+  async distinct(field: string, filter: any = {}): Promise<any[]> {
+    return Product.distinct(field, filter);
+  },
+
+  async aggregate(pipeline: any[]): Promise<any[]> {
+    return Product.aggregate(pipeline);
+  },
+
+  async updateMany(filter: any, update: any): Promise<any> {
+    return Product.updateMany(filter, update);
+  },
+
+  async deleteMany(filter: any): Promise<any> {
+    return Product.deleteMany(filter);
+  },
+
+  async create(data: any): Promise<IProduct> {
+    const product = new Product(data);
+    return product.save();
+  },
+
+  async findByIdAndUpdate(
+    id: string,
+    update: any,
+    options: any = { new: true },
+  ): Promise<IProduct | null> {
+    if (!mongoose.Types.ObjectId.isValid(id)) return null;
+    return Product.findByIdAndUpdate(id, update, options);
+  },
+
+  async findByOwner(sellerId: string, skip: number, limit: number) {
+    const total = await this.countDocuments({
+      sellerId: sellerId as any,
+      status: { $ne: "Deleted" },
+    });
+
     const products = await Product.find({
       sellerId: sellerId as any,
-      status: { $ne: "Deleted" }
+      status: { $ne: "Deleted" },
     } as any)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    // 3. Ánh xạ cấu hình dữ liệu an toàn tránh lỗi mảng images rỗng
     const data = products.map((p) => ({
       id: p._id.toString(),
       type: p.type,
@@ -37,11 +87,14 @@ export const productRepository = {
       createdAt: p.createdAt,
       viewCount: p.viewCount,
       bumpedAt: p.bumpedAt,
-      coverImg: p.images?.[0] || null, // Optional chaining phòng vệ lỗi dữ liệu cũ rỗng
+      coverImg: p.images?.[0] || null,
       imgCount: p.images?.length || 0,
     }));
 
-    // Trả về cấu trúc đối tượng khớp với khai báo bóc tách { data, total } ở Controller
     return { data, total };
-  }
+  },
+
+  async findOneAndUpdate(filter: any, update: any): Promise<IProduct | null> {
+    return Product.findOneAndUpdate(filter, update, { new: true });
+  },
 };

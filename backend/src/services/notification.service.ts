@@ -1,17 +1,11 @@
 import { getIO } from "../socket";
-import { User } from "../models/User";
-import { Notification } from "../models/Notification";
+import { userRepository } from "../repositories/user.repository";
+import { notificationRepository } from "../repositories/notification.repository";
+import { broadcastLogRepository } from "../repositories/broadcastlog.repository";
+import { logger } from "../utils/logger";
 import mongoose from "mongoose";
-import { BroadcastLog } from "../models/BroadcastLog";
+import { User } from "../models/User";
 
-// ─── Thông báo sản phẩm mới → toàn bộ follower ────────────────────────────
-/**
- * Thêm vào cuối notification.service.ts (cùng file với notifyFollowersNewProduct / notifySellerNewReview).
- * Nhớ thêm import BroadcastLog ở đầu file:
- *   import { BroadcastLog } from '../models/BroadcastLog';
- */
-
-/** Gửi thông báo broadcast từ admin đến nhóm người dùng được chỉ định */
 export async function broadcastToUsers(params: {
   adminId: string;
   content: string;
@@ -19,15 +13,14 @@ export async function broadcastToUsers(params: {
 }): Promise<{ sentCount: number; broadcast: object }> {
   const { adminId, content, targetRole } = params;
 
-  // Xây query: luôn loại trừ Admin; nếu targetRole cụ thể thì lọc thêm role
   const query: Record<string, unknown> =
     targetRole === "all" ? { role: { $ne: "Admin" } } : { role: targetRole };
 
-  const recipients = await User.find(query).select("_id");
+  // [FIX PERFORMANCE 3] Sử dụng Lean Queries để tránh RAM Leak
+  const recipients = await User.find(query).select("_id").lean();
   const sentCount = recipients.length;
 
   if (sentCount > 0) {
-    // Tạo Notification docs trong một lần ghi duy nhất
     const docs = recipients.map((u) => ({
       userId: u._id,
       type: "broadcast",
@@ -35,9 +28,8 @@ export async function broadcastToUsers(params: {
       isRead: false,
     }));
 
-    const inserted = await Notification.insertMany(docs);
+    const inserted = await notificationRepository.insertMany(docs);
 
-    // Map userId → notifId để emit id thật (tránh tmp_ trên client)
     const idByUser = new Map<string, string>(
       inserted.map((n, i) => [
         recipients[i]._id.toString(),
@@ -56,9 +48,8 @@ export async function broadcastToUsers(params: {
     }
   }
 
-  // Lưu bản ghi lịch sử broadcast
-  const log = await BroadcastLog.create({
-    adminId: new mongoose.Types.ObjectId(adminId),
+  const log = await broadcastLogRepository.create({
+    adminId,
     content,
     targetRole,
     sentCount,
@@ -67,7 +58,7 @@ export async function broadcastToUsers(params: {
   return {
     sentCount,
     broadcast: {
-      id: (log._id as mongoose.Types.ObjectId).toString(),
+      id: log._id.toString(),
       content: log.content,
       targetRole: log.targetRole,
       sentCount: log.sentCount,
@@ -83,16 +74,18 @@ export async function notifyFollowersNewProduct(
   productName: string,
 ): Promise<void> {
   try {
+    // [FIX PERFORMANCE 3]
     const followers = await User.find({
       following: new mongoose.Types.ObjectId(sellerId),
-    }).select("_id");
+    })
+      .select("_id")
+      .lean();
 
     if (followers.length === 0) return;
 
     const previewText = `${sellerName} vừa đăng mẻ hải sản mới: ${productName}`;
     const io = getIO();
 
-    // Lưu tất cả vào DB một lần (insertMany hiệu quả hơn save() lặp)
     const docs = followers.map((f) => ({
       userId: f._id,
       type: "new_product",
@@ -100,9 +93,8 @@ export async function notifyFollowersNewProduct(
       productId: new mongoose.Types.ObjectId(productId),
     }));
 
-    const inserted = await Notification.insertMany(docs);
+    const inserted = await notificationRepository.insertMany(docs);
 
-    // FIX: map follower._id → notif._id để emit id thật, tránh tmp_ trên client
     const idByFollower = new Map<string, string>(
       inserted.map((n, i) => [
         followers[i]._id.toString(),
@@ -113,19 +105,19 @@ export async function notifyFollowersNewProduct(
     for (const f of followers) {
       const fId = f._id.toString();
       io.to(`user_${fId}`).emit("notification", {
-        id: idByFollower.get(fId), // ← id thật từ MongoDB
+        id: idByFollower.get(fId),
         type: "new_product",
         productId,
         sellerId,
         preview: previewText,
       });
     }
-  } catch (err) {
-    console.error("Lỗi khi lưu/phát thông báo sản phẩm mới:", err);
+  } catch (err: any) {
+    logger.error("Lỗi khi lưu/phát thông báo sản phẩm mới:", {
+      message: err.message,
+    });
   }
 }
-
-// ─── Thông báo đánh giá mới → người bán ───────────────────────────────────
 
 export async function notifySellerNewReview(params: {
   sellerId: string;
@@ -140,8 +132,8 @@ export async function notifySellerNewReview(params: {
   const {
     sellerId,
     reviewerName,
-    productId,
     productName,
+    productId,
     reviewId,
     rating,
     comment,
@@ -152,27 +144,25 @@ export async function notifySellerNewReview(params: {
     `"${comment ? comment.slice(0, 40) : "Không có nhận xét"}"`;
 
   try {
-    const notif = new Notification({
-      userId: new mongoose.Types.ObjectId(sellerId),
+    const notif = await notificationRepository.create({
+      userId: new mongoose.Types.ObjectId(sellerId) as any,
       type: "new_review",
       content: previewText,
-      productId: new mongoose.Types.ObjectId(productId),
-      reviewId: new mongoose.Types.ObjectId(reviewId),
+      productId: new mongoose.Types.ObjectId(productId) as any,
+      reviewId: new mongoose.Types.ObjectId(reviewId) as any,
     });
 
-    await notif.save();
-
-    getIO()
-      .to(`user_${sellerId}`)
-      .emit("notification", {
-        id: (notif._id as mongoose.Types.ObjectId).toString(), // ← FIX
-        type: "new_review",
-        productId,
-        sellerId,
-        reviewId,
-        preview: previewText,
-      });
-  } catch (err) {
-    console.error("Lỗi khi lưu và phát thông báo đánh giá:", err);
+    getIO().to(`user_${sellerId}`).emit("notification", {
+      id: notif._id.toString(),
+      type: "new_review",
+      productId,
+      sellerId,
+      reviewId,
+      preview: previewText,
+    });
+  } catch (err: any) {
+    logger.error("Lỗi khi lưu và phát thông báo đánh giá:", {
+      message: err.message,
+    });
   }
 }

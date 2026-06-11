@@ -1,74 +1,82 @@
 import { Request, Response } from "express";
-import { User } from "../models/User";
+import { followService } from "../services/follow.service";
+import { userRepository } from "../repositories/user.repository";
 import { sendServerError } from "../helpers/response.helper";
 import mongoose from "mongoose";
 
-// Trong tệp: backend/src/controllers/follow.controller.ts
-
+/**
+ * Bật/tắt theo dõi một người bán
+ */
 export async function toggleFollow(req: Request, res: Response) {
   const { userId } = req.user;
-  const sellerId = req.params.sellerId;
-
-  if (!sellerId || !mongoose.Types.ObjectId.isValid(sellerId)) {
-    return res.status(400).json({ message: "ID người bán không hợp lệ" });
-  }
-  if (userId.toString() === sellerId) {
-    return res.status(400).json({ message: "Không thể tự follow chính mình" });
-  }
+  const { sellerId } = req.params;
 
   try {
-    const user = await User.findById(userId);
-    if (!user)
-      return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    const result = await followService.toggleFollow(userId, sellerId);
+    return res.json(result);
+  } catch (err: any) {
+    if (err.status)
+      return res.status(err.status).json({ message: err.message });
+    return sendServerError(res, err);
+  }
+}
 
-    const sellerObjId = new mongoose.Types.ObjectId(sellerId);
-    const isFollowing = user.following.some((id) => id.toString() === sellerId);
+/**
+ * Kiểm tra trạng thái theo dõi hiện tại
+ */
+export async function checkFollow(req: Request, res: Response) {
+  const { userId } = req.user;
+  const { sellerId } = req.params;
 
-    // 🌟 GIẢI PHÁP BẢO MẬT: Chặn không cho phép theo dõi nếu người bán không tồn tại hoặc bị khóa tài khoản
-    if (!isFollowing) {
-      const sellerExists = await User.exists({
-        _id: sellerObjId,
-        isActive: true
-      });
-      if (!sellerExists) {
-        return res.status(404).json({ message: "Người bán không tồn tại hoặc tài khoản đã bị vô hiệu hóa." });
-      }
-    }
-
-    if (isFollowing) {
-      user.following = user.following.filter(
-        (id) => id.toString() !== sellerId,
-      );
-      await user.save();
-      return res.json({ message: "Đã hủy theo dõi", isFollowing: false });
-    }
-
-    user.following.push(sellerObjId as any);
-    await user.save();
-    return res.json({ message: "Đã theo dõi thành công", isFollowing: true });
+  try {
+    const isFollowing = await userRepository.isFollowing(userId, sellerId);
+    return res.json({ isFollowing });
   } catch (err) {
     return sendServerError(res, err);
   }
 }
 
-// Trong tệp: backend/src/controllers/follow.controller.ts (hàm checkFollow)
-
-export async function checkFollow(req: Request, res: Response) {
+/**
+ * Lấy danh sách những người dùng mà tài khoản hiện tại đang theo dõi
+ */
+export async function getFollowing(req: Request, res: Response) {
   const { userId } = req.user;
-  const sellerId = req.params.sellerId;
-
-  if (!sellerId || !mongoose.Types.ObjectId.isValid(sellerId)) {
-    return res.status(400).json({ message: "ID người bán không hợp lệ" });
-  }
-
   try {
-    // 🌟 GIẢI PHÁP HIỆU NĂNG: Chỉ truy vấn duy nhất mảng "following" của người dùng để kiểm tra
-    const user = await User.findById(userId).select("following");
+    const user = await userRepository.findRawById(userId);
     if (!user)
       return res.status(404).json({ message: "Không tìm thấy người dùng" });
 
-    const isFollowing = user.following.some((id) => id.toString() === sellerId);
-    return res.json({ isFollowing });
+    const followingUsers = await userRepository.find({
+      _id: { $in: user.following },
+    });
+    const data = followingUsers.map((u) => ({
+      UserID: u._id.toString(),
+      Name: u.name,
+      AvatarURL: u.avatar,
+      IsSeller: u.role === "User",
+    }));
+    return res.json(data);
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+
+/**
+ * Lấy danh sách những người dùng đang theo dõi tài khoản hiện tại
+ */
+export async function getFollowers(req: Request, res: Response) {
+  const { userId } = req.user;
+  try {
+    const followersUsers = await userRepository.find({
+      following: new mongoose.Types.ObjectId(userId),
+    });
+    const data = followersUsers.map((u) => ({
+      UserID: u._id.toString(),
+      Name: u.name,
+      AvatarURL: u.avatar,
+      IsSeller: u.role === "User",
+    }));
+    return res.json(data);
   } catch (err) {
     return sendServerError(res, err);
   }

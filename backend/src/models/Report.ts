@@ -24,4 +24,8 @@ const reportSchema = new Schema<IReport>(
   { timestamps: { createdAt: true, updatedAt: false } },
 );
 
+// TỐI ƯU HÓA TRUY VẤN: Đánh chỉ mục liên hợp hỗ trợ việc truy vấn và kiểm tra trùng lặp báo cáo nhanh hơn
+reportSchema.index({ reporterId: 1, productId: 1 });
+reportSchema.index({ status: 1, createdAt: -1 });
+
 export const Report = model<IReport>("Report", reportSchema);

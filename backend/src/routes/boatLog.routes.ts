@@ -6,11 +6,18 @@ import {
   deleteBoatLog,
 } from "../controllers/boatLog.controller";
 import { authenticate } from "../middlewares/auth";
+import { validateSchema } from "../middlewares/validate";
+import { createBoatLogSchema } from "../validations/boatLog.validation";
 
 const router = Router();
 
 router.get("/", getBoatLogs);
-router.post("/", authenticate, createBoatLog);
+router.post(
+  "/",
+  authenticate,
+  validateSchema(createBoatLogSchema),
+  createBoatLog,
+);
 router.post("/:id/like", authenticate, toggleLikeBoatLog);
 router.delete("/:id", authenticate, deleteBoatLog);
 

@@ -26,13 +26,16 @@ const transporter = nodemailer.createTransport({
 });
 
 // 🌟 GIẢI PHÁP 2: Chỉ chạy xác minh cấu hình 1 lần duy nhất khi khởi động máy chủ
-if (process.env.EMAIL_USER && process.env.EMAIL_PASS && !process.env.EMAIL_USER.includes("your_email")) {
+if (
+  process.env.EMAIL_USER &&
+  process.env.EMAIL_PASS &&
+  !process.env.EMAIL_USER.includes("your_email")
+) {
   transporter.verify((err) => {
     if (err) logger.error(`[Email] SMTP configuration error: ${err.message}`);
     else logger.info("✅ [Email] SMTP Gmail connection is ready");
   });
 }
-
 
 async function sendOtpEmail(email: string, otp: string): Promise<void> {
   const user = process.env.EMAIL_USER;
@@ -71,16 +74,15 @@ async function sendOtpEmail(email: string, otp: string): Promise<void> {
   await transporter.sendMail(mailOptions);
 }
 
-// Cập nhật hàm hashOtp để tránh sập app khi thiếu ENV
+// KHẮC PHỤC LỖI TRUNG BÌNH: Ngăn chặn dùng mật khóa brute-force tĩnh nếu rỗng cấu hình bảo mật
 function hashOtp(otp: string): string {
   const secret = process.env.OTP_SECRET || process.env.JWT_SECRET;
   if (!secret) {
-    logger.warn("[OTP] Cảnh báo: Không tìm thấy OTP_SECRET hay JWT_SECRET. Đang sử dụng fallback key mặc định.");
+    throw new Error(
+      "[Security Critical] Không tìm thấy cấu hình OTP_SECRET hoặc JWT_SECRET. Từ chối băm OTP.",
+    );
   }
-  return crypto
-    .createHmac("sha256", secret || "fallback_default_secret_key_secure")
-    .update(otp)
-    .digest("hex");
+  return crypto.createHmac("sha256", secret).update(otp).digest("hex");
 }
 
 function makeError(message: string, status: number): Error {
@@ -139,8 +141,6 @@ export const otpService = {
     }
   },
 
-
-
   async verifyOtp(email: string, otp: string): Promise<string> {
     const cleanEmail = email.toLowerCase().trim();
     const cleanOtp = String(otp).trim(); // Ép kiểu string để tránh lỗi crash tại hàm hashOtp
@@ -159,7 +159,7 @@ export const otpService = {
       const otpTtl = await redis.ttl(KEY_OTP(cleanEmail));
       await redis.expire(
         KEY_VERIFY_FAILS(cleanEmail),
-        otpTtl > 0 ? otpTtl : OTP_TTL_SEC
+        otpTtl > 0 ? otpTtl : OTP_TTL_SEC,
       );
     }
 
@@ -194,7 +194,6 @@ export const otpService = {
 
     return resetToken;
   },
-
 
   async getEmailByResetToken(resetToken: string): Promise<string> {
     const email = await redis.get(KEY_RESET(resetToken));

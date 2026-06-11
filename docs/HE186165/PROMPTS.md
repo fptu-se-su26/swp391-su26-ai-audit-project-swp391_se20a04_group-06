@@ -5,7 +5,7 @@
 
 ---
 
-## P-001 — Thiết kế database schema
+## P-001 — Thiết kế cơ sở dữ liệu MongoDB (Mongoose Schemas)
 
 **Công cụ:** Claude Sonnet  
 **Ngày:** 19/05/2026  
@@ -17,12 +17,12 @@ Tôi đang xây dựng ứng dụng web mua bán hải sản tươi sống tại
 Người dùng có thể đăng ký làm người bán hoặc người mua.
 Người bán đăng tin sản phẩm kèm ảnh, giá, vị trí (lat/lng).
 Người mua có thể tìm kiếm theo loại hải sản, khu vực, giá; xem chi tiết, đánh giá sản phẩm; chat với người bán.
-Hãy đề xuất database schema (MySQL) với đầy đủ các bảng, cột, quan hệ khóa ngoại.
+Hãy đề xuất các MongoDB collections (Schemas dùng Mongoose) với đầy đủ các trường dữ liệu và liên kết giữa chúng.
 ```
 
-**Output AI trả về (tóm tắt):** AI đề xuất 9 bảng với đầy đủ quan hệ 1-n và n-n.
+**Output AI trả về (tóm tắt):** AI đề xuất các collection chính: `User`, `Product`, `Message`, `Notification`, `Review` với các schema Mongoose tương ứng.
 
-**Đã chỉnh sửa:** Thêm cột `lat`, `lng`, `address` vào `users` và `products`; thêm bảng `images` riêng để một sản phẩm có nhiều ảnh.
+**Đã chỉnh sửa:** Tích hợp trực tiếp mảng `images` vào trong `Product` schema (thay vì tách collection riêng) để tận dụng cấu trúc lồng nhau của MongoDB; thêm trường `location` kiểu GeoJSON `Point` để hỗ trợ truy vấn không gian ($near).
 
 ---
 
@@ -34,16 +34,16 @@ Hãy đề xuất database schema (MySQL) với đầy đủ các bảng, cột,
 
 **Prompt đã gửi:**
 ```
-Viết auth.controller.ts cho Express + TypeScript + MySQL với:
-- Đăng ký: hash password với bcrypt, lưu vào DB, trả JWT
+Viết auth.controller.ts cho Express + TypeScript + Mongoose với:
+- Đăng ký: hash password với bcrypt, lưu vào MongoDB, trả JWT
 - Đăng nhập: kiểm tra email + password, trả JWT (expires 7d)
 - Middleware verifyToken: kiểm tra Bearer token trong header, gán user vào req
-Dùng mysql2 pool, không dùng ORM.
+Dùng Mongoose Model để tương tác với DB.
 ```
 
 **Output AI trả về (tóm tắt):** Code đầy đủ cho register, login, middleware.
 
-**Đã chỉnh sửa:** Thêm kiểm tra email đã tồn tại trước khi insert; thêm try-catch chi tiết hơn; thêm trường `role` (buyer/seller) vào JWT payload.
+**Đã chỉnh sửa:** Thêm kiểm tra email đã tồn tại trước khi tạo user mới; thêm pre-save hook trong User Schema để tự động hash mật khẩu; thêm trường `role` (buyer/seller) vào JWT payload.
 
 ---
 
@@ -62,9 +62,9 @@ async function getProducts(req: Request, res: Response) {
 ```
 *(Copilot tự gợi ý phần còn lại)*
 
-**Output AI trả về (tóm tắt):** SQL query động với WHERE clause và ORDER BY.
+**Output AI trả về (tóm tắt):** Mongoose query object động với các filter `$gte`, `$lte`, `$regex` và `.sort()`, `.skip()`, `.limit()`.
 
-**Đã chỉnh sửa:** Thêm filter khoảng cách địa lý (Haversine) khi user truyền `lat`, `lng`, `radius` — phần này tự viết theo `utils/haversine.ts`.
+**Đã chỉnh sửa:** Tích hợp truy vấn địa lý sử dụng `$near` của MongoDB để tìm kiếm các sản phẩm lân cận vị trí GPS của người dùng; sử dụng Haversine để tính toán chính xác khoảng cách hiển thị lên giao diện.
 
 ---
 
@@ -82,7 +82,7 @@ Frontend: React
 Yêu cầu:
 - Mỗi cuộc hội thoại có conversationId riêng
 - Hiển thị trạng thái online/offline
-- Lưu tin nhắn vào MySQL khi gửi
+- Lưu tin nhắn vào MongoDB khi gửi
 - Load lịch sử tin nhắn khi mở chat
 Liệt kê các event cần dùng và luồng xử lý.
 ```
@@ -91,7 +91,7 @@ Liệt kê các event cần dùng và luồng xử lý.
 
 Events: `join_conversation`, `send_message`, `receive_message`, `user_online`, `user_offline`, `typing`, `stop_typing`.
 
-Luồng: Client join room → emit send_message → server lưu DB → emit receive_message đến room.
+Luồng: Client join room → emit send_message → server lưu MongoDB qua Message repository → emit receive_message đến room.
 
 **Đã chỉnh sửa:** Thêm logic `isRead` flag; thêm event `message_read` để hiển thị tick đã đọc.
 

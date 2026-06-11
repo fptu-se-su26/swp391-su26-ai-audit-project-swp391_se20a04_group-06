@@ -1,5 +1,4 @@
-import React from 'react';
-import { C } from './theme';
+// React component utilities
 export const fmt = (n) => new Intl.NumberFormat("vi-VN").format(n) + "đ";
 export const pill = (bg, color, label) => (
   <span

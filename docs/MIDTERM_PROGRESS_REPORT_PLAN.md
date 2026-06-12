@@ -39,6 +39,7 @@ Tài liệu này lập kế hoạch chi tiết cho báo cáo tiến độ giữa
 | **Hệ Thống Chat Realtime** | ✅ 100% | Nhắn tin 1-1 giữa Buyer và Seller qua Socket.io, lưu lịch sử trò chuyện trong MongoDB. |
 | **Đánh Giá & Theo Dõi (Review/Follow)** | ✅ 100% | Người mua đánh giá chất lượng sản phẩm (rating sao + bình luận + ảnh thực tế), theo dõi ngư dân yêu thích. |
 | **Admin Control Panel** | ✅ 100% | Thống kê số lượng bài đăng, quản lý danh sách tài khoản, duyệt tin đăng và xử lý báo cáo vi phạm. |
+| **Trợ Lý Chatbot AI (AI Assistant)** | ✅ 100% | Tích hợp mô hình LLM Llama 3.1 qua Groq Cloud API làm "Trợ lý hải sản" tư vấn cách chọn/chế biến hải sản và hướng dẫn tính năng web. |
 | **Kiểm Thử & Tự Động Hóa (CI/CD)** | ✅ 100% | Tích hợp bộ kiểm thử tự động Jest (16 test suites), tài liệu hóa API tương tác bằng Swagger UI (`/api-docs`), thiết lập GitHub Actions CI/CD Pipeline. |
 
 ---
@@ -83,11 +84,13 @@ flowchart LR
         UC_Chat([UC-4: Nhắn tin realtime]):::usecase
         UC_Review([UC-5: Đánh giá & Theo dõi]):::usecase
         UC_Admin([UC-6: Quản trị hệ thống]):::usecase
+        UC_Chatbot([UC-7: Trợ lý Chatbot AI]):::usecase
     end
 
     %% Links between Actors and Use Cases
     User --> UC_Auth
     User --> UC_Forgot
+    User --> UC_Chatbot
     
     Buyer --> UC_Explore
     Buyer --> UC_Review
@@ -106,9 +109,11 @@ flowchart LR
     UC_Explore -. "<<include>>" .-> UC_VerifyGPS
     
     %% Connections to external systems
+    GroqSys["«System»\nGroq Cloud API"]:::system
     UC_SendOTP --> EmailSys
     UC_UploadImg --> Cloudinary
     UC_UpgradePremium --> Sepay
+    UC_Chatbot --> GroqSys
 ```
 
 ---
@@ -397,6 +402,20 @@ Dưới đây là đặc tả chi tiết cho 6 Use Case cốt lõi đã được
 
 ---
 
+### UC-7: Trợ Lý Chatbot AI
+
+| Trường Thông Tin | Nội Dung Đặc Tả |
+| :--- | :--- |
+| **Tên Use Case** | UC-7: Trợ lý Chatbot AI |
+| **Tác Nhân (Actors)** | Người Mua (Buyer), Người Bán (Seller) |
+| **Mô Tả** | Người dùng chat trực tiếp với Trợ lý AI trên giao diện để nhờ tư vấn cách lựa chọn, bảo quản hải sản, gợi ý món ăn ngon, hoặc hướng dẫn sử dụng các chức năng của website HảiSản.vn. |
+| **Tiền Điều Kiện** | Hệ thống đã khởi chạy và cấu hình kết nối Groq API Key. |
+| **Luồng Sự Kiện Chính** | 1. Người dùng click vào biểu tượng bong bóng Chatbot AI trên màn hình.<br>2. Hệ thống mở cửa sổ hội thoại chat.<br>3. Người dùng nhập câu hỏi (ví dụ: "làm sao để chọn cua biển ngon?") và nhấn gửi.<br>4. Backend nhận request kèm theo nội dung câu hỏi và mảng lịch sử trò chuyện (history) để hỗ trợ giữ ngữ cảnh hội thoại.<br>5. Backend gọi Groq Cloud API sử dụng model `llama-3.1-8b-instant` cùng system instruction định nghĩa sẵn vai trò "Trợ lý hải sản".<br>6. Hệ thống nhận câu trả lời từ LLM trong thời hạn tối đa 15 giây (timeout cooldown).<br>7. Trả câu trả lời về frontend và hiển thị sinh động lên màn hình chat cho người dùng. |
+| **Luồng Thay Thế** | * **Chưa cấu hình API Key hoặc Groq API lỗi:** Hệ thống trả về thông báo lỗi "Hệ thống AI đang bảo trì" hoặc "Trợ lý AI tạm thời không khả dụng".<br>* **Lỗi quá tải / quá hạn thời gian (Timeout):** Trả về thông báo "AI đang bận, vui lòng thử lại sau" (cooldown 15s) hoặc "Hệ thống đang quá tải" (lỗi 429). |
+| **Hậu Điều Kiện** | Cuộc trò chuyện diễn ra bình thường, người dùng nhận được tư vấn trực tiếp từ AI. |
+
+---
+
 ## 🎯 Kế Hoạch 5 Tuần Tiếp Theo (Tuần 6 - 10)
 
 ### Tuần 6: Báo Cáo Giữa Kỳ & Tối Ưu Hóa Cổng Webhook
@@ -444,6 +463,7 @@ Dưới đây là đặc tả chi tiết cho 6 Use Case cốt lõi đã được
 * **Bước 2: Luồng Xác Thực (Authentication):** Đăng ký nhanh tài khoản người bán bằng Họ tên, Email, Mật khẩu (hoặc Đăng nhập bằng Google OAuth) $\rightarrow$ Đăng nhập thành công.<br>* **Bước 2.1: Quên mật khẩu (Demo bổ sung):** Nhập email quên mật khẩu $\rightarrow$ Nhận mã OTP xác minh qua Email (Gmail SMTP) $\rightarrow$ Xác nhận thành công và cập nhật mật khẩu mới.
 * **Bước 3: Người Bán đăng tải sản phẩm:** Người bán đăng bài bán "Tôm hùm xanh" kèm ảnh, nhập tọa độ GPS cập cảng, số ký.
 * **Bước 4: Người Mua tương tác:** Đăng nhập tài khoản người mua $\rightarrow$ Vào trang chi tiết tôm hùm $\rightarrow$ Chat realtime thương lượng với người bán (mở song song hai màn hình để thấy tin nhắn nhảy realtime).
+* **Bước 4.1: Tư vấn với Trợ lý Chatbot AI:** Người mua mở bong bóng chat AI, đặt câu hỏi về cách chế biến tôm hùm hoặc cách đăng ký Premium $\rightarrow$ Trợ lý AI ("Trợ lý hải sản") trả lời tức thì sinh động.
 * **Bước 5: Trang Admin:** Đăng nhập quyền Admin $\rightarrow$ Xem dashboard thống kê biểu đồ hoạt động của chợ $\rightarrow$ Kiểm duyệt tin đăng.
 * **Bước 6: Minh chứng kỹ thuật:** Mở Swagger UI (`/api-docs`) và chạy lệnh chạy test `npm run test` trực tiếp để chứng minh hệ thống có Unit Tests bảo vệ mã nguồn.
 

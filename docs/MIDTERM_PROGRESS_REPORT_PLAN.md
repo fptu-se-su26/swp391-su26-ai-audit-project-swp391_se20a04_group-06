@@ -268,6 +268,47 @@ Sơ đồ ERD trên phản ánh thiết kế cơ sở dữ liệu hướng tài 
 
 ---
 
+## 🧪 Hệ Thống Kiểm Thử Tự Động (Automated Testing Suite)
+
+Để đảm bảo chất lượng phần mềm lớp doanh nghiệp và hạn chế tối đa lỗi hồi quy (regression bugs) khi phát triển các tính năng nâng cao ở giai đoạn sau, hệ thống backend được bao bọc bởi bộ kiểm thử tự động toàn diện sử dụng **Jest** và **ts-jest** (dành cho TypeScript):
+
+### 1. Danh Sách Các Test Suites Đã Viết (16 Test Files)
+
+| STT | File Test | Thành Phần Kiểm Thử | Nội Dung Chi Tiết |
+| :---: | :--- | :--- | :--- |
+| 1 | `auth.service.test.ts` | Xác thực (Auth Service) | Test logic đăng ký, đăng nhập, cấp JWT, so khớp mật khẩu băm Bcrypt. |
+| 2 | `otp.service.test.ts` | Xác minh OTP (OTP Service) | Test logic tạo mã OTP ngẫu nhiên, lưu trữ Redis Cache, gửi OTP và xác thực khớp token. |
+| 3 | `product.service.test.ts` | Sản phẩm (Product Service) | Test các nghiệp vụ CRUD, validate dữ liệu đầu vào và logic cooldown đẩy bài. |
+| 4 | `review.service.test.ts` | Đánh giá (Review Service) | Test tính điểm đánh giá trung bình sao của ngư dân khi có review mới được gửi lên. |
+| 5 | `user.service.test.ts` | Người dùng (User Service) | Test các hàm cập nhật thông tin cá nhân và đặc biệt là logic xóa tài khoản cascade GDPR nâng cao. |
+| 6 | `message.service.test.ts` | Chat (Message Service) | Test luồng lưu tin nhắn chat, gửi ảnh, vị trí và cập nhật trạng thái đã đọc (`isRead`). |
+| 7 | `follow.service.test.ts` | Theo dõi (Follow Service) | Test logic người mua bấm theo dõi/hủy theo dõi ngư dân và đồng bộ số liệu followers. |
+| 8 | `favorite.service.test.ts`| Yêu thích (Favorite Service)| Test chức năng lưu sản phẩm vào danh sách yêu thích và kiểm tra tồn tại. |
+| 9 | `boatLog.service.test.ts` | Nhật ký (BoatLog Service) | Test nghiệp vụ đăng và quản lý nhật ký cabin hành trình của ngư dân. |
+| 10 | `recipe.service.test.ts` | Công thức (Recipe Service) | Test CRUD công thức nấu món ăn hải sản và quản lý lượt xem. |
+| 11 | `post.service.test.ts` | Bài viết (Post Service) | Test CRUD bài viết cộng đồng, tính năng thích (like) và bình luận (comment). |
+| 12 | `report.service.test.ts` | Báo cáo (Report Service) | Test logic người dùng gửi báo cáo vi phạm sản phẩm lên hệ thống. |
+| 13 | `admin.service.test.ts` | Quản trị (Admin Service) | Test các quyền hạn Admin: xóa tin vi phạm, khóa tài khoản, duyệt tin đăng. |
+| 14 | `badge.service.test.ts` | Danh hiệu (Badge Service) | Test hệ thống tự động cấp danh hiệu (uy tín, tích cực) cho tài khoản ngư dân. |
+| 15 | `haversine.test.ts` | Thuật toán khoảng cách | Test thuật toán Haversine tính toán khoảng cách thực tế mặt cầu giữa 2 tọa độ GPS. |
+| 16 | `follow.controller.test.ts`| Điều hướng API Follow | Test tích hợp (Integration Test) luồng API endpoint của tính năng theo dõi. |
+
+### 2. Các Lệnh Thực Thi Kiểm Thử
+
+* **Chạy toàn bộ các test suites:**
+  ```bash
+  cd backend
+  npm run test
+  ```
+* **Chạy test và xuất báo cáo độ bao phủ mã nguồn (Coverage Report):**
+  ```bash
+  cd backend
+  npm run test:cov
+  ```
+  *Báo cáo kết quả kiểm thử dạng HTML trực quan sẽ được xuất ra thư mục `backend/coverage/lcov-report/index.html`. Cho phép xem trực quan tỷ lệ bao phủ của từng file code nghiệp vụ.*
+
+---
+
 ## 📝 Đặc Tả Và Luồng Xử Lý Chi Tiết Của Các Use Case Đã Hoàn Thành
 
 Dưới đây là đặc tả chi tiết cho 6 Use Case cốt lõi đã được xây dựng và hoàn thành trong giai đoạn 1 (Tuần 1 - 5).

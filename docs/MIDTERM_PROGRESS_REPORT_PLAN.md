@@ -435,13 +435,13 @@ Dưới đây là đặc tả chi tiết cho 6 Use Case cốt lõi đã được
 1. **Slide 1: Giới thiệu dự án & Thành viên:** Tên đề tài HảiSản.vn - Hệ thống chợ hải sản bản địa kết nối thời gian thực theo định vị.
 2. **Slide 2: Vấn đề & Giải pháp:** Khó khăn của ngư dân (bị thương lái ép giá, người mua không kiểm chứng được độ tươi ngon) $\rightarrow$ Giải pháp kết nối trực tiếp, định vị GPS gần nhất và gọi video WebRTC trực tuyến.
 3. **Slide 3: Kiến trúc hệ thống:** Mô tả mô hình 3-Tier, sơ đồ WebRTC Signaling qua Socket.io và cơ chế bảo mật JWT + Redis.
-4. **Slide 4: Sơ đồ ERD (Database Design):** Giải thích 11 collections của MongoDB, các liên kết logic và hệ thống chỉ mục (GPS index, Text index).
+4. **Slide 4: Sơ đồ ERD (Database Design):** Giải thích thiết kế cơ sở dữ liệu MongoDB, các liên kết logic và hệ thống chỉ mục (GPS index, Text index).
 5. **Slide 5: Tiến độ thực tế (Những gì đã chạy được):** Liệt kê các chức năng đã làm, đính kèm kết quả chạy CI/CD thành công trên GitHub.
 6. **Slide 6: Kế hoạch Phase tiếp theo:** Kế hoạch chi tiết từ tuần 6 đến tuần 10.
 
 ### 2. Kịch Bản Demo Trực Quan (5 - 7 Phút)
 * **Bước 1: Trải nghiệm người dùng chưa đăng nhập:** Mở trang chủ, hệ thống tự động định vị GPS của người dùng và hiển thị danh sách ngư dân & hải sản xung quanh trên bản đồ Leaflet. Tìm kiếm hải sản bằng Full-Text Search.
-* **Bước 2: Luồng Xác Thực (Authentication):** Tạo tài khoản người bán mới $\rightarrow$ Nhận OTP $\rightarrow$ Đăng nhập.
+* **Bước 2: Luồng Xác Thực (Authentication):** Đăng ký nhanh tài khoản người bán bằng Họ tên, Email, Mật khẩu (hoặc Đăng nhập bằng Google OAuth) $\rightarrow$ Đăng nhập thành công.<br>* **Bước 2.1: Quên mật khẩu (Demo bổ sung):** Nhập email quên mật khẩu $\rightarrow$ Nhận mã OTP xác minh qua Email (Gmail SMTP) $\rightarrow$ Xác nhận thành công và cập nhật mật khẩu mới.
 * **Bước 3: Người Bán đăng tải sản phẩm:** Người bán đăng bài bán "Tôm hùm xanh" kèm ảnh, nhập tọa độ GPS cập cảng, số ký.
 * **Bước 4: Người Mua tương tác:** Đăng nhập tài khoản người mua $\rightarrow$ Vào trang chi tiết tôm hùm $\rightarrow$ Chat realtime thương lượng với người bán (mở song song hai màn hình để thấy tin nhắn nhảy realtime).
 * **Bước 5: Trang Admin:** Đăng nhập quyền Admin $\rightarrow$ Xem dashboard thống kê biểu đồ hoạt động của chợ $\rightarrow$ Kiểm duyệt tin đăng.

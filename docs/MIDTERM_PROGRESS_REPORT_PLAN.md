@@ -242,6 +242,30 @@ erDiagram
     PRODUCT ||--o{ REPORT : "bị báo cáo (productId)"
 ```
 
+### 📝 Giải Thích Chi Tiết Sơ Đồ Quan Hệ Thực Thể (ERD Specifications)
+
+Sơ đồ ERD trên phản ánh thiết kế cơ sở dữ liệu hướng tài liệu (Document-oriented) của MongoDB nhưng vẫn duy trì các liên kết logic chặt chẽ để phục vụ các luồng nghiệp vụ phức tạp:
+
+1. **Thực thể Trung tâm & Phân quyền (`USER`):**
+   * Đóng vai trò là Actor trong hệ thống. Dựa vào trường `role` để phân quyền (`User` hoặc `Admin`).
+   * Các cờ trạng thái `isVerified` (ngư dân uy tín) và `isPremium` (tài khoản ngư dân trả phí qua cổng Sepay) quyết định quyền lợi hiển thị tin đăng.
+   * Liên kết tự tham chiếu (Self-referencing): Mảng `favorites` (lưu danh sách các `PRODUCT` yêu thích) và mảng `following` (lưu ID các `USER` là ngư dân mà người này đang theo dõi).
+
+2. **Quản lý Hàng hóa & Không gian (`PRODUCT`):**
+   * Mỗi sản phẩm được đăng bán bởi duy nhất một ngư dân (`sellerId` liên kết đến `USER` với quan hệ 1-N).
+   * Chứa trường `location` định dạng **GeoJSON Point** được đánh chỉ mục `2dsphere` để phục vụ truy vấn khoảng cách GPS theo thời gian thực (Tìm quanh đây).
+
+3. **Giao tiếp Realtime (`MESSAGE` & `NOTIFICATION`):**
+   * `MESSAGE` lưu trữ các hội thoại thương lượng. Nó liên kết với `PRODUCT` (`productId`) để lưu ngữ cảnh cuộc chat (Chat về sản phẩm nào) và kết nối `senderId`, `receiverId` về `USER`.
+   * `NOTIFICATION` lưu các thông báo đẩy realtime cho người dùng (`userId`), chứa liên kết động tùy chọn tới `productId` hoặc `reviewId` để khi click vào thông báo sẽ chuyển hướng đúng trang.
+
+4. **Tương tác Cộng đồng & Uy tín (`REVIEW`, `POST`, `RECIPE`, `BOAT_LOG`):**
+   * `REVIEW` thể hiện đánh giá của người mua (`reviewerId`) dành cho sản phẩm (`productId`) và gián tiếp cho người bán (`sellerId`), giúp hệ thống tự động tính toán lại điểm rating trung bình cho ngư dân.
+   * `POST` (bài viết cộng đồng), `RECIPE` (công thức chế biến), và `BOAT_LOG` (nhật ký cabin hành trình đi biển của ngư dân) giúp kết nối cộng đồng. Tất cả đều liên kết trực tiếp với tác giả viết bài (`userId`/`authorId`).
+
+5. **Giám sát và Hỗ trợ (`REPORT`):**
+   * Lưu trữ các khiếu nại của người dùng (`reporterId`) về một sản phẩm vi phạm (`productId`) gửi đến Admin để phê duyệt hoặc gỡ bỏ tin đăng.
+
 ---
 
 ## 📝 Đặc Tả Và Luồng Xử Lý Chi Tiết Của Các Use Case Đã Hoàn Thành

@@ -43,39 +43,216 @@ Tài liệu này lập kế hoạch chi tiết cho báo cáo tiến độ giữa
 
 ---
 
-## 📐 Kiến Trúc Use Case Của Hệ Thống (Mới Cập Nhật)
+## 📐 Sơ Đồ Use Case Hệ Thống (UML Use Case Diagram)
 
-Dưới đây là sơ đồ Use Case tổng thể đại diện cho các tác vụ của 3 Actor chính (**Người Mua**, **Người Bán**, **Admin**) đối với các chức năng đã hoàn thành tính đến Tuần 5.
+Dưới đây là sơ đồ Use Case tổng thể đại diện cho các tác vụ của các Actor chính đối với các chức năng đã hoàn thành tính đến Tuần 5, được thiết kế theo đúng chuẩn UML với quan hệ kế thừa (generalization), bao gồm (include) và mở rộng (extend).
 
 ```mermaid
-flowchart TD
-    subgraph HeThong ["HảiSản.vn - Hệ Thống Chợ Hải Sản Bản Địa"]
-        UC1((UC-1: Đăng ký & Đăng nhập))
-        UC2((UC-2: Đăng bán hải sản))
-        UC3((UC-3: Tìm kiếm theo định vị GPS))
-        UC4((UC-4: Nhắn tin realtime))
-        UC5((UC-5: Đánh giá & Theo dõi))
-        UC6((UC-6: Quản trị hệ thống))
+flowchart LR
+    %% Actors definition
+    classDef actor fill:#f9f9f9,stroke:#333,stroke-width:2px,rx:10px;
+    classDef system fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef usecase fill:#fff,stroke:#333,stroke-width:1.5px,rx:30px;
+
+    User["👤 User (Thành viên)"]:::actor
+    Buyer["👤 Buyer (Người mua)"]:::actor
+    Seller["👤 Seller (Người bán)"]:::actor
+    Admin["👤 Admin (Quản trị viên)"]:::actor
+    
+    Sepay["«System»\nSepay Webhook"]:::system
+    Cloudinary["«System»\nCloudinary CDN"]:::system
+    EmailSys["«System»\nGmail SMTP"]:::system
+
+    %% Generalization (Kế thừa actor)
+    Buyer -- inherits --> User
+    Seller -- inherits --> User
+    Admin -- inherits --> User
+
+    subgraph SystemBoundary ["HảiSản.vn (System Boundary)"]
+        UC_Auth([UC-1: Đăng nhập & Đăng ký]):::usecase
+        UC_Forgot([UC-1.1: Quên mật khẩu]):::usecase
+        UC_SendOTP([UC-1.2: Gửi OTP Email]):::usecase
+        
+        UC_CreateProduct([UC-2: Đăng bán hải sản]):::usecase
+        UC_UploadImg([UC-2.1: Tải lên hình ảnh]):::usecase
+        UC_UpgradePremium([UC-2.2: Nâng cấp Premium]):::usecase
+        
+        UC_Explore([UC-3: Tìm kiếm GPS]):::usecase
+        UC_VerifyGPS([UC-3.1: Định vị tọa độ]):::usecase
+        
+        UC_Chat([UC-4: Nhắn tin realtime]):::usecase
+        UC_Review([UC-5: Đánh giá & Theo dõi]):::usecase
+        UC_Admin([UC-6: Quản trị hệ thống]):::usecase
     end
 
-    Buyer([Người Mua - Buyer])
-    Seller([Người Bán - Seller])
-    Admin([Quản Trị Viên - Admin])
+    %% Links between Actors and Use Cases
+    User --> UC_Auth
+    User --> UC_Forgot
+    
+    Buyer --> UC_Explore
+    Buyer --> UC_Review
+    
+    Seller --> UC_CreateProduct
+    Seller --> UC_UpgradePremium
+    
+    Buyer --> UC_Chat
+    Seller --> UC_Chat
+    
+    Admin --> UC_Admin
 
-    %% Mối liên kết của Người Mua
-    Buyer ---> UC1
-    Buyer ---> UC3
-    Buyer ---> UC4
-    Buyer ---> UC5
+    %% Include / Extend relationships
+    UC_Forgot -. "<<include>>" .-> UC_SendOTP
+    UC_CreateProduct -. "<<include>>" .-> UC_UploadImg
+    UC_Explore -. "<<include>>" .-> UC_VerifyGPS
+    
+    %% Connections to external systems
+    UC_SendOTP --> EmailSys
+    UC_UploadImg --> Cloudinary
+    UC_UpgradePremium --> Sepay
+```
 
-    %% Mối liên kết của Người Bán
-    Seller ---> UC1
-    Seller ---> UC2
-    Seller ---> UC4
-    Seller ---> UC5
+---
 
-    %% Mối liên kết của Admin
-    Admin ---> UC6
+## 🗄️ Sơ Đồ Cơ Sở Dữ Liệu Thực Thể (Database ERD Diagram)
+
+Dưới đây là sơ đồ quan hệ thực thể (ERD) chi tiết mô tả 10 collections chính của MongoDB trong hệ thống, chỉ rõ các kiểu dữ liệu và mối quan hệ ràng buộc khoá ngoại (Foreign Key) giữa các collection:
+
+```mermaid
+erDiagram
+    USER {
+        ObjectId id PK
+        string name
+        string email
+        string password
+        string role
+        boolean isActive
+        boolean isVerified
+        boolean isPremium
+        string avatar
+        array favorites
+        array following
+        date createdAt
+    }
+    PRODUCT {
+        ObjectId id PK
+        ObjectId sellerId FK
+        string type
+        string category
+        string name
+        string description
+        number price
+        string salesType
+        number totalWeight
+        number remainingWeight
+        string status
+        GeoJSONPoint location
+        date catchTime
+        string origin
+        date expiryDate
+        array images
+        date bumpedAt
+        date createdAt
+    }
+    MESSAGE {
+        ObjectId id PK
+        ObjectId productId FK
+        ObjectId senderId FK
+        ObjectId receiverId FK
+        string content
+        string imageUrl
+        object location
+        boolean isRead
+        date createdAt
+    }
+    REVIEW {
+        ObjectId id PK
+        ObjectId productId FK
+        ObjectId reviewerId FK
+        ObjectId sellerId FK
+        number rating
+        string comment
+        string imageUrl
+        date createdAt
+    }
+    POST {
+        ObjectId id PK
+        ObjectId userId FK
+        string title
+        string content
+        array images
+        array likes
+        array comments
+        number viewCount
+        date createdAt
+    }
+    RECIPE {
+        ObjectId id PK
+        ObjectId authorId FK
+        string title
+        string description
+        array ingredients
+        array instructions
+        string imageUrl
+        string difficulty
+        number cookingTime
+        number servings
+        array likes
+        number viewCount
+        date createdAt
+    }
+    BOAT_LOG {
+        ObjectId id PK
+        ObjectId userId FK
+        string content
+        array images
+        array likes
+        date createdAt
+    }
+    REPORT {
+        ObjectId id PK
+        ObjectId reporterId FK
+        ObjectId productId FK
+        string reason
+        string status
+        string adminNote
+        date createdAt
+    }
+    NOTIFICATION {
+        ObjectId id PK
+        ObjectId userId FK
+        string type
+        string content
+        boolean isRead
+        ObjectId productId FK
+        ObjectId reviewId FK
+        date createdAt
+    }
+    SUBSCRIPTION {
+        ObjectId id PK
+        ObjectId userId FK
+        string packageType
+        number price
+        string frequency
+        string preferredDay
+        string shippingAddress
+        string phone
+        string status
+        date createdAt
+    }
+
+    USER ||--o{ PRODUCT : "đăng bán (sellerId)"
+    USER ||--o{ MESSAGE : "gửi/nhận (senderId/receiverId)"
+    USER ||--o{ REVIEW : "đánh giá/nhận (reviewerId/sellerId)"
+    USER ||--o{ POST : "đăng bài (userId)"
+    USER ||--o{ RECIPE : "sáng tạo (authorId)"
+    USER ||--o{ BOAT_LOG : "nhật ký (userId)"
+    USER ||--o{ REPORT : "báo cáo (reporterId)"
+    USER ||--o{ NOTIFICATION : "nhận (userId)"
+    USER ||--o{ SUBSCRIPTION : "đăng ký (userId)"
+    
+    PRODUCT ||--o{ MESSAGE : "ngữ cảnh (productId)"
+    PRODUCT ||--o{ REVIEW : "được đánh giá (productId)"
+    PRODUCT ||--o{ REPORT : "bị báo cáo (productId)"
 ```
 
 ---

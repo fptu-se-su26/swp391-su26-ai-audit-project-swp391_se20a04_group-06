@@ -39,6 +39,8 @@ Tài liệu này lập kế hoạch chi tiết cho báo cáo tiến độ giữa
 | **Hệ Thống Chat Realtime** | ✅ 100% | Nhắn tin 1-1 giữa Buyer và Seller qua Socket.io, lưu lịch sử trò chuyện trong MongoDB. |
 | **Đánh Giá & Theo Dõi (Review/Follow)** | ✅ 100% | Người mua đánh giá chất lượng sản phẩm (rating sao + bình luận + ảnh thực tế), theo dõi ngư dân yêu thích. |
 | **Admin Control Panel** | ✅ 100% | Thống kê số lượng bài đăng, quản lý danh sách tài khoản, duyệt tin đăng và xử lý báo cáo vi phạm. |
+| **Diễn Đàn Cộng Đồng (Community)** | ✅ 100% | Đăng bài viết cộng đồng chia sẻ kinh nghiệm biển cả, thích (like), bình luận (comment) realtime và tải lên hình ảnh qua Cloudinary. |
+| **Cẩm Nang Công Thức (Recipes)** | ✅ 100% | Đăng tải công thức nấu món ăn hải sản, hướng dẫn chi tiết các bước, phân loại độ khó, thời gian nấu và định lượng khẩu phần. |
 | **Trợ Lý Chatbot AI (AI Assistant)** | ✅ 100% | Tích hợp mô hình LLM Llama 3.1 qua Groq Cloud API làm "Trợ lý hải sản" tư vấn cách chọn/chế biến hải sản và hướng dẫn tính năng web. |
 | **Kiểm Thử & Tự Động Hóa (CI/CD)** | ✅ 100% | Tích hợp bộ kiểm thử tự động Jest (16 test suites), tài liệu hóa API tương tác bằng Swagger UI (`/api-docs`), thiết lập GitHub Actions CI/CD Pipeline. |
 
@@ -85,12 +87,16 @@ flowchart LR
         UC_Review([UC-5: Đánh giá & Theo dõi]):::usecase
         UC_Admin([UC-6: Quản trị hệ thống]):::usecase
         UC_Chatbot([UC-7: Trợ lý Chatbot AI]):::usecase
+        UC_Recipe([UC-8: Sáng tạo công thức]):::usecase
+        UC_Post([UC-9: Đăng bài viết cộng đồng]):::usecase
     end
 
     %% Links between Actors and Use Cases
     User --> UC_Auth
     User --> UC_Forgot
     User --> UC_Chatbot
+    User --> UC_Recipe
+    User --> UC_Post
     
     Buyer --> UC_Explore
     Buyer --> UC_Review
@@ -107,6 +113,8 @@ flowchart LR
     UC_Forgot -. "<<include>>" .-> UC_SendOTP
     UC_CreateProduct -. "<<include>>" .-> UC_UploadImg
     UC_Explore -. "<<include>>" .-> UC_VerifyGPS
+    UC_Recipe -. "<<include>>" .-> UC_UploadImg
+    UC_Post -. "<<include>>" .-> UC_UploadImg
     
     %% Connections to external systems
     GroqSys["«System»\nGroq Cloud API"]:::system
@@ -416,6 +424,34 @@ Dưới đây là đặc tả chi tiết cho 6 Use Case cốt lõi đã được
 
 ---
 
+### UC-8: Sáng Tạo Công Thức Nấu Ăn
+
+| Trường Thông Tin | Nội Dung Đặc Tả |
+| :--- | :--- |
+| **Tên Use Case** | UC-8: Sáng tạo công thức nấu ăn |
+| **Tác Nhân (Actors)** | Người Mua (Buyer), Người Bán (Seller) |
+| **Mô Tả** | Người dùng đăng tải công thức nấu món ăn hải sản, hướng dẫn chi tiết các bước, phân loại độ khó, thời gian chế biến, định lượng khẩu phần và đính kèm hình ảnh minh họa qua Cloudinary. |
+| **Tiền Điều Kiện** | Người dùng đã đăng nhập thành công vào hệ thống. |
+| **Luồng Sự Kiện Chính** | 1. Người dùng chọn mục "Đăng công thức mới" trên giao diện.<br>2. Hệ thống hiển thị biểu mẫu điền thông tin công thức.<br>3. Người dùng nhập: Tiêu đề món ăn, mô tả, danh sách nguyên liệu, các bước thực hiện, độ khó (Easy / Medium / Hard), thời gian nấu (phút), định lượng servings.<br>4. Người dùng tải ảnh thành phẩm món ăn lên.<br>5. Hệ thống gọi Cloudinary API để tải ảnh lên và lưu URL ảnh nhận được.<br>6. Hệ thống validate và lưu dữ liệu vào collection `recipes` trong MongoDB.<br>7. Công thức được tạo thành công và xuất hiện công khai trên cẩm nang món ngon của website. |
+| **Luồng Thay Thế** | * **Thiếu hình ảnh hoặc nguyên liệu:** Hệ thống hiển thị cảnh báo yêu cầu điền đầy đủ để người dùng dễ theo dõi.<br>* **Lỗi lưu database:** Hệ thống báo lỗi và cho phép thử lại mà không mất thông tin đã điền. |
+| **Hậu Điều Kiện** | Bản ghi công thức nấu ăn mới được lưu vào database, tăng số lượng đóng góp của thành viên. |
+
+---
+
+### UC-9: Đăng Bài Viết Cộng Đồng
+
+| Trường Thông Tin | Nội Dung Đặc Tả |
+| :--- | :--- |
+| **Tên Use Case** | UC-9: Đăng bài viết cộng đồng |
+| **Tác Nhân (Actors)** | Người Mua (Buyer), Người Bán (Seller) |
+| **Mô Tả** | Người dùng viết bài đăng chia sẻ kinh nghiệm chọn hải sản, nhật ký đi biển, hoặc tin tức thị trường hải sản lên bảng tin cộng đồng. Hỗ trợ đính kèm nhiều ảnh, thích (like) và bình luận (comment) realtime. |
+| **Tiền Điều Kiện** | Người dùng đã đăng nhập thành công vào hệ thống. |
+| **Luồng Sự Kiện Chính** | 1. Người dùng click nút "Tạo bài viết mới" trên diễn đàn cộng đồng.<br>2. Hệ thống mở cửa sổ soạn thảo bài viết.<br>3. Người dùng nhập tiêu đề, nội dung bài viết và chọn tối đa 5 hình ảnh đi kèm.<br>4. Hệ thống thực hiện tải ảnh trực tiếp lên Cloudinary CDN.<br>5. Hệ thống lưu bài viết vào collection `posts` của MongoDB.<br>6. Bài viết được hiển thị lên bảng tin cộng đồng. Người dùng khác có thể nhấn thích (like) hoặc bình luận (comment) gửi realtime qua Socket.io. |
+| **Luồng Thay Thế** | * **Nội dung trống:** Hệ thống chặn và hiển thị yêu cầu "Nội dung bài viết không được để trống". |
+| **Hậu Điều Kiện** | Bài viết được đăng tải công khai trên bảng tin cộng đồng, sẵn sàng cho các tương tác. |
+
+---
+
 ## 🎯 Kế Hoạch 5 Tuần Tiếp Theo (Tuần 6 - 10)
 
 ### Tuần 6: Báo Cáo Giữa Kỳ & Tối Ưu Hóa Cổng Webhook
@@ -464,6 +500,7 @@ Dưới đây là đặc tả chi tiết cho 6 Use Case cốt lõi đã được
 * **Bước 3: Người Bán đăng tải sản phẩm:** Người bán đăng bài bán "Tôm hùm xanh" kèm ảnh, nhập tọa độ GPS cập cảng, số ký.
 * **Bước 4: Người Mua tương tác:** Đăng nhập tài khoản người mua $\rightarrow$ Vào trang chi tiết tôm hùm $\rightarrow$ Chat realtime thương lượng với người bán (mở song song hai màn hình để thấy tin nhắn nhảy realtime).
 * **Bước 4.1: Tư vấn với Trợ lý Chatbot AI:** Người mua mở bong bóng chat AI, đặt câu hỏi về cách chế biến tôm hùm hoặc cách đăng ký Premium $\rightarrow$ Trợ lý AI ("Trợ lý hải sản") trả lời tức thì sinh động.
+* **Bước 4.2: Tương tác Cộng đồng & Xem Công thức:** Người mua truy cập trang "Cộng đồng" xem bài viết đi biển của ngư dân, thả tim (like) và bình luận. Sau đó vào trang "Công thức" để học cách chế biến tôm hùm hấp nước dừa.
 * **Bước 5: Trang Admin:** Đăng nhập quyền Admin $\rightarrow$ Xem dashboard thống kê biểu đồ hoạt động của chợ $\rightarrow$ Kiểm duyệt tin đăng.
 * **Bước 6: Minh chứng kỹ thuật:** Mở Swagger UI (`/api-docs`) và chạy lệnh chạy test `npm run test` trực tiếp để chứng minh hệ thống có Unit Tests bảo vệ mã nguồn.
 

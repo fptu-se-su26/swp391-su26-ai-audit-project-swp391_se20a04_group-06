@@ -14,7 +14,7 @@ Tài liệu này lập kế hoạch chi tiết cho báo cáo tiến độ giữa
 | **Tuần 5** | Triển khai Unit Tests, Swagger API documentation, và thiết lập CI/CD tự động trên GitHub Actions. | 16 test suites (Jest) đạt độ bao phủ tốt, endpoint `/api-docs` hoạt động, CI chạy không lỗi. | ✅ Hoàn thành |
 | **Tuần 6** | **(Hiện tại)** Báo cáo tiến độ giữa kỳ, nhận phản hồi từ giáo viên và tối ưu hóa Sepay Webhook nâng cấp Premium. | Slide thuyết trình giữa kỳ, luồng Webhook hoàn thiện. | 🔄 Đang chạy |
 | **Tuần 7** | Triển khai cuộc gọi video trực tuyến thời gian thực (WebRTC Video Calling). | Kết nối ngang hàng P2P Buyer - Seller, giao diện Video call overlay. | 📋 Kế hoạch |
-| **Tuần 8** | Điều chỉnh giao diện Web & tối ưu hóa giao diện dựa trên phản hồi của người dùng/giáo viên. | Giao diện Web được tinh chỉnh, responsive tốt hơn và cải thiện trải nghiệm người dùng. | 📋 Kế hoạch |
+| **Tuần 8** | Xây dựng tính năng Nhật ký cabin (Boat Logs) và Điều chỉnh giao diện Web theo phản hồi. | Nhật ký cabin chạy được, giao diện Web được tối ưu hoá và responsive tốt hơn. | 📋 Kế hoạch |
 | **Tuần 9** | Tối ưu hóa hiệu năng truy vấn dữ liệu (Compound Indexes), rà soát bảo mật nâng cao (Spam rate limit, CSRF). | Hệ thống chịu tải tốt, vá toàn bộ lỗ hổng bảo mật. | 📋 Kế hoạch |
 | **Tuần 10** | Đóng gói hệ thống bằng Docker Compose, quay video demo toàn bộ luồng nghiệp vụ và bảo vệ dự án cuối kỳ. | File `docker-compose.yml` hoàn chỉnh, tài liệu bàn giao. | 📋 Kế hoạch |
 
@@ -200,6 +200,14 @@ erDiagram
         number viewCount
         date createdAt
     }
+    BOAT_LOG {
+        ObjectId id PK
+        ObjectId userId FK
+        string content
+        array images
+        array likes
+        date createdAt
+    }
     REPORT {
         ObjectId id PK
         ObjectId reporterId FK
@@ -225,6 +233,7 @@ erDiagram
     USER ||--o{ REVIEW : "đánh giá/nhận (reviewerId/sellerId)"
     USER ||--o{ POST : "đăng bài (userId)"
     USER ||--o{ RECIPE : "sáng tạo (authorId)"
+    USER ||--o{ BOAT_LOG : "nhật ký (userId)"
     USER ||--o{ REPORT : "báo cáo (reporterId)"
     USER ||--o{ NOTIFICATION : "nhận (userId)"
     
@@ -336,11 +345,10 @@ Dưới đây là đặc tả chi tiết cho 6 Use Case cốt lõi đã được
   * Xây dựng giao diện `VideoCallOverlay.jsx` phía React client hỗ trợ truyền phát video/audio.
   * Kiểm thử kết nối P2P sau NAT bằng STUN server miễn phí của Google.
 
-### Tuần 8: Điều Chỉnh & Tối Ưu Hóa Giao Diện Web (UI/UX)
+### Tuần 8: Nhật Ký Cabin (Boat Logs) & Điều Chỉnh Giao Diện Web
 * **Nội dung công việc:**
-  * Thu thập phản hồi từ buổi báo cáo giữa kỳ để điều chỉnh bố cục giao diện Web cho hợp lý hơn.
-  * Tối ưu hóa tính responsive trên thiết bị di động (Mobile responsive) đối với trang chủ và trang bản đồ.
-  * Thiết kế lại các thành phần giao diện nhỏ (micro-interactions, button hovers, loading indicators) để tăng tính chuyên nghiệp.
+  * **Boat Logs (Nhật ký Cabin):** Cho phép ngư dân đăng hình ảnh và ghi chép hành trình kéo lưới ngoài khơi để người mua kiểm chứng nguồn gốc hải sản.
+  * **Điều chỉnh giao diện Web:** Thu thập phản hồi từ buổi báo cáo giữa kỳ để điều chỉnh bố cục giao diện Web, tối ưu hóa tính responsive trên thiết bị di động (Mobile responsive) và các tương tác nhỏ (micro-interactions) để nâng cao chất lượng trải nghiệm người dùng.
 
 ### Tuần 9: Tích Hợp Hệ Thống, Bảo Mật & Đánh Giá Chất Lượng
 * **Nội dung công việc:**

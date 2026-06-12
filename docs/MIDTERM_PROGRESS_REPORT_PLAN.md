@@ -9,7 +9,7 @@ Tài liệu này lập kế hoạch chi tiết cho báo cáo tiến độ giữa
 | Tuần | Nội dung công việc | Kết quả đạt được | Trạng thái |
 | :---: | :--- | :--- | :---: |
 | **Tuần 1 - 2** | Khởi tạo dự án, phân tích yêu cầu, thiết kế kiến trúc hệ thống và cơ sở dữ liệu (ERD). | Kịch bản kiến trúc, sơ đồ thực tế (11 collections). | ✅ Hoàn thành |
-| **Tuần 3** | Hiện thực hóa quy trình Xác thực (Auth), băm mật khẩu, OTP SMS, phân quyền JWT và CRUD Sản phẩm cơ bản. | API đăng nhập, API CRUD sản phẩm, kết nối cơ sở dữ liệu MongoDB/Mongoose. | ✅ Hoàn thành |
+| **Tuần 3** | Hiện thực hóa quy trình Xác thực (Auth) bảo mật, băm mật khẩu, phân quyền JWT, và CRUD Sản phẩm cơ bản. | API đăng ký/đăng nhập, API CRUD sản phẩm, kết nối cơ sở dữ liệu MongoDB/Mongoose. | ✅ Hoàn thành |
 | **Tuần 4** | Tích hợp bản đồ định vị Leaflet (GPS), Haversine filter, Chat realtime qua Socket.io và hệ thống Đánh giá/Theo dõi. | Giao diện bản đồ, nhắn tin thời gian thực 1-1, đánh giá ngư dân. | ✅ Hoàn thành |
 | **Tuần 5** | Triển khai Unit Tests, Swagger API documentation, và thiết lập CI/CD tự động trên GitHub Actions. | 16 test suites (Jest) đạt độ bao phủ tốt, endpoint `/api-docs` hoạt động, CI chạy không lỗi. | ✅ Hoàn thành |
 | **Tuần 6** | **(Hiện tại)** Báo cáo tiến độ giữa kỳ, nhận phản hồi từ giáo viên và tối ưu hóa Sepay Webhook nâng cấp Premium. | Slide thuyết trình giữa kỳ, luồng Webhook hoàn thiện. | 🔄 Đang chạy |
@@ -24,7 +24,7 @@ Tài liệu này lập kế hoạch chi tiết cho báo cáo tiến độ giữa
 
 ### 1. Kiến Trúc & Công Nghệ (Tech Stack)
 * **Backend:** Node.js + TypeScript (Express) mang lại sự an toàn kiểu dữ liệu (type-safe) và khả năng mở rộng.
-* **Database & Caching:** MongoDB (Mongoose ODM) kết hợp Redis Cache để quản lý phiên OTP và token blacklist.
+* **Database & Caching:** MongoDB (Mongoose ODM) kết hợp Redis Cache để quản lý phiên, lưu mã xác minh OTP (khi đặt lại mật khẩu) và lưu token blacklist.
 * **Frontend:** React (Vite) + Bootstrap (v5.3.8) cho layout responsive & Grid, kết hợp inline style cho giao diện trực quan.
 * **Kênh Realtime & Media:** Socket.io (cho chat thời gian thực và tín hiệu WebRTC).
 * **Bảo mật:** JWT Stateless Auth kết hợp Redis Token Blacklist, Double Submit Cookie CSRF, Helmet, Rate Limiter chống spam.
@@ -33,7 +33,7 @@ Tài liệu này lập kế hoạch chi tiết cho báo cáo tiến độ giữa
 
 | Tính Năng / Module | Trạng Thái | Mô Tả Kỹ Thuật |
 | :--- | :---: | :--- |
-| **Authentication & Auth Flow** | ✅ 100% | Đăng ký, đăng nhập JWT, gửi OTP qua SMS Gateway (ESMS) lưu Redis TTL 5p. Tích hợp Google OAuth. |
+| **Authentication & Auth Flow** | ✅ 100% | Đăng ký/Đăng nhập JWT bằng Email/Password, tích hợp Google OAuth. Gửi OTP qua Email (Gmail SMTP) lưu Redis TTL 5p để phục vụ chức năng quên mật khẩu. |
 | **Quản Lý Sản Phẩm (Product CRUD)** | ✅ 100% | Thêm, sửa, xóa, tìm kiếm tin đăng hải sản. Phân biệt hải sản tươi sống (Fresh - có GPS) và hải sản khô (Dried - có hạn sử dụng). |
 | **Tìm Kiếm Theo Bản Đồ (Leaflet.js)** | ✅ 100% | Sử dụng MongoDB `2dsphere` index và toán tử `$near` để tìm kiếm sản phẩm theo khoảng cách thực tế quanh vị trí GPS của người dùng. |
 | **Hệ Thống Chat Realtime** | ✅ 100% | Nhắn tin 1-1 giữa Buyer và Seller qua Socket.io, lưu lịch sử trò chuyện trong MongoDB. |
@@ -90,11 +90,11 @@ Dưới đây là đặc tả chi tiết cho 6 Use Case cốt lõi đã được
 | :--- | :--- |
 | **Tên Use Case** | UC-1: Đăng ký & Đăng nhập hệ thống |
 | **Tác Nhân (Actors)** | Người Mua (Buyer), Người Bán (Seller) |
-| **Mô Tả** | Người dùng đăng ký tài khoản mới qua số điện thoại/email và OTP xác thực, hoặc đăng nhập trực tiếp qua Email/Password hoặc Google OAuth để nhận mã JWT truy cập tài nguyên. |
+| **Mô Tả** | Người dùng đăng ký tài khoản mới qua Email và Mật khẩu, hoặc đăng nhập trực tiếp qua Email/Password hoặc Google OAuth để nhận mã JWT truy cập tài nguyên. Hỗ trợ đặt lại mật khẩu thông qua mã OTP gửi qua Email. |
 | **Tiền Điều Kiện** | Người dùng có thiết bị kết nối mạng Internet. |
-| **Luồng Sự Kiện Chính** | 1. Người dùng chọn mục "Đăng ký" hoặc "Đăng nhập" trên giao diện.<br>2. Hệ thống hiển thị biểu mẫu yêu cầu nhập thông tin.<br>3. Người dùng điền Email, Mật khẩu, Số điện thoại.<br>4. Hệ thống tạo mã OTP 6 số qua module `crypto` và lưu vào Redis Cache với TTL 5 phút, đồng thời gọi ESMS API để gửi SMS đến số điện thoại người dùng.<br>5. Người dùng nhập mã OTP nhận được lên giao diện.<br>6. Hệ thống đối chiếu mã OTP trong Redis. Nếu trùng khớp, hệ thống băm mật khẩu bằng Bcrypt và lưu người dùng vào MongoDB, trả về cặp Access Token và Refresh Token.<br>7. Giao diện lưu cookie bảo mật và chuyển hướng người dùng vào Dashboard. |
-| **Luồng Thay Thế** | * **Sai mã OTP:** Hệ thống thông báo lỗi xác thực OTP và cho phép người dùng nhập lại hoặc yêu cầu gửi lại OTP.<br>* **Sai Email/Mật khẩu khi Đăng nhập:** Hệ thống báo lỗi "Tài khoản hoặc mật khẩu không chính xác", khóa tài khoản tạm thời nếu nhập sai liên tiếp quá 20 lần / 15 phút (Rate Limiting). |
-| **Hậu Điều Kiện** | Tài khoản người dùng được tạo và lưu trữ an toàn trong MongoDB. Phiên làm việc được thiết lập. |
+| **Luồng Sự Kiện Chính** | **Nhánh 1: Đăng ký tài khoản**<br>1. Người dùng chọn mục "Đăng ký" trên giao diện.<br>2. Hệ thống hiển thị biểu mẫu yêu cầu nhập Họ tên, Email, Mật khẩu.<br>3. Người dùng nhập thông tin và nhấn "Xác nhận".<br>4. Hệ thống validate thông tin, băm mật khẩu bằng Bcrypt, lưu tài khoản mới vào MongoDB và tự động đăng nhập (trả về JWT).<br><br>**Nhánh 2: Đăng nhập**<br>1. Người dùng nhập Email, Mật khẩu hoặc nhấn chọn "Đăng nhập bằng Google".<br>2. Hệ thống xác thực thông tin đăng nhập (hoặc verify Google ID token).<br>3. Trả về Access Token (maxAge 15 phút) và Refresh Token (lưu vào Redis Cache 7 ngày).<br>4. Giao diện lưu cookie bảo mật và chuyển hướng người dùng vào Dashboard.<br><br>**Nhánh 3: Quên mật khẩu (Forgot Password)**<br>1. Người dùng chọn "Quên mật khẩu" và nhập Email.<br>2. Hệ thống kiểm tra Email tồn tại, tạo mã OTP 6 số qua module `crypto` lưu vào Redis (TTL 5 phút) và gửi email OTP qua Gmail SMTP.<br>3. Người dùng nhập OTP $\rightarrow$ Hệ thống verify và tạo một Reset Token ngắn hạn lưu trong Redis.<br>4. Người dùng nhập mật khẩu mới kèm Reset Token $\rightarrow$ Hệ thống cập nhật mật khẩu băm mới vào MongoDB và xóa Reset Token. |
+| **Luồng Thay Thế** | * **Trùng Email khi đăng ký:** Hệ thống báo lỗi "Email đã được sử dụng" và yêu cầu nhập email khác.<br>* **Sai Email/Mật khẩu khi Đăng nhập:** Hệ thống báo lỗi "Tài khoản hoặc mật khẩu không chính xác", khóa tài khoản tạm thời nếu nhập sai liên tiếp quá 20 lần / 15 phút (Rate Limiting).<br>* **Nhập sai OTP quên mật khẩu:** Hệ thống báo lỗi "Mã OTP không hợp lệ hoặc đã hết hạn". |
+| **Hậu Điều Kiện** | Tài khoản người dùng được xác thực và lưu trữ trong MongoDB. Phiên làm việc được thiết lập. |
 
 ---
 

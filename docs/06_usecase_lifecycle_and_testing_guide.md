@@ -10,52 +10,94 @@ Khi người dùng thực hiện một thao tác trên giao diện (ví dụ: đ
 
 Dưới đây là sơ đồ Mermaid mô tả hành trình từ giao diện React Client đến cơ sở dữ liệu MongoDB/Redis:
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Người dùng (Client Browser)
-    participant ClientPage as React Component (Giao diện)
-    participant APIWrapper as api.js (Bộ gọi API)
-    participant Middleware as Middleware (Bảo mật & Phân quyền)
-    participant Routes as Routes (Định tuyến)
-    participant Controller as Controller (Nhận & Trả dữ liệu)
-    participant UseCase as Application UseCase (Logic nghiệp vụ)
-    participant DomainEntity as Domain Entity (Ràng buộc nghiệp vụ)
-    participant Repository as Repository Adapter (Kết nối DB)
-    participant DB as MongoDB / Redis (Cơ sở dữ liệu)
-
-    User->>ClientPage: Nhấp chuột (ví dụ: Đăng nhập/Đẩy bài)
-    ClientPage->>APIWrapper: Gọi hàm api() gửi yêu cầu
-    APIWrapper->>APIWrapper: Đính kèm Cookie, CSRF Token
-    APIWrapper->>Middleware: Gửi request HTTP qua Internet
-    Note over Middleware: Kiểm tra Cors, XSS, rate-limit, authenticate
-    Middleware->>Routes: Chuyển tiếp request sạch
-    Routes->>Controller: Điều phối request đến đúng phương thức
-    Controller->>UseCase: Gọi Use Case xử lý nghiệp vụ
-    UseCase->>DomainEntity: Khởi tạo/Gọi thực thể để kiểm tra tính đúng đắn
-    Note over DomainEntity: Check các quy tắc (Giá >= 0, có định vị...)
-    DomainEntity-->>UseCase: Trả về thực thể hợp lệ
-    UseCase->>Repository: Yêu cầu lưu trữ thực thể miền
-    Repository->>Repository: Dùng Mapper chuyển đổi thực thể thành dạng MongoDB Schema
-    Repository->>DB: Lưu trữ xuống database thực tế
-    DB-->>Repository: Acknowledge (Xác nhận lưu thành công)
-    Repository-->>UseCase: Hoàn thành lưu trữ
-    UseCase-->>Controller: Trả về kết quả nghiệp vụ thành công
-    Controller-->>APIWrapper: Trả về HTTP Response (JWT token, JSON data)
-    APIWrapper-->>ClientPage: Trả về kết quả JSON, cập nhật State
-    ClientPage-->>User: Thay đổi giao diện hiển thị (Thành công!)
+```
+[Người dùng (UI Browser)]
+       │ (1. Thao tác nhấp chuột / nhập liệu)
+       ▼
+[React Component (pages/ hoặc components/)]
+       │ (2. Gọi hàm API)
+       ▼
+[api.js (Client API Helper)]
+       │ (3. Đính kèm cookies, CSRF token)
+       ▼
+[Cors / Auth / Csrf Middlewares (Backend Security)]
+       │ (4. Xác thực JWT, check Rate Limit, chặn CSRF)
+       ▼
+[Express Router (routes/*.routes.ts)]
+       │ (5. Điều hướng định tuyến URL)
+       ▼
+[Presentation Controller (presentation/http/*Controller.ts)]
+       │ (6. Bóc tách req.body, req.query, req.user)
+       ▼
+[Application UseCase (application/use-cases/*.ts)]
+       │ (7. Điều phối và xử lý logic nghiệp vụ)
+       ▼
+[Domain Entity / Aggregate Root (domain/entities/*.ts)]
+       │ (8. Kiểm tra tính đúng đắn/bất biến của dữ liệu)
+       ▼
+[Infrastructure Repository (infrastructure/persistence/mongoose/*Repository.ts)]
+       │ (9. mapper.toPersistence và lưu trữ vào MongoDB / Redis)
+       ▼
+[MongoDB / Redis Cache] (Lưu trữ vĩnh viễn / bộ đệm)
 ```
 
 ---
 
-## 2. Phân Tích Chi Tiết Vòng Đời Use Case 1: Đăng Nhập Google & Giả Lập Dev (Google/Mock Auth)
+## 2. Bản Đồ Danh Sách Toàn Bộ 23 Use Cases Nghiệp Vụ Trong Dự Án
+
+Để giúp bạn có cái nhìn từ A-Z về mọi ngóc ngách của dự án HảiSản.vn, dưới đây là bảng danh mục toàn bộ **23 Use Cases** đang vận hành trong lõi nghiệp vụ backend, phân tách theo từng Bounded Context (Module):
+
+### 2.1 Phân hệ Định danh & Phân quyền (IAM - 6 Use Cases)
+| STT | Tên Use Case | Đường dẫn tệp tin | Mô tả chức năng nghiệp vụ | DB Collections tác động |
+| --- | --- | --- | --- | --- |
+| 1 | **GoogleAuthUseCase** | [GoogleAuthUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/application/use-cases/GoogleAuthUseCase.ts) | Xác thực mã token Google OAuth 2.0 hoặc giả lập môi trường Local Dev để đăng nhập nhanh. | `users` |
+| 2 | **LoginUseCase** | [LoginUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/application/use-cases/LoginUseCase.ts) | Đăng nhập bằng Email và mật khẩu truyền thống, kiểm tra mã hóa bcrypt. | `users` |
+| 3 | **RegisterUseCase** | [RegisterUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/application/use-cases/RegisterUseCase.ts) | Đăng ký tài khoản mới cho người dùng với vai trò tương ứng (Buyer hoặc Fisherman). | `users` |
+| 4 | **UpdateProfileUseCase** | [UpdateProfileUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/application/use-cases/UpdateProfileUseCase.ts) | Thay đổi thông tin cá nhân như họ tên, số điện thoại, avatar URL. | `users` |
+| 5 | **ChangePasswordUseCase** | [ChangePasswordUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/application/use-cases/ChangePasswordUseCase.ts) | Xác thực mật khẩu cũ và đổi mật khẩu mới cho người dùng. | `users` |
+| 6 | **DeleteAccountUseCase** | [DeleteAccountUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/application/use-cases/DeleteAccountUseCase.ts) | Xóa vĩnh viễn tài khoản người dùng và thực hiện dọn dẹp bắc cầu (Cascade delete) toàn bộ dữ liệu liên quan (sản phẩm, chat, like, ảnh trên Cloudinary) dưới dạng ACID Transaction. | Tất cả collections |
+
+### 2.2 Phân hệ Tin đăng & Hải sản (Product - 4 Use Cases)
+| STT | Tên Use Case | Đường dẫn tệp tin | Mô tả chức năng nghiệp vụ | DB Collections tác động |
+| --- | --- | --- | --- | --- |
+| 7 | **CreateProductUseCase** | [CreateProductUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/application/use-cases/CreateProductUseCase.ts) | Đăng mẻ hải sản mới bán, xác thực thông tin sản phẩm và GPS, kiểm tra giới hạn đăng bài theo ngày đối với tài khoản thường. | `products`, `users` |
+| 8 | **UpdateProductUseCase** | [UpdateProductUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/application/use-cases/UpdateProductUseCase.ts) | Cập nhật thông tin chi tiết mẻ sản phẩm đã đăng bán. | `products` |
+| 9 | **DeleteProductUseCase** | [DeleteProductUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/application/use-cases/DeleteProductUseCase.ts) | Xóa mẻ hải sản khỏi sàn, đồng thời xóa các dữ liệu liên kết (reviews, messages, notifications). | `products`, `reviews`, `messages`, `notifications` |
+| 10 | **BumpProductUseCase** | [BumpProductUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/application/use-cases/BumpProductUseCase.ts) | Đẩy tin bài đăng của mẻ hàng lên đầu trang, áp dụng cooldown 24h nghiêm ngặt để chống spam tin bài. | `products` |
+
+### 2.3 Phân hệ Diễn đàn & Bài viết Cộng đồng (Post - 5 Use Cases)
+| STT | Tên Use Case | Đường dẫn tệp tin | Mô tả chức năng nghiệp vụ | DB Collections tác động |
+| --- | --- | --- | --- | --- |
+| 11 | **CreatePostUseCase** | [CreatePostUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/application/use-cases/CreatePostUseCase.ts) | Tạo bài đăng mới chia sẻ kinh nghiệm đi biển hoặc đời sống ngư nghiệp của ngư dân. | `posts` |
+| 12 | **DeletePostUseCase** | [DeletePostUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/application/use-cases/DeletePostUseCase.ts) | Xóa vĩnh viễn bài đăng của người dùng và toàn bộ bình luận liên kết. | `posts` |
+| 13 | **ToggleLikePostUseCase** | [ToggleLikePostUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/application/use-cases/ToggleLikePostUseCase.ts) | Thích hoặc bỏ thích một bài đăng của ngư dân trên diễn đàn. | `posts` |
+| 14 | **AddCommentUseCase** | [AddCommentUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/application/use-cases/AddCommentUseCase.ts) | Thêm bình luận dưới bài viết cộng đồng. | `posts` |
+| 15 | **DeleteCommentUseCase** | [DeleteCommentUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/application/use-cases/DeleteCommentUseCase.ts) | Gỡ bỏ bình luận của chính mình dưới bài viết. | `posts` |
+
+### 2.4 Phân hệ Cẩm nang Công thức ẩm thực (Recipe - 5 Use Cases)
+| STT | Tên Use Case | Đường dẫn tệp tin | Mô tả chức năng nghiệp vụ | DB Collections tác động |
+| --- | --- | --- | --- | --- |
+| 16 | **CreateRecipeUseCase** | [CreateRecipeUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/application/use-cases/CreateRecipeUseCase.ts) | Đăng công thức nấu nướng hải sản mới với danh sách nguyên liệu, hình ảnh và các bước thực hiện. | `recipes` |
+| 17 | **UpdateRecipeUseCase** | [UpdateRecipeUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/application/use-cases/UpdateRecipeUseCase.ts) | Điều chỉnh các nguyên liệu, hình ảnh hoặc các bước hướng dẫn của công thức đã đăng. | `recipes` |
+| 18 | **DeleteRecipeUseCase** | [DeleteRecipeUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/application/use-cases/DeleteRecipeUseCase.ts) | Xóa vĩnh viễn công thức nấu ăn khỏi hệ thống. | `recipes` |
+| 19 | **ToggleLikeRecipeUseCase** | [ToggleLikeRecipeUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/application/use-cases/ToggleLikeRecipeUseCase.ts) | Người dùng thả tim yêu thích hoặc bỏ thích công thức món ăn. | `recipes` |
+| 20 | **IncrementRecipeViewsUseCase** | [IncrementRecipeViewsUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/application/use-cases/IncrementRecipeViewsUseCase.ts) | Tăng chỉ số lượt xem (views) của bài viết công thức khi người dùng mở xem chi tiết. | `recipes` |
+
+### 2.5 Phân hệ Nhật ký Cabin thuyền trưởng (Boat Log - 3 Use Cases)
+| STT | Tên Use Case | Đường dẫn tệp tin | Mô tả chức năng nghiệp vụ | DB Collections tác động |
+| --- | --- | --- | --- | --- |
+| 21 | **CreateBoatLogUseCase** | [CreateBoatLogUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/boat-log/application/use-cases/CreateBoatLogUseCase.ts) | Ngư dân viết nhật ký đánh cá ghi nhận tọa độ hành trình trên biển và hình ảnh hoạt động thực tế. | `boatlogs` |
+| 22 | **DeleteBoatLogUseCase** | [DeleteBoatLogUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/boat-log/application/use-cases/DeleteBoatLogUseCase.ts) | Xóa nhật ký đi biển đã đăng. | `boatlogs` |
+| 23 | **ToggleLikeBoatLogUseCase** | [ToggleLikeBoatLogUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/boat-log/application/use-cases/ToggleLikeBoatLogUseCase.ts) | Người theo dõi nhấn thích hoặc bỏ thích nhật ký đi biển của thuyền trưởng. | `boatlogs` |
+
+---
+
+## 3. Vòng Đời Use Case 1: Đăng Nhập Google & Giả Lập Dev (Google/Mock Auth)
 
 ### 📌 Mục đích:
 Hệ thống cho phép người dùng đăng nhập an toàn bằng tài khoản Google thật thông qua OAuth 2.0 hoặc tài khoản giả lập trên máy cá nhân để tăng tốc độ phát triển dự án (Local Dev Quick Login).
 
 ### 📊 Sơ đồ tuần tự Vòng đời hoàn chỉnh (Request & Response Lifecycle)
-
-Sơ đồ dưới đây biểu diễn chi tiết cách một yêu cầu đăng nhập đi qua các lớp cấu trúc, kết nối dịch vụ bên thứ ba (Google API), truy vấn và cập nhật cơ sở dữ liệu MongoDB/Redis, cũng như cách response kèm theo các cookie bảo mật chảy ngược lại trình duyệt để đồng bộ hóa giao diện:
 
 ```mermaid
 sequenceDiagram
@@ -119,71 +161,12 @@ sequenceDiagram
 
 ---
 
-### 🏃‍♂️ Hành trình từng dòng code cụ thể:
-
-#### Bước 1: Trình duyệt gửi yêu cầu đăng nhập
-* **Tệp tin**: [AuthPage.jsx](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/client/src/pages/AuthPage.jsx)
-* **Dòng code tham gia**: Hàm `selectMockAccount` (dòng 120-144) hoặc `handleGoogleCredentialResponse` (dòng 53-71).
-* **Nhiệm vụ**: Khi người dùng nhấn nút chọn tài khoản dev `binh@haisan.vn`, hàm này gửi yêu cầu POST đến backend bằng cách gọi:
-  ```javascript
-  const data = await api("/auth/google", {
-    method: "POST",
-    body: JSON.stringify({ idToken: "mock_google_token_binh@haisan.vn_..." })
-  });
-  ```
-
-#### Bước 2: Đính kèm CSRF token và Header bảo mật
-* **Tệp tin**: [api.js](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/client/src/services/api.js)
-* **Dòng code tham gia**: Đọc token CSRF từ cookie và thiết lập `credentials: "include"`.
-* **Nhiệm vụ**: Đảm bảo tất cả các cuộc gọi thay đổi dữ liệu được đính kèm token bảo mật chống hack chéo trang (CSRF), đồng thời cho phép trình duyệt tự động đính kèm Cookie xác thực.
-
-#### Bước 3: Định tuyến request trên Backend
-* **Tệp tin**: [auth.routes.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/routes/auth.routes.ts)
-* **Dòng code tham gia**: `router.post("/google", googleAuth);` (dòng 143).
-* **Nhiệm vụ**: Tiếp nhận yêu cầu gửi đến `/api/auth/google` và chuyển tiếp điều phối tới phương thức `googleAuth` của controller.
-
-#### Bước 4: Presentation Layer tiếp nhận dữ liệu
-* **Tệp tin**: [AuthController.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/presentation/http/AuthController.ts)
-* **Dòng code tham gia**: Phương thức `googleAuth` (dòng 315-342).
-* **Nhiệm vụ**: 
-  - Đọc `idToken` từ `req.body`.
-  - Gọi Use Case nghiệp vụ: `const authResult = await googleAuthUseCase.execute(idToken);`.
-  - Nhận lại thông tin định danh và thực hiện các hành động bảo mật: ký token Access Token (`signToken`), tạo Refresh Token ngẫu nhiên, lưu session vào Redis Cache, thiết lập cookie HTTP-only trả về client.
-
-#### Bước 5: Application Layer xử lý logic xác thực Google
-* **Tệp tin**: [GoogleAuthUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/application/use-cases/GoogleAuthUseCase.ts)
-* **Dòng code tham gia**: Phương thức `execute(idToken)` (dòng 9-107).
-* **Nhiệm vụ**:
-  - Nếu ở môi trường local development và token bắt đầu bằng `mock_google_token_`: Bỏ qua việc gọi lên máy chủ Google, tự động bóc tách chuỗi để lấy Email và sinh tài khoản giả lập.
-  - Nếu ở môi trường thực tế (production): Gửi request đến API chính thức của Google `https://oauth2.googleapis.com/tokeninfo` để kiểm tra độ tin cậy của token, lấy ra Tên, Email, Ảnh đại diện.
-  - Truy vấn database để tìm user bằng Email: `let user = await this.userRepository.findByEmail(email);`.
-  - **Tạo mới tài khoản nếu chưa tồn tại**: Gọi khởi tạo thực thể miền `User` mới và lưu trữ.
-
-#### Bước 6: Domain Layer áp dụng các ràng buộc nghiệp vụ
-* **Tệp tin**: [User.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/domain/entities/User.ts)
-* **Nhiệm vụ**: Lớp Domain Entity quản lý quy trình kiểm tra các thuộc tính của User (như email định dạng đúng, tài khoản đang hoạt động thông qua `checkActive()`). Đây là lõi nghiệp vụ bất biến, độc lập với cơ sở dữ liệu.
-
-#### Bước 7: Infrastructure Layer thực hiện lưu xuống MongoDB
-* **Tệp tin**: [MongooseUserRepository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/infrastructure/persistence/mongoose/MongooseUserRepository.ts)
-* **Dòng code tham gia**: Phương thức `save(user)` và mapper [UserMapper.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/infrastructure/persistence/mongoose/mappers/UserMapper.ts).
-* **Nhiệm vụ**: Chuyển đổi đối tượng domain `User` thành định dạng tài liệu lưu trữ MongoDB và chạy câu lệnh `User.updateOne(...)` lưu vào database.
-
-#### Bước 8: Trả về client và cập nhật trạng thái
-* **Nhiệm vụ**: 
-  - Browser nhận response HTTP 200 kèm các cookie bảo mật (`token` và `refreshToken`).
-  - React Context [AuthProvider.jsx](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/client/src/context/AuthProvider.jsx) cập nhật trạng thái `setUser(data.user)`.
-  - Điều hướng người dùng về trang Dashboard (nếu là Admin) hoặc Trang chủ (nếu là User thường).
-
----
-
-## 3. Phân Tích Chi Tiết Vòng Đời Use Case 2: Đẩy Tin Bài Đăng Bán (Bump Product)
+## 4. Vòng Đời Use Case 2: Đẩy Tin Bài Đăng Bán (Bump Product)
 
 ### 📌 Mục đích:
 Hệ thống cho phép ngư dân đẩy bài viết bán sản phẩm của mình lên đầu bảng tin để tiếp cận khách hàng tốt hơn, tuy nhiên có cơ chế cooldown nghiêm ngặt **24 tiếng** để chống spam bài đăng.
 
 ### 📊 Sơ đồ tuần tự Vòng đời hoàn chỉnh (Request & Response Lifecycle)
-
-Sơ đồ dưới đây mô tả cách request đẩy bài đăng bắt đầu từ client đi qua các bộ lọc Middleware bảo mật nghiêm ngặt (Cors, Auth, Csrf), gọi Use Case nghiệp vụ, thực thi kiểm tra cooldown 24h bằng truy vấn nguyên tử dưới Database, và tiến hành vô hiệu hóa Cache phiên bản trên Redis trước khi phản hồi thành công về giao diện:
 
 ```mermaid
 sequenceDiagram
@@ -261,60 +244,263 @@ sequenceDiagram
 
 ---
 
-### 🏃‍♂️ Hành trình từng dòng code cụ thể:
+## 5. Vòng Đời Use Case 3: Đăng Bán Mẻ Hải Sản Mới (Create Product)
 
-#### Bước 1: Ngư dân nhấp nút "Đẩy bài" trên Giao diện
-* **Tệp tin**: [DashboardPage.jsx](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/client/src/pages/DashboardPage.jsx)
-* **Nhiệm vụ**: Phát đi một request HTTP POST:
-  ```javascript
-  await api(`/products/${productId}/bump`, { method: "POST" });
-  ```
+### 📌 Mục đích:
+Cho phép ngư dân đăng bán các mẻ hải sản mới (Tươi hoặc Khô). Nếu là hàng tươi (`Fresh`), hệ thống bắt buộc phải thu nhận định vị tọa độ GPS để người mua tìm thấy mẻ hàng gần nhất. Để tránh spam, người dùng thường bị giới hạn đăng tối đa 5 tin một ngày (Premium không giới hạn).
 
-#### Bước 2: Middleware kiểm tra bảo mật
-* **Tệp tin**: [auth.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/middlewares/auth.ts) và [csrf.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/middlewares/csrf.ts)
-* **Nhiệm vụ**: 
-  - `authenticate`: Giải mã token JWT từ cookie, lấy thông tin `userId` và `role` gán vào `req.user`. Nếu không đăng nhập, lập tức trả lỗi 401.
-  - `validateCsrf`: Kiểm tra tính trùng khớp của token CSRF trong header và cookie để chặn đứng tin tặc.
+### 📊 Sơ đồ tuần tự Vòng đời hoàn chỉnh (Request & Response Lifecycle)
 
-#### Bước 3: Định tuyến và tiếp nhận Request ở Controller
-* **Tệp tin**: [product.routes.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/routes/product.routes.ts) & [ProductController.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/presentation/http/ProductController.ts)
-* **Dòng code tham gia**: Phương thức `bumpProduct` (dòng 117-126).
-* **Nhiệm vụ**: Lấy `id` sản phẩm từ URL và `userId` của ngư dân từ token xác thực, sau đó gọi Use Case: `await bumpProductUseCase.execute(id, userId);`.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Seller as Ngư dân (Seller)
+    participant PostPage as PostListingPage.jsx (Client UI)
+    participant ApiJs as api.js (API Client Wrapper)
+    participant Router as product.routes.ts (Express Router)
+    participant ProdCtrl as ProductController.ts (Controller)
+    participant CreateUC as CreateProductUseCase.ts (Use Case)
+    participant Redis as Redis (Limit Counter & Version Cache)
+    participant UserRepo as UserRepository (User DB check)
+    participant ProdRepo as MongooseProductRepository (Repository)
+    participant DB as MongoDB (Collection: products)
 
-#### Bước 4: Kiểm tra điều kiện Cooldown tại Service Layer
-* **Tệp tin**: [product.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/product.service.ts)
-* **Dòng code tham gia**: Phương thức `bump(id, userId)` (dòng 667-700).
-* **Nhiệm vụ**:
-  - Lấy thông tin bài đăng hiện thời từ repository.
-  - Tính toán thời gian hết hạn chờ: `const cutoffTime = new Date(Date.now() - 24 * 3600 * 1000);` (đúng 24 giờ trước).
-  - Gửi lệnh cập nhật có điều kiện nguyên tử (Atomic Update) xuống database:
-    ```typescript
-    const updated = await productRepository.findOneAndUpdate(
-      {
-        _id: id,
-        sellerId: userId,
-        $or: [
-          { bumpedAt: { $lte: cutoffTime } },
-          { bumpedAt: { $exists: false } }
-        ]
-      },
-      { $set: { bumpedAt: new Date() } }
-    );
-    ```
-  - **Phân tích logic nguyên tử**: Nếu bài đăng mới được đẩy dưới 24 giờ trước, mốc `bumpedAt` thực tế của nó sẽ lớn hơn `cutoffTime`. Khi đó, câu lệnh tìm kiếm của MongoDB không tìm thấy bản ghi nào thỏa mãn điều kiện lọc. Kết quả `updated` trả về là `null` hoặc rỗng → Hệ thống lập tức ném ra lỗi `HTTP 429 Too Many Requests` báo bài viết chưa hồi chiêu.
+    Seller->>PostPage: Điền thông tin & Click "Đăng bán"
+    PostPage->>ApiJs: Gọi api("/products", { method: "POST", body: productData })
+    ApiJs->>Router: HTTP POST /api/products (kèm jwt cookie + csrf token)
+    Router->>Router: Chạy validateSchema(productCreateSchema) để check định dạng dữ liệu
+    Router->>ProdCtrl: Gọi hàm createProduct(req, res, next)
+    ProdCtrl->>CreateUC: createProductUseCase.execute(userId, body)
 
-#### Bước 5: Làm mới Cache phiên bản trên Redis
-* **Tệp tin**: [product.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/product.service.ts) (dòng 699).
-* **Dòng code tham gia**: `await redisIncr("product:list:version:Fresh");` (hoặc `Dried`).
-* **Nhiệm vụ**: Nhằm phục vụ hiển thị siêu tốc, danh sách sản phẩm được lưu đệm trong bộ nhớ cache Redis. Khi bài đăng được đẩy lên đầu trang, danh sách hiển thị đã thay đổi. Bằng cách tăng biến số phiên bản danh sách sản phẩm lên 1 đơn vị, tất cả các request lấy danh sách sau đó của người dùng khác sẽ phát hiện cache đã lỗi thời, tự động xóa cache cũ và truy xuất dữ liệu mới nhất từ MongoDB.
+    CreateUC->>UserRepo: findById(userId)
+    UserRepo-->>CreateUC: Trả về user
+    
+    alt Nếu là tài khoản thường (không phải Premium)
+        CreateUC->>Redis: incr(`product:limit:${userId}:${today}`) (Tăng lượt đếm trong ngày)
+        Redis-->>CreateUC: Trả về số lượng đã đăng
+        alt Nếu lượt đăng > 5
+            CreateUC->>Redis: decr(...) (Trừ lại lượt)
+            CreateUC-->>ProdCtrl: Ném lỗi ConflictError (Đăng quá giới hạn 5 bài/ngày)
+            ProdCtrl-->>ApiJs: Trả về HTTP 403 Forbidden
+        end
+    end
+
+    CreateUC->>CreateUC: Khởi tạo thực thể domain Product và validate()
+    CreateUC->>ProdRepo: save(product)
+    ProdRepo->>DB: insertOne(productData)
+    DB-->>ProdRepo: Xác nhận lưu (Acknowledge)
+    
+    CreateUC->>Redis: incr(`product:list:version:${type}`) (Tăng phiên bản cache sản phẩm)
+    Redis-->>CreateUC: Acknowledge
+
+    CreateUC-->>ProdCtrl: Trả về { productId }
+    ProdCtrl-->>ApiJs: Trả về HTTP 201 Created { message: "Đăng bài thành công", productId }
+    ApiJs-->>PostPage: Trả về JSON thành công
+    PostPage->>Seller: Chuyển hướng về trang Dashboard và báo đăng thành công!
+```
 
 ---
 
-## 4. Hệ Thống Kiểm Thử Tự Động (Jest Testing Guide)
+## 6. Vòng Đời Use Case 4: Lọc & Tìm Kiếm Theo GPS và Từ Khóa (List Products)
+
+### 📌 Mục đích:
+Khách hàng mua hải sản có thể tìm thấy các mẻ hàng tươi xung quanh mình trong bán kính tối đa 20km sử dụng GPS, hoặc tìm kiếm hải sản theo tên/mô tả sử dụng Text Index. Ứng dụng tích hợp bộ đệm cache Redis thông minh giúp giảm tải truy vấn MongoDB và phản hồi dưới 100ms.
+
+### 📊 Sơ đồ tuần tự Vòng đời hoàn chỉnh (Request & Response Lifecycle)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Buyer as Khách mua (Buyer)
+    participant Home as HomePage.jsx (Client UI)
+    participant ApiJs as api.js (API Client Wrapper)
+    participant Router as product.routes.ts (Express Router)
+    participant ProdCtrl as ProductController.ts (Controller)
+    participant ProdSrv as product.service.ts (Service)
+    participant Redis as Redis Cache (Bộ đệm)
+    participant ProdRepo as MongooseProductRepository (Repository)
+    participant DB as MongoDB (Collection: products)
+
+    Buyer->>Home: Mở trang chủ (Trình duyệt xin quyền GPS)
+    Home->>ApiJs: Gọi api("/products?type=Fresh&lat=20.84&lng=106.68")
+    ApiJs->>Router: HTTP GET /api/products?...
+    Router->>ProdCtrl: Gọi hàm getProducts(req, res, next)
+    ProdCtrl->>ProdSrv: productService.list(query)
+
+    ProdSrv->>Redis: GET product:list:version:Fresh (Lấy phiên bản hiện tại)
+    Redis-->>ProdSrv: Trả về version (Ví dụ: "4")
+    ProdSrv->>ProdSrv: Hash chuỗi query lọc + số version thành cacheKey
+    ProdSrv->>Redis: GET cacheKey
+    
+    alt Trường hợp có Cache (Cache Hit)
+        Redis-->>ProdSrv: Trả về JSON danh sách mẻ hàng đã lưu
+    else Trường hợp không có Cache (Cache Miss)
+        ProdSrv->>ProdRepo: find(filter)
+        Note over ProdRepo: Tạo filter location: { $geoWithin: { $centerSphere: [...] } }
+        ProdRepo->>DB: Truy vấn dữ liệu sử dụng Chỉ mục 2dsphere
+        DB-->>ProdRepo: Trả về các mẻ hàng trong bán kính 20km
+        ProdRepo-->>ProdSrv: Trả về danh sách mẻ hàng
+        ProdSrv->>Redis: SET cacheKey = listData (Lưu lại cache thời hạn 10 phút)
+    end
+
+    ProdSrv-->>ProdCtrl: Trả về danh sách sản phẩm và thông tin người bán
+    ProdCtrl-->>ApiJs: Trả về HTTP 200 OK
+    ApiJs-->>Home: Cập nhật danh sách mẻ hàng vào State
+    Home->>Home: Vẽ các Marker sản phẩm và Lộ trình nét đứt (Polyline) trên Bản đồ Leaflet
+    Home->>Buyer: Người dùng nhìn thấy các mẻ hàng gần nhất trực quan trên bản đồ!
+```
+
+---
+
+## 7. Vòng Đời Use Case 5: Bắt Tay Báo Hiệu Cuộc Gọi Video (WebRTC Video Call Signaling)
+
+### 📌 Mục đích:
+Hỗ trợ cuộc gọi video trực tuyến thời gian thực giữa Người mua và Người bán để trực tiếp kiểm tra độ tươi sống của mẻ cá trên thuyền. WebRTC truyền dẫn media trực tiếp (Peer-to-Peer), nhưng cần server WebSocket (Socket.IO) làm trung gian trao đổi thông số cấu hình mạng ban đầu.
+
+### 📊 Sơ đồ tuần tự Vòng đời hoàn chỉnh (Request & Response Lifecycle)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Buyer as Người gọi (Buyer)
+    participant BuyerWS as socket.js (Client Socket)
+    participant WSServer as socket.ts (Socket.IO Server)
+    participant SellerWS as socket.js (Client Socket)
+    actor Seller as Người nhận (Seller)
+
+    Buyer->>BuyerWS: Nhấp nút "Gọi Video cho Ngư dân"
+    BuyerWS->>WSServer: Connection Handshake (Gửi kèm Cookie JWT xác thực)
+    WSServer->>WSServer: Verify token & gán socket.user = { userId }
+    
+    Buyer->>BuyerWS: Khởi tạo RTCPeerConnection & tạo SDP Offer
+    BuyerWS->>WSServer: emit("call_user", { to: SellerId, offer })
+    WSServer->>SellerWS: emit("incoming_call", { from: BuyerId, offer })
+    
+    SellerWS->>Seller: Hiển thị cuộc gọi đến (Rung chuông, nút Nhận/Từ chối)
+    Seller->>SellerWS: Nhấn "Đồng ý nhận cuộc gọi"
+    SellerWS->>SellerWS: Khởi tạo local stream & tạo SDP Answer
+    SellerWS->>WSServer: emit("answer_call", { to: BuyerId, answer })
+    WSServer->>BuyerWS: emit("call_accepted", { answer })
+
+    par Quá trình kết nối luồng mạng ICE Candidates
+        BuyerWS->>WSServer: emit("ice_candidate", { to: SellerId, candidate })
+        WSServer->>SellerWS: emit("ice_candidate", { candidate })
+    and
+        SellerWS->>WSServer: emit("ice_candidate", { to: BuyerId, candidate })
+        WSServer->>BuyerWS: emit("ice_candidate", { candidate })
+    end
+
+    Note over Buyer,Seller: Hai trình duyệt kết nối trực tiếp Peer-to-Peer thành công (Băng thông riêng)!
+```
+
+---
+
+## 8. Vòng Đời Use Case 6: Nâng Cấp Premium Tự Động Qua Sepay Webhook
+
+### 📌 Mục đích:
+Khi ngư dân muốn đăng tin bán không giới hạn và nhận huy hiệu vương miện Premium uy tín, họ sẽ quét mã VietQR chuyển khoản nâng cấp tài khoản. Hệ thống nhận webhook thanh toán từ đối tác Sepay, xác thực chữ ký bảo mật và tự động nâng cấp thời gian thực.
+
+### 📊 Sơ đồ tuần tự Vòng đời hoàn chỉnh (Request & Response Lifecycle)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Seller as Ngư dân
+    participant Bank as App Ngân Hàng
+    participant Sepay as Sepay Gateway
+    participant Router as payment.routes.ts (Router)
+    participant PayCtrl as payment.controller.ts (Controller)
+    participant Redis as Redis Session
+    participant DB as MongoDB (Collection: users)
+
+    Seller->>Bank: Quét mã QR chuyển khoản nội dung: "SF <UserID>"
+    Bank->>Sepay: Giao dịch liên ngân hàng thành công qua Napas
+    Sepay->>Router: HTTP POST /api/payment/webhook (Gửi payload giao dịch)
+    
+    Note over Router: Xác thực Header Authorization: ApiKey <webhook_key>
+    alt Chữ ký Authorization không trùng khớp
+        Router-->>Sepay: Phản hồi HTTP 401 Unauthorized (Từ chối xử lý)
+    end
+
+    Router->>PayCtrl: Gọi hàm sepayWebhook(req, res)
+    PayCtrl->>PayCtrl: safeCompare(token, process.env.SEPAY_WEBHOOK_KEY) (Chống Timing Attack)
+    
+    alt Verify Key thành công
+        PayCtrl->>PayCtrl: Phân tích cú pháp lấy UserID từ nội dung chuyển khoản (Memo)
+        PayCtrl->>DB: User.updateOne({ _id: UserID }, { isPremium: true })
+        DB-->>PayCtrl: Xác nhận cập nhật (Acknowledge)
+        
+        PayCtrl->>Redis: Quét và xóa tất cả Refresh Token của User này (auth:refresh:UserID:*)
+        Note over Redis: Buộc thiết bị của ngư dân phải logout chéo để đăng nhập lại nhận Token Premium mới
+        Redis-->>PayCtrl: Hoàn tất xóa session
+        
+        PayCtrl-->>Sepay: Trả về HTTP 200 OK (Xác nhận xử lý thành công)
+        Note over Seller: Thiết bị của ngư dân tự động reload, cập nhật giao diện thành Premium vương miện 👑!
+    end
+```
+
+---
+
+## 9. Vòng Đời Use Case 7: Xóa Tài Khoản GDPR Cascade (Quyền Được Quên)
+
+### 📌 Mục đích:
+Tuân thủ luật bảo vệ quyền riêng tư người dùng nghiêm ngặt (GDPR). Khi người dùng yêu cầu xóa tài khoản, hệ thống sẽ thực hiện xóa bắc cầu (Cascade Delete) toàn bộ các dữ liệu liên quan (tin nhắn, bài đăng, công thức nấu ăn, nhật ký đi biển, file ảnh trên Cloudinary) dưới dạng một MongoDB Transaction an toàn để đảm bảo không để lại dữ liệu mồ côi.
+
+### 📊 Sơ đồ tuần tự Vòng đời hoàn chỉnh (Request & Response Lifecycle)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Người dùng
+    participant ProfilePage as ProfilePage.jsx (Client UI)
+    participant ApiJs as api.js (API Client Wrapper)
+    participant Router as auth.routes.ts (Express Router)
+    participant AuthCtrl as AuthController.ts (Controller)
+    participant DeleteUC as DeleteAccountUseCase.ts (Use Case)
+    participant DB as MongoDB Transaction
+    participant Cloudinary as Cloudinary CDN (Image storage)
+    participant Redis as Redis Cache
+
+    User->>ProfilePage: Nhấp nút "Xóa vĩnh viễn tài khoản của tôi"
+    ProfilePage->>ApiJs: Gọi api("/auth/account", { method: "DELETE" })
+    ApiJs->>Router: HTTP DELETE /api/auth/account (kèm jwt cookie + csrf token)
+    Router->>AuthCtrl: Gọi hàm deleteAccount(req, res, next)
+    AuthCtrl->>DeleteUC: deleteAccountUseCase.execute(userId)
+
+    DeleteUC->>DB: mongoose.startSession() -> Bắt đầu ACID Transaction
+    
+    DeleteUC->>Redis: Quét và xóa toàn bộ Refresh Token của User
+    
+    DeleteUC->>DB: Query các sản phẩm đăng bán của User để lấy URL ảnh
+    DB-->>DeleteUC: Trả về danh sách ảnh sản phẩm
+    Note over DeleteUC: Trích xuất các public ID của ảnh lưu trữ trên Cloudinary
+    
+    DeleteUC->>DB: Rút ID của User khỏi mảng following và favorites của tất cả mọi người
+    DeleteUC->>DB: deleteMany(products) -> Xóa sản phẩm của User
+    DeleteUC->>DB: deleteMany(messages) -> Xóa toàn bộ tin nhắn chat liên quan
+    DeleteUC->>DB: deleteMany(posts, comments, recipes, boatLogs) -> Xóa dữ liệu cộng đồng
+    DeleteUC->>DB: findByIdAndDelete(userId) -> Xóa thông tin cá nhân User
+    
+    DeleteUC->>DB: commitTransaction() -> Lưu tất cả thay đổi vĩnh viễn vào Database
+    DB-->>DeleteUC: Transaction committed thành công
+    
+    DeleteUC->>Cloudinary: delete_resources(allPublicIds) -> Xóa vật lý ảnh sản phẩm trên cloud
+    Cloudinary-->>DeleteUC: Xác nhận đã xóa file ảnh
+    
+    DeleteUC-->>AuthCtrl: Trả về kết quả thành công
+    AuthCtrl->>AuthCtrl: res.clearCookie("token") & res.clearCookie("refreshToken")
+    AuthCtrl-->>ApiJs: Trả về HTTP 200 OK
+    ApiJs-->>ProfilePage: Trả về JSON thông báo xóa thành công
+    ProfilePage->>User: Xóa sạch bộ nhớ cục bộ, chuyển hướng về Trang chủ và hiện thông báo tạm biệt!
+```
+
+---
+
+## 10. Hệ Thống Kiểm Thử Tự Động (Jest Testing Guide)
 
 Kiểm thử tự động giúp nhà phát triển tự tin thay đổi mã nguồn mà không sợ làm hỏng các tính năng cũ đang chạy tốt. Dự án sử dụng framework **Jest** kết hợp **ts-jest** để biên dịch TypeScript động khi kiểm thử.
 
-### 4.1 Cấu hình kiểm thử Jest (`jest.config.js`)
+### 10.1 Cấu hình kiểm thử Jest (`jest.config.js`)
 * **Tệp tin**: [jest.config.js](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/jest.config.js)
 * **Ý nghĩa cấu hình**:
   - `preset: "ts-jest"`: Hướng dẫn Jest tự động dịch code `.ts` sang `.js` trong bộ nhớ RAM khi chạy thử nghiệm.
@@ -323,7 +509,7 @@ Kiểm thử tự động giúp nhà phát triển tự tin thay đổi mã ngu�
 
 ---
 
-### 4.2 Bản chất của cơ chế Giả Lập (Mocking Dependencies)
+### 10.2 Bản chất của cơ chế Giả Lập (Mocking Dependencies)
 > **❓ Câu hỏi**: Tại sao không kết nối trực tiếp vào MongoDB hay gửi email thật khi chạy test?
 > 
 > **💡 Trả lời**: Chạy thử nghiệm cần diễn ra cực kỳ nhanh (dưới 5 giây). Nếu kết nối vào cơ sở dữ liệu thật, dữ liệu rác sẽ làm bẩn database, đồng thời làm chậm tiến trình và phụ thuộc vào kết nối Internet. Do đó, chúng ta sử dụng cơ chế **Mocking** (tạo lập các vật thế thân giả lập) bằng cách khai báo ở đầu file test:
@@ -341,7 +527,7 @@ jest.mock("../config/redis", () => ({
 
 ---
 
-### 4.3 Phân Tích Code File Test Mẫu 1: `admin.service.test.ts`
+### 10.3 Phân Tích Code File Test Mẫu 1: `admin.service.test.ts`
 * **Tệp tin**: [admin.service.test.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/admin.service.test.ts)
 * **Logic kiểm thử khóa tài khoản của Admin**:
 
@@ -385,7 +571,7 @@ it("Nên đảo trạng thái hoạt động của tài khoản thành công", a
 
 ---
 
-### 4.4 Phân Tích Code File Test Mẫu 2: `product.service.test.ts`
+### 10.4 Phân Tích Code File Test Mẫu 2: `product.service.test.ts`
 * **Tệp tin**: [product.service.test.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/product.service.test.ts)
 * **Logic kiểm thử bộ lọc địa lý trắc địa GPS**:
 
@@ -416,7 +602,7 @@ it("Nên áp dụng bộ lọc $geoWithin khi truy vấn sản phẩm loại Fre
 
 ---
 
-### 4.5 Các lệnh vận hành kiểm thử
+### 10.5 Các lệnh vận hành kiểm thử
 
 Để chạy kiểm thử và theo dõi kết quả, hãy di chuyển vào thư mục `backend/` và mở cửa sổ Terminal:
 

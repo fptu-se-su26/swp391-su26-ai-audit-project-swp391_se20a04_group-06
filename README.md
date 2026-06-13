@@ -6,7 +6,7 @@
 
 ## 📋 Cẩm Nang Tài Liệu Kỹ Thuật (Developer Portal)
 
-Để đáp ứng nhu cầu tìm hiểu sâu và chi tiết về toàn bộ hệ thống cũng như cấu trúc từng dòng code của dự án, tài liệu kỹ thuật được phân chia khoa học thành **5 chuyên đề chuyên sâu** nằm trong thư mục `docs/`. 
+Để đáp ứng nhu cầu tìm hiểu sâu và chi tiết về toàn bộ hệ thống cũng như cấu trúc từng dòng code của dự án, tài liệu kỹ thuật được phân chia khoa học thành **6 chuyên đề chuyên sâu** nằm trong thư mục `docs/`. 
 
 Hãy truy cập các liên kết dưới đây để học và nghiên cứu hệ thống như một chuyên gia:
 
@@ -48,6 +48,10 @@ Hãy truy cập các liên kết dưới đây để học và nghiên cứu h�
      - `MapExplore.jsx` hoặc `HomePage.jsx` (Tích hợp bản đồ Leaflet, GPS Geolocation API).
      - `ChatBox.jsx` (Giao diện hội thoại realtime, upload ảnh, gửi vị trí).
      - `VideoCallOverlay.jsx` (Hiển thị video stream WebRTC và bảng điều khiển).
+
+6. **[Chuyên đề 06: Hướng Dẫn Vòng Đời Use Case & Kiến Trúc Kiểm Thử Tự Động](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/docs/06_usecase_lifecycle_and_testing_guide.md)**
+   - Phân tích chi tiết luồng dữ liệu (end-to-end request flow) của 2 use case tiêu biểu: Đăng nhập Google/Dev Mock và Đẩy bài đăng (Bump Product).
+   - Giải thích kiến trúc, cấu hình kiểm thử Jest, bản chất cơ chế Mocking và phân tích chi tiết các file test mẫu (`admin.service.test.ts`, `product.service.test.ts`).
 
 ---
 

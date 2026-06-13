@@ -126,8 +126,7 @@ export function ProductDetailPage({ product: initialProduct }) {
   const [reportSent, setReportSent] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [favLoading, setFavLoading] = useState(false);
-  const [priceHistory, setPriceHistory] = useState([]);
-  const [showPriceHistory, setShowPriceHistory] = useState(false);
+
 
   useSEO({
     title: product
@@ -163,9 +162,7 @@ export function ProductDetailPage({ product: initialProduct }) {
       .catch(() => {})
       .finally(() => setLoading(false));
 
-    api(`/products/${productId}/price-history`)
-      .then((history) => setPriceHistory(history || []))
-      .catch(() => {});
+
 
     if (user && initialSellerId) {
       api(`/follows/${initialSellerId}/check`)
@@ -433,57 +430,7 @@ export function ProductDetailPage({ product: initialProduct }) {
                     <span className={styles.priceTax}></span>
                   </div>
 
-                  {/* Price History Accordion */}
-                  {priceHistory.length > 0 && (
-                    <div style={{ marginBottom: 12 }}>
-                      <button
-                        className={styles.priceHistoryBtn}
-                        onClick={() => setShowPriceHistory(!showPriceHistory)}
-                      >
-                        📈{" "}
-                        {showPriceHistory
-                          ? "Ẩn lịch sử đổi giá ▲"
-                          : "Xem lịch sử đổi giá ▼"}
-                      </button>
-                      {showPriceHistory && (
-                        <div className={styles.priceHistoryPanel}>
-                          <div
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 700,
-                              color: "#94a3b8",
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            Biến động giá trị mẻ hàng
-                          </div>
-                          {priceHistory.map((h, i) => (
-                            <div key={i} className={styles.priceHistoryItem}>
-                              <div>
-                                <span
-                                  style={{
-                                    textDecoration: "line-through",
-                                    color: "#94a3b8",
-                                  }}
-                                >
-                                  {fmt(h.oldPrice)}
-                                </span>{" "}
-                                ➔{" "}
-                                <strong style={{ color: C.coral }}>
-                                  {fmt(h.newPrice)}
-                                </strong>
-                              </div>
-                              <span style={{ fontSize: 11, color: "#94a3b8" }}>
-                                {new Date(h.changedAt).toLocaleDateString(
-                                  "vi-VN",
-                                )}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+
 
                   {/* Stock Meter */}
                   <div className={styles.stockSection}>

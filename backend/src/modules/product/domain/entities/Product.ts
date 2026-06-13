@@ -1,7 +1,6 @@
 import { AggregateRoot } from "../../../../shared/domain/AggregateRoot";
 import { ValidationError, ConflictError } from "../../../../shared/domain/exceptions/DomainException";
 import { GPSCoordinates } from "../value-objects/GPSCoordinates";
-import { PriceHistory } from "../value-objects/PriceHistory";
 
 export interface ProductProps {
   sellerId: string;
@@ -20,7 +19,6 @@ export interface ProductProps {
   origin?: string;
   expiryDate?: Date;
   images: string[];
-  priceHistory: PriceHistory[];
   bumpedAt?: Date;
   createdAt?: Date;
   viewCount?: number;
@@ -62,15 +60,7 @@ export class Product extends AggregateRoot<ProductProps> {
     if (newPrice < 0) {
       throw new ValidationError("Giá bán không thể nhỏ hơn 0.");
     }
-    if (newPrice !== this.props.price) {
-      const oldPrice = this.props.price;
-      this.props.price = newPrice;
-      this.props.priceHistory.push(new PriceHistory({
-        oldPrice,
-        newPrice,
-        changedAt: new Date()
-      }));
-    }
+    this.props.price = newPrice;
   }
 
   public bump(requestedByUserId: string): void {
@@ -152,7 +142,6 @@ export class Product extends AggregateRoot<ProductProps> {
       origin: this.props.origin,
       expiryDate: this.props.expiryDate,
       images: this.props.images,
-      priceHistory: this.props.priceHistory,
       bumpedAt: this.props.bumpedAt,
       createdAt: this.props.createdAt,
       viewCount: this.props.viewCount,
@@ -176,7 +165,6 @@ export class Product extends AggregateRoot<ProductProps> {
   get origin() { return this.props.origin; }
   get expiryDate() { return this.props.expiryDate; }
   get images() { return this.props.images; }
-  get priceHistory() { return this.props.priceHistory; }
   get bumpedAt() { return this.props.bumpedAt; }
   get createdAt() { return this.props.createdAt; }
   get viewCount() { return this.props.viewCount; }

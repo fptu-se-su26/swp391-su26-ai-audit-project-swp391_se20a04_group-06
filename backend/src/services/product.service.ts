@@ -297,20 +297,6 @@ export const productService = {
     return { products: data, total, page, limit };
   },
 
-  async getPriceHistory(id: string) {
-    const product = await productRepository.findOne({
-      _id: id,
-      status: { $ne: "Deleted" },
-    });
-
-    if (!product) throw new HttpError(404, "Không tìm thấy sản phẩm");
-
-    return (product.priceHistory || []).sort(
-      (a: any, b: any) =>
-        new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime(),
-    );
-  },
-
   async getTodayCount(userId: string) {
     const user = await userRepository.findRawById(userId);
     if (!user) throw new HttpError(404, "Không tìm thấy người dùng");
@@ -601,16 +587,6 @@ export const productService = {
     const updateQuery: any = { $set: updateFields };
     if (Object.keys(unsetFields).length > 0) {
       updateQuery.$unset = unsetFields;
-    }
-
-    if (newPrice !== undefined && newPrice !== currentProduct.price) {
-      updateQuery.$push = {
-        priceHistory: {
-          oldPrice: currentProduct.price,
-          newPrice,
-          changedAt: new Date(),
-        },
-      };
     }
 
     await productRepository.findByIdAndUpdate(id, updateQuery);

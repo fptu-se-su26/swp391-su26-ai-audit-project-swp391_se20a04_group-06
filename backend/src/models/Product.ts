@@ -1,11 +1,5 @@
 import { Schema, model, Document, Types } from "mongoose";
 
-export interface IPriceHistory {
-  oldPrice: number;
-  newPrice: number;
-  changedAt: Date;
-}
-
 export interface IProduct extends Document {
   sellerId: Types.ObjectId;
   type: "Fresh" | "Dried";
@@ -30,7 +24,6 @@ export interface IProduct extends Document {
   origin?: string;
   expiryDate?: Date;
   images: string[];
-  priceHistory: IPriceHistory[];
   viewCount: number;
   bumpedAt: Date;
   createdAt: Date;
@@ -88,15 +81,6 @@ const productSchema = new Schema<IProduct>(
     origin: { type: String },
     expiryDate: { type: Date },
     images: [{ type: String }],
-
-    // Nhúng trực tiếp mảng lịch sử giá trong tài liệu
-    priceHistory: [
-      {
-        oldPrice: { type: Number, required: true },
-        newPrice: { type: Number, required: true },
-        changedAt: { type: Date, default: Date.now },
-      },
-    ],
 
     viewCount: { type: Number, default: 0 },
     bumpedAt: { type: Date, default: Date.now },

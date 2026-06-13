@@ -605,58 +605,6 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
 }
 
-/* ── Price History Accordion ── */
-.priceHistoryBtn {
-  background: none;
-  border: none;
-  color: #0b4f6c;
-  font-weight: 700;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 6px 10px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  border-radius: 6px;
-  transition: background 0.2s;
-  font-family: inherit;
-}
-
-.priceHistoryBtn:hover {
-  background: #f0f9ff;
-}
-
-.priceHistoryPanel {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 12px;
-  margin-top: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  animation: slideDown 0.25s ease;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.priceHistoryItem {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  border-left: 3px solid #0b4f6c;
-  padding-left: 10px;
-  padding: 4px 0 4px 10px;
-}
 
 /* ── Report Modal ── */
 .modalOverlay {

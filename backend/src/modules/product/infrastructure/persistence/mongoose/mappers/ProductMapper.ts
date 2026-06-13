@@ -1,6 +1,5 @@
 import { Product as DomainProduct } from "../../../../domain/entities/Product";
 import { GPSCoordinates } from "../../../../domain/value-objects/GPSCoordinates";
-import { PriceHistory } from "../../../../domain/value-objects/PriceHistory";
 import { IProduct as MongooseProductDoc } from "../../../../../../models/Product";
 import mongoose from "mongoose";
 
@@ -22,15 +21,6 @@ export class ProductMapper {
       );
     }
 
-    const priceHistory = (mongooseDoc.priceHistory || []).map(
-      (h: any) =>
-        new PriceHistory({
-          oldPrice: h.oldPrice,
-          newPrice: h.newPrice,
-          changedAt: h.changedAt,
-        })
-    );
-
     return new DomainProduct(
       {
         sellerId: mongooseDoc.sellerId.toString(),
@@ -49,7 +39,6 @@ export class ProductMapper {
         origin: mongooseDoc.origin,
         expiryDate: mongooseDoc.expiryDate,
         images: mongooseDoc.images || [],
-        priceHistory,
         bumpedAt: mongooseDoc.bumpedAt,
         createdAt: mongooseDoc.createdAt,
         viewCount: mongooseDoc.viewCount,
@@ -72,11 +61,6 @@ export class ProductMapper {
       remainingWeight: props.remainingWeight,
       status: props.status,
       images: props.images,
-      priceHistory: props.priceHistory.map((h) => ({
-        oldPrice: h.oldPrice,
-        newPrice: h.newPrice,
-        changedAt: h.changedAt,
-      })),
       viewCount: props.viewCount,
       bumpedAt: props.bumpedAt,
     };

@@ -38,23 +38,6 @@ export async function getProductById(req: Request, res: Response, next: NextFunc
   }
 }
 
-export async function getProductPriceHistory(req: Request, res: Response, next: NextFunction) {
-  const id = parseId(req.params.id);
-  if (!id) return res.status(400).json({ message: "ID sản phẩm không hợp lệ" });
-  try {
-    const history = await productService.getPriceHistory(id);
-    return res.json(
-      history.map((h: any) => ({
-        oldPrice: h.oldPrice,
-        newPrice: h.newPrice,
-        changedAt: h.changedAt,
-      }))
-    );
-  } catch (err) {
-    next(err);
-  }
-}
-
 export async function getMyProducts(req: Request, res: Response, next: NextFunction) {
   const rawPage = typeof req.query.page === "string" ? req.query.page : undefined;
   const rawLimit = typeof req.query.limit === "string" ? req.query.limit : undefined;

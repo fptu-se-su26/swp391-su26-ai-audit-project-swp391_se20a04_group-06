@@ -11,11 +11,11 @@ async function main() {
     await mongoose.connection.db.collection("users").deleteMany({});
     await mongoose.connection.db.collection("products").deleteMany({});
     await mongoose.connection.db.collection("messages").deleteMany({});
-    await mongoose.connection.db.collection("subscriptions").deleteMany({});
+
     await mongoose.connection.db.collection("recipes").deleteMany({});
     await mongoose.connection.db.collection("posts").deleteMany({});
     console.log(
-      "Cleared existing users, products, messages, subscriptions, recipes, and posts",
+      "Cleared existing users, products, messages, recipes, and posts",
     );
 
     const passwordHash =
@@ -331,41 +331,7 @@ async function main() {
     // Get admin ID
     const adminId = users.find((u) => u.name === "Admin")._id;
 
-    // Insert Subscriptions
-    const subscriptionsData = [
-      {
-        userId: lanId,
-        packageType: "Medium",
-        price: 499000,
-        frequency: "BiWeekly",
-        preferredDay: "Wednesday",
-        shippingAddress: "123 Đường Láng, Đống Đa, Hà Nội",
-        phone: "0987654321",
-        note: "Giao hải sản không xương cho trẻ nhỏ ăn.",
-        status: "Active",
-        nextDeliveryDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days later
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        userId: tuanId,
-        packageType: "Large",
-        price: 899000,
-        frequency: "Monthly",
-        preferredDay: "Saturday",
-        shippingAddress: "456 Lê Lợi, Quận 1, TP. Hồ Chí Minh",
-        phone: "0912345678",
-        note: "Cần bọc đá cẩn thận giao chiều thứ Bảy.",
-        status: "Pending",
-        nextDeliveryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10 days later
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ];
-    const subscriptionsResult = await mongoose.connection.db
-      .collection("subscriptions")
-      .insertMany(subscriptionsData);
-    console.log(`Inserted ${subscriptionsResult.insertedCount} subscriptions`);
+
 
     // Insert Recipes
     const recipesData = [

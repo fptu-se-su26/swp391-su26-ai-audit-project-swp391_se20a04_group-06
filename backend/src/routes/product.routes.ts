@@ -9,7 +9,6 @@ import {
   deleteProduct,
   getMyProducts,
   bumpProduct,
-  getProductPriceHistory,
   getTodayCount,
 } from "../modules/product/presentation/http/ProductController";
 import { authenticate } from "../middlewares/auth";
@@ -20,15 +19,7 @@ import {
 
 const router = Router();
 
-const priceHistoryLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 60,
-  message: {
-    message: "Quá nhiều yêu cầu xem lịch sử giá. Vui lòng thử lại sau.",
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+
 
 /**
  * @openapi
@@ -115,24 +106,7 @@ router.get("/today-count", authenticate, getTodayCount);
  */
 router.get("/:id", getProductById);
 
-/**
- * @openapi
- * /api/products/{id}/price-history:
- *   get:
- *     summary: Lấy lịch sử biến động giá của một sản phẩm
- *     tags: [Products]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID sản phẩm
- *     responses:
- *       200:
- *         description: Trả về lịch sử biến động giá
- */
-router.get("/:id/price-history", priceHistoryLimiter, getProductPriceHistory);
+
 
 /**
  * @openapi

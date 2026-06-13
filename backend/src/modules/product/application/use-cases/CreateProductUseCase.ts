@@ -105,7 +105,6 @@ export class CreateProductUseCase {
       origin,
       expiryDate: expiryDate ? new Date(expiryDate) : undefined,
       images: Array.isArray(images) ? images : [],
-      priceHistory: [],
     });
 
     try {

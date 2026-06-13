@@ -10,7 +10,7 @@ import {
   changePassword,
   deleteAccount,
   googleAuth,
-} from "../controllers/auth.controller";
+} from "../modules/iam/presentation/http/AuthController";
 import { authenticate } from "../middlewares/auth";
 import { upload, handleUploadError } from "../middlewares/upload";
 import {

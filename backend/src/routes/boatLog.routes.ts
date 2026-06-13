@@ -4,7 +4,7 @@ import {
   createBoatLog,
   toggleLikeBoatLog,
   deleteBoatLog,
-} from "../controllers/boatLog.controller";
+} from "../modules/boat-log/presentation/http/BoatLogController";
 import { authenticate } from "../middlewares/auth";
 import { validateSchema } from "../middlewares/validate";
 import { createBoatLogSchema } from "../validations/boatLog.validation";

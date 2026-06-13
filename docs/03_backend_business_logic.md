@@ -1,64 +1,66 @@
 # Chuyên Đề 03: Bản Đồ Nghiệp Vụ & Hệ Thống Kiểm Thử Backend
 
-Chuyên đề này cung cấp cái nhìn toàn cảnh về cấu trúc nghiệp vụ của Backend theo mô hình MVC + Repository, bản đồ tra cứu của toàn bộ các tệp tin trong hệ thống, giải thích mã nguồn các nghiệp vụ phức tạp nhất và cách thức vận hành hệ thống kiểm thử tự động Jest.
+Chuyên đề này cung cấp cái nhìn toàn cảnh về cấu trúc nghiệp vụ của Backend theo mô hình MVC + Repository, bản đồ tra cứu của toàn bộ các tệp tin trong hệ thống, giải thích mã nguồn các nghiệp vụ ph## 1. Bản Đồ Tra Cứu Toàn Bộ File Nghiệp Vụ Backend (Kiến trúc DDD & Hexagonal)
 
----
+Hệ thống đã chuyển dịch hoàn toàn từ MVC sang kiến trúc **Domain-Driven Design (DDD) & Hexagonal Architecture** kết hợp phân tách **CQRS** (Đọc/Ghi riêng biệt). Dưới đây là sơ đồ tra cứu cấu trúc tệp tin trong `backend/src`:
 
-## 1. Bản Đồ Tra Cứu Toàn Bộ File Nghiệp Vụ Backend
+### 1.1 Nhân chung của miền dữ liệu (`src/shared/domain`)
+Thư mục này chứa các thành phần cốt lõi của DDD dùng chung (Shared Kernel) giữa các Bounded Contexts:
+* [Entity.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/shared/domain/Entity.ts): Lớp cơ sở trừu tượng cho thực thể miền (Entity) định danh bằng ID.
+* [ValueObject.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/shared/domain/ValueObject.ts): Lớp cơ sở cho các giá trị không đổi trong miền (Value Object).
+* [AggregateRoot.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/shared/domain/AggregateRoot.ts): Lớp cơ sở cho các thực thể chịu trách nhiệm quản lý tính toàn vẹn (Aggregate Root).
+* [exceptions/DomainException.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/shared/domain/exceptions/DomainException.ts): Định nghĩa các lỗi nghiệp vụ miền (ValidationError, ConflictError).
+* [events/DomainEvents.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/shared/domain/events/DomainEvents.ts): Bộ trung gian bắt giữ và truyền đạt sự kiện miền (Domain Events).
 
-Dưới đây là bảng thống kê và giải thích chi tiết vai trò của **tất cả các tệp tin mã nguồn nghiệp vụ** trong thư mục `backend/src`:
+### 1.2 Các Phân Hệ Nghiệp Vụ DDD (`src/modules`)
+Được phân thành các **Bounded Contexts** độc lập. Mỗi Bounded Context được tổ chức thành các lớp:
+* **Domain Layer (Lõi nghiệp vụ):** Chứa Aggregate Roots, Entities, Value Objects và Interfaces Port.
+* **Application Layer (Lớp ứng dụng):** Chứa các Use Cases thực hiện luồng xử lý đơn lập.
+* **Infrastructure Layer (Hạ tầng):** Chứa các Database Persistence Adapters và Mappers chuyển đổi thực thể.
+* **Presentation Layer (Lớp giao diện/API):** Chứa các HTTP Controllers.
 
-### 1.1 Thư mục Cấu hình (`src/config`)
-* [cookie.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/config/cookie.ts): Định nghĩa các tùy chọn cấu hình cookie bảo mật (HttpOnly, Secure, SameSite).
-* [redis.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/config/redis.ts): Cấu hình kết nối Client Redis để lưu cache và làm adapter cho Socket.IO.
-* [cloudinary.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/config/cloudinary.ts): Cấu hình SDK Cloudinary quản lý tải lên và xóa tài nguyên hình ảnh.
+#### A. Phân hệ Định danh & Phân quyền (`src/modules/iam`)
+* **Domain:** [User.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/domain/entities/User.ts) (Aggregate Root kiểm soát tài khoản), [IUserRepository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/domain/repositories/IUserRepository.ts) (Port).
+* **Application:** Use cases Đăng ký (`RegisterUseCase`), Đăng nhập (`LoginUseCase`), Cập nhật Profile (`UpdateProfileUseCase`), Đổi mật khẩu (`ChangePasswordUseCase`), Xóa tài khoản (`DeleteAccountUseCase`), Đăng nhập Google (`GoogleAuthUseCase`).
+* **Infrastructure:** [MongooseUserRepository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/infrastructure/persistence/mongoose/MongooseUserRepository.ts) (Adapter), [UserMapper.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/infrastructure/persistence/mongoose/mappers/UserMapper.ts) (Mapper).
+* **Presentation:** [AuthController.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/presentation/http/AuthController.ts) (Controller đón tiếp HTTP).
 
-### 1.2 Thư mục Định nghĩa Thực thể dữ liệu (`src/models`)
-* [User.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/models/User.ts): Schema Mongoose định nghĩa cấu trúc bảng người dùng (`users`).
-* [Product.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/models/Product.ts): Định nghĩa sản phẩm, mảng lịch sử giá, và cấu trúc vị trí GeoJSON.
-* [Message.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/models/Message.ts): Định nghĩa dữ liệu tin nhắn chat realtime.
-* [Review.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/models/Review.ts): Định nghĩa cấu trúc đánh giá xếp hạng sao.
-* [Report.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/models/Report.ts): Định nghĩa báo cáo vi phạm sản phẩm.
-* [Notification.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/models/Notification.ts): Định nghĩa cấu trúc thông báo hệ thống và tin nhắn mới.
-* [Subscription.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/models/Subscription.ts): Định nghĩa đăng ký Omakase định kỳ của khách mua hàng.
-* [Post.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/models/Post.ts): Định nghĩa bài viết diễn đàn cộng đồng và mảng nhúng bình luận.
-* [Recipe.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/models/Recipe.ts): Định nghĩa công thức nấu ăn chế biến hải sản.
-* [BoatLog.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/models/BoatLog.ts): Định nghĩa tệp nhật ký hành trình đi biển của ngư dân.
-* [PaymentTransaction.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/models/PaymentTransaction.ts): Lưu giữ lịch sử nhận thanh toán nâng cấp Premium từ Sepay.
-* [BroadcastLog.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/models/BroadcastLog.ts): Lưu vết lịch sử admin phát thông báo chung toàn trang.
+#### B. Phân hệ Tin đăng Hải sản (`src/modules/product`)
+* **Domain:** [Product.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/domain/entities/Product.ts) (Aggregate Root), [GPSCoordinates.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/domain/value-objects/GPSCoordinates.ts), [PriceHistory.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/domain/value-objects/PriceHistory.ts), [IProductRepository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/domain/repositories/IProductRepository.ts) (Port).
+* **Application:** Use cases Đăng tin (`CreateProductUseCase`), Đẩy tin (`BumpProductUseCase`), Cập nhật (`UpdateProductUseCase`), Xóa sản phẩm (`DeleteProductUseCase`).
+* **Infrastructure:** [MongooseProductRepository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/infrastructure/persistence/mongoose/MongooseProductRepository.ts) (Adapter), [ProductMapper.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/infrastructure/persistence/mongoose/mappers/ProductMapper.ts) (Mapper).
+* **Presentation:** [ProductController.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/presentation/http/ProductController.ts) (Controller).
 
-### 1.3 Thư mục Data Access Layer (`src/repositories`)
-* [user.repository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/repositories/user.repository.ts): Thực hiện các truy vấn tìm kiếm theo email, ID, cập nhật trạng thái verify.
-* [product.repository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/repositories/product.repository.ts): Thực hiện truy vấn sản phẩm của ngư dân, hỗ trợ phân trang dữ liệu.
-* [message.repository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/repositories/message.repository.ts): Lưu trữ tin nhắn, tổng hợp danh sách cuộc hội thoại (aggregation pipeline).
-* [review.repository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/repositories/review.repository.ts): Truy vấn, tổng hợp điểm số trung bình (rating) của ngư dân.
-* [report.repository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/repositories/report.repository.ts): Quản lý truy xuất dữ liệu báo cáo vi phạm phục vụ admin kiểm duyệt.
-* [notification.repository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/repositories/notification.repository.ts): Quản lý tạo/xóa thông báo, cập nhật trạng thái đã đọc.
-* [post.repository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/repositories/post.repository.ts): Quản lý CRUD bài đăng và tương tác like/comment của cộng đồng.
-* [recipe.repository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/repositories/recipe.repository.ts): Quản lý truy xuất danh sách các công thức chế biến hải sản.
-* [boatlog.repository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/repositories/boatlog.repository.ts): Quản lý nhật ký đi biển của ngư dân.
-* [broadcastlog.repository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/repositories/broadcastlog.repository.ts): Quản lý lưu trữ nhật ký phát tin hệ thống của admin.
+#### C. Phân hệ Diễn đàn Cộng đồng (`src/modules/post`)
+* **Domain:** [Post.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/domain/entities/Post.ts) (Aggregate Root quản lý Like & Comment), [IPostRepository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/domain/repositories/IPostRepository.ts) (Port).
+* **Application:** Use cases Tạo bài viết (`CreatePostUseCase`), Xóa bài viết (`DeletePostUseCase`), Thích bài viết (`ToggleLikePostUseCase`), Thêm bình luận (`AddCommentUseCase`), Xóa bình luận (`DeleteCommentUseCase`).
+* **Infrastructure:** [MongoosePostRepository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/infrastructure/persistence/mongoose/MongoosePostRepository.ts) (Adapter), [PostMapper.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/infrastructure/persistence/mongoose/mappers/PostMapper.ts) (Mapper).
+* **Presentation:** [PostController.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/presentation/http/PostController.ts) (Controller).
 
-### 1.4 Thư mục Service Layer (`src/services`)
-* [auth.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/auth.service.ts): Xử lý đăng ký, đăng nhập thường & Google OAuth, cơ chế đổi mật khẩu, cập nhật hồ sơ, xóa tài khoản GDPR.
-* [user.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/user.service.ts): Tính toán điểm rating, tổng hợp bảng xếp hạng leaderboard ngư dân tiêu biểu.
-* [product.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/product.service.ts): CRUD sản phẩm, phân trang, lưu cache Redis, truy vấn địa lý GPS bản đồ, logic bump bài đăng.
-* [message.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/message.service.ts): Cung cấp API tải tin nhắn lịch sử và nạp danh sách các hội thoại.
-* [review.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/review.service.ts): Xử lý tạo và lấy danh sách đánh giá ngư dân.
-* [report.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/report.service.ts): Xử lý tạo báo cáo và xử lý kiểm duyệt báo cáo của admin.
-* [follow.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/follow.service.ts): Thực thi logic theo dõi (follow)/bỏ theo dõi (unfollow) giữa các tài khoản.
-* [favorite.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/favorite.service.ts): Quản lý danh sách sản phẩm yêu thích của người mua.
-* [notification.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/notification.service.ts): Gửi thông báo đẩy khi có tin đăng mới cho người theo dõi.
-* [badge.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/badge.service.ts): Hệ thống huy hiệu tự động (ví dụ cấp huy hiệu "Ngư dân chăm chỉ" nếu đăng trên 5 sản phẩm).
-* [admin.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/admin.service.ts): Nghiệp vụ của admin: khóa tài khoản, duyệt badge ngư dân uy tín, xuất dashboard thống kê doanh thu.
-* [otp.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/otp.service.ts): Sinh OTP ngẫu nhiên, lưu tạm Redis, gọi cổng gửi tin SMS ESMS Gateway.
-* [post.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/post.service.ts): Nghiệp vụ viết bài diễn đàn cộng đồng, bình luận và thả tim.
-* [recipe.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/recipe.service.ts): Nghiệp vụ CRUD công thức nấu ăn, đếm lượt xem.
-* [boatLog.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/boatLog.service.ts): Nghiệp vụ viết nhật ký buồng lái của ngư dân.
-* [fisherman.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/fisherman.service.ts): API tổng hợp thông tin, tabs bài viết/công thức/nhật ký của ngư dân.
+#### D. Phân hệ Cẩm nang Công thức (`src/modules/recipe`)
+* **Domain:** [Recipe.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/domain/entities/Recipe.ts) (Aggregate Root), [IRecipeRepository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/domain/repositories/IRecipeRepository.ts) (Port).
+* **Application:** Use cases Tạo công thức (`CreateRecipeUseCase`), Sửa (`UpdateRecipeUseCase`), Xóa (`DeleteRecipeUseCase`), Thích (`ToggleLikeRecipeUseCase`), Tăng lượt xem (`IncrementRecipeViewsUseCase`).
+* **Infrastructure:** [MongooseRecipeRepository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/infrastructure/persistence/mongoose/MongooseRecipeRepository.ts) (Adapter), [RecipeMapper.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/infrastructure/persistence/mongoose/mappers/RecipeMapper.ts) (Mapper).
+* **Presentation:** [RecipeController.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/presentation/http/RecipeController.ts) (Controller).
 
-### 1.5 Thư mục Route & Controller Layer (`src/routes` & `src/controllers`)
-Mỗi module nghiệp vụ (như auth, product, message, payment) có cặp Router và Controller tương ứng đứng trước để đón tiếp request HTTP, chuyển đổi dữ liệu và gọi Service Layer:
+#### E. Phân hệ Nhật ký Cabin (`src/modules/boat-log`)
+* **Domain:** [BoatLog.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/boat-log/domain/entities/BoatLog.ts) (Aggregate Root), [IBoatLogRepository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/boat-log/domain/repositories/IBoatLogRepository.ts) (Port).
+* **Application:** Use cases Viết nhật ký (`CreateBoatLogUseCase`), Xóa (`DeleteBoatLogUseCase`), Thích (`ToggleLikeBoatLogUseCase`).
+* **Infrastructure:** [MongooseBoatLogRepository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/boat-log/infrastructure/persistence/mongoose/MongooseBoatLogRepository.ts) (Adapter), [BoatLogMapper.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/boat-log/infrastructure/persistence/mongoose/mappers/BoatLogMapper.ts) (Mapper).
+* **Presentation:** [BoatLogController.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/boat-log/presentation/http/BoatLogController.ts) (Controller).
+
+### 1.3 Lớp Chống Tham Nhũng Tương Thích Ngược (`src/repositories`)
+Đóng vai trò làm lớp trung gian (Anti-Corruption Layer - ACL) bọc các tệp truy vấn cũ để tự động ánh xạ sang các Use Cases và thực thể của DDD mà không gây phá vỡ các phần chưa nâng cấp hoặc Client:
+* [user.repository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/repositories/user.repository.ts): Chuyển luồng đọc/ghi thông tin người dùng sang DDD.
+* [product.repository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/repositories/product.repository.ts): Chuyển luồng đọc/ghi sản phẩm sang DDD.
+* [recipe.repository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/repositories/recipe.repository.ts): ACL ánh xạ nghiệp vụ Recipe.
+* [boatlog.repository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/repositories/boatlog.repository.ts): ACL ánh xạ nghiệp vụ BoatLog.
+* [post.repository.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/repositories/post.repository.ts): ACL ánh xạ nghiệp vụ Diễn đàn & Bình luận.
+
+### 1.4 Thư mục Route Định Tuyến Layer (`src/routes`)
+Đón tiếp các REST Request và chuyển trực tiếp tới các Controller trong lớp Presentation của DDD:
+* Các tệp tin routes: `auth.routes.ts`, `product.routes.ts`, `recipe.routes.ts`, `boatLog.routes.ts`, `post.routes.ts`.
+* Các tệp tin controllers: `auth.controller.ts`, `product.controller.ts`, `message.controller.ts`, `admin.controller.ts`, `follow.controller.ts`, `review.controller.ts`, `notification.controller.ts`, `favorite.controller.ts`, `report.controller.ts`, `payment.controller.ts`, `chatbot.controller.ts`, `recipe.controller.ts`, `post.controller.ts`, `boatLog.controller.ts`, `otp.controller.ts`, `user.controller.ts`, `fisherman.controller.ts`, `image.controller.ts`.roller tương ứng đứng trước để đón tiếp request HTTP, chuyển đổi dữ liệu và gọi Service Layer:
 * Các tệp tin routes: `auth.routes.ts`, `product.routes.ts`, `message.routes.ts`, `admin.routes.ts`, `follow.routes.ts`, `review.routes.ts`, `notification.routes.ts`, `favorite.routes.ts`, `report.routes.ts`, `payment.routes.ts`, `chatbot.routes.ts`, `recipe.routes.ts`, `post.routes.ts`, `boatLog.routes.ts`, `otp.routes.ts`, `fisherman.routes.ts`.
 * Các tệp tin controllers: `auth.controller.ts`, `product.controller.ts`, `message.controller.ts`, `admin.controller.ts`, `follow.controller.ts`, `review.controller.ts`, `notification.controller.ts`, `favorite.controller.ts`, `report.controller.ts`, `payment.controller.ts`, `chatbot.controller.ts`, `recipe.controller.ts`, `post.controller.ts`, `boatLog.controller.ts`, `otp.controller.ts`, `user.controller.ts`, `fisherman.controller.ts`, `image.controller.ts`.
 
@@ -252,6 +254,45 @@ export async function sepayWebhook(req: Request, res: Response) {
   - Khi ngân hàng nhận tiền chuyển khoản của ngư dân, Sepay Gateway sẽ gọi Webhook POST thẳng vào API của backend.
   - Để xác minh request này thực sự đến từ Sepay chứ không phải do kẻ xấu giả lập dữ liệu gửi lên, hệ thống kiểm tra Header Authorization.
   - Sử dụng hàm `safeCompare` để đối chiếu chuỗi token nhận được với `SEPAY_WEBHOOK_KEY` cấu hình trong `.env`. `safeCompare` chạy một vòng lặp có thời gian xử lý không đổi (Constant Time comparison) để so khớp các ký tự chuỗi, bảo vệ hệ thống trước hình thức tấn công Timing Attack dò tìm khóa bảo mật qua phản hồi của CPU.
+
+---
+
+### 2.4 Quản Lý Hội Thoại & Tính Năng Chat Nâng Cao (`message.controller.ts` & `socket.ts`)
+
+#### Thu hồi tin nhắn (Recall Message)
+```typescript
+export async function recallMessage(req: Request, res: Response) {
+  const { id } = req.params;
+  const { userId } = req.user;
+
+  try {
+    const msg = await Message.findById(id);
+    if (!msg) return res.status(404).json({ message: "Không tìm thấy tin nhắn" });
+    if (msg.senderId.toString() !== userId) {
+      return res.status(403).json({ message: "Bạn không có quyền thu hồi tin nhắn này" });
+    }
+
+    msg.isRecalled = true;
+    await msg.save();
+
+    // Đồng bộ Realtime qua Socket
+    getIO().to(`product_${msg.productId}_${msg.senderId}`).emit("message_recalled", { id });
+    getIO().to(`product_${msg.productId}_${msg.receiverId}`).emit("message_recalled", { id });
+
+    return res.json({ success: true, message: "Thu hồi thành công" });
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+```
+* **Giải thích:**
+  - Hàm thực hiện cập nhật thuộc tính `isRecalled = true` của bản ghi tin nhắn cụ thể trong MongoDB.
+  - Thực hiện kiểm tra quyền sở hữu (`msg.senderId.toString() !== userId`) để đảm bảo một người dùng không thể thu hồi tin nhắn của đối phương.
+  - Sử dụng `getIO().to(room).emit("message_recalled", { id })` để broadcast sự kiện thu hồi tin nhắn tới cả người gửi và người nhận thông qua Socket.IO room chuyên biệt. Phía Frontend React sẽ nhận sự kiện này và ẩn nội dung tin nhắn đó đi trên giao diện tức thời.
+
+#### Chỉnh sửa nội dung tin nhắn (Edit Message) & Thả cảm xúc (React Message)
+* Khi người gửi chỉnh sửa tin nhắn hoặc thả biểu tượng cảm xúc (emoji), controller sẽ cập nhật trực tiếp vào trường `content` hoặc `reaction` trong database.
+* Đồng thời emit sự kiện `"message_edited"` hoặc `"message_reacted"` qua Socket.io để đồng bộ giao diện cho người nhận tức thì mà không cần reload trang.
 
 ---
 

@@ -11,7 +11,7 @@ import {
   bumpProduct,
   getProductPriceHistory,
   getTodayCount,
-} from "../controllers/product.controller";
+} from "../modules/product/presentation/http/ProductController";
 import { authenticate } from "../middlewares/auth";
 import {
   productCreateSchema,

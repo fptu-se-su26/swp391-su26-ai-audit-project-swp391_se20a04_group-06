@@ -221,6 +221,8 @@ Mô hình hóa sản phẩm hải sản (loại tươi sống gắn định vị
 * `imageUrl` (String, Nullable): Đường dẫn ảnh đính kèm.
 * `location` (Object, Nullable): Tọa độ chia sẻ `{ latitude, longitude, address }`.
 * `isRead` (Boolean, Default: `false`): Trạng thái xem.
+* `isRecalled` (Boolean, Default: `false`): Trạng thái tin nhắn đã bị thu hồi bởi người gửi.
+* `reaction` (String, Nullable): Biểu tượng cảm xúc (Emoji) được thả vào tin nhắn.
 
 #### 4. REVIEW (`reviews` collection)
 * `productId` (ObjectId, Required, Ref: `Product`): Sản phẩm giao dịch.

@@ -14,6 +14,8 @@ import { initSocket, closeSocketRedisClients } from "./socket";
 import { startCronJobs } from "./cron";
 import { generateCsrfToken, validateCsrf } from "./middlewares/csrf";
 import { setupSwagger } from "./config/swagger";
+import { errorHandler } from "./middlewares/errorHandler";
+import { OnUserPremiumUpgraded } from "./modules/iam/application/event-handlers/OnUserPremiumUpgraded";
 
 import authRoutes, { userRouter } from "./routes/auth.routes";
 import otpRoutes from "./routes/otp.routes";
@@ -179,27 +181,7 @@ app.use((_req, res) =>
   res.status(404).json({ message: "Không tìm thấy endpoint này" }),
 );
 
-app.use(
-  (
-    err: Error,
-    req: express.Request,
-    res: express.Response,
-    _next: express.NextFunction,
-  ) => {
-    logger.error(`Exception on ${req.method} ${req.url}: ${err.message}`, {
-      stack: err.stack,
-    });
-    
-    // Giả lập tích hợp giám sát Sentry khi chạy thực tế
-    if (process.env.SENTRY_DSN) {
-      logger.info(`[Monitoring] Sentry captured exception: ${err.message}`);
-    }
-
-    return res
-      .status(500)
-      .json({ message: "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau." });
-  },
-);
+app.use(errorHandler);
 
 process.on("uncaughtException", (err) => {
   logger.error(`[CRITICAL] uncaughtException: ${err.message}`, {
@@ -231,6 +213,9 @@ async function bootstrap() {
   if (process.env.SENTRY_DSN) {
     logger.info(`📡 [Monitoring] Sentry integration configured via SENTRY_DSN`);
   }
+
+  // Đăng ký Event Handlers miền của DDD
+  OnUserPremiumUpgraded.register();
 
   await testConnection();
   await connectRedis();

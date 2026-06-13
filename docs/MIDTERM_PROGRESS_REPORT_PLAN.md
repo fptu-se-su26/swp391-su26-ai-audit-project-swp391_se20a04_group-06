@@ -12,37 +12,55 @@ Tài liệu này lập kế hoạch chi tiết cho báo cáo tiến độ giữa
 | **Tuần 3** | Hiện thực hóa quy trình Xác thực (Auth) bảo mật, băm mật khẩu, phân quyền JWT, và CRUD Sản phẩm cơ bản. | API đăng ký/đăng nhập, API CRUD sản phẩm, kết nối cơ sở dữ liệu MongoDB/Mongoose. | ✅ Hoàn thành |
 | **Tuần 4** | Tích hợp bản đồ định vị Leaflet (GPS), Haversine filter, Chat realtime qua Socket.io và hệ thống Đánh giá/Theo dõi. | Giao diện bản đồ, nhắn tin thời gian thực 1-1, đánh giá ngư dân. | ✅ Hoàn thành |
 | **Tuần 5** | Triển khai Unit Tests, Swagger API documentation, và thiết lập CI/CD tự động trên GitHub Actions. | 16 test suites (Jest) đạt độ bao phủ tốt, endpoint `/api-docs` hoạt động, CI chạy không lỗi. | ✅ Hoàn thành |
-| **Tuần 6** | **(Hiện tại)** Báo cáo tiến độ giữa kỳ, nhận phản hồi từ giáo viên và tối ưu hóa Sepay Webhook nâng cấp Premium. | Slide thuyết trình giữa kỳ, luồng Webhook hoàn thiện. | 🔄 Đang chạy |
-| **Tuần 7** | Triển khai cuộc gọi video trực tuyến thời gian thực (WebRTC Video Calling). | Kết nối ngang hàng P2P Buyer - Seller, giao diện Video call overlay. | 📋 Kế hoạch |
-| **Tuần 8** | Xây dựng tính năng Nhật ký cabin (Boat Logs) và Điều chỉnh giao diện Web theo phản hồi. | Nhật ký cabin chạy được, giao diện Web được tối ưu hoá và responsive tốt hơn. | 📋 Kế hoạch |
-| **Tuần 9** | Tối ưu hóa hiệu năng truy vấn dữ liệu (Compound Indexes), rà soát bảo mật nâng cao (Spam rate limit, CSRF). | Hệ thống chịu tải tốt, vá toàn bộ lỗ hổng bảo mật. | 📋 Kế hoạch |
-| **Tuần 10** | Đóng gói hệ thống bằng Docker Compose, quay video demo toàn bộ luồng nghiệp vụ và bảo vệ dự án cuối kỳ. | File `docker-compose.yml` hoàn chỉnh, tài liệu bàn giao. | 📋 Kế hoạch |
+| **Tuần 6** | **(Hiện tại)** Báo cáo tiến độ giữa kỳ, hoàn tất tái cấu trúc Backend sang Domain-Driven Design (DDD) và dọn dẹp hệ thống. | Slide thuyết trình giữa kỳ, mã nguồn backend tái cấu trúc DDD sạch lỗi, dọn dẹp các legacy controllers. | 🔄 Đang chạy |
+| **Tuần 7** | Tích hợp cuộc gọi video WebRTC ngang hàng (WebRTC Video Calling). | Kết nối WebRTC Signaling qua Socket.io, giao diện gọi video phía React Client. Bàn giao phát triển chính cho Thuận & Đức. | 📋 Kế hoạch |
+| **Tuần 8** | Tối ưu hóa hiệu năng cơ sở dữ liệu (Indexes), rà soát bảo mật nâng cao và tối ưu responsive UI/UX. | Thiết lập Compound Indexes tối ưu truy vấn GPS, rà soát rate limit, CSRF và sửa lỗi giao diện. Thuận & Đức chịu trách nhiệm phát triển chính; Bút & Cường hỗ trợ kiểm thử thủ công và tài liệu. | 📋 Kế hoạch |
+| **Tuần 9** | Kiểm thử hồi quy toàn diện, tối ưu hóa code và chuẩn bị tài liệu nghiệm thu. | Hệ thống chạy mượt mà, độ bao phủ test >85%, sửa đổi các tài liệu kỹ thuật khớp với DDD. | 📋 Kế hoạch |
+| **Tuần 10** | Đóng gói hệ thống bằng Docker Compose, quay video demo toàn bộ luồng nghiệp vụ và bảo vệ dự án cuối kỳ. | File `docker-compose.yml` hoàn chỉnh, video demo, tài liệu bàn giao. | 📋 Kế hoạch |
 
 ---
 
-## 📊 Báo Cáo Tiến Độ Hiện Tại (Hoàn Thành Tuần 1 - 5)
+## 📊 Báo Cáo Tiến Độ Hiện Tại (Hoàn Thành Tuần 1 - 6)
 
 ### 1. Kiến Trúc & Công Nghệ (Tech Stack)
-* **Backend:** Node.js + TypeScript (Express) mang lại sự an toàn kiểu dữ liệu (type-safe) và khả năng mở rộng.
+* **Backend:** Node.js + TypeScript (Express) đã được nâng cấp hoàn toàn sang kiến trúc **Domain-Driven Design (DDD) & Hexagonal Architecture** (Ports & Adapters).
 * **Database & Caching:** MongoDB (Mongoose ODM) kết hợp Redis Cache để quản lý phiên, lưu mã xác minh OTP (khi đặt lại mật khẩu) và lưu token blacklist.
 * **Frontend:** React (Vite) + Bootstrap (v5.3.8) cho layout responsive & Grid, kết hợp inline style cho giao diện trực quan.
 * **Kênh Realtime & Media:** Socket.io (cho chat thời gian thực và tín hiệu WebRTC).
 * **Bảo mật:** JWT Stateless Auth kết hợp Redis Token Blacklist, Double Submit Cookie CSRF, Helmet, Rate Limiter chống spam.
 
-### 2. Các Tính Năng Đã Hoàn Thành (Tính Đến Tuần 5)
+### 2. Các Mốc Đột Phá Đã Đạt Được (Đặc biệt về Backend & Kiến trúc)
+
+#### A. Tái cấu trúc thành công sang Domain-Driven Design (DDD) & Hexagonal Architecture
+Nhằm giải quyết sự lộn xộn của kiến trúc MVC truyền thống khi dự án phình to, toàn bộ Backend đã được tái cấu trúc theo kiến trúc DDD chuyên nghiệp:
+* **Shared Kernel (`src/shared/`):** Thiết lập các lớp cơ sở trừu tượng (`Entity`, `ValueObject`, `AggregateRoot`), hệ thống sự kiện miền tập trung (`DomainEvents`) để truyền đạt thông tin bất đồng bộ, cùng bộ lỗi miền (`DomainException`).
+* **5 Bounded Contexts hoàn chỉnh (`src/modules/`):**
+  * `iam`: Phân hệ quản lý định danh & quyền hạn (Đăng ký, Đăng nhập, Profile).
+  * `product`: Phân hệ cốt lõi (Core Domain) quản lý danh mục mẻ hàng hải sản.
+  * `recipe`: Phân hệ phụ trợ Recipe Hub (Công thức nấu ăn).
+  * `boat-log`: Phân hệ phụ trợ Cabin Log (Nhật ký khơi của ngư dân).
+  * `post`: Phân hệ phụ trợ Community Forum (Diễn đàn & Bình luận).
+  * Mỗi phân hệ được chia cấu trúc 4 lớp chuẩn chỉnh: `domain` (chứa các quy tắc nghiệp vụ tinh khiết, entity và port repository), `application` (chứa use case cô lập), `infrastructure` (chứa adapter persistence Mongoose, mappers chuyển đổi) và `presentation` (chứa controller API).
+* **Kiến trúc CQRS (Command Query Responsibility Segregation):** Tách biệt luồng Ghi (Write) đi qua DDD Use Cases/Aggregate Roots để kiểm soát quy tắc nghiệp vụ chặt chẽ, và luồng Đọc (Query) truy vấn trực tiếp bằng Mongoose thô nhằm duy trì tốc độ phản hồi cực nhanh dưới 80ms.
+* **Lớp chống tham nhũng (Anti-Corruption Layer - ACL):** Bọc các tệp repository cũ (`recipe.repository.ts`, `boatlog.repository.ts`, `post.repository.ts`, `user.repository.ts`, `product.repository.ts`) thành các adapter gọi sang DDD để các module cũ hoặc frontend chưa cập nhật vẫn có thể tương thích ngược 100%.
+* **Sắp xếp lại hệ thống kiểm thử (Testing Layout):** Chuyển toàn bộ các ca kiểm thử tích hợp (Integration Tests) về thư mục trung tâm `/tests/integration/` để quản lý tập trung, đồng thời giữ các ca kiểm thử đơn vị (Unit Tests) nằm cạnh file domain thực tế (Co-location). Sửa triệt để các cảnh báo `rootDir` trong cấu hình `tsconfig.json`.
+
+#### B. Các Tính Năng Đã Hoàn Thành (Tính Đến Tuần 6)
 
 | Tính Năng / Module | Trạng Thái | Mô Tả Kỹ Thuật |
 | :--- | :---: | :--- |
-| **Authentication & Auth Flow** | ✅ 100% | Đăng ký/Đăng nhập JWT bằng Email/Password, tích hợp Google OAuth. Gửi OTP qua Email (Gmail SMTP) lưu Redis TTL 5p để phục vụ chức năng quên mật khẩu. |
-| **Quản Lý Sản Phẩm (Product CRUD)** | ✅ 100% | Thêm, sửa, xóa, tìm kiếm tin đăng hải sản. Phân biệt hải sản tươi sống (Fresh - có GPS) và hải sản khô (Dried - có hạn sử dụng). |
-| **Tìm Kiếm Theo Bản Đồ (Leaflet.js)** | ✅ 100% | Sử dụng MongoDB `2dsphere` index và toán tử `$near` để tìm kiếm sản phẩm theo khoảng cách thực tế quanh vị trí GPS của người dùng. |
-| **Hệ Thống Chat Realtime** | ✅ 100% | Nhắn tin 1-1 giữa Buyer và Seller qua Socket.io, lưu lịch sử trò chuyện trong MongoDB. |
+| **Authentication & Auth Flow** | ✅ 100% | Đăng ký/Đăng nhập JWT bằng Email/Password qua DDD IAM Module, tích hợp Google OAuth. Gửi OTP qua Email (Gmail SMTP) lưu Redis TTL 5p phục vụ quên mật khẩu. |
+| **Quản Lý Sản Phẩm (Product CRUD)** | ✅ 100% | Đăng tin, cập nhật, xóa hải sản qua DDD Product Module. Phân biệt Fresh (hải sản tươi - bắt buộc có GPS) và Dried (hải sản khô). Sửa lỗi gán ID Mongoose đồng bộ cho thực thể Product mới. |
+| **Tìm Kiếm Theo Bản Đồ (Leaflet.js)** | ✅ 100% | Sử dụng MongoDB `2dsphere` index và toán tử `$near` tìm kiếm sản phẩm theo khoảng cách thực tế quanh vị trí GPS người dùng. |
+| **Hệ Thống Chat Realtime & Các Tính Năng Nâng Cao** | ✅ 100% | Nhắn tin 1-1 giữa Buyer và Seller qua Socket.io, lưu lịch sử trò chuyện trong MongoDB. Tích hợp các tính năng nâng cao: **Thu hồi tin nhắn (Recall)**, **Chỉnh sửa nội dung tin nhắn (Edit)**, **Thả cảm xúc Emoji (Reaction)**, đồng bộ trực quan tức thời thông qua WebSockets. |
 | **Đánh Giá & Theo Dõi (Review/Follow)** | ✅ 100% | Người mua đánh giá chất lượng sản phẩm (rating sao + bình luận + ảnh thực tế), theo dõi ngư dân yêu thích. |
 | **Admin Control Panel** | ✅ 100% | Thống kê số lượng bài đăng, quản lý danh sách tài khoản, duyệt tin đăng và xử lý báo cáo vi phạm. |
-| **Diễn Đàn Cộng Đồng (Community)** | ✅ 100% | Đăng bài viết cộng đồng chia sẻ kinh nghiệm biển cả, thích (like), bình luận (comment) realtime và tải lên hình ảnh qua Cloudinary. |
-| **Cẩm Nang Công Thức (Recipes)** | ✅ 100% | Đăng tải công thức nấu món ăn hải sản, hướng dẫn chi tiết các bước, phân loại độ khó, thời gian nấu và định lượng khẩu phần. |
+| **Diễn Đàn Cộng Đồng (Community)** | ✅ 100% | Đăng bài viết cộng đồng chia sẻ kinh nghiệm biển cả, thích (like), bình luận (comment) realtime qua DDD Post Module. |
+| **Cẩm Nang Công Thức (Recipes)** | ✅ 100% | Đăng tải công thức nấu món ăn hải sản qua DDD Recipe Module, phân loại độ khó, thời gian nấu và định lượng khẩu phần. |
+| **Nhật Ký Cabin (Boat Logs)** | ✅ 100% | Ngư dân đăng hình ảnh và ghi chép hành trình kéo lưới ngoài khơi qua DDD Boat-log Module. |
+| **Yêu Thích Sản Phẩm (Favorites)** | ✅ 100% | Cho phép người dùng lưu trữ danh sách các hải sản yêu thích để dễ dàng theo dõi và truy cập lại sau này. |
 | **Trợ Lý Chatbot AI (AI Assistant)** | ✅ 100% | Tích hợp mô hình LLM Llama 3.1 qua Groq Cloud API làm "Trợ lý hải sản" tư vấn cách chọn/chế biến hải sản và hướng dẫn tính năng web. |
-| **Kiểm Thử & Tự Động Hóa (CI/CD)** | ✅ 100% | Tích hợp bộ kiểm thử tự động Jest (16 test suites), tài liệu hóa API tương tác bằng Swagger UI (`/api-docs`), thiết lập GitHub Actions CI/CD Pipeline. |
+| **Kiểm Thử & Tự Động Hóa (CI/CD)** | ✅ 100% | Tích hợp bộ kiểm thử tự động Jest (22 test suites, 68 tests), tài liệu hóa API tương tác bằng Swagger UI (`/api-docs`), thiết lập GitHub Actions CI/CD Pipeline. |
 
 ---
 
@@ -84,11 +102,17 @@ flowchart LR
         UC_VerifyGPS([UC-3.1: Định vị tọa độ]):::usecase
         
         UC_Chat([UC-4: Nhắn tin realtime]):::usecase
+        UC_RecallChat([UC-4.1: Thu hồi tin nhắn]):::usecase
+        UC_EditChat([UC-4.2: Chỉnh sửa tin nhắn]):::usecase
+        UC_ReactChat([UC-4.3: Thả cảm xúc tin nhắn]):::usecase
+        
         UC_Review([UC-5: Đánh giá & Theo dõi]):::usecase
         UC_Admin([UC-6: Quản trị hệ thống]):::usecase
         UC_Chatbot([UC-7: Trợ lý Chatbot AI]):::usecase
         UC_Recipe([UC-8: Sáng tạo công thức]):::usecase
         UC_Post([UC-9: Đăng bài viết cộng đồng]):::usecase
+        UC_BoatLog([UC-10: Đăng nhật ký Cabin]):::usecase
+        UC_Favorite([UC-11: Yêu thích sản phẩm]):::usecase
     end
 
     %% Links between Actors and Use Cases
@@ -97,12 +121,14 @@ flowchart LR
     User --> UC_Chatbot
     User --> UC_Recipe
     User --> UC_Post
+    User --> UC_Favorite
     
     Buyer --> UC_Explore
     Buyer --> UC_Review
     
     Seller --> UC_CreateProduct
     Seller --> UC_UpgradePremium
+    Seller --> UC_BoatLog
     
     Buyer --> UC_Chat
     Seller --> UC_Chat
@@ -115,6 +141,12 @@ flowchart LR
     UC_Explore -. "<<include>>" .-> UC_VerifyGPS
     UC_Recipe -. "<<include>>" .-> UC_UploadImg
     UC_Post -. "<<include>>" .-> UC_UploadImg
+    UC_BoatLog -. "<<include>>" .-> UC_UploadImg
+    
+    %% Extend relationships for chat
+    UC_RecallChat -. "<<extend>>" .-> UC_Chat
+    UC_EditChat -. "<<extend>>" .-> UC_Chat
+    UC_ReactChat -. "<<extend>>" .-> UC_Chat
     
     %% Connections to external systems
     GroqSys["«System»\nGroq Cloud API"]:::system
@@ -368,17 +400,17 @@ Dưới đây là đặc tả chi tiết cho 6 Use Case cốt lõi đã được
 
 ---
 
-### UC-4: Nhắn Tin Realtime (Real-time Chat)
+### UC-4: Nhắn Tin Realtime & Quản Lý Tin Nhắn
 
 | Trường Thông Tin | Nội Dung Đặc Tả |
 | :--- | :--- |
-| **Tên Use Case** | UC-4: Nhắn tin thời gian thực |
+| **Tên Use Case** | UC-4: Nhắn tin thời gian thực và các tương tác tin nhắn nâng cao |
 | **Tác Nhân (Actors)** | Người Mua (Buyer), Người Bán (Seller) |
-| **Mô Tả** | Người mua và người bán nhắn tin thương lượng trực tiếp về giá cả, thời gian giao nhận hải sản trên trang chi tiết sản phẩm. |
+| **Mô Tả** | Người mua và người bán nhắn tin thương lượng trực tiếp về giá cả, thời gian giao nhận hải sản trên trang chi tiết sản phẩm, đồng thời có thể tương tác với tin nhắn đã gửi (thu hồi, sửa nội dung, thả cảm xúc). |
 | **Tiền Điều Kiện** | Cả hai người dùng đều đã đăng nhập vào hệ thống. |
-| **Luồng Sự Kiện Chính** | 1. Người mua click nút "Chat với ngư dân" tại trang chi tiết sản phẩm.<br>2. Hệ thống khởi tạo phòng chat (Room) riêng biệt thông qua Socket.IO dựa trên `conversationId` kết hợp giữa BuyerID, SellerID và ProductID.<br>3. Người mua nhập nội dung tin nhắn và nhấn gửi.<br>4. Socket.io Client phát sự kiện `sendMessage` kèm nội dung lên Socket.io Server.<br>5. Server nhận dữ liệu, ghi bản ghi vào collection `messages` trong MongoDB và đồng thời phát sự kiện `receiveMessage` tới SocketID của người bán đang online trong phòng chat.<br>6. Màn hình người bán hiển thị tin nhắn ngay lập tức mà không cần tải lại trang.<br>7. Hệ thống tự động gửi thông báo hệ thống (Notification) nếu đối phương đang offline. |
-| **Luồng Thay Thế** | * **Mất kết nối mạng đột ngột:** Socket.io kích hoạt cơ chế tự động kết nối lại (Auto-reconnect). Tin nhắn gửi đi thất bại được đánh dấu màu đỏ kèm nút "Gửi lại". |
-| **Hậu Điều Kiện** | Cuộc trò chuyện được lưu trữ và hiển thị realtime giữa hai trình duyệt. |
+| **Luồng Sự Kiện Chính** | **Luồng 1: Nhắn tin thông thường**<br>1. Người dùng vào chi tiết sản phẩm hoặc hộp thư chat và bắt đầu soạn tin.<br>2. Socket.io kết nối phòng chat riêng biệt dạng `product_${productId}_${buyerId}` dựa trên ProductID và BuyerID.<br>3. Người dùng gửi tin nhắn (văn bản/hình ảnh/tọa độ GPS).<br>4. Backend ghi dữ liệu vào collection `messages` và broadcast sự kiện `new_message` tới các client trong phòng chat.<br>5. Người nhận hiển thị tin nhắn realtime và nhận thông báo đẩy nếu đang duyệt trang khác.<br><br>**Luồng 2: Thu hồi tin nhắn (Recall) [UC-4.1]**<br>1. Người gửi chọn nút "Thu hồi" tại tin nhắn đã gửi của mình.<br>2. Client gửi yêu cầu `PATCH /api/messages/:id/recall`.<br>3. Backend kiểm tra quyền sở hữu tin nhắn, cập nhật cờ `isRecalled = true` trong database và phát sự kiện `message_recalled` qua Socket.io để client đối phương ẩn nội dung tin nhắn cũ đi tức thì.<br><br>**Luồng 3: Chỉnh sửa tin nhắn (Edit) [UC-4.2]**<br>1. Người gửi chọn "Sửa tin nhắn", chỉnh sửa nội dung và bấm Lưu.<br>2. Client gửi yêu cầu `PATCH /api/messages/:id/edit` kèm nội dung mới.<br>3. Backend lưu nội dung mới và phát sự kiện `message_edited` để đồng bộ hiển thị nội dung chỉnh sửa realtime ở cả hai phía.<br><br>**Luồng 4: Thả cảm xúc Emoji (Reaction) [UC-4.3]**<br>1. Người dùng di chuột vào tin nhắn và chọn một biểu tượng cảm xúc (Thả tim, Like, Haha, v.v.).<br>2. Client gửi yêu cầu `PATCH /api/messages/:id/react` kèm loại cảm xúc.<br>3. Backend lưu vào trường `reaction` của tin nhắn và phát sự kiện `message_reacted` để hiển thị emoji tương ứng ngay dưới tin nhắn trên màn hình đối phương. |
+| **Luồng Thay Thế** | * **Mất kết nối mạng đột ngột:** Socket.io kích hoạt cơ chế tự động kết nối lại (Auto-reconnect). Tin nhắn gửi đi thất bại được đánh dấu màu đỏ kèm nút "Gửi lại".<br>* **Thu hồi tin nhắn của người khác:** API phản hồi lỗi `403 Forbidden` và chặn thao tác. |
+| **Hậu Điều Kiện** | Cuộc trò chuyện và các trạng thái cập nhật (thu hồi, sửa đổi, cảm xúc) được lưu trữ trong MongoDB và đồng bộ thời gian thực 100%. |
 
 ---
 
@@ -452,35 +484,122 @@ Dưới đây là đặc tả chi tiết cho 6 Use Case cốt lõi đã được
 
 ---
 
-## 🎯 Kế Hoạch 5 Tuần Tiếp Theo (Tuần 6 - 10)
+### UC-10: Đăng Nhật Ký Cabin (Boat Logs)
+
+| Trường Thông Tin | Nội Dung Đặc Tả |
+| :--- | :--- |
+| **Tên Use Case** | UC-10: Đăng nhật ký Cabin |
+| **Tác Nhân (Actors)** | Người Bán (Seller / Ngư dân) |
+| **Mô Tả** | Ngư dân đăng tải hình ảnh và ghi chép hành trình kéo lưới ngoài biển khơi lên trang cá nhân của mình làm bằng chứng trực quan cho độ uy tín và nguồn gốc hải sản. Hỗ trợ cho phép người dùng khác thích (like) tương tác. |
+| **Tiền Điều Kiện** | Ngư dân đã đăng nhập thành công vào hệ thống. |
+| **Luồng Sự Kiện Chính** | 1. Ngư dân vào trang quản lý Dashboard cá nhân và chọn mục "Nhật ký Cabin".<br>2. Hệ thống hiển thị biểu mẫu viết nhật ký.<br>3. Ngư dân nhập nội dung nhật ký (ví dụ: chia sẻ toạ độ đánh bắt hải trình hôm nay) và đính kèm hình ảnh kéo lưới trên tàu.<br>4. Hệ thống tải hình ảnh trực tiếp lên Cloudinary CDN và nhận URL trả về.<br>5. Hệ thống validate thông tin và lưu bản ghi nhật ký vào collection `boatlogs` trong MongoDB.<br>6. Nhật ký cabin được hiển thị công khai trên trang cá nhân của ngư dân (tab Nhật ký cabin) và người mua có thể tương tác nhấn Thích (like). |
+| **Luồng Thay Thế** | * **Nội dung trống:** Hệ thống chặn và báo lỗi "Nội dung nhật ký không được để trống". |
+| **Hậu Điều Kiện** | Nhật ký hành trình đi biển được lưu trữ an toàn trong MongoDB. |
+
+---
+
+### UC-11: Yêu Thích Sản Phẩm (Favorites)
+
+| Trường Thông Tin | Nội Dung Đặc Tả |
+| :--- | :--- |
+| **Tên Use Case** | UC-11: Yêu thích sản phẩm |
+| **Tác Nhân (Actors)** | Người Mua (Buyer), Người Bán (Seller) |
+| **Mô Tả** | Người dùng đánh dấu yêu thích các sản phẩm hải sản đăng bán trên chợ để lưu trữ nhanh vào danh sách yêu thích cá nhân, phục vụ việc truy cập lại nhanh chóng sau này. |
+| **Tiền Điều Kiện** | Người dùng đã đăng nhập thành công vào hệ thống. |
+| **Luồng Sự Kiện Chính** | 1. Người dùng vào chi tiết sản phẩm hải sản đăng bán trên chợ.<br>2. Nhấn vào biểu tượng "Thả tim / Yêu thích" bên cạnh thông tin sản phẩm.<br>3. Hệ thống gửi request và thực hiện cập nhật mảng `favorites` trong collection `users` của MongoDB (thêm ID sản phẩm nếu chưa thích, hoặc xóa ID sản phẩm nếu nhấn hủy thích).<br>4. Giao diện thay đổi trạng thái biểu tượng trái tim thành màu đỏ (đã thích) hoặc màu xám (chưa thích).<br>5. Người dùng có thể truy cập tab "Yêu thích" trong trang cá nhân để xem lại toàn bộ các sản phẩm đã đánh dấu. |
+| **Luồng Thay Thế** | * **Lỗi mạng:** Trả về thông báo lỗi và giữ nguyên trạng thái yêu thích trước đó để đảm bảo tính đồng nhất trạng thái. |
+| **Hậu Điều Kiện** | Danh sách sản phẩm yêu thích của người dùng được cập nhật thành công trên database. |
+
+---
+
+## 🎯 Kế Hoạch 5 Tuần Tiếp Theo (Tuần 6 - 10) & Phân Chia Công Việc Thành Viên
 
 ### Tuần 6: Báo Cáo Giữa Kỳ & Tối Ưu Hóa Cổng Webhook
 * **Nội dung công việc:**
-  * Chuẩn bị Slide báo cáo và kịch bản demo chạy thực tế.
+  * Chuẩn bị Slide báo cáo và kịch bản demo chạy thực tế giữa kỳ.
   * Tối ưu hóa API Webhook tự động nâng cấp Premium qua Sepay Webhook (`POST /api/payment/webhook`), thực hiện cơ chế tự động logout cascade khi tài khoản chuyển đổi quyền hạn để làm mới token.
 
 ### Tuần 7: Tích Hợp Cuộc Gọi Video WebRTC (Real-time Video Calling)
 * **Nội dung công việc:**
-  * Triển khai WebRTC Signaling Server qua Socket.io để trao đổi SDP và ICE Candidates.
+  * Triển khai WebRTC Signaling Server qua Socket.io để trao đổi SDP (Session Description Protocol) và các ICE Candidates.
   * Xây dựng giao diện `VideoCallOverlay.jsx` phía React client hỗ trợ truyền phát video/audio.
   * Kiểm thử kết nối P2P sau NAT bằng STUN server miễn phí của Google.
 
-### Tuần 8: Nhật Ký Cabin (Boat Logs) & Điều Chỉnh Giao Diện Web
+### Tuần 8: Điều Chỉnh & Tối Ưu Hóa Giao Diện Web (UI/UX) & Rà Soát Hiệu Năng
 * **Nội dung công việc:**
-  * **Boat Logs (Nhật ký Cabin):** Cho phép ngư dân đăng hình ảnh và ghi chép hành trình kéo lưới ngoài khơi để người mua kiểm chứng nguồn gốc hải sản.
-  * **Điều chỉnh giao diện Web:** Thu thập phản hồi từ buổi báo cáo giữa kỳ để điều chỉnh bố cục giao diện Web, tối ưu hóa tính responsive trên thiết bị di động (Mobile responsive) và các tương tác nhỏ (micro-interactions) để nâng cao chất lượng trải nghiệm người dùng.
+  * Thu thập phản hồi từ buổi báo cáo giữa kỳ để điều chỉnh bố cục giao diện Web cho hợp lý hơn.
+  * Tối ưu hóa tính responsive trên thiết bị di động (Mobile responsive) đối với trang chủ và trang bản đồ.
+  * Thiết kế lại các thành phần giao diện nhỏ (micro-interactions, button hovers, loading indicators) để nâng cao chất lượng trải nghiệm người dùng.
+  * Tối ưu hiệu năng truy vấn DB bằng các Compound Indexes cho GPS filter.
 
 ### Tuần 9: Tích Hợp Hệ Thống, Bảo Mật & Đánh Giá Chất Lượng
 * **Nội dung công việc:**
-  * Kiểm tra và vá các lỗ hổng bảo mật: Rate Limiting cho chat socket, kiểm tra lại chống NoSQL Injection.
+  * Kiểm tra và vá các lỗ hổng bảo mật: Rate Limiting cho chat socket, kiểm tra lại chống lỗi NoSQL Injection.
   * Chạy test phủ mã nguồn (Unit test coverage > 85%) và đảm bảo GitHub Actions hoàn thành không lỗi.
-  * Tối ưu hiệu năng truy vấn DB bằng các Compound Indexes.
 
 ### Tuần 10: Nghiệm Thu & Thuyết Trình Cuối Kỳ
 * **Nội dung công việc:**
   * Đóng gói Docker Compose hoàn chỉnh chạy đa container (Client, Server, MongoDB, Redis).
   * Quay video demo toàn bộ luồng nghiệp vụ thực tế.
   * Chuẩn bị tài liệu kỹ thuật cuối kỳ bàn giao cho giáo viên.
+
+---
+
+## 👥 Bảng Phân Chia Công Việc Thành Viên (Tuần 6 - Tuần 8)
+
+> [!IMPORTANT]
+> **Đặc điểm phân chia công việc:**
+> Để tối ưu hóa tiến trình, hai thành viên nòng cốt kỹ thuật là **Nguyễn Hoài Thuận** và **Trần Minh Đức** được phân giao khối lượng công việc **CỰC NHIỀU** (gánh vác toàn bộ phần lập trình core backend/frontend phức tạp, tái cấu trúc DDD, rà soát mã nguồn nâng cao và bảo mật). Ngược lại, hai thành viên **Lê Văn Bút** và **Phạm Việt Cường** được giao nhiệm vụ bổ trợ với khối lượng công việc **CỰC ÍT** (chỉ viết tài liệu hướng dẫn, cập nhật Swagger, chuẩn bị seed data mẫu và hỗ trợ kiểm thử thủ công/làm slide thuyết trình).
+
+---
+
+### 🚀 1. Thành viên phụ trách CHÍNH (Khối lượng công việc CỰC NHIỀU)
+
+#### 👨‍💻 Nguyễn Hoài Thuận (Lead Developer & Code Reviewer)
+* **Tuần 6:**
+  * **(Rất nặng)** Lead chuẩn bị slide báo cáo tiến độ kỹ thuật chi tiết và kịch bản demo chạy thực tế toàn bộ hệ thống.
+  * **(Rất nặng)** Tiến hành rà soát (Code Review) toàn bộ mã nguồn Backend đã dịch chuyển từ MVC sang DDD nhằm phát hiện lỗi logic nghiệp vụ, xử lý triệt để các cảnh báo kiểu dữ liệu trong repository.
+* **Tuần 7:**
+  * **(Rất nặng)** Lập trình lõi WebRTC Signaling Server tích hợp trực tiếp vào Socket.io server của Express backend.
+  * **(Rất nặng)** Thiết kế kiến trúc trao đổi thông số bắt tay SDP Offer/Answer và ICE Candidates giữa các máy khách, tối ưu hóa phân luồng room chat.
+* **Tuần 8:**
+  * **(Rất nặng)** Viết giao diện React client `VideoCallOverlay.jsx` cho luồng gọi điện video (rung chuông cuộc gọi đến, chấp nhận/từ chối, bật/tắt camera/mic, giao diện toàn màn hình).
+  * **(Rất nặng)** Tích hợp WebRTC và Socket.io client phía React, sửa các lỗi bất đồng bộ và rò rỉ bộ nhớ khi hủy kết nối cuộc gọi.
+
+#### 👨‍💻 Trần Minh Đức (Core Developer & Performance/Security Specialist)
+* **Tuần 6:**
+  * **(Rất nặng)** Sửa đổi lỗi rò rỉ ID trên User/Product repository mới sau khi chuyển sang DDD.
+  * **(Rất nặng)** Tối ưu luồng cascade token trên Redis khi tài khoản được nâng cấp qua cổng thanh toán Sepay Webhook, xử lý cơ chế tự động logout để cập nhật JWT mới.
+* **Tuần 7:**
+  * **(Rất nặng)** Cấu hình và tích hợp hạ tầng truyền thông WebRTC sử dụng STUN/TURN servers của Google để giúp hai trình duyệt kết nối trực tiếp xuyên qua NAT/Firewall.
+  * **(Rất nặng)** Thiết lập quản lý các trạng thái cuộc gọi trên backend (Đang gọi, Bận, Đã cúp máy, Không liên lạc được) nhằm cập nhật trạng thái UI tương ứng của người dùng còn lại.
+* **Tuần 8:**
+  * **(Rất nặng)** Thiết lập các Compound Indexes trong database MongoDB để tối ưu hóa hiệu năng truy vấn địa lý `$near` cho hải sản tươi sống.
+  * **(Rất nặng)** Rà soát và vá các lỗ hổng bảo mật của backend: chống XSS injection khi chat và chống NoSQL Injection khi lọc sản phẩm.
+  * **(Rất nặng)** Viết toàn bộ các ca kiểm thử đơn vị & tích hợp (Unit & Integration tests) sử dụng Jest để bảo vệ mã nguồn các tính năng nâng cao (WebRTC, OTP, Payment).
+
+---
+
+### 📋 2. Thành viên phụ trách BỔ TRỢ (Khối lượng công việc CỰC ÍT)
+
+#### 👨‍💻 Lê Văn Bút (Support Developer & Documentation)
+* **Tuần 6:**
+  * **(Rất nhẹ)** Rà soát tài liệu API Swagger để cập nhật các route mới của DDD.
+  * **(Rất nhẹ)** Hỗ trợ chuẩn bị slide mô tả phần giao diện React Frontend tĩnh.
+* **Tuần 7:**
+  * **(Rất nhẹ)** Thiết kế tinh chỉnh các micro-interactions giao diện nhỏ (hovers nút, biểu tượng tải dữ liệu trang).
+* **Tuần 8:**
+  * **(Rất nhẹ)** Căn chỉnh CSS hiển thị phần cẩm nang công thức nấu ăn trên màn hình di động nhỏ (Mobile responsive).
+  * **(Rất nhẹ)** Cập nhật tài liệu hướng dẫn cài đặt và khởi chạy mã nguồn cục bộ (README.md).
+
+#### 👨‍💻 Phạm Việt Cường (Testing & Content Support)
+* **Tuần 6:**
+  * **(Rất nhẹ)** Nạp dữ liệu mẫu (seafood seed data) thực tế và chính xác cho các loại hải sản để nạp sẵn vào MongoDB.
+* **Tuần 7:**
+  * **(Rất nhẹ)** Thực hiện kiểm thử thủ công (manual testing) luồng đăng bài viết cộng đồng và chat realtime trên nhiều trình duyệt khác nhau để phát hiện bugs hiển thị.
+* **Tuần 8:**
+  * **(Rất nhẹ)** Hỗ trợ kiểm thử hộp đen (blackbox testing) tính năng gọi video WebRTC giữa tài khoản Buyer và Seller theo kịch bản chuẩn bị sẵn.
+  * **(Rất nhẹ)** Tổng hợp các phản hồi về lỗi UI/UX từ người dùng thử để chuyển tiếp danh sách lỗi cho Thuận & Đức sửa đổi.
 
 ---
 
@@ -500,7 +619,7 @@ Dưới đây là đặc tả chi tiết cho 6 Use Case cốt lõi đã được
 * **Bước 3: Người Bán đăng tải sản phẩm:** Người bán đăng bài bán "Tôm hùm xanh" kèm ảnh, nhập tọa độ GPS cập cảng, số ký.
 * **Bước 4: Người Mua tương tác:** Đăng nhập tài khoản người mua $\rightarrow$ Vào trang chi tiết tôm hùm $\rightarrow$ Chat realtime thương lượng với người bán (mở song song hai màn hình để thấy tin nhắn nhảy realtime).
 * **Bước 4.1: Tư vấn với Trợ lý Chatbot AI:** Người mua mở bong bóng chat AI, đặt câu hỏi về cách chế biến tôm hùm hoặc cách đăng ký Premium $\rightarrow$ Trợ lý AI ("Trợ lý hải sản") trả lời tức thì sinh động.
-* **Bước 4.2: Tương tác Cộng đồng & Xem Công thức:** Người mua truy cập trang "Cộng đồng" xem bài viết đi biển của ngư dân, thả tim (like) và bình luận. Sau đó vào trang "Công thức" để học cách chế biến tôm hùm hấp nước dừa.
+* **Bước 4.2: Tương tác Cộng đồng, Xem Công thức, Nhật ký & Yêu thích:** Người mua vào diễn đàn Cộng đồng thả tim/bình luận, xem Nhật ký Cabin của ngư dân để kiểm chứng hành trình đi biển, học công thức nấu ăn hải sản, và nhấn Thả tim lưu sản phẩm vào danh sách Yêu thích cá nhân.
 * **Bước 5: Trang Admin:** Đăng nhập quyền Admin $\rightarrow$ Xem dashboard thống kê biểu đồ hoạt động của chợ $\rightarrow$ Kiểm duyệt tin đăng.
 * **Bước 6: Minh chứng kỹ thuật:** Mở Swagger UI (`/api-docs`) và chạy lệnh chạy test `npm run test` trực tiếp để chứng minh hệ thống có Unit Tests bảo vệ mã nguồn.
 

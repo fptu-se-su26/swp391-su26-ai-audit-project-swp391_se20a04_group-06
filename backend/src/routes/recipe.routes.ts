@@ -6,7 +6,7 @@ import {
   toggleLikeRecipe,
   updateRecipe,
   deleteRecipe,
-} from "../controllers/recipe.controller";
+} from "../modules/recipe/presentation/http/RecipeController";
 import { authenticate } from "../middlewares/auth";
 import { validateSchema } from "../middlewares/validate";
 import {

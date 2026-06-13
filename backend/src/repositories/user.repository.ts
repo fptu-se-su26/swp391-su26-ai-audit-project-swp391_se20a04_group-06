@@ -1,98 +1,97 @@
-import { User, IUser } from "../models/User";
+import { MongooseUserRepository } from "../modules/iam/infrastructure/persistence/mongoose/MongooseUserRepository";
+import { User as DomainUser } from "../modules/iam/domain/entities/User";
+import { User as MongooseUser } from "../models/User";
 import mongoose from "mongoose";
+
+const dddUserRepository = new MongooseUserRepository();
 
 export const userRepository = {
   async findByEmail(email: string) {
-    const user = await User.findOne({ email });
+    const user = await dddUserRepository.findByEmail(email);
     if (!user) return null;
+    const props = user.toProps();
     return {
-      userId: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      passwordHash: user.passwordHash,
-      role: user.role,
-      isActive: user.isActive,
-      isVerified: user.isVerified,
-      avatar: user.avatar,
-      isPremium: user.isPremium,
-      badges: user.badges || [],
-      createdAt: user.createdAt,
+      userId: props.id,
+      name: props.name,
+      email: props.email,
+      passwordHash: props.passwordHash,
+      role: props.role,
+      isActive: props.isActive,
+      isVerified: props.isVerified,
+      avatar: props.avatar,
+      isPremium: props.isPremium,
+      badges: props.badges || [],
     };
   },
 
-  async findRawById(userId: string): Promise<IUser | null> {
+  async findRawById(userId: string) {
     if (!mongoose.Types.ObjectId.isValid(userId)) return null;
-    return User.findById(userId);
+    return MongooseUser.findById(userId);
   },
 
   async findById(userId: string) {
-    const user = await this.findRawById(userId);
+    const user = await dddUserRepository.findById(userId);
     if (!user) return null;
+    const props = user.toProps();
     return {
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      isActive: user.isActive,
-      isVerified: user.isVerified,
-      avatarUrl: user.avatar,
-      isPremium: user.isPremium,
-      badges: user.badges || [],
-      createdAt: user.createdAt,
+      id: props.id,
+      name: props.name,
+      email: props.email,
+      role: props.role,
+      isActive: props.isActive,
+      isVerified: props.isVerified,
+      avatarUrl: props.avatar,
+      isPremium: props.isPremium,
+      badges: props.badges || [],
     };
   },
 
-  async findFavoritesPopulated(userId: string): Promise<IUser | null> {
+  async findFavoritesPopulated(userId: string) {
     if (!mongoose.Types.ObjectId.isValid(userId)) return null;
-    return User.findById(userId).populate({
+    return MongooseUser.findById(userId).populate({
       path: "favorites",
       populate: { path: "sellerId", select: "name isVerified" },
     });
   },
 
   async exists(query: any): Promise<boolean> {
-    return !!(await User.exists(query));
+    return !!(await MongooseUser.exists(query));
   },
 
   async countDocuments(filter: any): Promise<number> {
-    return User.countDocuments(filter);
+    return MongooseUser.countDocuments(filter);
   },
 
-  async find(
-    filter: any,
-    sort: any = {},
-    skip = 0,
-    limit = 100,
-  ): Promise<IUser[]> {
-    return User.find(filter).sort(sort).skip(skip).limit(limit);
+  async find(filter: any, sort: any = {}, skip = 0, limit = 100) {
+    return MongooseUser.find(filter).sort(sort).skip(skip).limit(limit);
   },
 
-  async emailExistsForOther(
-    email: string,
-    excludeUserId: any,
-  ): Promise<boolean> {
+  async emailExistsForOther(email: string, excludeUserId: any): Promise<boolean> {
     if (!mongoose.Types.ObjectId.isValid(excludeUserId)) return false;
-    const user = await User.findOne({ email, _id: { $ne: excludeUserId } });
+    const user = await MongooseUser.findOne({ email: email.toLowerCase().trim(), _id: { $ne: excludeUserId } });
     return !!user;
   },
 
-  async create(
-    name: string,
-    email: string,
-    passwordHash: string,
-  ): Promise<string> {
-    const user = new User({
-      name,
-      email,
+  async create(name: string, email: string, passwordHash: string): Promise<string> {
+    const user = new DomainUser({
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
       passwordHash,
+      role: "User",
+      isActive: true,
+      isVerified: false,
+      isPremium: false,
+      avatar: null,
+      badges: [],
+      favorites: [],
+      following: [],
     });
-    await user.save();
-    return user._id.toString();
+    await dddUserRepository.save(user);
+    return user.id;
   },
 
   async getNameById(userId: any): Promise<string | null> {
-    if (!mongoose.Types.ObjectId.isValid(userId)) return null;
-    const user = await User.findById(userId).select("name");
+    const user = await dddUserRepository.findById(userId.toString());
     return user ? user.name : null;
   },
 
@@ -103,117 +102,105 @@ export const userRepository = {
       email?: string;
       avatar?: string;
       isVerified?: boolean;
-    },
+    }
   ): Promise<void> {
-    if (!mongoose.Types.ObjectId.isValid(userId)) return;
-    const updates: any = {};
-    if (fields.name !== undefined) updates.name = fields.name;
-    if (fields.email !== undefined) updates.email = fields.email;
-    if (fields.avatar !== undefined) updates.avatar = fields.avatar;
-    if (fields.isVerified !== undefined) updates.isVerified = fields.isVerified;
-
-    await User.findByIdAndUpdate(userId, { $set: updates });
+    const user = await dddUserRepository.findById(userId.toString());
+    if (!user) return;
+    
+    user.updateProfile(
+      fields.name ?? user.name,
+      fields.email ?? user.email,
+      fields.avatar ?? (user.avatar || undefined)
+    );
+    if (fields.isVerified !== undefined) {
+      user.updateVerification(fields.isVerified);
+    }
+    await dddUserRepository.save(user);
   },
 
-  async updateActiveStatus(
-    userId: string,
-    isActive: boolean,
-  ): Promise<IUser | null> {
-    if (!mongoose.Types.ObjectId.isValid(userId)) return null;
-    return User.findByIdAndUpdate(
-      userId,
-      { $set: { isActive } },
-      { new: true },
-    );
+  async updateActiveStatus(userId: string, isActive: boolean) {
+    const user = await dddUserRepository.findById(userId);
+    if (!user) return null;
+    user.updateActiveStatus(isActive);
+    await dddUserRepository.save(user);
+    return MongooseUser.findById(userId);
   },
 
-  async updateVerificationStatus(
-    userId: string,
-    isVerified: boolean,
-  ): Promise<IUser | null> {
-    if (!mongoose.Types.ObjectId.isValid(userId)) return null;
-    return User.findByIdAndUpdate(
-      userId,
-      { $set: { isVerified } },
-      { new: true },
-    );
+  async updateVerificationStatus(userId: string, isVerified: boolean) {
+    const user = await dddUserRepository.findById(userId);
+    if (!user) return null;
+    user.updateVerification(isVerified);
+    await dddUserRepository.save(user);
+    return MongooseUser.findById(userId);
   },
 
   async updateBadges(userId: string, badges: string[]): Promise<void> {
-    if (!mongoose.Types.ObjectId.isValid(userId)) return;
-    await User.findByIdAndUpdate(userId, { $set: { badges } });
+    const user = await dddUserRepository.findById(userId);
+    if (!user) return;
+    user.updateBadges(badges);
+    await dddUserRepository.save(user);
   },
 
-  async addFavorite(userId: string, productId: string): Promise<IUser | null> {
-    if (!mongoose.Types.ObjectId.isValid(userId)) return null;
-    return User.findByIdAndUpdate(
-      userId,
-      {
-        $addToSet: { favorites: new mongoose.Types.ObjectId(productId) as any },
-      },
-      { new: true },
-    );
+  async addFavorite(userId: string, productId: string) {
+    const user = await dddUserRepository.findById(userId);
+    if (!user) return null;
+    user.addFavorite(productId);
+    await dddUserRepository.save(user);
+    return MongooseUser.findById(userId);
   },
 
-  async removeFavorite(
-    userId: string,
-    productId: string,
-  ): Promise<IUser | null> {
-    if (!mongoose.Types.ObjectId.isValid(userId)) return null;
-    return User.findByIdAndUpdate(
-      userId,
-      { $pull: { favorites: new mongoose.Types.ObjectId(productId) as any } },
-      { new: true },
-    );
+  async removeFavorite(userId: string, productId: string) {
+    const user = await dddUserRepository.findById(userId);
+    if (!user) return null;
+    user.removeFavorite(productId);
+    await dddUserRepository.save(user);
+    return MongooseUser.findById(userId);
   },
 
   async getPasswordHash(userId: any): Promise<string | null> {
-    if (!mongoose.Types.ObjectId.isValid(userId)) return null;
-    const user = await User.findById(userId).select("passwordHash");
+    const user = await dddUserRepository.findById(userId.toString());
     return user ? user.passwordHash : null;
   },
 
   async updatePassword(userId: any, newHash: string): Promise<void> {
-    if (!mongoose.Types.ObjectId.isValid(userId)) return;
-    await User.findByIdAndUpdate(userId, { $set: { passwordHash: newHash } });
+    const user = await dddUserRepository.findById(userId.toString());
+    if (!user) return;
+    user.updatePassword(newHash);
+    await dddUserRepository.save(user);
   },
 
   async isFollowing(userId: string, sellerId: string): Promise<boolean> {
-    if (
-      !mongoose.Types.ObjectId.isValid(userId) ||
-      !mongoose.Types.ObjectId.isValid(sellerId)
-    ) {
-      return false;
-    }
-    const user = await User.findOne({
-      _id: userId,
-      following: new mongoose.Types.ObjectId(sellerId),
-    });
-    return !!user;
+    const user = await dddUserRepository.findById(userId);
+    if (!user) return false;
+    return user.following.includes(sellerId);
   },
 
   async followSeller(userId: string, sellerId: string): Promise<void> {
-    await User.findByIdAndUpdate(userId, {
-      $addToSet: { following: new mongoose.Types.ObjectId(sellerId) as any },
-    });
+    const user = await dddUserRepository.findById(userId);
+    if (!user) return;
+    user.follow(sellerId);
+    await dddUserRepository.save(user);
   },
 
   async unfollowSeller(userId: string, sellerId: string): Promise<void> {
-    await User.findByIdAndUpdate(userId, {
-      $pull: { following: new mongoose.Types.ObjectId(sellerId) as any },
-    });
+    const user = await dddUserRepository.findById(userId);
+    if (!user) return;
+    user.unfollow(sellerId);
+    await dddUserRepository.save(user);
   },
 
   async deleteById(userId: string): Promise<any> {
-    if (!mongoose.Types.ObjectId.isValid(userId)) return null;
-    return User.findByIdAndDelete(userId);
+    const user = await dddUserRepository.findById(userId);
+    if (!user) return null;
+    await dddUserRepository.delete(user);
+    return true;
   },
 
   async updateMany(filter: any, update: any): Promise<any> {
-    return User.updateMany(filter, update);
+    return MongooseUser.updateMany(filter, update);
   },
 
   async aggregate(pipeline: any[]): Promise<any[]> {
-    return User.aggregate(pipeline);
+    return MongooseUser.aggregate(pipeline);
   },
 };

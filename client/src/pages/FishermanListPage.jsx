@@ -116,7 +116,7 @@ export function FishermanListPage() {
           🚢 Mạng Lưới Ngư Dân Haisan.vn
         </h1>
         <p style={{ fontSize: 14, color: C.muted, margin: 0 }}>
-          {total > 0 ? `${total} ngư dân đang hoạt động` : "Đang tải..."}
+          {loading ? "Đang tải..." : `${total} ngư dân đang hoạt động`}
         </p>
       </div>
 

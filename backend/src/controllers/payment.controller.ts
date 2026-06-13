@@ -3,6 +3,10 @@ import { userRepository } from "../repositories/user.repository";
 import { PaymentTransaction } from "../models/PaymentTransaction";
 import { logger } from "../utils/logger";
 import { safeCompare } from "../utils/security";
+import { MongooseUserRepository } from "../modules/iam/infrastructure/persistence/mongoose/MongooseUserRepository";
+import { DomainEvents } from "../shared/domain/events/DomainEvents";
+
+const dddUserRepository = new MongooseUserRepository();
 
 export async function sepayWebhook(req: Request, res: Response) {
   try {
@@ -94,7 +98,7 @@ export async function sepayWebhook(req: Request, res: Response) {
     }
 
     const userId = match[0];
-    const user = await userRepository.findRawById(userId);
+    const user = await dddUserRepository.findById(userId);
     if (!user) {
       logger.error(
         `[Sepay Webhook] User with ID ${userId} not found in database`,
@@ -108,7 +112,7 @@ export async function sepayWebhook(req: Request, res: Response) {
       );
       await PaymentTransaction.create({
         gatewayTransactionId,
-        userId: user._id as any,
+        userId: user.id as any,
         amount: numericAmount,
         content: finalContent,
       });
@@ -117,12 +121,15 @@ export async function sepayWebhook(req: Request, res: Response) {
         .json({ success: true, message: "User is already premium" });
     }
 
-    user.isPremium = true;
-    await user.save();
+    user.upgradeToPremium();
+    await dddUserRepository.save(user);
+
+    // Kích hoạt phát tán sự kiện nâng cấp tài khoản (thu hồi token trên Redis)
+    DomainEvents.dispatchEventsForAggregate(user.id);
 
     await PaymentTransaction.create({
       gatewayTransactionId,
-      userId: user._id as any,
+      userId: user.id as any,
       amount: numericAmount,
       content: finalContent,
     });

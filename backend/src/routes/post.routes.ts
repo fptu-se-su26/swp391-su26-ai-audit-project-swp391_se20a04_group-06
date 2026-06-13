@@ -7,7 +7,7 @@ import {
   addComment,
   deletePost,
   deleteComment,
-} from "../controllers/post.controller";
+} from "../modules/post/presentation/http/PostController";
 import { authenticate } from "../middlewares/auth";
 import { validateSchema } from "../middlewares/validate";
 import {

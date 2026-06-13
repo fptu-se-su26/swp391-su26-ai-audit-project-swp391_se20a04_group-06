@@ -92,6 +92,78 @@ Dưới đây là sơ đồ Mermaid mô tả hành trình từ giao diện React
 
 ---
 
+### 2.6 Khái Quát Hóa: 4 Mẫu Kiến Trúc Vòng Đời Cho 23 Use Cases
+
+Mặc dù hệ thống có tới 23 Use Cases khác nhau, tuy nhiên tất cả đều được thiết kế tuân theo **4 khuôn mẫu kiến trúc vòng đời (Flow Patterns)** chuẩn mực dưới đây. Điều này đảm bảo tính nhất quán (Consistency), dễ bảo trì và dễ hiểu cho toàn bộ hệ thống từ A-Z:
+
+```mermaid
+graph TD
+    subgraph Mẫu A: Command Use Case (Ghi/Xóa dữ liệu - 17 Use Cases)
+        UI_A["Client UI (React Component)"] -->|1. Request POST/PUT/DELETE| Route_A["Express Route (Zod Validation)"]
+        Route_A -->|2. Dispatch| Ctrl_A["Controller (Bóc tách request)"]
+        Ctrl_A -->|3. Invoke| UC_A["Use Case (Chạy logic nghiệp vụ)"]
+        UC_A -->|4. Invariant Check| Domain_A["Domain Entity (Kiểm tra điều kiện)"]
+        UC_A -->|5. Save| Repo_A["Mongoose Repo (Ghi Database)"]
+        UC_A -->|6. Evict| Cache_A["Redis Cache (Xóa/Incr Version)"]
+        Cache_A -->|7. Gửi Response| UI_A
+    end
+```
+
+```mermaid
+graph TD
+    subgraph Mẫu B: Query Use Case (Truy vấn/Đọc dữ liệu)
+        UI_B["Client UI (React Component)"] -->|1. Request GET| Route_B["Express Route (Query params)"]
+        Route_B -->|2. Dispatch| Ctrl_B["Controller (Bóc tách params)"]
+        Ctrl_B -->|3. Invoke| Service_B["Service / Read Model"]
+        Service_B -->|4. Check Cache| Redis_B{"Redis Cache"}
+        Redis_B -->|5. Cache Hit| Ctrl_B
+        Redis_B -->|6. Cache Miss| Repo_B["Mongoose Repo (Chỉ mục GPS/Text)"]
+        Repo_B -->|7. Query DB| DB_B[(MongoDB)]
+        DB_B -->|8. Save Cache| Redis_B
+        Repo_B -->|9. Trả về dữ liệu| Service_B
+        Service_B -->|10. Response JSON| UI_B
+    end
+```
+
+```mermaid
+graph TD
+    subgraph Mẫu C: WebSocket Signaling (Giao tiếp thời gian thực)
+        UI_C["Client Socket (socket.js)"] -->|1. Emit Event| WS_C["Socket.IO Server (socket.ts)"]
+        WS_C -->|2. Verify Token| JWT_C["JWT Middleware"]
+        WS_C -->|3. Broadcast / Emit| Partner_C["Partner Socket (Client)"]
+        Partner_C -->|4. Update UI| Client_C["UI View (React Component)"]
+    end
+```
+
+```mermaid
+graph TD
+    subgraph Mẫu D: Third-Party Integration (Tích hợp cổng Webhook)
+        Gateway_D["Sepay Gateway (External)"] -->|1. POST Webhook| Route_D["Express Route"]
+        Route_D -->|2. Timing Check| Ctrl_D["Payment Controller (safeCompare)"]
+        Ctrl_D -->|3. Update DB| DB_D[(MongoDB: users)]
+        Ctrl_D -->|4. Evict Sessions| Redis_D["Redis (Delete keys)"]
+        Ctrl_D -->|5. Confirm HTTP 200| Gateway_D
+    end
+```
+
+#### Phân loại chi tiết 23 Use Cases theo 4 khuôn mẫu:
+
+1. **Mẫu A (Ghi/Xóa dữ liệu - 17 Use Cases)**:
+   * **IAM**: [RegisterUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/application/use-cases/RegisterUseCase.ts), [LoginUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/application/use-cases/LoginUseCase.ts), [ChangePasswordUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/application/use-cases/ChangePasswordUseCase.ts), [UpdateProfileUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/application/use-cases/UpdateProfileUseCase.ts), [DeleteAccountUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/application/use-cases/DeleteAccountUseCase.ts).
+   * **Product**: [CreateProductUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/application/use-cases/CreateProductUseCase.ts), [UpdateProductUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/application/use-cases/UpdateProductUseCase.ts), [DeleteProductUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/application/use-cases/DeleteProductUseCase.ts), [BumpProductUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/application/use-cases/BumpProductUseCase.ts).
+   * **Post**: [CreatePostUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/application/use-cases/CreatePostUseCase.ts), [DeletePostUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/application/use-cases/DeletePostUseCase.ts), [ToggleLikePostUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/application/use-cases/ToggleLikePostUseCase.ts), [AddCommentUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/application/use-cases/AddCommentUseCase.ts), [DeleteCommentUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/application/use-cases/DeleteCommentUseCase.ts).
+   * **Recipe**: [CreateRecipeUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/application/use-cases/CreateRecipeUseCase.ts), [UpdateRecipeUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/application/use-cases/UpdateRecipeUseCase.ts), [DeleteRecipeUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/application/use-cases/DeleteRecipeUseCase.ts), [ToggleLikeRecipeUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/application/use-cases/ToggleLikeRecipeUseCase.ts), [IncrementRecipeViewsUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/application/use-cases/IncrementRecipeViewsUseCase.ts).
+   * **Boat Log**: [CreateBoatLogUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/boat-log/application/use-cases/CreateBoatLogUseCase.ts), [DeleteBoatLogUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/boat-log/application/use-cases/DeleteBoatLogUseCase.ts), [ToggleLikeBoatLogUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/boat-log/application/use-cases/ToggleLikeBoatLogUseCase.ts).
+2. **Mẫu B (Đọc/Lọc dữ liệu)**:
+   * Tất cả các luồng danh sách như lọc GPS (`list`), xem chi tiết sản phẩm, xem công thức nấu ăn, lấy danh sách bài đăng.
+3. **Mẫu C (Realtime Signaling)**:
+   * **WebRTC**: Luồng bắt tay cuộc gọi video trực tuyến (SDP Offer/Answer, ICE Candidates).
+   * **Chat**: Gửi/nhận tin nhắn, thu hồi tin nhắn, chỉnh sửa tin nhắn thời gian thực.
+4. **Mẫu D (Cổng thanh toán & Webhook)**:
+   * **Payment**: Sepay Webhook tự động nâng cấp Premium qua VietQR.
+
+---
+
 ## 3. Vòng Đời Use Case 1: Đăng Nhập Google & Giả Lập Dev (Google/Mock Auth)
 
 ### 📌 Mục đích:
@@ -500,7 +572,74 @@ sequenceDiagram
 
 Kiểm thử tự động giúp nhà phát triển tự tin thay đổi mã nguồn mà không sợ làm hỏng các tính năng cũ đang chạy tốt. Dự án sử dụng framework **Jest** kết hợp **ts-jest** để biên dịch TypeScript động khi kiểm thử.
 
-### 10.1 Cấu hình kiểm thử Jest (`jest.config.js`)
+### 10.1 Sơ Đồ Vòng Đời Hoạt Động Của Hệ Thống Kiểm Thử Tự Động (Jest Testing Lifecycle)
+
+Để hiểu rõ làm thế nào một lệnh test `npm run test` có thể thực thi và kiểm thử mã nguồn độc lập mà không cần khởi chạy server thực tế hay ghi đè vào MongoDB/Redis thật, dưới đây là sơ đồ tuần tự biểu diễn vòng đời kiểm thử tự động trong dự án:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Dev as Nhà phát triển (Developer)
+    participant Terminal as NPM Terminal CLI
+    participant Jest as Jest Runner (Test Engine)
+    participant Config as jest.config.js (Config Reader)
+    participant TSJest as ts-jest (TS Compiler Adapter)
+    participant Sandbox as Node.js Test Sandbox (Môi trường ảo)
+    participant Mock as Jest Mock Register (Bộ giả lập)
+    participant Target as Target Code File (Service/UseCase test)
+    participant RepoMock as Mongoose Repository Mock
+    participant Reporter as Jest CLI Reporter & Coverage
+
+    Dev->>Terminal: Thực thi lệnh: npm run test / npm run test:cov
+    Terminal->>Jest: Khởi tạo Jest Test Engine process
+    Jest->>Config: Đọc tệp cấu hình jest.config.js
+    Config-->>Jest: Trả về cấu hình (preset: "ts-jest", testEnvironment: "node", v.v.)
+    
+    Jest->>Jest: Quét hệ thống tìm các file khớp mẫu *.test.ts
+    
+    loop Đối với mỗi file test được phát hiện (ví dụ: admin.service.test.ts)
+        Jest->>TSJest: Gửi mã nguồn TypeScript của file test và các file import liên quan
+        TSJest->>TSJest: Biên dịch TypeScript sang JavaScript trong RAM (In-Memory Compilation)
+        TSJest-->>Jest: Trả về mã nguồn JavaScript đã biên dịch
+        
+        Jest->>Sandbox: Khởi tạo một Node.js Sandbox biệt lập (tránh nhiễm chéo state giữa các file test)
+        Sandbox->>Mock: Đăng ký các Mock definitions: jest.mock("../repositories/user.repository")
+        Mock-->>Sandbox: Ghi đè và đóng băng module thật, thay bằng hàm rỗng jest.fn()
+        
+        Sandbox->>Target: Import thực thể cần test (ví dụ: AdminService)
+        
+        loop Đối với mỗi khối kiểm thử "it()" hoặc "test()" bên trong file test
+            Note over Sandbox,RepoMock: Giai đoạn 1: SETUP (Dàn dựng bối cảnh)
+            Sandbox->>RepoMock: Thiết lập giá trị trả về giả lập: mockResolvedValue(null) hoặc mockResolvedValue(userDoc)
+            
+            Note over Sandbox,Target: Giai đoạn 2: EXECUTE (Thực thi hàm cần test)
+            Sandbox->>Target: Gọi phương thức cần kiểm thử (ví dụ: toggleUserActive(userId))
+            Target->>RepoMock: Gọi hàm truy vấn (ví dụ: findRawById(userId))
+            RepoMock-->>Target: Trả về ngay lập tức giá trị giả lập đã cấu hình ở Setup (không đụng tới MongoDB)
+            Target-->>Sandbox: Trả về kết quả đầu ra (hoặc ném lỗi HttpError)
+            
+            Note over Sandbox,RepoMock: Giai đoạn 3: ASSERT (Khẳng định tính đúng đắn)
+            Sandbox->>Sandbox: Kiểm tra kết quả trả về bằng expect(result).toBe(...)
+            Sandbox->>RepoMock: Kiểm chứng cuộc gọi bằng expect(repo.updateActiveStatus).toHaveBeenCalledWith(...)
+        end
+        
+        Sandbox-->>Jest: Trả về kết quả chạy test của file (Pass / Fail)
+        Jest->>Sandbox: Hủy bỏ môi trường Sandbox để giải phóng bộ nhớ
+    end
+    
+    Jest->>Reporter: Tổng hợp kết quả từ tất cả các test suites
+    
+    alt Nếu có cờ báo cáo độ bao phủ (:cov)
+        Jest->>Reporter: Tính toán tỷ lệ dòng code được chạy qua (Statements, Branches, Functions, Lines)
+        Reporter->>Terminal: Ghi file HTML báo cáo vào thư mục coverage/lcov-report/index.html
+    end
+    
+    Reporter-->>Dev: Xuất thông tin tổng hợp lên màn hình terminal (Ví dụ: 22 suites passed, 68 tests passed)
+```
+
+---
+
+### 10.2 Cấu hình kiểm thử Jest (`jest.config.js`)
 * **Tệp tin**: [jest.config.js](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/jest.config.js)
 * **Ý nghĩa cấu hình**:
   - `preset: "ts-jest"`: Hướng dẫn Jest tự động dịch code `.ts` sang `.js` trong bộ nhớ RAM khi chạy thử nghiệm.
@@ -509,7 +648,7 @@ Kiểm thử tự động giúp nhà phát triển tự tin thay đổi mã ngu�
 
 ---
 
-### 10.2 Bản chất của cơ chế Giả Lập (Mocking Dependencies)
+### 10.3 Bản chất của cơ chế Giả Lập (Mocking Dependencies)
 > **❓ Câu hỏi**: Tại sao không kết nối trực tiếp vào MongoDB hay gửi email thật khi chạy test?
 > 
 > **💡 Trả lời**: Chạy thử nghiệm cần diễn ra cực kỳ nhanh (dưới 5 giây). Nếu kết nối vào cơ sở dữ liệu thật, dữ liệu rác sẽ làm bẩn database, đồng thời làm chậm tiến trình và phụ thuộc vào kết nối Internet. Do đó, chúng ta sử dụng cơ chế **Mocking** (tạo lập các vật thế thân giả lập) bằng cách khai báo ở đầu file test:
@@ -527,7 +666,7 @@ jest.mock("../config/redis", () => ({
 
 ---
 
-### 10.3 Phân Tích Code File Test Mẫu 1: `admin.service.test.ts`
+### 10.4 Phân Tích Code File Test Mẫu 1: `admin.service.test.ts`
 * **Tệp tin**: [admin.service.test.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/admin.service.test.ts)
 * **Logic kiểm thử khóa tài khoản của Admin**:
 
@@ -571,7 +710,7 @@ it("Nên đảo trạng thái hoạt động của tài khoản thành công", a
 
 ---
 
-### 10.4 Phân Tích Code File Test Mẫu 2: `product.service.test.ts`
+### 10.5 Phân Tích Code File Test Mẫu 2: `product.service.test.ts`
 * **Tệp tin**: [product.service.test.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/product.service.test.ts)
 * **Logic kiểm thử bộ lọc địa lý trắc địa GPS**:
 
@@ -602,7 +741,7 @@ it("Nên áp dụng bộ lọc $geoWithin khi truy vấn sản phẩm loại Fre
 
 ---
 
-### 10.5 Các lệnh vận hành kiểm thử
+### 10.6 Các lệnh vận hành kiểm thử
 
 Để chạy kiểm thử và theo dõi kết quả, hãy di chuyển vào thư mục `backend/` và mở cửa sổ Terminal:
 

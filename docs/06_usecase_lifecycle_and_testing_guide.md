@@ -87,8 +87,23 @@ graph TD
     ApiJs ===>|16. Parse JSON / Trả Promise| ReactComp
     ReactComp ===>|17. Cập nhật State / Rerender| User
 
-    linkStyle 0,1,2,3,4,5,6,7,8 stroke:#28a745,stroke-width:2px,stroke-dasharray: 5 5;
-    linkStyle 9,10,11,12,13,14,15,16,17 stroke:#dc3545,stroke-width:2px;
+    linkStyle 0 stroke:#28a745,stroke-width:2px,stroke-dasharray: 5 5;
+    linkStyle 1 stroke:#28a745,stroke-width:2px,stroke-dasharray: 5 5;
+    linkStyle 2 stroke:#28a745,stroke-width:2px,stroke-dasharray: 5 5;
+    linkStyle 3 stroke:#28a745,stroke-width:2px,stroke-dasharray: 5 5;
+    linkStyle 4 stroke:#28a745,stroke-width:2px,stroke-dasharray: 5 5;
+    linkStyle 5 stroke:#28a745,stroke-width:2px,stroke-dasharray: 5 5;
+    linkStyle 6 stroke:#28a745,stroke-width:2px,stroke-dasharray: 5 5;
+    linkStyle 7 stroke:#28a745,stroke-width:2px,stroke-dasharray: 5 5;
+    linkStyle 8 stroke:#28a745,stroke-width:2px,stroke-dasharray: 5 5;
+    linkStyle 9 stroke:#dc3545,stroke-width:2px;
+    linkStyle 10 stroke:#dc3545,stroke-width:2px;
+    linkStyle 11 stroke:#dc3545,stroke-width:2px;
+    linkStyle 12 stroke:#dc3545,stroke-width:2px;
+    linkStyle 13 stroke:#dc3545,stroke-width:2px;
+    linkStyle 14 stroke:#dc3545,stroke-width:2px;
+    linkStyle 15 stroke:#dc3545,stroke-width:2px;
+    linkStyle 16 stroke:#dc3545,stroke-width:2px;
     
     classDef reqClass fill:#d4edda,stroke:#28a745,stroke-width:1px;
     classDef resClass fill:#f8d7da,stroke:#dc3545,stroke-width:1px;

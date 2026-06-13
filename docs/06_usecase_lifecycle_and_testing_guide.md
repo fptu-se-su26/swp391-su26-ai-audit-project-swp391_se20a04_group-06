@@ -30,34 +30,34 @@ Dưới đây là sơ đồ hành trình hai chiều hoàn chỉnh:
                  │                                                               ▲ (16. Đọc Headers & Parse JSON)
                  ▼                                                               │
 ┌─────────────────────────────────┐                             ┌─────────────────────────────────┐
-│     [Backend Middlewares]       │ ──(4. Xác thực & Chặn CSRF)─>│     [Backend Middlewares]       │
+│     [Backend Middlewares]       │ ──(4. Kiểm tra bảo mật)─────>│     [Backend Middlewares]       │
 └─────────────────────────────────┘                             └─────────────────────────────────┘
                  │                                                               ▲ (15. Chuyển tiếp HTTP Response)
                  ▼                                                               │
 ┌─────────────────────────────────┐                             ┌─────────────────────────────────┐
-│ [Express Router (routes.ts)]    │ ──(5. Định tuyến URL)───────>│ [Express Router (routes.ts)]    │
+│ [Express Router (routes.ts)]    │ ──(5. Tìm đường dẫn xử lý)──>│ [Express Router (routes.ts)]    │
 └─────────────────────────────────┘                             └─────────────────────────────────┘
                  │                                                               ▲ (14. Gửi HTTP Status + Body)
                  ▼                                                               │
 ┌─────────────────────────────────┐                             ┌─────────────────────────────────┐
-│ [Presentation Controller]       │ ──(6. Giải nén req.body/user)─>│ [Presentation Controller]       │
+│ [Presentation Controller]       │ ──(6. Lấy dữ liệu gửi lên)──>│ [Presentation Controller]       │
 └─────────────────────────────────┘                             └─────────────────────────────────┘
-                 │                                                               ▲ (13. Định dạng JSON DTO trả về)
+                 │                                                               ▲ (13. Chuyển kết quả sang JSON)
                  ▼                                                               │
 ┌─────────────────────────────────┐                             ┌─────────────────────────────────┐
-│ [Application UseCase (.ts)]     │ ──(7. Điều phối nghiệp vụ)──>│ [Application UseCase (.ts)]     │
+│ [Application UseCase (.ts)]     │ ──(7. Chạy logic nghiệp vụ)─>│ [Application UseCase (.ts)]     │
 └─────────────────────────────────┘                             └─────────────────────────────────┘
-                 │                                                               ▲ (12. Trả kết quả/DTO nghiệp vụ)
+                 │                                                               ▲ (12. Trả kết quả xử lý)
                  ▼                                                               │
 ┌─────────────────────────────────┐                             ┌─────────────────────────────────┐
-│ [Domain Entity / AggRoot]       │ ──(8. Kiểm tra tính bất biến)─>│ [Domain Entity / AggRoot]       │
+│ [Domain Entity / AggRoot]       │ ──(8. Check điều kiện/luật)─>│ [Domain Entity / AggRoot]       │
 └─────────────────────────────────┘                             └─────────────────────────────────┘
-                 │                                                               ▲ (11. Đóng gói Thực thể Domain)
+                 │                                                               ▲ (11. Trả thực thể nghiệp vụ)
                  ▼                                                               │
 ┌─────────────────────────────────┐                             ┌─────────────────────────────────┐
-│ [Infrastructure Repository]     │ ──(9. Ánh xạ toPersistence)─>│ [Infrastructure Repository]     │
+│ [Infrastructure Repository]     │ ──(9. Chuyển đổi lưu vào DB)─>│ [Infrastructure Repository]     │
 └─────────────────────────────────┘                             └─────────────────────────────────┘
-                 │                                                               ▲ (10. Ánh xạ toDomain)
+                 │                                                               ▲ (10. Đọc dữ liệu từ Database)
                  ▼                                                               │
 ┌─────────────────────────────────┐                                              │
 │    [Database MongoDB / Redis]   │ ─────────────────────────────────────────────┘
@@ -71,17 +71,17 @@ graph TD
     User["Người dùng (UI Browser)"] --->|1. Thao tác UI| ReactComp["React Component (pages/ hoặc components/)"]
     ReactComp --->|2. Gọi API| ApiJs["api.js (Client API Wrapper)"]
     ApiJs --->|3. Gửi HTTP Request| Middleware["Security Middlewares (Cors, Auth, Csrf)"]
-    Middleware --->|4. Kiểm tra an toàn| Router["Express Router (routes/*.routes.ts)"]
-    Router --->|5. Điều phối Route| Controller["Presentation Controller (*Controller.ts)"]
-    Controller --->|6. Bóc tách req| UseCase["Application UseCase (*UseCase.ts)"]
-    UseCase --->|7. Chạy Business Logic| Domain["Domain Entity / Aggregate Root"]
-    UseCase --->|8. Đọc/Ghi dữ liệu| Repo["Infrastructure Repository (*Repository.ts)"]
-    Repo --->|9. Lưu trữ dữ liệu| Database[("Database MongoDB / Redis Cache")]
+    Middleware --->|4. Kiểm tra bảo mật| Router["Express Router (routes/*.routes.ts)"]
+    Router --->|5. Tìm đường dẫn xử lý| Controller["Presentation Controller (*Controller.ts)"]
+    Controller --->|6. Lấy dữ liệu gửi lên| UseCase["Application UseCase (*UseCase.ts)"]
+    UseCase --->|7. Chạy logic nghiệp vụ| Domain["Domain Entity / Aggregate Root"]
+    UseCase --->|8. Đọc/Ghi dữ liệu qua Repository| Repo["Infrastructure Repository (*Repository.ts)"]
+    Repo --->|9. Chuyển đổi dữ liệu lưu vào Database| Database[("Database MongoDB / Redis Cache")]
 
-    Database ===>|10. Trả dữ liệu / toDomain| Repo
-    Repo ===>|11. Trả Domain Entity| UseCase
-    UseCase ===>|12. Trả DTO nghiệp vụ| Controller
-    Controller ===>|13. Trả về HTTP JSON Response| Router
+    Database ===>|10. Đọc dữ liệu từ Database| Repo
+    Repo ===>|11. Trả thực thể nghiệp vụ| UseCase
+    UseCase ===>|12. Trả kết quả xử lý| Controller
+    Controller ===>|13. Chuyển kết quả sang JSON| Router
     Router ===>|14. Chuyển tiếp HTTP Response| Middleware
     Middleware ===>|15. Trả qua HTTP Channel| ApiJs
     ApiJs ===>|16. Parse JSON / Trả Promise| ReactComp

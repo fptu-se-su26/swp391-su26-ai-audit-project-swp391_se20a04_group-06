@@ -53,6 +53,70 @@ sequenceDiagram
 ### 📌 Mục đích:
 Hệ thống cho phép người dùng đăng nhập an toàn bằng tài khoản Google thật thông qua OAuth 2.0 hoặc tài khoản giả lập trên máy cá nhân để tăng tốc độ phát triển dự án (Local Dev Quick Login).
 
+### 📊 Sơ đồ tuần tự Vòng đời hoàn chỉnh (Request & Response Lifecycle)
+
+Sơ đồ dưới đây biểu diễn chi tiết cách một yêu cầu đăng nhập đi qua các lớp cấu trúc, kết nối dịch vụ bên thứ ba (Google API), truy vấn và cập nhật cơ sở dữ liệu MongoDB/Redis, cũng như cách response kèm theo các cookie bảo mật chảy ngược lại trình duyệt để đồng bộ hóa giao diện:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Người dùng
+    participant AuthPage as AuthPage.jsx (Client UI)
+    participant ApiJs as api.js (API Client Wrapper)
+    participant Router as auth.routes.ts (Express Router)
+    participant AuthCtrl as AuthController.ts (Controller)
+    participant AuthUC as GoogleAuthUseCase.ts (Use Case)
+    participant GoogleAPI as Google API (Token verification)
+    participant UserRepo as MongooseUserRepository.ts (Repository)
+    participant UserMapper as UserMapper.ts (Data Mapper)
+    participant UserDomain as User.ts (Domain Entity)
+    participant DB as MongoDB (Collection: users)
+    participant Redis as Redis Cache (auth:refresh:*)
+
+    User->>AuthPage: Nhấp chọn tài khoản (Ví dụ: binh@haisan.vn)
+    AuthPage->>ApiJs: Gọi api("/auth/google", { method: "POST", body: { idToken } })
+    ApiJs->>ApiJs: Đọc cookie "csrfToken" gán vào header "x-csrf-token"
+    ApiJs->>Router: Gửi HTTP Request (POST /api/auth/google) kèm credentials: "include"
+    Router->>AuthCtrl: Điều phối điều khiển tới hàm googleAuth(req, res, next)
+    AuthCtrl->>AuthUC: googleAuthUseCase.execute(idToken)
+    
+    alt Trường hợp Token thật (Production)
+        AuthUC->>GoogleAPI: HTTP GET oauth2.googleapis.com/tokeninfo?id_token=...
+        GoogleAPI-->>AuthUC: Trả về payload (email, name, picture, email_verified)
+    else Trường hợp Token giả lập (Local Dev Mode)
+        Note over AuthUC: Tự động phân tích chuỗi idToken để lấy thông tin giả lập (email, name)
+    end
+
+    AuthUC->>UserRepo: findByEmail(email)
+    UserRepo->>DB: Query: findOne({ email })
+    DB-->>UserRepo: Trả về tài liệu MongooseDoc (hoặc null)
+    
+    alt Nếu Người dùng chưa tồn tại (Đăng ký mới)
+        UserRepo->>UserMapper: Ánh xạ dữ liệu mới
+        UserMapper->>UserDomain: new User(props) (Khởi tạo Domain Entity)
+        UserDomain-->>UserRepo: Thực thể domain User
+        UserRepo->>DB: save() -> User.create()
+        DB-->>UserRepo: Acknowledge (Xác nhận đã tạo bản ghi)
+    else Nếu Người dùng đã tồn tại (Đăng nhập)
+        UserRepo->>UserMapper: toDomain(mongooseDoc)
+        UserMapper->>UserDomain: Khởi tạo thực thể domain User từ database
+        UserDomain-->>UserRepo: Thực thể domain User
+        AuthUC->>UserDomain: user.checkActive() (Kiểm tra xem tài khoản có bị Admin khóa không)
+    end
+    
+    AuthUC-->>AuthCtrl: Trả về kết quả xác thực { userId, role, email, avatarUrl, isPremium }
+    
+    AuthCtrl->>AuthCtrl: signToken(userId, role) -> Sinh Access Token (JWT, hạn 15 phút)
+    AuthCtrl->>AuthCtrl: Sinh Refresh Token ngẫu nhiên (40 ký tự)
+    AuthCtrl->>Redis: set(`auth:refresh:${userId}:${refreshToken}`, "1", "EX", 7 ngày)
+    AuthCtrl->>AuthCtrl: rotateCsrfToken(res) (Xoay vòng CSRF Token mới)
+    
+    AuthCtrl-->>ApiJs: Gửi HTTP Response 200/201 OK kèm cookies: token (Access Token), refreshToken, csrfToken
+    ApiJs-->>AuthPage: Trả về kết quả JSON chứa thông tin user
+    AuthPage->>AuthPage: Gọi setUser(data.user) để cập nhật React Context
+    AuthPage->>User: Điều hướng về Trang chủ / Dashboard. Hiển thị thông báo đăng nhập thành công!
+```
+
 ---
 
 ### 🏃‍♂️ Hành trình từng dòng code cụ thể:
@@ -116,6 +180,84 @@ Hệ thống cho phép người dùng đăng nhập an toàn bằng tài khoản
 
 ### 📌 Mục đích:
 Hệ thống cho phép ngư dân đẩy bài viết bán sản phẩm của mình lên đầu bảng tin để tiếp cận khách hàng tốt hơn, tuy nhiên có cơ chế cooldown nghiêm ngặt **24 tiếng** để chống spam bài đăng.
+
+### 📊 Sơ đồ tuần tự Vòng đời hoàn chỉnh (Request & Response Lifecycle)
+
+Sơ đồ dưới đây mô tả cách request đẩy bài đăng bắt đầu từ client đi qua các bộ lọc Middleware bảo mật nghiêm ngặt (Cors, Auth, Csrf), gọi Use Case nghiệp vụ, thực thi kiểm tra cooldown 24h bằng truy vấn nguyên tử dưới Database, và tiến hành vô hiệu hóa Cache phiên bản trên Redis trước khi phản hồi thành công về giao diện:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Seller as Ngư dân (Seller)
+    participant DashPage as DashboardPage.jsx (Client UI)
+    participant ApiJs as api.js (API Client Wrapper)
+    participant AuthMW as auth.ts (Authentication Middleware)
+    participant CsrfMW as csrf.ts (CSRF Middleware)
+    participant Router as product.routes.ts (Express Router)
+    participant ProdCtrl as ProductController.ts (Controller)
+    participant BumpUC as BumpProductUseCase.ts (Use Case)
+    participant ProdRepo as MongooseProductRepository.ts (Repository)
+    participant ProdMapper as ProductMapper.ts (Data Mapper)
+    participant ProdDomain as Product.ts (Domain Entity)
+    participant DB as MongoDB (Collection: products)
+    participant Redis as Redis Cache (product:list:version:Fresh)
+
+    Seller->>DashPage: Nhấn nút "Đẩy bài" (Bump) của mẻ hàng cụ thể
+    DashPage->>ApiJs: Gọi api(`/products/${productId}/bump`, { method: "POST" })
+    ApiJs->>ApiJs: Đọc cookie "csrfToken" gán vào header "x-csrf-token"
+    ApiJs->>AuthMW: Gửi HTTP POST request kèm cookie xác thực "token"
+    
+    alt Kiểm tra xác thực (Auth Middleware)
+        AuthMW->>AuthMW: Giải mã token JWT bằng JWT_SECRET
+        Note over AuthMW: Gán req.user = { userId, role }
+    else Token hết hạn hoặc không hợp lệ
+        AuthMW-->>ApiJs: Trả về HTTP 401 Unauthorized
+        ApiJs-->>DashPage: Kích hoạt luồng làm mới token (Silent Refresh) hoặc bắt đăng nhập lại
+    end
+
+    AuthMW->>CsrfMW: Chuyển tiếp request đã xác thực
+    
+    alt Kiểm tra CSRF (CSRF Middleware)
+        CsrfMW->>CsrfMW: So khớp header "x-csrf-token" với cookie "csrfToken" bằng safeCompare
+    else Token CSRF không khớp
+        CsrfMW-->>ApiJs: Trả về HTTP 403 Forbidden ("CSRF token không hợp lệ")
+    end
+
+    CsrfMW->>Router: Tiếp tục chuyển tiếp request an toàn
+    Router->>ProdCtrl: Điều phối tới hàm bumpProduct(req, res, next)
+    ProdCtrl->>BumpUC: bumpProductUseCase.execute(productId, userId)
+    
+    BumpUC->>ProdRepo: findById(productId)
+    ProdRepo->>DB: Query: findById(productId)
+    DB-->>ProdRepo: Trả về tài liệu MongooseDoc
+    ProdRepo->>ProdMapper: toDomain(mongooseDoc)
+    ProdMapper->>ProdDomain: Khởi tạo thực thể domain Product
+    ProdDomain-->>BumpUC: Đối tượng thực thể domain Product
+
+    BumpUC->>ProdDomain: product.bump(userId)
+    
+    alt Logic kiểm tra cooldown (Domain Entity)
+        Note over ProdDomain: Lấy ra mốc bumpedAt cuối của sản phẩm
+        Note over ProdDomain: So sánh: now.getTime() - bumpedAt.getTime() < 24 giờ?
+    else Vi phạm cooldown
+        ProdDomain-->>BumpUC: Ném lỗi ConflictError ("Sản phẩm này đã được đẩy lên gần đây...")
+        BumpUC-->>ProdCtrl: Chuyển tiếp lỗi
+        ProdCtrl-->>ApiJs: Trả về HTTP 429 / 409 Error
+    end
+
+    BumpUC->>ProdRepo: save(product) (Yêu cầu lưu thay đổi)
+    ProdRepo->>ProdRepo: Dùng updateOne cập nhật trường bumpedAt = now
+    ProdRepo->>DB: Gửi truy vấn nguyên tử findOneAndUpdate với điều kiện lte cutoffTime
+    DB-->>ProdRepo: Xác nhận cập nhật thành công (Acknowledge)
+
+    BumpUC->>Redis: incr("product:list:version:Fresh") (Tăng phiên bản danh sách để xóa cache)
+    Redis-->>BumpUC: Acknowledge
+    
+    BumpUC-->>ProdCtrl: Hoàn tất xử lý đẩy tin
+    ProdCtrl-->>ApiJs: Trả về HTTP 200 OK { message: "Đã đẩy tin thành công!" }
+    ApiJs-->>DashPage: Nhận phản hồi thành công
+    DashPage->>Seller: Hiển thị thông báo Toast thành công và cập nhật lại giao diện!
+```
 
 ---
 

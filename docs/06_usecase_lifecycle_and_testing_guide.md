@@ -4,42 +4,96 @@ Tài liệu này được biên soạn nhằm giải thích cặn kẽ cách d�
 
 ---
 
-## 1. Bản Đồ Tổng Quan: Con Đường Đi Của Một Yêu Cầu (Request Flow)
+## 1. Bản Đồ Tổng Quan: Hành Trình Hai Chiều Của Yêu Cầu & Phản Hồi (Request & Response Flow)
 
-Khi người dùng thực hiện một thao tác trên giao diện (ví dụ: đăng nhập, đăng sản phẩm, bình luận), dữ liệu sẽ đi qua một hành trình phân lớp nghiêm ngặt trước khi được lưu vào cơ sở dữ liệu. 
+Khi người dùng thực hiện một thao tác trên giao diện (ví dụ: đăng nhập, đăng sản phẩm, bình luận), dữ liệu sẽ đi qua một hành trình phân lớp nghiêm ngặt từ Client tới Database (Request) và sau đó kết quả xử lý sẽ chảy ngược trở lại từ Database tới tận tay người dùng (Response). 
 
-Dưới đây là sơ đồ Mermaid mô tả hành trình từ giao diện React Client đến cơ sở dữ liệu MongoDB/Redis:
+Dưới đây là sơ đồ hành trình hai chiều hoàn chỉnh:
 
 ```
-[Người dùng (UI Browser)]
-       │ (1. Thao tác nhấp chuột / nhập liệu)
-       ▼
-[React Component (pages/ hoặc components/)]
-       │ (2. Gọi hàm API)
-       ▼
-[api.js (Client API Helper)]
-       │ (3. Đính kèm cookies, CSRF token)
-       ▼
-[Cors / Auth / Csrf Middlewares (Backend Security)]
-       │ (4. Xác thực JWT, check Rate Limit, chặn CSRF)
-       ▼
-[Express Router (routes/*.routes.ts)]
-       │ (5. Điều hướng định tuyến URL)
-       ▼
-[Presentation Controller (presentation/http/*Controller.ts)]
-       │ (6. Bóc tách req.body, req.query, req.user)
-       ▼
-[Application UseCase (application/use-cases/*.ts)]
-       │ (7. Điều phối và xử lý logic nghiệp vụ)
-       ▼
-[Domain Entity / Aggregate Root (domain/entities/*.ts)]
-       │ (8. Kiểm tra tính đúng đắn/bất biến của dữ liệu)
-       ▼
-[Infrastructure Repository (infrastructure/persistence/mongoose/*Repository.ts)]
-       │ (9. mapper.toPersistence và lưu trữ vào MongoDB / Redis)
-       ▼
-[MongoDB / Redis Cache] (Lưu trữ vĩnh viễn / bộ đệm)
+                                 HÀNH TRÌNH HAI CHIỀU (BIDIRECTIONAL FLOW)
+ 
+  CHIỀU GỬI YÊU CẦU (REQUEST PATH)                               CHIỀU TRẢ PHẢN HỒI (RESPONSE PATH)
+┌─────────────────────────────────┐                             ┌─────────────────────────────────┐
+│     [Người dùng (UI Browser)]   │ ──(1. Nhấp chuột/Nhập liệu)─>│    [Người dùng (UI Browser)]    │
+└─────────────────────────────────┘                             └─────────────────────────────────┘
+                 │                                                               ▲ (18. Nhìn thấy thông báo/Toast)
+                 ▼                                                               │
+┌─────────────────────────────────┐                             ┌─────────────────────────────────┐
+│   [React Component (Client)]    │ ──(2. Gọi api("/endpoint"))─>│   [React Component (Client)]    │
+└─────────────────────────────────┘                             └─────────────────────────────────┘
+                 │                                                               ▲ (17. Cập nhật State giao diện)
+                 ▼                                                               │
+┌─────────────────────────────────┐                             ┌─────────────────────────────────┐
+│     [api.js (API Client)]       │ ──(3. Gửi HTTP Request JWT)─>│     [api.js (API Client)]       │
+└─────────────────────────────────┘                             └─────────────────────────────────┘
+                 │                                                               ▲ (16. Đọc Headers & Parse JSON)
+                 ▼                                                               │
+┌─────────────────────────────────┐                             ┌─────────────────────────────────┐
+│     [Backend Middlewares]       │ ──(4. Xác thực & Chặn CSRF)─>│     [Backend Middlewares]       │
+└─────────────────────────────────┘                             └─────────────────────────────────┘
+                 │                                                               ▲ (15. Chuyển tiếp HTTP Response)
+                 ▼                                                               │
+┌─────────────────────────────────┐                             ┌─────────────────────────────────┐
+│ [Express Router (routes.ts)]    │ ──(5. Định tuyến URL)───────>│ [Express Router (routes.ts)]    │
+└─────────────────────────────────┘                             └─────────────────────────────────┘
+                 │                                                               ▲ (14. Gửi HTTP Status + Body)
+                 ▼                                                               │
+┌─────────────────────────────────┐                             ┌─────────────────────────────────┐
+│ [Presentation Controller]       │ ──(6. Giải nén req.body/user)─>│ [Presentation Controller]       │
+└─────────────────────────────────┘                             └─────────────────────────────────┘
+                 │                                                               ▲ (13. Định dạng JSON DTO trả về)
+                 ▼                                                               │
+┌─────────────────────────────────┐                             ┌─────────────────────────────────┐
+│ [Application UseCase (.ts)]     │ ──(7. Điều phối nghiệp vụ)──>│ [Application UseCase (.ts)]     │
+└─────────────────────────────────┘                             └─────────────────────────────────┘
+                 │                                                               ▲ (12. Trả kết quả/DTO nghiệp vụ)
+                 ▼                                                               │
+┌─────────────────────────────────┐                             ┌─────────────────────────────────┐
+│ [Domain Entity / AggRoot]       │ ──(8. Kiểm tra tính bất biến)─>│ [Domain Entity / AggRoot]       │
+└─────────────────────────────────┘                             └─────────────────────────────────┘
+                 │                                                               ▲ (11. Đóng gói Thực thể Domain)
+                 ▼                                                               │
+┌─────────────────────────────────┐                             ┌─────────────────────────────────┐
+│ [Infrastructure Repository]     │ ──(9. Ánh xạ toPersistence)─>│ [Infrastructure Repository]     │
+└─────────────────────────────────┘                             └─────────────────────────────────┘
+                 │                                                               ▲ (10. Ánh xạ toDomain)
+                 ▼                                                               │
+┌─────────────────────────────────┐                                              │
+│    [Database MongoDB / Redis]   │ ─────────────────────────────────────────────┘
+└─────────────────────────────────┘
 ```
+
+#### Sơ đồ khối trực quan (Mermaid Flowchart):
+
+```mermaid
+graph TD
+    User["Người dùng (UI Browser)"] --->|1. Thao tác UI| ReactComp["React Component (pages/ hoặc components/)"]
+    ReactComp --->|2. Gọi API| ApiJs["api.js (Client API Wrapper)"]
+    ApiJs --->|3. Gửi HTTP Request| Middleware["Security Middlewares (Cors, Auth, Csrf)"]
+    Middleware --->|4. Kiểm tra an toàn| Router["Express Router (routes/*.routes.ts)"]
+    Router --->|5. Điều phối Route| Controller["Presentation Controller (*Controller.ts)"]
+    Controller --->|6. Bóc tách req| UseCase["Application UseCase (*UseCase.ts)"]
+    UseCase --->|7. Chạy Business Logic| Domain["Domain Entity / Aggregate Root"]
+    UseCase --->|8. Đọc/Ghi dữ liệu| Repo["Infrastructure Repository (*Repository.ts)"]
+    Repo --->|9. Lưu trữ dữ liệu| Database[("Database MongoDB / Redis Cache")]
+
+    Database ===>|10. Trả dữ liệu / toDomain| Repo
+    Repo ===>|11. Trả Domain Entity| UseCase
+    UseCase ===>|12. Trả DTO nghiệp vụ| Controller
+    Controller ===>|13. Trả về HTTP JSON Response| Router
+    Router ===>|14. Chuyển tiếp HTTP Response| Middleware
+    Middleware ===>|15. Trả qua HTTP Channel| ApiJs
+    ApiJs ===>|16. Parse JSON / Trả Promise| ReactComp
+    ReactComp ===>|17. Cập nhật State / Rerender| User
+
+    linkStyle 0,1,2,3,4,5,6,7,8 stroke:#28a745,stroke-width:2px,stroke-dasharray: 5 5;
+    linkStyle 9,10,11,12,13,14,15,16,17 stroke:#dc3545,stroke-width:2px;
+    
+    classDef reqClass fill:#d4edda,stroke:#28a745,stroke-width:1px;
+    classDef resClass fill:#f8d7da,stroke:#dc3545,stroke-width:1px;
+```
+*(Ghi chú: Đường đứt nét màu xanh lá cây đại diện cho chiều Request gửi đi, đường nét liền màu đỏ dày đại diện cho chiều Response trả kết quả ngược lại).*
 
 ---
 

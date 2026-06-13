@@ -164,7 +164,7 @@ Mặc dù hệ thống có tới 20 Use Cases khác nhau, tuy nhiên tất cả 
 
 ```mermaid
 graph TD
-    subgraph Mẫu A: Command Use Case (Ghi/Xóa dữ liệu - 14 Use Cases)
+    subgraph A ["Mẫu A: Command Use Case (Ghi/Xóa dữ liệu - 14 Use Cases)"]
         UI_A["Client UI (React Component)"] -->|1. Request POST/PUT/DELETE| Route_A["Express Route (Zod Validation)"]
         Route_A -->|2. Dispatch| Ctrl_A["Controller (Bóc tách request)"]
         Ctrl_A -->|3. Invoke| UC_A["Use Case (Chạy logic nghiệp vụ)"]
@@ -177,7 +177,7 @@ graph TD
 
 ```mermaid
 graph TD
-    subgraph Mẫu B: Query Use Case (Truy vấn/Đọc dữ liệu)
+    subgraph B ["Mẫu B: Query Use Case (Truy vấn/Đọc dữ liệu)"]
         UI_B["Client UI (React Component)"] -->|1. Request GET| Route_B["Express Route (Query params)"]
         Route_B -->|2. Dispatch| Ctrl_B["Controller (Bóc tách params)"]
         Ctrl_B -->|3. Invoke| Service_B["Service / Read Model"]
@@ -193,7 +193,7 @@ graph TD
 
 ```mermaid
 graph TD
-    subgraph Mẫu C: WebSocket Signaling (Giao tiếp thời gian thực)
+    subgraph C ["Mẫu C: WebSocket Signaling (Giao tiếp thời gian thực)"]
         UI_C["Client Socket (socket.js)"] -->|1. Emit Event| WS_C["Socket.IO Server (socket.ts)"]
         WS_C -->|2. Verify Token| JWT_C["JWT Middleware"]
         WS_C -->|3. Broadcast / Emit| Partner_C["Partner Socket (Client)"]
@@ -203,7 +203,7 @@ graph TD
 
 ```mermaid
 graph TD
-    subgraph Mẫu D: Third-Party Integration (Tích hợp cổng Webhook)
+    subgraph D ["Mẫu D: Third-Party Integration (Tích hợp cổng Webhook)"]
         Gateway_D["Sepay Gateway (External)"] -->|1. POST Webhook| Route_D["Express Route"]
         Route_D -->|2. Timing Check| Ctrl_D["Payment Controller (safeCompare)"]
         Ctrl_D -->|3. Update DB| DB_D[(MongoDB: users)]

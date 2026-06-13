@@ -91,12 +91,17 @@ sequenceDiagram
     participant DB as MongoDB
 
     Note over Client,Server: Đăng Nhập / Đăng Ký thành công
+    Client->>Server: Gửi yêu cầu Đăng nhập / Đăng ký
+    Server->>DB: Truy vấn thông tin / Lưu User mới
+    DB-->>Server: Trả về thực thể User (isActive=true)
     Server->>Server: Ký Access Token (hạn 15p) & Refresh Token (hạn 7 ngày)
     Server->>Client: Gửi cookies: access_token (HttpOnly, Secure, SameSite=Strict) và refresh_token
     
     Note over Client,Server: Yêu cầu tài nguyên cần phân quyền (API Request)
     Client->>Server: Gửi request kèm cookies
     Server->>Server: Giải mã & Verify signature của Access Token
+    Server->>DB: Kiểm tra xem User còn hoạt động (isActive=true)?
+    DB-->>Server: Trả về trạng thái hoạt động của User
     Server-->>Client: Trả về tài nguyên
 
     Note over Client,Server: Khi Access Token hết hạn (Hành động Refresh tự động)
@@ -112,10 +117,11 @@ sequenceDiagram
     end
 ```
 
-### Đăng ký OTP qua SMS Gateway:
-1. Người dùng nhập số điện thoại. Hệ thống sinh mã OTP 6 số ngẫu nhiên qua module `crypto`.
-2. Lưu cặp khóa `{ "otp:phone_number": OTP_CODE }` vào Redis với **TTL 5 phút** để tự động hủy khóa nhằm tối ưu bộ nhớ.
-3. Backend gọi ESMS Gateway API qua HTTPS POST gửi SMS tới điện thoại người dùng. Khi người dùng xác nhận, backend truy vấn Redis để so khớp giá trị.
+### Quên mật khẩu bằng OTP qua Email (Gmail SMTP):
+1. Người dùng yêu cầu khôi phục mật khẩu bằng cách nhập Email.
+2. Hệ thống kiểm tra tài khoản, sinh mã OTP 6 số ngẫu nhiên qua module `crypto`, và lưu vào Redis dạng `{ "otp:email": OTP_CODE }` với **TTL 5 phút** để tự động hủy khóa.
+3. Backend gọi dịch vụ Mailer gửi mã OTP đến Email người dùng qua giao thức SMTP (Gmail). Người dùng nhập mã OTP để xác nhận và thiết lập mật khẩu mới.
+
 
 ---
 
@@ -140,7 +146,9 @@ sequenceDiagram
     alt Chữ ký khớp & Nội dung hợp lệ
         Server->>Server: Parse cú pháp lấy UserID từ Transaction Memo
         Server->>DB: Cập nhật isPremium = true cho User
+        DB-->>Server: Xác nhận cập nhật thành công (Acknowledge)
         Server->>Redis: Quét & Xóa toàn bộ Refresh Tokens của User này (Cascade Logout)
+        Redis-->>Server: Trả về trạng thái hoàn tất
         Server-->>Sepay: Phản hồi HTTP 200 OK (Xác nhận xử lý thành công)
         Note over User: Thiết bị của Ngư dân tự động yêu cầu đăng nhập lại để nhận Token Premium mới
     else Token Webhook không hợp lệ

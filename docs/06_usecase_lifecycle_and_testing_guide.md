@@ -112,9 +112,9 @@ graph TD
 
 ---
 
-## 2. Bản Đồ Danh Sách Toàn Bộ 20 Use Cases Nghiệp Vụ Trong Dự Án
+## 2. Bản Đồ Danh Sách Toàn Bộ 35 Use Cases Nghiệp Vụ Trong Dự Án
 
-Để giúp bạn có cái nhìn từ A-Z về mọi ngóc ngách của dự án HảiSản.vn, dưới đây là bảng danh mục toàn bộ **20 Use Cases** đang vận hành trong lõi nghiệp vụ backend, phân tách theo từng Bounded Context (Module):
+Để giúp bạn có cái nhìn từ A-Z về mọi ngóc ngách của dự án HảiSản.vn, dưới đây là bảng danh mục toàn bộ **35 Use Cases** đang vận hành trong hệ thống. Trong đó, 20 Use Cases cốt lõi được triển khai dưới dạng Class UseCase độc lập trong thư mục `src/modules/*/application/use-cases/` (theo kiến trúc DDD), và 15 Use Cases bổ trợ khác (như nhắn tin, thông báo, call video, bảng điều khiển quản lý...) được triển khai trực tiếp dưới dạng Service Transactions trong thư mục `src/services/` hoặc `socket.ts` nhằm tối ưu cấu trúc và giảm thiểu code boilerplate:
 
 ### 2.1 Phân hệ Định danh & Phân quyền (IAM - 3 Use Cases)
 | STT | Tên Use Case | Đường dẫn tệp tin | Mô tả chức năng nghiệp vụ | DB Collections tác động |
@@ -156,15 +156,58 @@ graph TD
 | 19 | **DeleteBoatLogUseCase** | [DeleteBoatLogUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/boat-log/application/use-cases/DeleteBoatLogUseCase.ts) | Xóa nhật ký đi biển đã đăng. | `boatlogs` |
 | 20 | **ToggleLikeBoatLogUseCase** | [ToggleLikeBoatLogUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/boat-log/application/use-cases/ToggleLikeBoatLogUseCase.ts) | Người theo dõi nhấn thích hoặc bỏ thích nhật ký đi biển của thuyền trưởng. | `boatlogs` |
 
+### 2.6 Phân hệ Nhắn tin & Trò chuyện giữa Người mua & Người bán (Message - 3 Use Cases)
+| STT | Tên Use Case / Nghiệp vụ | Đường dẫn tệp tin | Mô tả chức năng nghiệp vụ | DB Collections tác động |
+| --- | --- | --- | --- | --- |
+| 21 | **SendMessage** | [message.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/message.service.ts) | Người mua hoặc người bán gửi tin nhắn (dạng chữ, ảnh hoặc vị trí GPS bản đồ) trực tiếp. | `messages` |
+| 22 | **GetChatHistory** | [message.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/message.service.ts) | Truy xuất lịch sử trò chuyện phân trang giữa hai người dùng cho một sản phẩm nhất định. | `messages` |
+| 23 | **MarkMessagesAsRead** | [message.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/message.service.ts) | Đánh dấu tất cả tin nhắn trong một hộp thoại là đã đọc để cập nhật bộ đếm thông báo. | `messages` |
+
+### 2.7 Phân hệ Thông báo Đẩy thời gian thực (Notification - 2 Use Cases)
+| STT | Tên Use Case / Nghiệp vụ | Đường dẫn tệp tin | Mô tả chức năng nghiệp vụ | DB Collections tác động |
+| --- | --- | --- | --- | --- |
+| 24 | **GetNotifications** | [notification.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/notification.service.ts) | Đọc danh sách các thông báo cá nhân (thích bài, bình luận, được phê duyệt tài khoản...). | `notifications` |
+| 25 | **MarkNotificationAsRead** | [notification.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/notification.service.ts) | Cập nhật trạng thái một thông báo cụ thể hoặc toàn bộ thông báo thành "đã đọc". | `notifications` |
+
+### 2.8 Phân hệ Đàm thoại Video trực tuyến (Video Call Signaling - 1 Use Case)
+| STT | Tên Use Case / Nghiệp vụ | Đường dẫn tệp tin | Mô tả chức năng nghiệp vụ | DB Collections tác động |
+| --- | --- | --- | --- | --- |
+| 26 | **VideoCallSignaling** | [socket.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/socket.ts) | Trung chuyển các gói tin bắt tay WebRTC (Offer, Answer, ICE Candidates) qua Socket.IO để đàm thoại video. | Không có (real-time signaling) |
+
+### 2.9 Phân hệ Báo cáo Vi phạm (Report - 2 Use Cases)
+| STT | Tên Use Case / Nghiệp vụ | Đường dẫn tệp tin | Mô tả chức năng nghiệp vụ | DB Collections tác động |
+| --- | --- | --- | --- | --- |
+| 27 | **CreateReport** | [report.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/report.service.ts) | Người dùng gửi báo cáo vi phạm kèm theo lý do đối với một tin đăng hải sản cụ thể. | `reports` |
+| 28 | **HandleReport** | [report.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/report.service.ts) | Admin phê duyệt báo cáo vi phạm, tự động gỡ sản phẩm hoặc bác bỏ báo cáo nếu không đúng sự thật. | `reports`, `products` |
+
+### 2.10 Phân hệ Đánh giá & Phản hồi chất lượng (Review - 2 Use Cases)
+| STT | Tên Use Case / Nghiệp vụ | Đường dẫn tệp tin | Mô tả chức năng nghiệp vụ | DB Collections tác động |
+| --- | --- | --- | --- | --- |
+| 29 | **CreateReview** | [review.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/review.service.ts) | Người mua đánh giá điểm số (1-5 sao) và để lại phản hồi về độ uy tín của ngư dân bán hàng. | `reviews` |
+| 30 | **DeleteReview** | [review.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/review.service.ts) | Hỗ trợ xóa bình luận đánh giá không lịch sự hoặc spam bởi Admin hoặc chính người dùng. | `reviews` |
+
+### 2.11 Phân hệ Bảng quản trị hệ thống dành cho Admin (Admin Dashboard - 3 Use Cases)
+| STT | Tên Use Case / Nghiệp vụ | Đường dẫn tệp tin | Mô tả chức năng nghiệp vụ | DB Collections tác động |
+| --- | --- | --- | --- | --- |
+| 31 | **GetAdminDashboardStats** | [admin.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/admin.service.ts) | Truy xuất số liệu thống kê tổng quan (số người dùng, tin đăng, báo cáo, doanh thu, tăng trưởng biểu đồ). | `users`, `products`, `reviews`, `messages` |
+| 32 | **ManageUserVerification** | [admin.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/admin.service.ts) | Phê duyệt chứng thực danh tính (Verify) cho các ngư dân để tăng độ uy tín bán hàng. | `users` |
+| 33 | **ToggleUserActive** | [admin.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/admin.service.ts) | Cấm (Ban) hoặc kích hoạt lại tài khoản người dùng vi phạm quy chế của sàn. | `users` |
+
+### 2.12 Phân hệ Bảng điều khiển & Hoạt động cá nhân của User (User Dashboard - 2 Use Cases)
+| STT | Tên Use Case / Nghiệp vụ | Đường dẫn tệp tin | Mô tả chức năng nghiệp vụ | DB Collections tác động |
+| --- | --- | --- | --- | --- |
+| 34 | **UserGetStats** | [user.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/user.service.ts) | Xem số liệu tổng quan cá nhân: số lượng mẻ đăng bán, lượt xem tích lũy, số lượng người theo dõi, trạng thái Premium. | `users`, `products` |
+| 35 | **UserManageListings** | [product.service.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/product.service.ts) | Chuyển đổi trạng thái tin đăng (Bán hết/Ẩn tin/Hiện lại tin) và theo dõi thông tin hàng hóa. | `products` |
+
 ---
 
-### 2.6 Khái Quát Hóa: 4 Mẫu Kiến Trúc Vòng Đời Cho 20 Use Cases
+### 2.13 Khái Quát Hóa: 4 Mẫu Kiến Trúc Vòng Đời Cho 35 Use Cases
 
-Mặc dù hệ thống có tới 20 Use Cases khác nhau, tuy nhiên tất cả đều được thiết kế tuân theo **4 khuôn mẫu kiến trúc vòng đời (Flow Patterns)** chuẩn mực dưới đây. Điều này đảm bảo tính nhất quán (Consistency), dễ bảo trì và dễ hiểu cho toàn bộ hệ thống từ A-Z:
+Mặc dù hệ thống có tới 35 Use Cases khác nhau, tuy nhiên tất cả đều được thiết kế tuân theo **4 khuôn mẫu kiến trúc vòng đời (Flow Patterns)** chuẩn mực dưới đây. Điều này đảm bảo tính nhất quán (Consistency), dễ bảo trì và dễ hiểu cho toàn bộ hệ thống từ A-Z:
 
 ```mermaid
 graph TD
-    subgraph A ["Mẫu A: Command Use Case (Ghi/Xóa dữ liệu - 14 Use Cases)"]
+    subgraph A ["Mẫu A: Command Use Case (Ghi/Xóa dữ liệu - 29 Use Cases)"]
         UI_A["Client UI (React Component)"] -->|1. Request POST/PUT/DELETE| Route_A["Express Route (Zod Validation)"]
         Route_A -->|2. Dispatch| Ctrl_A["Controller (Bóc tách request)"]
         Ctrl_A -->|3. Invoke| UC_A["Use Case (Chạy logic nghiệp vụ)"]
@@ -212,21 +255,29 @@ graph TD
     end
 ```
 
-#### Phân loại chi tiết 20 Use Cases theo 4 khuôn mẫu:
+#### Phân loại chi tiết 35 Use Cases theo 4 khuôn mẫu:
 
-1. **Mẫu A (Ghi/Xóa dữ liệu - 14 Use Cases)**:
+1. **Mẫu A (Ghi/Xóa dữ liệu - 29 Use Cases)**:
    * **IAM**: [UpdateProfileUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/application/use-cases/UpdateProfileUseCase.ts), [DeleteAccountUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/iam/application/use-cases/DeleteAccountUseCase.ts).
    * **Product**: [CreateProductUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/application/use-cases/CreateProductUseCase.ts), [UpdateProductUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/application/use-cases/UpdateProductUseCase.ts), [DeleteProductUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/application/use-cases/DeleteProductUseCase.ts), [BumpProductUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/product/application/use-cases/BumpProductUseCase.ts).
    * **Post**: [CreatePostUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/application/use-cases/CreatePostUseCase.ts), [DeletePostUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/application/use-cases/DeletePostUseCase.ts), [ToggleLikePostUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/application/use-cases/ToggleLikePostUseCase.ts), [AddCommentUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/application/use-cases/AddCommentUseCase.ts), [DeleteCommentUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/post/application/use-cases/DeleteCommentUseCase.ts).
    * **Recipe**: [CreateRecipeUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/application/use-cases/CreateRecipeUseCase.ts), [UpdateRecipeUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/application/use-cases/UpdateRecipeUseCase.ts), [DeleteRecipeUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/application/use-cases/DeleteRecipeUseCase.ts), [ToggleLikeRecipeUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/application/use-cases/ToggleLikeRecipeUseCase.ts), [IncrementRecipeViewsUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/recipe/application/use-cases/IncrementRecipeViewsUseCase.ts).
    * **Boat Log**: [CreateBoatLogUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/boat-log/application/use-cases/CreateBoatLogUseCase.ts), [DeleteBoatLogUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/boat-log/application/use-cases/DeleteBoatLogUseCase.ts), [ToggleLikeBoatLogUseCase.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/modules/boat-log/application/use-cases/ToggleLikeBoatLogUseCase.ts).
-2. **Mẫu B (Đọc/Lọc dữ liệu)**:
-   * Tất cả các luồng danh sách như lọc GPS (`list`), xem chi tiết sản phẩm, xem công thức nấu ăn, lấy danh sách bài đăng.
-3. **Mẫu C (Realtime Signaling)**:
-   * **WebRTC**: Luồng bắt tay cuộc gọi video trực tuyến (SDP Offer/Answer, ICE Candidates).
-   * **Chat**: Gửi/nhận tin nhắn, thu hồi tin nhắn, chỉnh sửa tin nhắn thời gian thực.
-4. **Mẫu D (Cổng thanh toán & Webhook)**:
-   * **Payment**: Sepay Webhook tự động nâng cấp Premium qua VietQR.
+   * **Chat & Message**: [SendMessage](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/message.service.ts), [MarkMessagesAsRead](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/message.service.ts).
+   * **Notification**: [MarkNotificationAsRead](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/notification.service.ts).
+   * **Report**: [CreateReport](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/report.service.ts), [HandleReport](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/report.service.ts).
+   * **Review**: [CreateReview](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/review.service.ts), [DeleteReview](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/review.service.ts).
+   * **Admin Action**: [ManageUserVerification](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/admin.service.ts), [ToggleUserActive](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/admin.service.ts).
+   * **User Action**: [UserManageListings](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/product.service.ts).
+2. **Mẫu B (Đọc/Lọc dữ liệu - 4 Use Cases)**:
+   * **Danh sách & Chi tiết**: Lọc GPS (`list`), xem chi tiết sản phẩm, cẩm nang nấu ăn, bài viết cộng đồng.
+   * **Chat History**: [GetChatHistory](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/message.service.ts).
+   * **Notification List**: [GetNotifications](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/notification.service.ts).
+   * **Dashboards**: [GetAdminDashboardStats](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/admin.service.ts), [UserGetStats](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/services/user.service.ts).
+3. **Mẫu C (Realtime Signaling - 1 Use Case)**:
+   * **WebRTC**: Luồng đàm thoại video trực tuyến [VideoCallSignaling](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/socket.ts) (SDP Offer/Answer, ICE Candidates).
+4. **Mẫu D (Cổng thanh toán & Webhook - 1 Use Case)**:
+   * **Payment**: Sepay Webhook nâng cấp tài khoản Premium qua VietQR [payment.routes.ts](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/backend/src/routes/payment.routes.ts).
 
 ---
 

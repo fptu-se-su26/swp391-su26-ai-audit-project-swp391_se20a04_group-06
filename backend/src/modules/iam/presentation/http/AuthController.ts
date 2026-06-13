@@ -8,10 +8,7 @@ import { rotateCsrfToken } from "../../../../middlewares/csrf";
 // DDD Components
 import { MongooseUserRepository } from "../../infrastructure/persistence/mongoose/MongooseUserRepository";
 import { CloudinaryImageUploader } from "../../infrastructure/external-services/CloudinaryImageUploader";
-import { RegisterUseCase } from "../../application/use-cases/RegisterUseCase";
-import { LoginUseCase } from "../../application/use-cases/LoginUseCase";
 import { UpdateProfileUseCase } from "../../application/use-cases/UpdateProfileUseCase";
-import { ChangePasswordUseCase } from "../../application/use-cases/ChangePasswordUseCase";
 import { DeleteAccountUseCase } from "../../application/use-cases/DeleteAccountUseCase";
 import { GoogleAuthUseCase } from "../../application/use-cases/GoogleAuthUseCase";
 
@@ -37,61 +34,10 @@ function signToken(userId: string, role: string): string {
 const userRepository = new MongooseUserRepository();
 const imageUploader = new CloudinaryImageUploader();
 
-const registerUseCase = new RegisterUseCase(userRepository);
-const loginUseCase = new LoginUseCase(userRepository);
 const updateProfileUseCase = new UpdateProfileUseCase(userRepository, imageUploader);
-const changePasswordUseCase = new ChangePasswordUseCase(userRepository);
 const deleteAccountUseCase = new DeleteAccountUseCase(userRepository);
 const googleAuthUseCase = new GoogleAuthUseCase(userRepository);
 
-export async function register(req: Request, res: Response, next: any) {
-  const { name, email, password } = req.body;
-  try {
-    const user = await registerUseCase.execute(name, email, password);
-    const accessToken = signToken(user.userId, user.role);
-    const refreshToken = crypto.randomBytes(40).toString("hex");
-
-    await redis.set(
-      `auth:refresh:${user.userId}:${refreshToken}`,
-      "1",
-      "EX",
-      7 * 24 * 3600
-    );
-
-    res.cookie("token", accessToken, ACCESS_COOKIE_OPTS);
-    res.cookie("refreshToken", refreshToken, REFRESH_COOKIE_OPTS);
-    rotateCsrfToken(res);
-
-    logger.info(`User registered successfully: ID=${user.userId}, Email=${email}`);
-    return res.status(201).json({ user });
-  } catch (err: any) {
-    next(err);
-  }
-}
-
-export async function login(req: Request, res: Response, next: any) {
-  const { email, password } = req.body;
-  try {
-    const user = await loginUseCase.execute(email, password);
-    const accessToken = signToken(user.userId, user.role);
-    const refreshToken = crypto.randomBytes(40).toString("hex");
-
-    await redis.set(
-      `auth:refresh:${user.userId}:${refreshToken}`,
-      "1",
-      "EX",
-      7 * 24 * 3600
-    );
-
-    res.cookie("token", accessToken, ACCESS_COOKIE_OPTS);
-    res.cookie("refreshToken", refreshToken, REFRESH_COOKIE_OPTS);
-
-    logger.info(`User logged in: ID=${user.userId}`);
-    return res.json({ user });
-  } catch (err: any) {
-    next(err);
-  }
-}
 
 export async function logout(req: Request, res: Response, next: any) {
   const oldRefreshToken = req.cookies?.refreshToken;
@@ -165,43 +111,6 @@ export async function updateProfile(req: Request, res: Response, next: any) {
   }
 }
 
-export async function changePassword(req: Request, res: Response, next: any) {
-  const { userId } = req.user;
-  const { currentPassword, newPassword } = req.body;
-
-  try {
-    await changePasswordUseCase.execute(userId, currentPassword, newPassword);
-
-    let cursor = "0";
-    const keys: string[] = [];
-    do {
-      const reply = await redis.scan(
-        cursor,
-        "MATCH",
-        `auth:refresh:${userId}:*`,
-        "COUNT",
-        100
-      );
-      cursor = reply[0];
-      keys.push(...reply[1]);
-    } while (cursor !== "0");
-
-    if (keys.length > 0) {
-      await redis.del(...keys);
-    }
-
-    logger.info(`Password changed and all active sessions revoked safely for UserID=${userId}`);
-
-    res.clearCookie("token", CLEAR_COOKIE_OPTIONS);
-    res.clearCookie("refreshToken", CLEAR_COOKIE_OPTIONS);
-
-    return res.json({
-      message: "Đổi mật khẩu thành công. Vui lòng đăng nhập lại bằng mật khẩu mới.",
-    });
-  } catch (err: any) {
-    next(err);
-  }
-}
 
 export async function me(req: Request, res: Response, next: any) {
   const token = req.cookies?.token;

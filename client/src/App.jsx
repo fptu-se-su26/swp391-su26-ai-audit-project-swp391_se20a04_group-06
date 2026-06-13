@@ -39,11 +39,7 @@ const ProductDetailPage = lazy(() =>
     default: m.ProductDetailPage,
   })),
 );
-const ForgotPasswordPage = lazy(() =>
-  import("./pages/ForgotPasswordPage").then((m) => ({
-    default: m.ForgotPasswordPage,
-  })),
-);
+
 const AuthPage = lazy(() =>
   import("./pages/AuthPage").then((m) => ({ default: m.AuthPage })),
 );
@@ -306,14 +302,7 @@ function AppShell() {
           <Route path="/cong-thuc/:id" element={<RecipeDetailPage />} />
           <Route path="/cong-dong" element={<CommunityPage />} />
           <Route path="/quy-trinh" element={<GuidePage />} />
-          <Route
-            path="/quen-mat-khau"
-            element={
-              <GuestRoute>
-                <ForgotPasswordPage />
-              </GuestRoute>
-            }
-          />
+
           <Route
             path="/nguoi-ban/:sellerId"
             element={<SellerProfilePageRoute />}

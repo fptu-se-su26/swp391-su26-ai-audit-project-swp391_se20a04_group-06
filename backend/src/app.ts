@@ -18,7 +18,6 @@ import { errorHandler } from "./middlewares/errorHandler";
 import { OnUserPremiumUpgraded } from "./modules/iam/application/event-handlers/OnUserPremiumUpgraded";
 
 import authRoutes, { userRouter } from "./routes/auth.routes";
-import otpRoutes from "./routes/otp.routes";
 import productRoutes from "./routes/product.routes";
 import fishermanRoutes from "./routes/fisherman.routes";
 import imageRoutes from "./routes/image.routes";
@@ -117,9 +116,6 @@ const globalLimiter = rateLimit({
 });
 
 // ── Gắn limiters theo thứ tự (specific trước, global sau) ────────────────
-app.use("/api/auth/login", authLimiter);
-app.use("/api/auth/register", authLimiter);
-app.use("/api/auth/forgot-password", authLimiter);
 
 app.use("/api/messages/unread-count", pollingLimiter); // polling 30s
 app.use("/api/notifications", pollingLimiter); // polling nếu có
@@ -132,13 +128,8 @@ app.use(generateCsrfToken);
 
 app.use("/api", (req, res, next) => {
   const publicPaths = [
-    "/auth/login",
-    "/auth/register",
     "/health",
     "/auth/logout",
-    "/auth/forgot-password",
-    "/auth/verify-otp",
-    "/auth/reset-password",
     "/auth/refresh",
     "/auth/google",
     "/payment/webhook",
@@ -159,7 +150,6 @@ app.get("/api/health", (_req, res) =>
 );
 
 app.use("/api/auth", authRoutes);
-app.use("/api/auth", otpRoutes);
 app.use("/api/users", userRouter);
 app.use("/api/products", productRoutes);
 app.use("/api/fishermen", fishermanRoutes);

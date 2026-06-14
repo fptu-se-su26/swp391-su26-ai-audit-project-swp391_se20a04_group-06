@@ -12,7 +12,11 @@ const options: swaggerJSDoc.Options = {
     info: {
       title: "HảiSản.vn API Documentation", // Tên tiêu đề của trang tài liệu API
       version: "1.0.0", // Phiên bản hiện tại của bộ API
-      description: "Tài liệu API chi tiết cho ứng dụng mua bán hải sản HảiSản.vn", // Đoạn mô tả giới thiệu chung về hệ thống
+      description: "Tài liệu API chi tiết cho ứng dụng mua bán hải sản HảiSản.vn\n\n" +
+                   "⚠️ **LƯU Ý BẢO MẬT & TÍCH HỢP CHO FRONTEND DEVELOPER:**\n" +
+                   "1. **Bảo vệ CSRF**: Mọi API ghi dữ liệu (POST, PUT, DELETE, PATCH) ngoại trừ các API công khai đều yêu cầu đính kèm CSRF Token. Lập trình viên Frontend phải đọc token từ cookie `XSRF-TOKEN` của trình duyệt và gửi kèm trong request header dưới dạng `x-csrf-token: <value>`.\n" +
+                   "2. **Xác thực Cookie**: Sử dụng HttpOnly JWT Cookie xác thực, hãy nhấn nút 'Authorize' (cấu hình `cookieAuth`) và đăng nhập thành công trước để thực hiện test các API cần quyền truy cập.\n" +
+                   "3. **Tài liệu Realtime (Socket.IO & WebRTC)**: Các kênh sự kiện thời gian thực không thể chạy thử trực tiếp trên Swagger. Hãy tham chiếu tệp tài liệu hướng dẫn tích hợp realtime chuyên biệt tại [08_socket_io_realtime_guide.md](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/docs/08_socket_io_realtime_guide.md) trong mã nguồn dự án.",
     },
     servers: [
       {
@@ -31,6 +35,103 @@ const options: swaggerJSDoc.Options = {
           description: "JWT Access Token được lưu trong HTTP-Only Cookie", // Giải thích cơ chế bảo mật cookie
         },
       },
+      // Định nghĩa các schemas dùng chung cho lập trình viên Frontend tiện đối chiếu và làm việc
+      schemas: {
+        ErrorResponse: {
+          type: "object",
+          properties: {
+            message: {
+              type: "string",
+              example: "Mô tả chi tiết lỗi xảy ra"
+            }
+          }
+        },
+        UserPublicProfile: {
+          type: "object",
+          properties: {
+            id: { type: "string", example: "64df56e9c40212f8e1234568" },
+            name: { type: "string", example: "Nguyễn Văn A" },
+            email: { type: "string", format: "email", example: "anguyen@gmail.com" },
+            role: { type: "string", enum: ["User", "Admin"], example: "User" },
+            avatarUrl: { type: "string", nullable: true, example: "https://cloudinary.com/avatar.jpg" },
+            isVerified: { type: "boolean", example: true },
+            rating: { type: "number", example: 4.8 }
+          }
+        },
+        ProductResponse: {
+          type: "object",
+          properties: {
+            id: { type: "string", example: "64df56e9c40212f8e1234567" },
+            name: { type: "string", example: "Cua biển Cà Mau" },
+            price: { type: "number", example: 350000 },
+            category: { type: "string", example: "Cua, Ghẹ" },
+            unit: { type: "string", example: "kg" },
+            location: {
+              type: "object",
+              properties: {
+                type: { type: "string", example: "Point" },
+                coordinates: { type: "array", items: { type: "number" }, example: [106.660172, 10.762622] }
+              }
+            },
+            images: { type: "array", items: { type: "string" }, example: ["https://cloudinary.com/cua1.jpg"] },
+            sellerId: { type: "string", example: "64df56e9c40212f8e1234568" },
+            createdAt: { type: "string", format: "date-time" }
+          }
+        },
+        MessageResponse: {
+          type: "object",
+          properties: {
+            id: { type: "string", example: "64df56e9c40212f8e1234599" },
+            productId: { type: "string", example: "64df56e9c40212f8e1234567" },
+            senderId: { type: "string", example: "64df56e9c40212f8e1234568" },
+            receiverId: { type: "string", example: "64df56e9c40212f8e1234567" },
+            content: { type: "string", nullable: true, example: "Xin chào shop!" },
+            imageUrl: { type: "string", nullable: true, example: "https://cloudinary.com/chat1.jpg" },
+            isRead: { type: "boolean", example: false },
+            isRecalled: { type: "boolean", example: false },
+            reaction: { type: "string", nullable: true, example: "heart" },
+            sentAt: { type: "string", format: "date-time" }
+          }
+        },
+        PostResponse: {
+          type: "object",
+          properties: {
+            id: { type: "string", example: "64df56e9c40212f8e12345aa" },
+            title: { type: "string", example: "Kinh nghiệm chọn mua mực tươi ngon" },
+            content: { type: "string", example: "Mực tươi cần có mắt trong, da không bị trầy..." },
+            images: { type: "array", items: { type: "string" } },
+            tags: { type: "array", items: { type: "string" }, example: ["Kinh nghiệm", "Mực"] },
+            authorId: { type: "string", example: "64df56e9c40212f8e1234568" },
+            likesCount: { type: "integer", example: 12 },
+            createdAt: { type: "string", format: "date-time" }
+          }
+        },
+        CommentResponse: {
+          type: "object",
+          properties: {
+            id: { type: "string", example: "64df56e9c40212f8e12345bb" },
+            text: { type: "string", example: "Cảm ơn tác giả đã chia sẻ!" },
+            authorId: { type: "string", example: "64df56e9c40212f8e1234567" },
+            createdAt: { type: "string", format: "date-time" }
+          }
+        },
+        RecipeResponse: {
+          type: "object",
+          properties: {
+            id: { type: "string", example: "64df56e9c40212f8e12345cc" },
+            title: { type: "string", example: "Lẩu thái hải sản chua cay" },
+            description: { type: "string", example: "Công thức chế biến đơn giản chuẩn vị" },
+            ingredients: { type: "array", items: { type: "string" } },
+            instructions: { type: "array", items: { type: "string" } },
+            imageUrl: { type: "string", nullable: true },
+            difficulty: { type: "string", enum: ["Easy", "Medium", "Hard"], example: "Medium" },
+            cookingTime: { type: "number", example: 30 },
+            servings: { type: "number", example: 4 },
+            likesCount: { type: "integer", example: 25 },
+            authorId: { type: "string", example: "64df56e9c40212f8e1234568" }
+          }
+        }
+      }
     },
   },
   // Khai báo danh sách các đường dẫn chứa tệp tin định nghĩa API cần quét để sinh tài liệu

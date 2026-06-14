@@ -10,7 +10,7 @@
 
 Hãy truy cập các liên kết dưới đây để học và nghiên cứu hệ thống như một chuyên gia:
 
-1. **[Chuyên đề 01: Kiến Trúc & Thiết Kế Hệ Thống](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/docs/01_architecture_and_design.md)**
+1. **[Chuyên đề 01: Kiến Trúc & Thiết Kế Hệ Thống](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/docs/core/01_architecture_and_design.md)**
    - Phân tích chi tiết cách web hoạt động, luồng truyền tải dữ liệu Client-Server.
    - Cơ chế cuộc gọi video ngang hàng P2P (WebRTC Signaling, SDP, ICE Candidates).
    - Cơ chế Auth bảo mật (JWT stateless + Refresh Token Rotation + Blacklist trong Redis).
@@ -19,7 +19,7 @@ Hãy truy cập các liên kết dưới đây để học và nghiên cứu h�
    - Cơ chế hoạt động của các Index nâng cao (GeoJSON `2dsphere`, Text Index, Compound Indexes).
    - Giải pháp bảo mật (Rate Limiting, CSRF, NoSQL Injection, XSS, CORS).
 
-2. **[Chuyên đề 02: Phân Tích Mã Nguồn Hạ Tầng Backend](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/docs/02_backend_framework_core.md)**
+2. **[Chuyên đề 02: Phân Tích Mã Nguồn Hạ Tầng Backend](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/docs/core/02_backend_framework_core.md)**
    - Giải thích chi tiết từng dòng code (Line-by-line) của các file điều phối trung tâm backend:
      - `app.ts` (Bootstrap, Middlewares, Rate Limiters, Graceful Shutdown).
      - `db.ts` (Mongoose connection, Index builder).
@@ -27,7 +27,7 @@ Hãy truy cập các liên kết dưới đây để học và nghiên cứu h�
      - `cron.ts` (Tiến trình chạy ngầm node-cron).
      - Các middlewares bảo mật: `csrf.ts`, `auth.ts`, `validate.ts`, `upload.ts`.
 
-3. **[Chuyên đề 03: Bản Đồ Nghiệp Vụ & Hệ Thống Kiểm Thử Backend](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/docs/03_backend_business_logic.md)**
+3. **[Chuyên đề 03: Bản Đồ Nghiệp Vụ & Hệ Thống Kiểm Thử Backend](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/docs/core/03_backend_business_logic.md)**
    - Bản đồ hóa toàn bộ các thư mục nghiệp vụ backend. Giải thích công dụng của **tất cả** các file controllers, services, repositories, routes, validations.
    - Giải thích từng dòng code (Line-by-line) nghiệp vụ mẫu:
      - `user.service.ts` (Logic xóa tài khoản cascade GDPR nâng cao).
@@ -35,21 +35,21 @@ Hãy truy cập các liên kết dưới đây để học và nghiên cứu h�
      - `payment.controller.ts` (Nhận & verify webhook Sepay).
    - **Hệ thống Kiểm thử tự động (Jest Tests):** Danh sách 16 file `.test.ts`, cấu hình Jest và giải thích line-by-line file test `admin.service.test.ts`.
 
-4. **[Chuyên đề 04: Phân Tích Mã Nguồn Nền Tảng Client (React)](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/docs/04_client_architecture_and_core.md)**
+4. **[Chuyên đề 04: Phân Tích Mã Nguồn Nền Tảng Client (React)](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/docs/core/04_client_architecture_and_core.md)**
    - Giải thích chi tiết từng dòng code (Line-by-line) cấu trúc React App:
      - `App.jsx` (Routes, lazy loading Suspense, route guards, unread message state sync).
      - Contexts: `AuthProvider.jsx` (Stateless JWT token sync & refresh), `VideoCallProvider.jsx` (WebRTC peer connection state).
      - Custom Hooks: `useApiFetch.js`, `useNotifications.js`, `useSEO.js`.
      - Services & Utils: `api.js` (Fetch API wrapper), `socket.js` (Singleton Socket client).
 
-5. **[Chuyên đề 05: Bản Đồ Trang & Các Thành Phần Giao Diện React](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/docs/05_client_pages_and_components.md)**
+5. **[Chuyên đề 05: Bản Đồ Trang & Các Thành Phần Giao Diện React](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/docs/core/05_client_pages_and_components.md)**
    - Bản đồ hóa toàn bộ các thư mục React client, giải thích vai trò của **tất cả** các tệp tin trong `components/` và `pages/`.
    - Phân tích chi tiết dòng code (Line-by-line) của các chức năng giao diện quan trọng:
      - `MapExplore.jsx` hoặc `HomePage.jsx` (Tích hợp bản đồ Leaflet, GPS Geolocation API).
      - `ChatBox.jsx` (Giao diện hội thoại realtime, upload ảnh, gửi vị trí).
      - `VideoCallOverlay.jsx` (Hiển thị video stream WebRTC và bảng điều khiển).
 
-6. **[Chuyên đề 06: Hướng Dẫn Vòng Đời Use Case & Kiến Trúc Kiểm Thử Tự Động](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/docs/06_usecase_lifecycle_and_testing_guide.md)**
+6. **[Chuyên đề 06: Hướng Dẫn Vòng Đời Use Case & Kiến Trúc Kiểm Thử Tự Động](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/docs/core/06_usecase_lifecycle_and_testing_guide.md)**
    - Phân tích chi tiết luồng dữ liệu (end-to-end request flow) của 2 use case tiêu biểu: Đăng nhập Google/Dev Mock và Đẩy bài đăng (Bump Product).
    - Giải thích kiến trúc, cấu hình kiểm thử Jest, bản chất cơ chế Mocking và phân tích chi tiết các file test mẫu (`admin.service.test.ts`, `product.service.test.ts`).
 

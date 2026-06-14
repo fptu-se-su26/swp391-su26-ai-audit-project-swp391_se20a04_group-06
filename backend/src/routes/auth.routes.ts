@@ -97,6 +97,41 @@ router.post("/refresh", refreshToken);
 // Tuyến đường GET /me để lấy thông tin cá nhân của tài khoản hiện tại đang đăng nhập
 router.get("/me", me);
 
+/**
+ * @openapi
+ * /api/auth/profile:
+ *   put:
+ *     summary: Cập nhật thông tin cá nhân
+ *     tags: [Authentication]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               avatar:
+ *                 type: string
+ *                 format: binary
+ *                 description: Ảnh đại diện người dùng
+ *               name:
+ *                 type: string
+ *                 description: Tên người dùng
+ *                 example: Nguyễn Văn A
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Địa chỉ email người dùng
+ *                 example: anguyen@gmail.com
+ *     responses:
+ *       200:
+ *         description: Cập nhật thông tin thành công
+ *       400:
+ *         description: Dữ liệu không hợp lệ
+ *       401:
+ *         description: Chưa đăng nhập
+ */
 // Tuyến đường PUT /profile cập nhật thông tin tài khoản (yêu cầu đăng nhập, cho phép tải lên 1 ảnh đại diện avatar, validate dữ liệu, rồi gọi controller updateProfile)
 router.put(
   "/profile",
@@ -107,6 +142,20 @@ router.put(
   updateProfile,
 );
 
+/**
+ * @openapi
+ * /api/auth/account:
+ *   delete:
+ *     summary: Người dùng tự xóa tài khoản của chính mình
+ *     tags: [Authentication]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Xóa tài khoản thành công
+ *       401:
+ *         description: Chưa đăng nhập
+ */
 // Tuyến đường DELETE /account để người dùng tự xóa tài khoản của chính mình (yêu cầu đăng nhập)
 router.delete("/account", authenticate, deleteAccount);
 
@@ -115,7 +164,39 @@ export default router;
 
 // Khởi tạo một đối tượng router riêng biệt quản lý thông tin công khai của người dùng (user routes)
 export const userRouter = Router();
+
+/**
+ * @openapi
+ * /api/users/fishermen/leaderboard:
+ *   get:
+ *     summary: Lấy bảng xếp hạng ngư dân tiêu biểu
+ *     tags: [Users]
+ *     responses:
+ *       200:
+ *         description: Lấy bảng xếp hạng thành công
+ */
 // Tuyến đường GET /fishermen/leaderboard lấy bảng xếp hạng ngư dân tiêu biểu
 userRouter.get("/fishermen/leaderboard", getFishermanLeaderboard);
+
+/**
+ * @openapi
+ * /api/users/{id}:
+ *   get:
+ *     summary: Lấy hồ sơ cá nhân công khai của người dùng khác
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID của người dùng cần xem hồ sơ
+ *     responses:
+ *       200:
+ *         description: Lấy hồ sơ cá nhân thành công
+ *       404:
+ *         description: Không tìm thấy người dùng
+ */
 // Tuyến đường GET /:id để lấy thông tin hồ sơ cá nhân công khai của người dùng dựa theo ID
 userRouter.get("/:id", getUserPublicProfile);
+

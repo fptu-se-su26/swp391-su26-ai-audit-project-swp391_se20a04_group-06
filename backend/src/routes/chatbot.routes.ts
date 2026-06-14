@@ -22,6 +22,30 @@ const chatbotLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+/**
+ * @openapi
+ * /api/chatbot:
+ *   post:
+ *     summary: Gửi câu hỏi đến chatbot AI tư vấn hải sản
+ *     tags: [Chatbot]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [message]
+ *             properties:
+ *               message:
+ *                 type: string
+ *                 description: Câu hỏi của người dùng
+ *                 example: Làm thế nào để bảo quản mực tươi ngon?
+ *     responses:
+ *       200:
+ *         description: Phản hồi của chatbot AI
+ *       429:
+ *         description: Quá nhiều yêu cầu trong thời gian ngắn
+ */
 // Định nghĩa tuyến đường POST / để gửi câu hỏi đến chatbot, áp dụng middleware giới hạn tần suất gửi tin và gọi controller askChatbot
 router.post("/", chatbotLimiter, askChatbot);
 

@@ -1,22 +1,37 @@
+// Import đối tượng Router từ thư viện express để định nghĩa các tuyến đường HTTP
 import { Router } from "express";
+// Import thư viện express-rate-limit để quản lý giới hạn tần suất yêu cầu (nếu cần thiết dùng thêm)
 import rateLimit from "express-rate-limit";
+// Import middleware kiểm tra tính hợp lệ của dữ liệu đầu vào theo schema (validateSchema)
 import { validateSchema } from "../middlewares/validate";
+// Import các hàm xử lý từ ProductController của module product liên quan đến sản phẩm hải sản
 import {
+  // Lấy danh sách sản phẩm hoặc tìm kiếm theo GPS, từ khóa
   getProducts,
+  // Lấy thông tin chi tiết một sản phẩm theo ID
   getProductById,
+  // Tạo bài đăng bán sản phẩm mới
   createProduct,
+  // Cập nhật thông tin sản phẩm
   updateProduct,
+  // Xóa sản phẩm
   deleteProduct,
+  // Lấy danh sách sản phẩm của người dùng hiện tại
   getMyProducts,
+  // Đẩy bài đăng sản phẩm lên đầu trang
   bumpProduct,
+  // Đếm số lượng sản phẩm đăng hôm nay của người dùng
   getTodayCount,
 } from "../modules/product/presentation/http/ProductController";
+// Import middleware xác thực người dùng đã đăng nhập (authenticate)
 import { authenticate } from "../middlewares/auth";
+// Import cấu trúc schema kiểm duyệt dữ liệu tạo mới và cập nhật sản phẩm từ product.validation
 import {
   productCreateSchema,
   productUpdateSchema,
 } from "../validations/product.validation";
 
+// Khởi tạo đối tượng router từ Express Router
 const router = Router();
 
 
@@ -53,6 +68,7 @@ const router = Router();
  *       200:
  *         description: Trả về danh sách sản phẩm thỏa mãn điều kiện
  */
+// Định nghĩa tuyến đường GET / lấy danh sách sản phẩm (công khai không cần đăng nhập)
 router.get("/", getProducts);
 
 /**
@@ -69,6 +85,7 @@ router.get("/", getProducts);
  *       401:
  *         description: Chưa đăng nhập
  */
+// Định nghĩa tuyến đường GET /my để lấy danh sách sản phẩm của chính người đăng nhập (yêu cầu đăng nhập)
 router.get("/my", authenticate, getMyProducts);
 
 /**
@@ -83,6 +100,7 @@ router.get("/my", authenticate, getMyProducts);
  *       200:
  *         description: Trả về số lượng sản phẩm đăng hôm nay
  */
+// Định nghĩa tuyến đường GET /today-count lấy số sản phẩm đã đăng trong ngày (yêu cầu đăng nhập)
 router.get("/today-count", authenticate, getTodayCount);
 
 /**
@@ -104,6 +122,7 @@ router.get("/today-count", authenticate, getTodayCount);
  *       404:
  *         description: Không tìm thấy sản phẩm
  */
+// Định nghĩa tuyến đường GET /:id để lấy thông tin chi tiết sản phẩm theo ID (công khai không cần đăng nhập)
 router.get("/:id", getProductById);
 
 
@@ -155,6 +174,7 @@ router.get("/:id", getProductById);
  *       401:
  *         description: Chưa đăng nhập
  */
+// Định nghĩa tuyến đường POST / để tạo sản phẩm mới (yêu cầu đăng nhập, validate cấu trúc đầu vào, rồi gọi controller createProduct)
 router.post(
   "/",
   authenticate,
@@ -186,6 +206,7 @@ router.post(
  *       200:
  *         description: Cập nhật sản phẩm thành công
  */
+// Định nghĩa tuyến đường PUT /:id cập nhật thông tin sản phẩm theo ID (yêu cầu đăng nhập, validate dữ liệu cập nhật, rồi gọi controller updateProduct)
 router.put(
   "/:id",
   authenticate,
@@ -211,6 +232,7 @@ router.put(
  *       200:
  *         description: Xóa sản phẩm thành công
  */
+// Định nghĩa tuyến đường DELETE /:id để người bán tự xóa sản phẩm theo ID (yêu cầu đăng nhập)
 router.delete("/:id", authenticate, deleteProduct);
 
 /**
@@ -233,6 +255,8 @@ router.delete("/:id", authenticate, deleteProduct);
  *       400:
  *         description: Chưa hết thời gian cooldown để tiếp tục đẩy bài
  */
+// Định nghĩa tuyến đường POST /:id/bump để đẩy bài đăng sản phẩm lên đầu trang tìm kiếm (yêu cầu đăng nhập)
 router.post("/:id/bump", authenticate, bumpProduct);
 
+// Xuất mặc định router để cấu hình vào app chính app.ts
 export default router;

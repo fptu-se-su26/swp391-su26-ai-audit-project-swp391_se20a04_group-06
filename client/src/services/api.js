@@ -1,134 +1,201 @@
-// Hàm getCookie nhận vào tên cookie và lấy giá trị của nó từ document.cookie của trình duyệt
+// Định nghĩa hàm getCookie nhận tham số 'name' là tên của cookie cần tìm kiếm
 const getCookie = (name) => {
-  // Kiểm tra nếu chạy trên môi trường Server (ví dụ SSR/NodeJS) không có đối tượng document thì trả về null
-  if (typeof document === "undefined") return null;
-  // Thêm dấu chấm phẩy trước danh sách cookie để chuẩn hóa quá trình cắt tách chuỗi
+  // Kiểm tra nếu biến 'document' chưa được định nghĩa (môi trường server-side rendering/Node.js không có DOM)
+  if (typeof document === "undefined") {
+    // Trả về null ngay lập tức vì không thể truy cập tài liệu HTML ở đây
+    return null;
+  }
+  
+  // Nối thêm dấu chấm phẩy trước danh sách cookies hiện có trong trình duyệt để chuẩn hóa cấu trúc chuỗi
   const value = `; ${document.cookie}`;
-  // Cắt chuỗi theo tên của cookie cần tìm (ví dụ: "; csrfToken=")
+  
+  // Phân tách chuỗi cookies thành các phần tử mảng bằng kí tự phân tách là tên cookie kèm dấu bằng (ví dụ: "; csrfToken=")
   const parts = value.split(`; ${name}=`);
-  // Nếu tìm thấy chính xác một cặp tên-giá trị (chuỗi bị tách làm đôi)
-  if (parts.length === 2) return parts.pop().split(";").shift(); // Lấy giá trị cookie, loại bỏ các cookie phía sau bằng cách split dấu ";"
-  return null; // Trả về null nếu không tìm thấy cookie
+  
+  // Nếu mảng phân tách có độ dài bằng 2 (nghĩa là tìm thấy chính xác một cookie có tên tương ứng)
+  if (parts.length === 2) {
+    // Lấy phần tử cuối cùng của mảng, tiếp tục phân tách bằng dấu ";" rồi lấy phần tử đầu tiên (để lọc bỏ các cookie đằng sau) và trả về giá trị của nó
+    return parts.pop().split(";").shift();
+  }
+  
+  // Trả về null nếu không tìm thấy cookie có tên tương hợp
+  return null;
 };
 
-// Queue Locking giúp xử lý gộp nhiều request gọi API đồng thời khi hết hạn token
-let isRefreshing = false; // Biến cờ đánh dấu hệ thống đang thực hiện làm mới token (Silent Refresh) để tránh chạy trùng lặp
-let refreshSubscribers = []; // Danh sách hàng đợi lưu trữ các request bị tạm giữ trong lúc đợi refresh token hoàn tất
+// Khai báo biến cờ hiệu 'isRefreshing' ở trạng thái ban đầu là false (dùng để kiểm soát tiến trình gửi yêu cầu làm mới Access Token)
+let isRefreshing = false;
 
-// Hàm đăng ký một request vào hàng đợi và thực hiện callback sau khi có token mới
+// Khởi tạo mảng hàng đợi 'refreshSubscribers' rỗng (dùng lưu trữ các tác vụ callback của request cần tạm ngắt để chờ cấp token mới)
+let refreshSubscribers = [];
+
+// Định nghĩa hàm subscribeTokenRefresh để đẩy một hàm callback 'cb' vào hàng đợi đang chờ làm mới token
 function subscribeTokenRefresh(cb) {
+  // Thêm callback vào mảng danh sách người đăng ký nhận thông tin làm mới
   refreshSubscribers.push(cb);
 }
 
-// Hàm giải phóng hàng đợi: Chạy lại toàn bộ các request đang chờ hoặc ném ra lỗi nếu refresh thất bại
+// Định nghĩa hàm onRefreshed để gọi lại toàn bộ các request bị tạm giữ sau khi tiến trình refresh token hoàn thành
 function onRefreshed(err) {
-  refreshSubscribers.forEach((cb) => cb(err)); // Chạy từng callback lưu trong danh sách hàng đợi
-  refreshSubscribers = []; // Làm trống danh sách hàng đợi sau khi giải quyết xong
+  // Duyệt qua từng hàm callback trong danh sách hàng đợi 'refreshSubscribers' và thực thi nó với tham số lỗi 'err' (nếu có)
+  refreshSubscribers.forEach((cb) => cb(err));
+  
+  // Xóa sạch toàn bộ các phần tử trong danh sách hàng đợi sau khi đã chạy xong
+  refreshSubscribers = [];
 }
 
-// Hàm gọi API dùng chung (Wrapper) cho toàn bộ ứng dụng Client
+// Định nghĩa và xuất ra hàm gọi API dùng chung 'api' nhận vào 'path' (đường dẫn endpoint) và đối tượng cấu hình tùy chọn 'options'
 export async function api(path, options = {}) {
-  // Lấy mã CSRF Token từ Cookie trình duyệt để gửi kèm request chống tấn công CSRF
+  // Lấy mã thông báo CSRF Token hiện thời từ cookie của trình duyệt để phòng vệ tấn công giả mạo yêu cầu
   const csrfToken = getCookie("csrfToken");
 
+  // Lấy dữ liệu phần thân (body) từ đối tượng options truyền vào
   let body = options.body;
-  const isFormData = body instanceof FormData; // Kiểm tra xem body gửi lên có phải là kiểu FormData (upload ảnh/file) hay không
-  // Nếu body là kiểu đối tượng (Object) bình thường và không phải FormData, chuyển đổi nó sang dạng chuỗi JSON
+  
+  // Kiểm tra xem body truyền vào có phải là một đối tượng thuộc lớp FormData (sử dụng khi tải tệp tin, hình ảnh lên máy chủ) hay không
+  const isFormData = body instanceof FormData;
+  
+  // Nếu có body, kiểu của body là đối tượng (Object) và đồng thời nó không phải là lớp FormData
   if (body && typeof body === "object" && !isFormData) {
+    // Chuyển đổi đối tượng JavaScript thô thành định dạng chuỗi JSON để gửi đi trong request body
     body = JSON.stringify(body);
   }
 
-  // Khởi tạo các headers cho HTTP Request
+  // Khởi tạo đối tượng lưu trữ cấu hình các Header cho yêu cầu HTTP
   const headers = {
-    // Nếu là FormData thì để trình duyệt tự điền Content-Type kèm boundary, ngược lại đặt mặc định là application/json
+    // Nếu là dữ liệu FormData thì không định nghĩa Content-Type (để trình duyệt tự thiết lập boundary), ngược lại đặt là 'application/json'
     ...(isFormData ? {} : { "Content-Type": "application/json" }),
-    // Nếu có CSRF Token thì tự động đính kèm vào HTTP Header "x-csrf-token"
+    
+    // Nếu tìm thấy mã thông báo CSRF token trong cookies thì tự động điền vào Header bảo mật 'x-csrf-token'
     ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
-    ...options.headers, // Gộp thêm bất kỳ custom headers nào truyền vào từ options
+    
+    // Gộp thêm toàn bộ các header tùy chỉnh khác (nếu có) được truyền trực tiếp từ tham số options
+    ...options.headers,
   };
 
-  // Cấu hình đầy đủ cho hàm fetch API
+  // Khởi tạo đối tượng cấu hình cuối cùng để truyền vào hàm fetch của trình duyệt
   const config = {
+    // Kế thừa toàn bộ cấu hình từ options gốc
     ...options,
+    
+    // Truyền phần thân body đã được chuẩn hóa
     body,
+    
+    // Truyền tập hợp các Header đã được thiết lập
     headers,
-    credentials: "include", // Quan trọng: Yêu cầu đính kèm cookie (Session, Refresh Token) trong mọi request
+    
+    // Cài đặt credentials là 'include' để bắt buộc trình duyệt tự động đính kèm cookie phiên (JWT) trong mọi request gửi đi
+    credentials: "include",
   };
 
-  // Thực hiện gọi HTTP Request thực tế đến Backend
+  // Thực hiện cuộc gọi HTTP bất đồng bộ đến địa chỉ endpoint backend (kết hợp chuỗi '/api' với đường dẫn tương đối 'path')
   let res = await fetch(`/api${path}`, config);
 
-  // Xử lý kịch bản lỗi 401 Unauthorized (khi Access Token hết hạn)
+  // Xử lý kịch bản khi máy chủ phản hồi mã lỗi 401 Unauthorized (biểu thị Access Token đã hết hạn hoặc không hợp lệ)
   if (
-    res.status === 401 && // Nếu backend phản hồi mã lỗi 401 (chưa đăng nhập hoặc token hết hạn)
-    !options._isRetry && // Tránh lặp vô hạn bằng cách kiểm tra đây không phải là request thử lại lần thứ hai
-    path !== "/auth/login" && // Không tự động refresh nếu đây là đường dẫn login gốc
-    path !== "/auth/register" // Không tự động refresh nếu đây là đường dẫn đăng ký gốc
+    // Mã trạng thái phản hồi trả về từ server là 401
+    res.status === 401 &&
+    
+    // Đảm bảo request này chưa được gắn cờ thử lại trước đó (options._isRetry) để phòng ngừa vòng lặp vô hạn
+    !options._isRetry &&
+    
+    // Không thực hiện tự động làm mới token nếu đường dẫn hiện tại là route đăng nhập
+    path !== "/auth/login" &&
+    
+    // Không thực hiện tự động làm mới token nếu đường dẫn hiện tại là route đăng ký tài khoản mới
+    path !== "/auth/register"
   ) {
-    // Nếu chưa có request nào khác đang chạy luồng refresh token
+    // Nếu hiện tại chưa có luồng làm mới token nào khác đang chạy
     if (!isRefreshing) {
-      isRefreshing = true; // Bật cờ đánh dấu đang trong quá trình refresh token
+      // Đặt cờ hiệu isRefreshing thành true để khóa hệ thống không cho phép các request khác chạy lại tiến trình này trùng lặp
+      isRefreshing = true;
+      
       try {
-        // Gửi yêu cầu POST tới endpoint làm mới token, kèm theo cookie Refresh Token tự động gửi đi qua credentials: "include"
+        // Gửi yêu cầu POST đến endpoint '/auth/refresh' để yêu cầu cấp Access Token mới thông qua Refresh Token trong cookie
         const refreshRes = await fetch("/api/auth/refresh", {
+          // Sử dụng phương thức POST
           method: "POST",
+          
+          // Đính kèm mã CSRF token nếu có để vượt qua middleware bảo mật của Backend
           headers: csrfToken ? { "x-csrf-token": csrfToken } : {},
+          
+          // Tiếp tục yêu cầu đính kèm cookie của trình duyệt (Refresh Token cookie)
           credentials: "include",
         });
 
-        // Nếu refresh thành công (Backend sinh mới Access Token và lưu đè vào cookie)
+        // Nếu máy chủ xác nhận refresh thành công và phản hồi mã trạng thái ok (200 - 299)
         if (refreshRes.ok) {
-          isRefreshing = false; // Tắt cờ refreshing
-          onRefreshed(null); // Giải phóng các request đang chờ bằng cách báo không có lỗi (null)
+          // Đặt lại cờ isRefreshing về false (hoàn tất)
+          isRefreshing = false;
+          
+          // Giải phóng hàng đợi: Chạy lại toàn bộ các request đang chờ trong queue bằng cách truyền tham số lỗi là null
+          onRefreshed(null);
         } else {
-          isRefreshing = false; // Tắt cờ refreshing
-          // Giải phóng hàng đợi và báo lỗi phiên đăng nhập đã hết hạn
+          // Nếu làm mới token thất bại ở mức logic backend (ví dụ: Refresh Token hết hạn hoặc bị blacklist)
+          isRefreshing = false;
+          
+          // Thông báo lỗi phiên làm việc hết hạn cho toàn bộ các request đang nằm trong hàng đợi
           onRefreshed(
             new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."),
           );
 
+          // Ném ra ngoại lệ lỗi thông báo người dùng hết hạn phiên làm việc
           throw new Error(
             "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
           );
         }
       } catch (err) {
-        isRefreshing = false; // Đảm bảo reset cờ refreshing kể cả khi bị lỗi mạng/lỗi hệ thống
-        onRefreshed(err); // Thông báo lỗi tới toàn bộ các request đang chờ
+        // Nhảy vào đây nếu tiến trình gọi API refresh bị lỗi mạng hoặc lỗi hệ thống khác
+        isRefreshing = false;
+        
+        // Phát tín hiệu lỗi tương ứng để hủy bỏ các request đang xếp hàng chờ
+        onRefreshed(err);
+        
+        // Ném lỗi ra ngoài cho hàm gọi xử lý tiếp
         throw err;
       }
     }
 
-    // Đối với các request gọi đồng thời (trong khi cờ isRefreshing đang bật):
-    // Tạm giữ chúng lại dưới dạng một Promise và đưa vào hàng đợi chờ refresh xong
+    // Đối với các request được gọi song song hoặc trong lúc luồng làm mới token đang chạy:
+    // Tạm giữ request đó lại, trả về một Promise và đưa tác vụ này vào hàng đợi chờ đợi giải quyết
     return new Promise((resolve, reject) => {
+      // Đăng ký tác vụ thực thi sau khi hoàn thành refresh token
       subscribeTokenRefresh(async (err) => {
+        // Nếu quá trình refresh trước đó báo lỗi
         if (err) {
-          reject(err); // Ném lỗi nếu quá trình refresh token thất bại
+          // Từ chối Promise và ném ra lỗi
+          reject(err);
           return;
         }
-        // Lấy lại CSRF token mới từ cookie phòng trường hợp backend đã sinh mã CSRF mới
+        
+        // Lấy lại mã CSRF token mới từ cookie (phòng hờ backend đã tạo và gửi về mã CSRF mới sau khi refresh)
         const updatedCsrf = getCookie("csrfToken");
+        
+        // Nếu có CSRF token mới cập nhật và request hiện tại không phải dạng tải file FormData
         if (updatedCsrf && !isFormData) {
-          config.headers["x-csrf-token"] = updatedCsrf; // Cập nhật lại header CSRF Token
+          // Cập nhật lại giá trị header bảo mật 'x-csrf-token' tương ứng
+          config.headers["x-csrf-token"] = updatedCsrf;
         }
+        
         try {
-          // Thực hiện gọi lại chính request ban đầu kèm cờ đánh dấu `_isRetry: true` để tránh lặp vô hạn
+          // Chạy lại cuộc gọi API ban đầu, đính kèm thêm cờ _isRetry: true để đảm bảo không lặp vô hạn nếu tiếp tục lỗi 401
           resolve(await api(path, { ...options, _isRetry: true }));
         } catch (e) {
+          // Bắt và từ chối Promise nếu yêu cầu thử lại thất bại
           reject(e);
         }
       });
     });
   }
 
-  // Phân tích dữ liệu phản hồi dạng JSON, nếu rỗng thì trả về object trống
+  // Chuyển đổi luồng dữ liệu trả về từ máy chủ sang định dạng JSON, nếu parse lỗi thì trả về một đối tượng trống
   const data = await res.json().catch(() => ({}));
 
-  // Nếu HTTP Status Code không nằm trong khoảng thành công (200 - 299)
+  // Nếu kết quả trả về từ máy chủ báo lỗi (status code nằm ngoài dải 200 - 299)
   if (!res.ok) {
-    // Ném lỗi kèm thông điệp chi tiết từ Backend hoặc thông báo lỗi mặc định
+    // Ném ra đối tượng lỗi chứa thông điệp lỗi trả về từ Backend hoặc hiển thị mã lỗi HTTP thô
     throw new Error(data.message || `Lỗi hệ thống (Mã lỗi: ${res.status})`);
   }
 
-  return data; // Trả về dữ liệu sạch dạng JSON cho component/page xử lý tiếp
+  // Trả về dữ liệu sạch đã chuyển đổi JSON để các component React nhận và sử dụng
+  return data;
 }

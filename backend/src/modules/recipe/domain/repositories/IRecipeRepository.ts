@@ -1,3 +1,4 @@
+// Import thực thể Recipe ở tầng Domain để định nghĩa kiểu dữ liệu trong Repository
 import { Recipe } from "../entities/Recipe";
 
 /**
@@ -11,17 +12,21 @@ export interface IRecipeRepository {
    * @param id ID của công thức cần tìm dưới dạng string.
    * @returns Trả về một thực thể Recipe (Domain Entity) hoặc null nếu không tìm thấy.
    */
+  // Định nghĩa phương thức tìm kiếm công thức nấu ăn theo ID duy nhất
   findById(id: string): Promise<Recipe | null>;
 
   /**
    * Lưu hoặc cập nhật trạng thái của thực thể Recipe xuống Cơ sở dữ liệu.
    * @param recipe Thực thể Recipe cần lưu trữ.
    */
+  // Định nghĩa phương thức lưu thông tin công thức nấu ăn (tạo mới hoặc cập nhật)
   save(recipe: Recipe): Promise<void>;
 
   /**
    * Xóa vĩnh viễn một công thức khỏi Cơ sở dữ liệu.
    * @param recipe Thực thể Recipe cần xóa.
    */
+  // Định nghĩa phương thức xóa công thức nấu ăn khỏi cơ sở dữ liệu
   delete(recipe: Recipe): Promise<void>;
 }
+

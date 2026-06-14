@@ -1,27 +1,45 @@
+// Import lớp điều phối sự kiện Domain (DomainEvents) để đăng ký lắng nghe sự kiện
 import { DomainEvents } from "../../../../shared/domain/events/DomainEvents";
+// Import sự kiện UserPremiumUpgradedEvent để làm định nghĩa kiểu cho sự kiện nhận được
 import { UserPremiumUpgradedEvent } from "../../domain/events/UserPremiumUpgradedEvent";
+// Import đối tượng kết nối Redis để tương tác thu hồi token
 import { redis } from "../../../../config/redis";
+// Import logger ghi nhận vết xử lý sự kiện
 import { logger } from "../../../../utils/logger";
 
+/**
+ * BỘ XỬ LÝ SỰ KIỆN MIỀN (DOMAIN EVENT HANDLER): KHI NGƯỜI DÙNG ĐƯỢC NÂNG CẤP PREMIUM
+ * Lắng nghe sự kiện nâng cấp thành công để thực thi các tác vụ phụ trợ (side-effects) như buộc đăng xuất các phiên cũ
+ */
 export class OnUserPremiumUpgraded {
+  
+  /**
+   * ĐĂNG KÝ BỘ LẮNG NGHE SỰ KIỆN VỚI HỆ THỐNG ĐIỀU PHỐI (DomainEvents)
+   */
   public static register(): void {
     DomainEvents.register(
       async (event: UserPremiumUpgradedEvent) => {
+        // Khi sự kiện được phát đi, gọi hàm xử lý bất đồng bộ tương ứng bên dưới
         await this.onUserPremiumUpgraded(event);
       },
-      UserPremiumUpgradedEvent.name
+      UserPremiumUpgradedEvent.name // Đăng ký dựa trên tên định danh duy nhất của lớp sự kiện
     );
   }
 
+  /**
+   * HÀM XỬ LÝ SỰ KIỆN NÂNG CẤP PREMIUM (THU HỒI TOKEN / CASCADE LOGOUT)
+   */
   private static async onUserPremiumUpgraded(event: UserPremiumUpgradedEvent): Promise<void> {
-    const { userId } = event;
+    const { userId } = event; // Lấy ID người dùng được nâng cấp từ sự kiện nhận được
     logger.info(`[DomainEvent Handler] Bắt đầu xử lý nâng cấp Premium cho User ID = ${userId}`);
 
     try {
-      // Quét & Xóa toàn bộ Refresh Tokens của User này trên Redis (Cascade Logout)
+      // THU HỒI TOÀN BỘ PHIÊN ĐĂNG NHẬP CŨ TRÊN REDIS (Cascade Logout)
+      // Mục đích: Ép buộc client phải xin cấp lại Access Token mới chứa quyền Premium ở lần gọi API tiếp theo
       let cursor = "0";
       const keysToDelete: string[] = [];
 
+      // Quét tìm tất cả các Refresh Token đang hoạt động của người dùng trên Redis
       do {
         const reply = await redis.scan(
           cursor,
@@ -34,6 +52,7 @@ export class OnUserPremiumUpgraded {
         keysToDelete.push(...reply[1]);
       } while (cursor !== "0");
 
+      // Nếu tìm thấy các phiên đăng nhập cũ, thực hiện xóa chúng khỏi bộ nhớ Redis
       if (keysToDelete.length > 0) {
         await redis.del(...keysToDelete);
         logger.info(
@@ -41,9 +60,11 @@ export class OnUserPremiumUpgraded {
         );
       }
     } catch (err: any) {
+      // Chỉ log lỗi nếu có sự cố xảy ra chứ không quăng lỗi ra ngoài để tránh ảnh hưởng đến tiến trình chính phát sự kiện
       logger.error(
         `[DomainEvent Handler] Lỗi khi thu hồi token cho User=${userId}: ${err.message}`
       );
     }
   }
 }
+

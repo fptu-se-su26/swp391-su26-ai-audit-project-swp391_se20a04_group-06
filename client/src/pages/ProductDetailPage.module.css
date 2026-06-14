@@ -1,10 +1,10 @@
 /* ═══════════════════════════════════════════════════
    ProductDetailPage.module.css
-   Premium Japanese seafood marketplace design
-   Inspired by umai.fish
+   Thiết kế chợ hải sản cao cấp Nhật Bản
+   Lấy cảm hứng từ trang umai.fish
    ═══════════════════════════════════════════════════ */
 
-/* ── Full-width background wrapper ── */
+/* ── Lớp bao bọc toàn bộ trang (chiều rộng tối đa, chiều cao tối thiểu bằng màn hình, màu nền giấy truyền thống Nhật Bản) ── */
 .pageWrapper {
   width: 100%;
   min-height: 100vh;
@@ -14,16 +14,17 @@
   align-items: center;
 }
 
-/* ── Centered and compact container ── */
+/* ── Container trung tâm chứa nội dung chính (giới hạn chiều rộng 980px và đệm lề) ── */
 .container {
   width: 100%;
   max-width: 980px; /* Thu hẹp từ 1140px để gọn gàng hơn */
   margin: 0 auto;
   padding: 24px 16px 80px;
-  animation: fadeInUp 0.5s ease-out;
+  animation: fadeInUp 0.5s ease-out; /* Hoạt ảnh trượt xuất hiện từ dưới lên */
   box-sizing: border-box;
 }
 
+/* ── Hoạt ảnh chuyển động trượt nhẹ và hiện dần lên ── */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -35,7 +36,7 @@
   }
 }
 
-/* ── Breadcrumb ── */
+/* ── Thanh điều hướng Breadcrumb (đường dẫn phân cấp trang) ── */
 .breadcrumb {
   display: flex;
   align-items: center;
@@ -43,9 +44,10 @@
   font-size: 13px;
   color: #8b7d5e;
   margin-bottom: 20px;
-  flex-wrap: wrap;
+  flex-wrap: wrap; /* Tự động xuống dòng khi màn hình nhỏ */
 }
 
+/* Đường liên kết trong breadcrumb */
 .breadcrumb a {
   color: #6b5e3e;
   text-decoration: none;
@@ -53,10 +55,12 @@
   transition: color 0.2s;
 }
 
+/* Hiệu ứng di chuột vào liên kết breadcrumb */
 .breadcrumb a:hover {
   color: #0b4f6c;
 }
 
+/* Phần hiển thị trang hiện tại trong breadcrumb (chữ đậm, cắt ngắn bằng dấu ba chấm nếu quá dài) */
 .breadcrumbCurrent {
   color: #333;
   font-weight: 700;
@@ -66,27 +70,30 @@
   white-space: nowrap;
 }
 
-/* ── Main Grid ── */
+/* ── Bố cục lưới chính của trang chi tiết (chia làm 2 cột: phần nội dung và sidebar thông tin) ── */
 .grid {
   display: grid;
-  grid-template-columns: 1fr 340px; /* Thu nhỏ sidebar từ 400px xuống 340px */
+  grid-template-columns: 1fr 340px; /* Cột chính co giãn và cột phụ sidebar rộng 340px */
   grid-template-rows: auto auto;
   grid-template-areas:
     "gallery sidebar"
     "desc sidebar";
-  gap: 24px; /* Giảm nhẹ khoảng cách giữa các phần */
+  gap: 24px; /* Khoảng cách giữa các cột/hàng */
   margin-bottom: 24px;
   align-items: start;
 }
 
+/* Vùng hiển thị bộ sưu tập ảnh sản phẩm */
 .galleryArea {
   grid-area: gallery;
 }
 
+/* Vùng hiển thị mô tả sản phẩm */
 .descArea {
   grid-area: desc;
 }
 
+/* Vùng hiển thị sidebar thông tin sản phẩm (có thuộc tính dính - sticky để cuộn theo trang) */
 .infoArea {
   grid-area: sidebar;
   position: sticky;
@@ -97,6 +104,7 @@
   gap: 16px;
 }
 
+/* Phản hồi giao diện trên màn hình nhỏ hơn 900px (Chuyển thành bố cục 1 cột dọc) */
 @media (max-width: 900px) {
   .grid {
     grid-template-columns: 1fr;
@@ -108,11 +116,11 @@
     gap: 20px;
   }
   .infoArea {
-    position: static;
+    position: static; /* Bỏ tính năng dính sticky khi ở giao diện một cột */
   }
 }
 
-/* ── Enhanced Image Gallery ── */
+/* ── Bộ sưu tập ảnh sản phẩm (được bo góc và đổ bóng) ── */
 .gallery {
   border-radius: 16px;
   overflow: hidden;
@@ -120,27 +128,31 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
 }
 
+/* Khung hiển thị ảnh lớn đang được chọn */
 .mainImage {
   position: relative;
   height: 380px; /* Giảm chiều cao từ 440px xuống để tiết kiệm không gian */
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: zoom-in;
+  cursor: zoom-in; /* Hiển thị con trỏ kính lúp phóng to */
   overflow: hidden;
 }
 
+/* Hình ảnh lớn bên trong khung */
 .mainImage img {
   max-width: 100%;
   max-height: 100%;
-  object-fit: contain;
-  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  object-fit: contain; /* Đảm bảo hình ảnh không bị méo */
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Hiệu ứng zoom ảnh nhẹ mượt mà */
 }
 
+/* Hiệu ứng khi di chuột vào ảnh lớn (phóng to nhẹ 3%) */
 .mainImage:hover img {
   transform: scale(1.03);
 }
 
+/* Bộ đếm số thứ tự ảnh hiện tại (ví dụ: 1/4) hiển thị ở góc phải trên */
 .imgCounter {
   position: absolute;
   top: 14px;
@@ -155,6 +167,7 @@
   z-index: 10;
 }
 
+/* Các nút bấm điều hướng ảnh trước/sau (Prev/Next) */
 .navBtn {
   position: absolute;
   top: 50%;
@@ -176,32 +189,38 @@
   justify-content: center;
 }
 
+/* Hiệu ứng di chuột vào nút điều hướng (tăng độ mờ nền và phóng to nhẹ) */
 .navBtn:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: translateY(-50%) scale(1.08);
 }
 
+/* Nút quay lại ảnh trước nằm bên trái */
 .navPrev {
   left: 14px;
 }
+
+/* Nút chuyển ảnh tiếp theo nằm bên phải */
 .navNext {
   right: 14px;
 }
 
-/* Thumbnail strip */
+/* Dải ảnh nhỏ thu nhỏ (Thumbnail strip) nằm ở đáy bộ sưu tập */
 .thumbStrip {
   display: flex;
   gap: 0;
   background: #1e293b;
   padding: 6px 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
+  overflow-x: auto; /* Cho phép cuộn ngang */
+  scrollbar-width: none; /* Ẩn thanh cuộn trên Firefox */
 }
 
+/* Ẩn thanh cuộn trên Chrome/Safari */
 .thumbStrip::-webkit-scrollbar {
   display: none;
 }
 
+/* Khung hiển thị ảnh nhỏ (Thumbnail) đơn lẻ */
 .thumb {
   flex: 0 0 64px; /* Thu gọn chiều rộng thumbnail */
   height: 48px; /* Thu gọn chiều cao thumbnail */
@@ -209,27 +228,31 @@
   overflow: hidden;
   cursor: pointer;
   border: 2px solid transparent;
-  opacity: 0.5;
+  opacity: 0.5; /* Mờ mặc định */
   transition: all 0.25s ease;
   margin: 0 3px;
 }
 
+/* Tăng độ rõ khi di chuột vào ảnh nhỏ */
 .thumb:hover {
   opacity: 0.85;
 }
 
+/* Trạng thái ảnh nhỏ đang được chọn hiển thị rõ nét và viền xanh sáng */
 .thumbActive {
   opacity: 1;
   border-color: #38bdf8;
   box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.3);
 }
 
+/* Ảnh bên trong thumbnail */
 .thumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
+/* Khung hiển thị tạm thời khi không có ảnh thumbnail */
 .thumbPlaceholder {
   width: 100%;
   height: 100%;
@@ -240,7 +263,7 @@
   background: linear-gradient(135deg, #0b4f6c, #1a7fa0);
 }
 
-/* ── Right Sidebar Card ── */
+/* ── Sidebar thông tin nằm bên phải trang (bám dính khi cuộn) ── */
 .sidebar {
   position: sticky;
   top: 74px;
@@ -249,6 +272,7 @@
   gap: 16px;
 }
 
+/* Hộp thẻ thông tin sản phẩm (màu nền trắng, có đổ bóng mờ và hiệu ứng nổi khi di chuột) */
 .infoCard {
   background: #fff;
   border-radius: 16px;
@@ -258,11 +282,12 @@
   transition: box-shadow 0.3s ease;
 }
 
+/* Tăng độ bóng đổ khi di chuột vào thẻ thông tin */
 .infoCard:hover {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
 }
 
-/* ── Badges Row ── */
+/* Hàng chứa các nhãn huy hiệu trạng thái (Tươi sống / Đồ khô, Bán buôn / Lẻ...) */
 .badges {
   display: flex;
   gap: 6px;
@@ -270,6 +295,7 @@
   flex-wrap: wrap;
 }
 
+/* Giao diện chung của nhãn huy hiệu */
 .badge {
   border-radius: 6px;
   padding: 4px 10px;
@@ -278,27 +304,31 @@
   letter-spacing: 0.02em;
 }
 
+/* Huy hiệu cho hải sản tươi sống (Nền xanh nhạt, chữ xanh đậm) */
 .badgeFresh {
   background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
   color: #0369a1;
 }
 
+/* Huy hiệu cho hải sản khô / đông lạnh (Nền vàng nhạt, chữ vàng đậm) */
 .badgeDried {
   background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
   color: #92400e;
 }
 
+/* Huy hiệu hiển thị danh mục sản phẩm */
 .badgeCategory {
   background: #f0f9ff;
   color: #0b4f6c;
 }
 
+/* Huy hiệu hiển thị trạng thái bán buôn (sỉ) */
 .badgeWholesale {
   background: #f1f5f9;
   color: #334155;
 }
 
-/* ── Product Title ── */
+/* ── Tiêu đề tên sản phẩm (chữ lớn đậm màu Slate tối) ── */
 .productTitle {
   font-size: 20px; /* Giảm nhẹ cỡ chữ tiêu đề */
   font-weight: 800;
@@ -308,7 +338,7 @@
   letter-spacing: -0.01em;
 }
 
-/* ── Price ── */
+/* ── Khung hiển thị giá bán (dải nền màu xanh nhạt có viền) ── */
 .priceBlock {
   display: flex;
   align-items: baseline;
@@ -320,6 +350,7 @@
   border: 1px solid #bae6fd;
 }
 
+/* Số tiền giá bán sản phẩm (chữ rất to đậm màu đại dương) */
 .price {
   font-size: 28px; /* Giảm nhẹ cỡ chữ giá bán */
   font-weight: 900;
@@ -327,23 +358,26 @@
   letter-spacing: -0.02em;
 }
 
+/* Đơn vị tính giá (ví dụ: /kg, /con) */
 .priceUnit {
   font-size: 14px;
   font-weight: 600;
   color: #64748b;
 }
 
+/* Chú thích giá đã bao gồm thuế (nằm sát bên phải hàng giá) */
 .priceTax {
   font-size: 11px;
   color: #94a3b8;
   margin-left: auto;
 }
 
-/* ── Stock meter ── */
+/* ── Khối hiển thị số lượng tồn kho ── */
 .stockSection {
   margin-bottom: 14px;
 }
 
+/* Dòng chữ hiển thị thông tin số lượng tồn kho (Còn lại: X kg) */
 .stockHeader {
   display: flex;
   justify-content: space-between;
@@ -353,6 +387,7 @@
   font-weight: 500;
 }
 
+/* Khung nền thanh tiến trình biểu thị lượng tồn kho */
 .stockBar {
   height: 8px;
   background: #f1f5f9;
@@ -360,13 +395,14 @@
   overflow: hidden;
 }
 
+/* Thanh biểu diễn mức tồn kho còn lại (hiệu ứng trượt mượt mà khi nạp) */
 .stockFill {
   height: 100%;
   border-radius: 99px;
   transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* ── Info Table (umai-style) ── */
+/* ── Bảng thông số chi tiết của sản phẩm theo kiểu Nhật Bản (Umai) ── */
 .infoTable {
   width: 100%;
   border-collapse: collapse;
@@ -377,14 +413,17 @@
   overflow: hidden;
 }
 
+/* Từng hàng trong bảng */
 .infoTable tr {
   border-bottom: 1px solid #e2e8f0;
 }
 
+/* Hàng cuối cùng không cần viền dưới */
 .infoTable tr:last-child {
   border-bottom: none;
 }
 
+/* Cột tiêu đề thuộc tính trong bảng (nền xám nhạt, viền phải) */
 .infoTable th {
   text-align: left;
   padding: 6px 10px;
@@ -397,13 +436,14 @@
   vertical-align: middle;
 }
 
+/* Cột giá trị thuộc tính trong bảng (chữ Slate đậm) */
 .infoTable td {
   padding: 6px 10px;
   color: #1e293b;
   font-weight: 600;
 }
 
-/* ── Seller Card ── */
+/* ── Thẻ hiển thị thông tin người bán (ngư dân / cửa hàng) ── */
 .sellerCard {
   display: flex;
   align-items: center;
@@ -416,6 +456,7 @@
   background: #fff;
 }
 
+/* Hiệu ứng hover vào thẻ người bán (thay màu nền, viền và nổi nhẹ) */
 .sellerCard:hover {
   background: #f8fafc;
   border-color: #0b4f6c;
@@ -423,6 +464,7 @@
   transform: translateY(-1px);
 }
 
+/* Vòng tròn ảnh đại diện đại diện người bán (hiển thị chữ cái đầu hoặc ảnh) */
 .sellerAvatar {
   width: 44px;
   height: 44px;
@@ -438,11 +480,13 @@
   box-shadow: 0 4px 12px rgba(11, 79, 108, 0.2);
 }
 
+/* Khung chứa tên và hành động kêu gọi của người bán */
 .sellerInfo {
   flex: 1;
   min-width: 0;
 }
 
+/* Tên người bán (chữ in đậm tối) */
 .sellerName {
   font-weight: 800;
   color: #0f172a;
@@ -453,6 +497,7 @@
   flex-wrap: wrap;
 }
 
+/* Dòng kêu gọi hành động nhỏ phía dưới tên người bán */
 .sellerCta {
   font-size: 11.5px;
   color: #0b4f6c;
@@ -460,18 +505,20 @@
   margin-top: 2px;
 }
 
+/* Icon mũi tên chỉ sang phải trong thẻ người bán */
 .sellerArrow {
   font-size: 16px;
   color: #94a3b8;
   transition: transform 0.2s;
 }
 
+/* Hiệu ứng dịch chuyển mũi tên khi hover vào thẻ người bán */
 .sellerCard:hover .sellerArrow {
   transform: translateX(4px);
   color: #0b4f6c;
 }
 
-/* ── Fisherman Badges ── */
+/* ── Các huy hiệu bổ sung của ngư dân (ví dụ: Uy tín, Đánh bắt xa bờ...) ── */
 .fishBadges {
   display: flex;
   flex-wrap: wrap;
@@ -479,6 +526,7 @@
   margin-top: 8px;
 }
 
+/* Từng huy hiệu nhỏ có nền màu ngọc lục bảo nhạt */
 .fishBadge {
   background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
   border: 1px solid #99f6e4;
@@ -493,17 +541,19 @@
   transition: transform 0.15s;
 }
 
+/* Hiệu ứng zoom nhẹ khi di chuột vào huy hiệu ngư dân */
 .fishBadge:hover {
   transform: scale(1.05);
 }
 
-/* ── CTA Buttons ── */
+/* ── Nhóm các nút kêu gọi hành động chính (Mua ngay, Liên hệ...) ── */
 .ctaGroup {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
+/* Nút hành động chính (nổi bật nhất, nền xanh lục bảo có vệt sáng lướt qua khi hover) */
 .ctaPrimary {
   padding: 12px 0;
   border-radius: 10px;
@@ -520,6 +570,7 @@
   overflow: hidden;
 }
 
+/* Vệt sáng chéo chạy dọc nút chính */
 .ctaPrimary::after {
   content: "";
   position: absolute;
@@ -536,15 +587,18 @@
   transition: left 0.5s;
 }
 
+/* Kích hoạt chạy vệt sáng khi di chuột qua nút chính */
 .ctaPrimary:hover::after {
   left: 100%;
 }
 
+/* Hiệu ứng nổi lên khi di chuột vào nút chính */
 .ctaPrimary:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 24px rgba(32, 143, 103, 0.35);
 }
 
+/* Nút hành động phụ */
 .ctaSecondary {
   padding: 10px 0;
   border-radius: 10px;
@@ -555,11 +609,12 @@
   transition: all 0.25s ease;
 }
 
+/* Hiệu ứng nhấc nhẹ nút phụ khi di chuột */
 .ctaSecondary:hover {
   transform: translateY(-1px);
 }
 
-/* ── Description Section ── */
+/* ── Vùng hiển thị phần mô tả chi tiết sản phẩm ── */
 .descSection {
   background: #fff;
   border-radius: 16px;
@@ -569,6 +624,7 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
 }
 
+/* Tiêu đề phân khu (ví dụ: Mô tả sản phẩm, Bản đồ đánh bắt...) */
 .sectionTitle {
   font-weight: 800;
   font-size: 15px;
@@ -581,6 +637,7 @@
   border-bottom: 2px solid #f1f5f9;
 }
 
+/* Vạch kẻ màu xanh trang trí bên cạnh tiêu đề phân khu */
 .sectionTitleAccent {
   width: 4px;
   height: 18px;
@@ -588,6 +645,7 @@
   border-radius: 4px;
 }
 
+/* Đoạn văn mô tả chi tiết sản phẩm (hỗ trợ hiển thị nhiều dòng có sẵn xuống dòng) */
 .descText {
   font-size: 14px;
   color: #334155;
@@ -596,7 +654,7 @@
   white-space: pre-line;
 }
 
-/* ── Map Section ── */
+/* ── Phân khu chứa bản đồ định vị vùng đánh bắt hải sản ── */
 .mapSection {
   margin-top: 16px;
   border-radius: 16px;
@@ -605,13 +663,12 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
 }
 
-
-/* ── Report Modal ── */
+/* ── Hộp thoại báo cáo vi phạm (Report Modal Overlay) ── */
 .modalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.5); /* Nền mờ tối */
+  backdrop-filter: blur(4px); /* Làm nhòe nội dung trang phía dưới */
   z-index: 9999;
   display: flex;
   align-items: center;
@@ -619,6 +676,7 @@
   animation: fadeIn 0.2s ease;
 }
 
+/* Hoạt ảnh hiện dần lớp phủ */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -628,6 +686,7 @@
   }
 }
 
+/* Thẻ hộp thoại chính chứa form báo cáo */
 .modalCard {
   background: #fff;
   border-radius: 20px;
@@ -635,9 +694,10 @@
   max-width: 400px;
   width: 90%;
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
-  animation: modalIn 0.3s ease;
+  animation: modalIn 0.3s ease; /* Hoạt ảnh bật ra */
 }
 
+/* Hoạt ảnh phóng to nhẹ và bật lên của hộp thoại */
 @keyframes modalIn {
   from {
     opacity: 0;
@@ -649,7 +709,7 @@
   }
 }
 
-/* ── Loading skeleton ── */
+/* ── Trạng thái skeleton giả lập khi đang tải dữ liệu (Loading shimmer) ── */
 .loadingShimmer {
   text-align: center;
   padding: 100px 20px;
@@ -658,6 +718,7 @@
   font-size: 15px;
 }
 
+/* Vòng tròn xoay tải dữ liệu (Spinner) */
 .loadingShimmer::after {
   content: "";
   display: block;
@@ -670,20 +731,21 @@
   animation: spin 0.8s linear infinite;
 }
 
+/* Hoạt ảnh xoay tròn 360 độ */
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-/* ── Responsive ── */
+/* ── Responsive cho màn hình máy tính bảng và điện thoại cỡ vừa (<= 900px) ── */
 @media (max-width: 900px) {
   .container {
     padding: 16px 12px 60px;
   }
 
   .mainImage {
-    height: 280px;
+    height: 280px; /* Thu nhỏ chiều cao ảnh lớn */
   }
 
   .productTitle {
@@ -695,11 +757,11 @@
   }
 
   .sidebar {
-    position: static;
+    position: static; /* Hủy dính sticky khi màn hình nhỏ */
   }
 }
 
-/* ── Report link ── */
+/* ── Đường dẫn liên kết báo cáo vi phạm ── */
 .reportLink {
   font-size: 12px;
   color: #94a3b8;
@@ -712,18 +774,19 @@
   text-align: center;
 }
 
+/* Đổi màu đỏ khi di chuột vào nút báo cáo vi phạm */
 .reportLink:hover {
   color: #ef4444;
 }
 
-/* ── Divider ── */
+/* ── Thanh kẻ phân chia nội dung nhẹ ── */
 .divider {
   border: none;
   border-top: 1.5px solid #f1f5f9;
   margin: 14px 0;
 }
 
-/* ── Section label ── */
+/* ── Nhãn chữ phân khu phụ (in hoa, màu xám) ── */
 .sectionLabel {
   font-size: 11px;
   font-weight: 800;
@@ -733,9 +796,9 @@
   margin-bottom: 8px;
 }
 
-/* ── Umai.fish Inspired Custom Styles ── */
+/* ── Các kiểu dáng lấy cảm hứng từ umai.fish ── */
 
-/* highlights list */
+/* Khung chứa danh sách điểm nổi bật của hải sản (vẽ viền đứt nét màu vàng) */
 .highlightsList {
   list-style: none;
   padding: 14px;
@@ -745,6 +808,7 @@
   border-radius: 12px;
 }
 
+/* Tiêu đề vùng điểm nổi bật (màu cam sẫm) */
 .highlightsHeader {
   font-size: 12px;
   font-weight: 800;
@@ -754,6 +818,7 @@
   letter-spacing: 0.03em;
 }
 
+/* Từng mục điểm nổi bật nhỏ */
 .highlightsLi {
   font-size: 12px;
   font-weight: 600;
@@ -764,11 +829,12 @@
   gap: 6px;
 }
 
+/* Mục nổi bật cuối cùng không cần căn lề dưới */
 .highlightsLi:last-child {
   margin-bottom: 0;
 }
 
-/* alternating detail rows */
+/* Vùng hiển thị thông tin mô tả chi tiết xếp so le (Alternating detail rows) */
 .detailsSection {
   margin-top: 24px;
   display: flex;
@@ -776,6 +842,7 @@
   gap: 24px;
 }
 
+/* Hàng ngang chứa chi tiết (kết hợp hình ảnh và đoạn văn) */
 .detailRow {
   display: flex;
   background: #fff;
@@ -786,14 +853,17 @@
   align-items: center;
 }
 
+/* Kiểu hàng bình thường (ảnh bên trái, chữ bên phải) */
 .rowNormal {
   flex-direction: row;
 }
 
+/* Kiểu hàng đảo ngược (ảnh bên phải, chữ bên trái) */
 .rowReverse {
   flex-direction: row-reverse;
 }
 
+/* Khung chứa ảnh chi tiết */
 .detailImage {
   flex: 1;
   min-height: 220px; /* Giảm chiều cao tối thiểu từ 280px để gọn gàng hơn */
@@ -801,6 +871,7 @@
   background: #f8fafc;
 }
 
+/* Ảnh chi tiết bên trong */
 .detailImage img {
   width: 100%;
   height: 100%;
@@ -808,11 +879,13 @@
   display: block;
 }
 
+/* Vùng nội dung văn bản đi kèm ảnh */
 .detailContent {
   flex: 1;
   padding: 24px; /* Giảm đệm từ 36px để bớt rỗng */
 }
 
+/* Tiêu đề nhỏ của hàng chi tiết (có gạch chân trang trí màu vàng mật) */
 .detailRowTitle {
   font-size: 16px; /* Giảm nhẹ kích cỡ tiêu đề */
   font-weight: 800;
@@ -823,6 +896,7 @@
   display: inline-block;
 }
 
+/* Đoạn văn chi tiết */
 .detailRowText {
   font-size: 13.5px;
   color: #475569;
@@ -831,6 +905,7 @@
   white-space: pre-line;
 }
 
+/* Chuyển các hàng chi tiết xếp so le thành dạng cột dọc trên màn hình nhỏ di động */
 @media (max-width: 768px) {
   .detailRow {
     flex-direction: column !important;
@@ -845,7 +920,7 @@
   }
 }
 
-/* producer card */
+/* Thẻ giới thiệu tiểu sử nhà sản xuất / ngư dân đánh bắt */
 .producerCard {
   background: #fff;
   border-radius: 16px;
@@ -855,6 +930,7 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
 }
 
+/* Khung tiêu đề thẻ nhà sản xuất */
 .producerHeader {
   display: flex;
   align-items: center;
@@ -864,6 +940,7 @@
   border-bottom: 2px solid #f1f5f9;
 }
 
+/* Tiêu đề chính thẻ nhà sản xuất */
 .producerHeader h2 {
   font-size: 16px;
   font-weight: 800;
@@ -871,12 +948,14 @@
   margin: 0;
 }
 
+/* Thân thẻ nhà sản xuất (Chia cột: cột trái ảnh chân dung, cột phải lời trích dẫn và tiểu sử) */
 .producerBody {
   display: grid;
   grid-template-columns: 200px 1fr; /* Thu hẹp cột bên trái để nhường không gian */
   gap: 24px;
 }
 
+/* Responsive cột thẻ nhà sản xuất trên màn hình điện thoại */
 @media (max-width: 768px) {
   .producerBody {
     grid-template-columns: 1fr;
@@ -888,6 +967,7 @@
   }
 }
 
+/* Khối bên trái thẻ nhà sản xuất (ảnh tròn to, tên, danh hiệu) */
 .producerLeft {
   display: flex;
   flex-direction: column;
@@ -896,6 +976,7 @@
   padding-right: 16px;
 }
 
+/* Responsive khối trái thẻ nhà sản xuất trên di động */
 @media (max-width: 768px) {
   .producerLeft {
     border-right: none;
@@ -905,6 +986,7 @@
   }
 }
 
+/* Ảnh đại diện tròn cỡ lớn của ngư dân nhà sản xuất */
 .producerAvatarLarge {
   width: 72px; /* Giảm kích cỡ vòng tròn đại diện */
   height: 72px;
@@ -920,6 +1002,7 @@
   box-shadow: 0 6px 18px rgba(11, 79, 108, 0.15);
 }
 
+/* Tên nhà sản xuất ngư dân */
 .producerLeft h3 {
   font-size: 15px;
   font-weight: 800;
@@ -927,12 +1010,14 @@
   margin: 0 0 6px 0;
 }
 
+/* Mô tả chức vụ / nghề nghiệp của ngư dân */
 .producerLeft p {
   font-size: 12px;
   color: #64748b;
   margin: 0 0 10px 0;
 }
 
+/* Hộp chứa các huy hiệu gắn liền với ngư dân này */
 .producerBadges {
   display: flex;
   flex-wrap: wrap;
@@ -940,6 +1025,7 @@
   justify-content: center;
 }
 
+/* Huy hiệu nhà sản xuất */
 .producerBadge {
   background: #f0fdfa;
   border: 1px solid #99f6e4;
@@ -950,12 +1036,14 @@
   font-weight: 700;
 }
 
+/* Khối bên phải thẻ nhà sản xuất (Lời trích dẫn, mô tả và thống kê số liệu) */
 .producerRight {
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
+/* Lời trích dẫn phát biểu của ngư dân (chữ nghiêng màu cam) */
 .producerQuote {
   font-size: 15px;
   font-weight: 700;
@@ -965,6 +1053,7 @@
   line-height: 1.5;
 }
 
+/* Đoạn giới thiệu tóm tắt cuộc đời / kinh nghiệm đi biển của ngư dân */
 .producerBio {
   font-size: 13.5px;
   color: #475569;
@@ -972,11 +1061,13 @@
   margin: 0 0 16px 0;
 }
 
+/* Hàng hiển thị các thông số thống kê của ngư dân (số mẻ cá, thâm niên...) */
 .producerStats {
   display: flex;
   gap: 16px;
 }
 
+/* Ô thống kê đơn lẻ (nền xám nhạt) */
 .producerStats div {
   background: #f8fafc;
   padding: 8px 12px;
@@ -986,6 +1077,7 @@
   border: 1px solid #f1f5f9;
 }
 
+/* Giá trị thông số thống kê (chữ to đậm) */
 .producerStats strong {
   display: block;
   font-size: 14.5px;
@@ -994,13 +1086,14 @@
   margin-bottom: 2px;
 }
 
+/* Nhãn chú thích thông số thống kê (chữ nhỏ nhạt) */
 .producerStats span {
   font-size: 11px;
   color: #64748b;
   font-weight: 600;
 }
 
-/* seasonal catch */
+/* Thẻ lịch vụ mùa đánh bắt hải sản (Seasonal catch calendar) */
 .seasonalCard {
   background: #fff;
   border-radius: 16px;
@@ -1010,24 +1103,28 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
 }
 
+/* Khung lưới chứa 4 mùa trong năm */
 .seasonalGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
 }
 
+/* Responsive lưới mùa vụ trên điện thoại */
 @media (max-width: 640px) {
   .seasonalGrid {
     grid-template-columns: 1fr;
   }
 }
 
+/* Hộp biểu diễn thông tin mùa vụ đơn lẻ */
 .seasonBox {
   padding: 12px;
   border-radius: 12px;
   border: 1px solid transparent;
 }
 
+/* Vụ Xuân (Nền hồng đào, chữ đỏ) */
 .spring {
   background: #fff5f5;
   border-color: #fee2e2;
@@ -1036,6 +1133,7 @@
   color: #e11d48;
 }
 
+/* Vụ Hè (Nền xanh lá dịu, chữ xanh lục) */
 .summer {
   background: #f0fdf4;
   border-color: #dcfce7;
@@ -1044,6 +1142,7 @@
   color: #16a34a;
 }
 
+/* Vụ Thu (Nền vàng ấm, chữ vàng cam) */
 .autumn {
   background: #fffbeb;
   border-color: #fef3c7;
@@ -1052,6 +1151,7 @@
   color: #d97706;
 }
 
+/* Vụ Đông (Nền xanh tuyết nhạt, chữ xanh dương) */
 .winter {
   background: #f0f9ff;
   border-color: #e0f2fe;
@@ -1060,12 +1160,14 @@
   color: #0284c7;
 }
 
+/* Tiêu đề tên mùa (ví dụ: Mùa Xuân (Tháng 3 - 5)) */
 .seasonTitle {
   font-weight: 800;
   font-size: 13.5px;
   margin-bottom: 4px;
 }
 
+/* Danh sách loại hải sản đặc trưng đánh bắt trong mùa */
 .seasonBox p {
   font-size: 12.5px;
   color: #475569;
@@ -1074,7 +1176,7 @@
   font-weight: 600;
 }
 
-/* schedule */
+/* Thẻ lịch trình cập bến của các tàu đánh cá (Seafood boat landing schedule) */
 .scheduleCard {
   background: #fff;
   border-radius: 16px;
@@ -1084,6 +1186,7 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
 }
 
+/* Dòng mô tả lịch trình cập bến */
 .scheduleDesc {
   font-size: 13px;
   color: #64748b;
@@ -1091,20 +1194,23 @@
   line-height: 1.5;
 }
 
+/* Khung cuộn ngang bảo vệ bảng lịch trình trên màn hình di động nhỏ */
 .tableWrapper {
   overflow-x: auto;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
 }
 
+/* Bảng lịch trình cập bến */
 .scheduleTable {
   width: 100%;
   border-collapse: collapse;
   font-size: 12.5px;
   text-align: center;
-  min-width: 580px;
+  min-width: 580px; /* Chiều rộng tối thiểu để bảng không bị bóp méo */
 }
 
+/* Tiêu đề cột của bảng lịch trình (nền xám nhạt, chữ đậm) */
 .scheduleTable th {
   background: #f8fafc;
   color: #475569;
@@ -1114,6 +1220,7 @@
   border-right: 1px solid #e2e8f0;
 }
 
+/* Các ô dữ liệu trong bảng */
 .scheduleTable td {
   padding: 12px 8px;
   border-bottom: 1px solid #e2e8f0;
@@ -1121,11 +1228,13 @@
   font-weight: 600;
 }
 
+/* Cột cuối cùng không cần viền phải ngăn cách */
 .scheduleTable th:last-child,
 .scheduleTable td:last-child {
   border-right: none;
 }
 
+/* Ô hiển thị tên của ngư dân điều khiển tàu (căn lề trái, chữ màu đại dương) */
 .fishermanName {
   text-align: left;
   color: #0b4f6c;
@@ -1133,11 +1242,12 @@
   padding-left: 14px !important;
 }
 
+/* Ô hiển thị trạng thái của tàu (ví dụ: Đang đi biển, Đã cập cảng...) */
 .statusCell {
   font-size: 14px;
 }
 
-/* commitment banner */
+/* Banner cam kết chất lượng sản phẩm sạch, tươi ngon tự nhiên (Commitment banner) */
 .commitmentBanner {
   background: #208f67;
   color: #fff;

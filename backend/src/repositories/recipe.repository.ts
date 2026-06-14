@@ -1,7 +1,11 @@
+// Import mô hình Recipe của Mongoose để thực hiện các câu lệnh truy vấn cơ sở dữ liệu MongoDB
 import { Recipe as MongooseRecipe } from "../models/Recipe";
+// Import lớp MongooseRecipeRepository trong module recipe ở lớp hạ tầng để thực hiện lưu trữ/xóa thực thể
 import { MongooseRecipeRepository } from "../modules/recipe/infrastructure/persistence/mongoose/MongooseRecipeRepository";
+// Import thực thể miền Recipe (Domain Entity) để khởi tạo và áp dụng quy tắc nghiệp vụ
 import { Recipe as DomainRecipe } from "../modules/recipe/domain/entities/Recipe";
 
+// Khởi tạo đối tượng Repository DDD quản lý thực thể miền Công thức nấu ăn
 const dddRecipeRepository = new MongooseRecipeRepository();
 
 /**
@@ -11,57 +15,86 @@ const dddRecipeRepository = new MongooseRecipeRepository();
  */
 export const recipeRepository = {
   // ── READ OPERATIONS (Truy vấn tối ưu hóa) ──────────────────────────────────
+  // Phương thức tìm kiếm tất cả công thức nấu ăn dựa theo bộ lọc, phân trang, và tùy chọn sắp xếp điểm số
   async findAll(filter: any, skip: number, limit: number, sortByScore = false) {
+    // Xác định cấu hình sắp xếp: nếu sắp xếp theo điểm số tìm kiếm văn bản thì ưu tiên điểm số, ngược lại xếp theo thời gian tạo giảm dần
     const sortOption: any = sortByScore
       ? { score: { $meta: "textScore" }, createdAt: -1 }
       : { createdAt: -1 };
+    // Xác định trường chiếu (projection) để lấy điểm số tìm kiếm nếu có
     const projection: any = sortByScore
       ? { score: { $meta: "textScore" } }
       : {};
 
+    // Thực hiện truy vấn đồng thời danh sách công thức nấu ăn và đếm số lượng tài liệu khớp bộ lọc
     const [recipes, total] = await Promise.all([
+      // Tìm các công thức nấu ăn phù hợp với bộ lọc và trường hiển thị
       MongooseRecipe.find(filter, projection)
+        // Liên kết thông tin người tác giả (authorId) để lấy các trường: tên, ảnh đại diện, đã xác thực và vai trò
         .populate("authorId", "name avatar isVerified role")
+        // Sắp xếp danh sách
         .sort(sortOption)
+        // Bỏ qua skip phần tử để phân trang
         .skip(skip)
+        // Giới hạn số lượng phần tử trả về trên một trang
         .limit(limit),
+      // Đếm số lượng công thức nấu ăn thỏa mãn bộ lọc
       MongooseRecipe.countDocuments(filter),
     ]);
+    // Trả về danh sách công thức nấu ăn và tổng số lượng tìm thấy
     return { recipes, total };
   },
 
+  // Phương thức tìm kiếm công thức nấu ăn theo ID
   async findById(id: string) {
+    // Tìm kiếm công thức nấu ăn và liên kết thông tin của tác giả
     return MongooseRecipe.findById(id).populate(
       "authorId",
       "name avatar isVerified role",
     );
   },
 
+  // Phương thức tìm kiếm công thức nấu ăn theo ID và tăng số lượng lượt xem lên 1
   async findByIdAndIncrementView(id: string) {
+    // Tìm kiếm theo ID và tăng biến viewCount thêm 1 đơn vị, trả về dữ liệu mới sau khi tăng
     return MongooseRecipe.findByIdAndUpdate(
       id,
       { $inc: { viewCount: 1 } },
       { new: true },
-    ).populate("authorId", "name avatar isVerified role");
+    ).populate("authorId", "name avatar isVerified role"); // Liên kết thông tin tác giả
   },
 
+  // Phương thức đếm số lượng công thức nấu ăn thỏa mãn bộ lọc
   async countDocuments(filter: any): Promise<number> {
+    // Gọi hàm countDocuments của Mongoose model để đếm số bản ghi
     return MongooseRecipe.countDocuments(filter);
   },
 
   // ── WRITE OPERATIONS (Ủy quyền cho DDD Aggregate & Repository) ──────────────
+  // Phương thức tạo mới một công thức nấu ăn
   async create(data: {
+    // Tiêu đề công thức
     title: string;
+    // Mô tả công thức
     description: string;
+    // Danh sách nguyên liệu cần chuẩn bị
     ingredients: string[];
+    // Các bước hướng dẫn thực hiện nấu ăn
     instructions: string[];
+    // Đường dẫn ảnh món ăn (tùy chọn)
     imageUrl: string | null;
+    // ID tác giả tạo công thức
     authorId: string;
+    // Mức độ khó của công thức (Dễ, Trung bình, Khó)
     difficulty: "Easy" | "Medium" | "Hard";
+    // Thời gian chuẩn bị và nấu (tính bằng phút)
     cookingTime: number;
+    // Số khẩu phần ăn phục vụ
     servings: number;
+    // Các nhãn phân loại đính kèm
     tags: string[];
   }) {
+    // Khởi tạo một thực thể miền Domain Recipe với các giá trị đầu vào ban đầu
     const domainRecipe = new DomainRecipe({
       title: data.title,
       description: data.description,
@@ -73,16 +106,21 @@ export const recipeRepository = {
       cookingTime: data.cookingTime,
       servings: data.servings,
       tags: data.tags,
-      likes: [],
-      viewCount: 0,
+      likes: [], // Khởi tạo danh sách lượt thích trống
+      viewCount: 0, // Khởi tạo số lượng lượt xem bằng 0
     });
 
+    // Gọi DDD repository để thực hiện kiểm chứng và lưu trữ thực thể miền này
     await dddRecipeRepository.save(domainRecipe);
+    // Lấy lại tài liệu Mongoose thô từ database bằng ID thực thể miền để trả về cho API cũ
     return (await MongooseRecipe.findById(domainRecipe.id))!;
   },
 
+  // Phương thức cập nhật thông tin công thức nấu ăn
   async update(
+    // ID của công thức cần cập nhật
     id: string,
+    // Các trường thông tin cho phép cập nhật một phần
     updates: Partial<{
       title: string;
       description: string;
@@ -95,50 +133,78 @@ export const recipeRepository = {
       tags: string[];
     }>,
   ) {
+    // Tìm thực thể miền Recipe trong DDD repository bằng ID
     const domainRecipe = await dddRecipeRepository.findById(id);
+    // Nếu không tìm thấy thực thể tương ứng, trả về null
     if (!domainRecipe) return null;
 
+    // Thực hiện hàm nghiệp vụ cập nhật thông tin của thực thể miền
     domainRecipe.update(updates);
+    // Lưu lại trạng thái cập nhật của thực thể miền xuống database thông qua DDD repository
     await dddRecipeRepository.save(domainRecipe);
 
+    // Trả về tài liệu Mongoose thô sau khi đã lưu thành công
     return MongooseRecipe.findById(id);
   },
 
+  // Phương thức thêm lượt thích của một người dùng cho công thức nấu ăn
   async addLike(recipeId: string, userId: string) {
+    // Tìm kiếm thực thể miền Recipe trong DDD repository
     const domainRecipe = await dddRecipeRepository.findById(recipeId);
+    // Nếu không tìm thấy công thức nấu ăn tương ứng, trả về null
     if (!domainRecipe) return null;
 
+    // Nếu người dùng này chưa từng thích công thức nấu ăn này
     if (!domainRecipe.likes.includes(userId)) {
+      // Thực hiện nghiệp vụ bật/tắt lượt thích (thêm userId vào danh sách likes)
       domainRecipe.toggleLike(userId);
+      // Lưu thực thể miền xuống database thông qua DDD repository
       await dddRecipeRepository.save(domainRecipe);
     }
+    // Trả về tài liệu Mongoose thô đã cập nhật
     return MongooseRecipe.findById(recipeId);
   },
 
+  // Phương thức xóa lượt thích của một người dùng khỏi công thức nấu ăn
   async removeLike(recipeId: string, userId: string) {
+    // Tìm kiếm thực thể miền Recipe trong DDD repository
     const domainRecipe = await dddRecipeRepository.findById(recipeId);
+    // Nếu không tìm thấy công thức nấu ăn tương ứng, trả về null
     if (!domainRecipe) return null;
 
+    // Nếu người dùng này đã thích công thức nấu ăn này trước đó
     if (domainRecipe.likes.includes(userId)) {
+      // Thực hiện nghiệp vụ bật/tắt lượt thích (xóa userId khỏi danh sách likes)
       domainRecipe.toggleLike(userId);
+      // Lưu thực thể miền xuống database thông qua DDD repository
       await dddRecipeRepository.save(domainRecipe);
     }
+    // Trả về tài liệu Mongoose thô đã cập nhật
     return MongooseRecipe.findById(recipeId);
   },
 
+  // Phương thức cập nhật đồng loạt nhiều tài liệu công thức nấu ăn khớp với bộ lọc
   async updateMany(filter: any, update: any, options: any = {}) {
+    // Thực hiện cập nhật hàng loạt bằng phương thức của Mongoose Model
     return MongooseRecipe.updateMany(filter, update, options);
   },
 
+  // Phương thức xóa đồng loạt nhiều tài liệu công thức nấu ăn khớp với bộ lọc
   async deleteMany(filter: any) {
+    // Thực hiện xóa hàng loạt bằng phương thức của Mongoose Model
     return MongooseRecipe.deleteMany(filter);
   },
 
+  // Phương thức xóa một công thức nấu ăn theo ID
   async delete(id: string) {
+    // Tìm thực thể miền Recipe trong DDD repository bằng ID
     const domainRecipe = await dddRecipeRepository.findById(id);
+    // Nếu tìm thấy thực thể miền tương ứng
     if (domainRecipe) {
+      // Gọi DDD repository để thực hiện nghiệp vụ xóa thực thể miền khỏi database
       await dddRecipeRepository.delete(domainRecipe);
     }
+    // Trả về kết quả xóa thành công
     return true;
   },
 };

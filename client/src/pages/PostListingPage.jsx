@@ -1,8 +1,13 @@
+// Import thư viện React và hook useState
 import React, { useState } from "react";
+// Import hook điều hướng chuyển trang của React Router
 import { useNavigate } from "react-router-dom";
+// Import bảng màu sắc theme định nghĩa chung
 import { C } from "../utils/theme";
+// Import helper gọi API dùng chung
 import { api } from "../services/api";
 
+// Danh mục phân loại hải sản đăng bán
 const CATEGORIES = [
   { id: "Fish", label: "🐟 Cá các loại" },
   { id: "Shrimp", label: "🦐 Tôm sống" },
@@ -12,6 +17,7 @@ const CATEGORIES = [
   { id: "Others", label: "✨ Phân loại khác" },
 ];
 
+// Hàm nén ảnh phía client trước khi upload lên Cloudinary nhằm giảm tải dung lượng và băng thông mạng
 const compressImage = (file) => {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -21,10 +27,11 @@ const compressImage = (file) => {
       img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement("canvas");
-        const MAX_WIDTH = 1200;
+        const MAX_WIDTH = 1200; // Giới hạn chiều rộng tối đa cho ảnh đăng bán là 1200px
         let width = img.width;
         let height = img.height;
 
+        // Tính toán tỷ lệ chiều cao tương ứng
         if (width > MAX_WIDTH) {
           height = Math.round((height * MAX_WIDTH) / width);
           width = MAX_WIDTH;
@@ -35,6 +42,7 @@ const compressImage = (file) => {
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, width, height);
 
+        // Xuất canvas ra đối tượng Blob định dạng JPEG với chất lượng nén 75%
         canvas.toBlob(
           (blob) => {
             resolve(new File([blob], file.name, { type: "image/jpeg" }));
@@ -47,9 +55,12 @@ const compressImage = (file) => {
   });
 };
 
+// Component chính hiển thị trang đăng tin bán hải sản mới
 export function PostListingPage() {
   const navigate = useNavigate();
+  // Quản lý loại hải sản (Fresh: Tươi sống, Dried: Đồ khô)
   const [type, setType] = useState("Fresh");
+  // State quản lý số lượt đăng bài viết trong ngày của người dùng để kiểm soát hạn mức (limit spam)
   const [postCount, setPostCount] = useState({
     count: 0,
     max: 10,
@@ -57,6 +68,7 @@ export function PostListingPage() {
     loading: true,
   });
 
+  // Gọi API lấy thông tin số lượng bài viết đã đăng trong ngày hôm nay của người dùng
   React.useEffect(() => {
     api("/products/today-count")
       .then((data) => {
@@ -71,27 +83,31 @@ export function PostListingPage() {
         setPostCount((p) => ({ ...p, loading: false }));
       });
   }, []);
-  const [category, setCategory] = useState("Fish"); // Giá trị phân loại mặc định
-  const [salesType, setSalesType] = useState("Retail");
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [weight, setWeight] = useState("");
-  const [desc, setDesc] = useState("");
-  const [origin, setOrigin] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [catchTime, setCatchTime] = useState("");
+
+  // Các states quản lý giá trị nhập liệu cho biểu mẫu đăng bài
+  const [category, setCategory] = useState("Fish"); // Phân loại loài
+  const [salesType, setSalesType] = useState("Retail"); // Loại hình (Retail: bán lẻ, Wholesale: bán sỉ)
+  const [name, setName] = useState(""); // Tên sản phẩm
+  const [price, setPrice] = useState(""); // Giá tiền
+  const [weight, setWeight] = useState(""); // Trọng lượng
+  const [desc, setDesc] = useState(""); // Mô tả chi tiết
+  const [origin, setOrigin] = useState(""); // Nguồn gốc xuất xứ (chỉ dùng cho đồ khô nhập tay)
+  const [expiry, setExpiry] = useState(""); // Hạn sử dụng (chỉ dùng cho đồ khô)
+  const [catchTime, setCatchTime] = useState(""); // Thời gian đánh bắt (chỉ dùng cho đồ tươi)
   const [catchLat] = useState("");
   const [catchLng] = useState("");
+  // State quản lý trạng thái định vị định vị GPS
   const [gps, setGps] = useState({ status: "idle", lat: null, lng: null });
-  const [address, setAddress] = useState("");
-  const [images, setImages] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
-  const [err, setErr] = useState("");
+  const [address, setAddress] = useState(""); // Địa chỉ hiển thị tự động lấy từ tọa độ GPS qua Geocoding
+  const [images, setImages] = useState([]); // Mảng chứa các files ảnh được chọn
+  const [loading, setLoading] = useState(false); // Trạng thái đang gửi yêu cầu đăng tin
+  const [done, setDone] = useState(false); // Trạng thái đăng tin hoàn tất thành công
+  const [err, setErr] = useState(""); // State chứa thông tin lỗi nếu xảy ra sự cố
 
-  const [focusedField, setFocusedField] = useState(null);
-  const [hoveredType, setHoveredType] = useState(null);
+  const [focusedField, setFocusedField] = useState(null); // State theo dõi trường input nào đang focus để vẽ hiệu ứng
+  const [hoveredType, setHoveredType] = useState(null); // State theo dõi hover vào thẻ Fresh/Dried
 
+  // Hàm trả về style CSS động cho các ô nhập dữ liệu khi focus
   const getInputStyle = (fieldName) => ({
     width: "100%",
     padding: "12px 14px",
@@ -109,6 +125,7 @@ export function PostListingPage() {
         : "0 1px 2px rgba(0,0,0,0.01)",
   });
 
+  // Hàm xử lý kích hoạt định vị GPS của trình duyệt và thực hiện Reverse Geocoding lấy tên địa chỉ
   const getGps = () => {
     setGps((g) => ({ ...g, status: "loading" }));
     if (navigator.geolocation) {
@@ -118,6 +135,7 @@ export function PostListingPage() {
           const lng = pos.coords.longitude;
           setGps({ status: "ok", lat, lng });
           try {
+            // Sử dụng Nominatim OpenStreetMap để dịch tọa độ vĩ độ/kinh độ ra địa chỉ cụ thể
             const r = await fetch(
               `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=vi`,
             );
@@ -129,18 +147,22 @@ export function PostListingPage() {
             ].filter(Boolean);
             if (parts.length > 0) setAddress(parts.join(", "));
           } catch {
-            // Bỏ qua lỗi reverse geocoding — địa chỉ tự động không bắt buộc
+            // Bỏ qua lỗi reverse geocoding — người dùng có thể chỉnh sửa địa chỉ thủ công
           }
         },
+        // Nếu người dùng từ chối cấp quyền định vị
         () => setGps({ status: "denied", lat: null, lng: null }),
       );
     } else setGps({ status: "denied", lat: null, lng: null });
   };
 
+  // Hàm xử lý gửi đăng tin bán hải sản mới
   const submit = async () => {
     setErr("");
+    // Xác thực dữ liệu cơ bản
     if (!name || !price || !weight)
       return setErr("Vui lòng điền đầy đủ tên, giá và khối lượng hải sản");
+    // Đối với hải sản tươi sống, bắt buộc phải có tọa độ vị trí
     if (type === "Fresh" && gps.status !== "ok")
       return setErr(
         "Bắt buộc phải bật định vị GPS để đăng tin hải sản tươi sống",
@@ -151,17 +173,17 @@ export function PostListingPage() {
     try {
       let uploadedImageUrls = [];
 
-      // 🌟 BƯỚC A: Nếu có ảnh, thực hiện nén và tải trực tiếp lên Cloudinary
+      // 🌟 BƯỚC A: Nếu có đính kèm ảnh, tiến hành nén và tải lên Cloudinary
       if (images.length > 0) {
-        // 1. Lấy chữ ký số bảo mật từ Backend
+        // 1. Gọi backend lấy signature chứng thực upload trực tiếp lên Cloudinary
         const sigData = await api("/images/signature");
 
-        // 2. Nén toàn bộ ảnh phía Client
+        // 2. Nén toàn bộ ảnh song song ở phía Client
         const compressedFiles = await Promise.all(
           images.map((img) => compressImage(img)),
         );
 
-        // 3. Tải đồng thời trực tiếp lên máy chủ Cloudinary CDN
+        // 3. Tiến hành gọi API upload ảnh lên Cloudinary
         uploadedImageUrls = await Promise.all(
           compressedFiles.map(async (file) => {
             const fd = new FormData();
@@ -171,7 +193,7 @@ export function PostListingPage() {
             fd.append("signature", sigData.signature);
             fd.append("folder", sigData.folder);
 
-            // Gửi trực tiếp lên Cloudinary API
+            // Gửi request POST trực tiếp tới Cloudinary
             const cloudRes = await fetch(
               `https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`,
               {
@@ -185,12 +207,12 @@ export function PostListingPage() {
             }
 
             const cloudData = await cloudRes.json();
-            return cloudData.secure_url; // Trả về đường dẫn CDN
+            return cloudData.secure_url; // Trả về link ảnh dạng HTTPS
           }),
         );
       }
 
-      // 🌟 BƯỚC B: Gửi duy nhất 1 cuộc gọi tạo bài đăng kèm danh sách ảnh đã tải thành công
+      // 🌟 BƯỚC B: Gửi request tạo sản phẩm/bài đăng mới lên backend của ứng dụng
       const body = {
         type,
         category,
@@ -199,7 +221,7 @@ export function PostListingPage() {
         price,
         salesType,
         totalWeight: weight,
-        images: uploadedImageUrls, // Đính kèm mảng URL ảnh trực tiếp
+        images: uploadedImageUrls, // Mảng các đường dẫn ảnh đã upload thành công
         ...(catchTime ? { catchTime } : {}),
         ...(type === "Fresh"
           ? address
@@ -219,7 +241,7 @@ export function PostListingPage() {
         body: JSON.stringify(body),
       });
 
-      setDone(true);
+      setDone(true); // Đánh dấu hoàn tất
     } catch (e) {
       setErr(e.message || "Đăng mẻ hàng thất bại. Vui lòng thử lại.");
     } finally {
@@ -227,6 +249,7 @@ export function PostListingPage() {
     }
   };
 
+  // Giao diện khi đăng tin thành công hoàn toàn
   if (done)
     return (
       <div
@@ -299,6 +322,7 @@ export function PostListingPage() {
 
   return (
     <div style={{ maxWidth: 720, margin: "0 auto", padding: "32px 24px 80px" }}>
+      {/* Tiêu đề biểu mẫu và nút quay lại trang chủ */}
       <div
         style={{
           display: "flex",
@@ -334,7 +358,7 @@ export function PostListingPage() {
         </h1>
       </div>
 
-      {/* ⚠️ CẢNH BÁO GIỚI HẠN ĐĂNG BÀI */}
+      {/* ⚠️ CẢNH BÁO GIỚI HẠN ĐĂNG BÀI - Chỉ hiển thị cho tài khoản thường */}
       {!postCount.loading && !postCount.isPremium && (
         <div
           style={{
@@ -376,8 +400,8 @@ export function PostListingPage() {
             }}
           >
             {postCount.count >= postCount.max
-              ? "Tài khoản thường chỉ được đăng tối đa 5 bài mỗi ngày để hạn chế spam. Bạn đã dùng hết lượt đăng hôm nay. Hãy nâng cấp Premium để đăng không giới hạn!"
-              : `Bạn đang là thành viên thường, được phép đăng tối đa 5 bài viết mỗi ngày. Hãy nâng cấp lên Premium để mở khoá tính năng đăng bán không giới hạn!`}
+              ? "Tài khoản thường chỉ được đăng tối đa số bài giới hạn mỗi ngày để tránh nội dung spam. Bạn đã dùng hết lượt đăng hôm nay. Hãy nâng cấp Premium để đăng không giới hạn!"
+              : `Bạn đang là thành viên thường, được phép đăng tối đa số bài giới hạn mỗi ngày. Hãy nâng cấp lên Premium để mở khoá tính năng đăng bán không giới hạn!`}
           </p>
           <button
             type="button"
@@ -438,6 +462,7 @@ export function PostListingPage() {
         </div>
       )}
 
+      {/* Lựa chọn loại hải sản bán */}
       <section
         style={{
           background: C.white,
@@ -519,6 +544,7 @@ export function PostListingPage() {
         </div>
       </section>
 
+      {/* Hiển thị khu vực yêu cầu kích hoạt GPS nếu là hải sản tươi sống */}
       {type === "Fresh" && (
         <div
           style={{
@@ -573,6 +599,7 @@ export function PostListingPage() {
         </div>
       )}
 
+      {/* Hiển thị địa chỉ tự động lấy từ GPS */}
       {type === "Fresh" && gps.status === "ok" && (
         <div style={{ marginBottom: 16 }}>
           <div
@@ -597,6 +624,7 @@ export function PostListingPage() {
         </div>
       )}
 
+      {/* Chi tiết nội dung mẻ hàng */}
       <section
         style={{
           background: C.white,
@@ -642,6 +670,7 @@ export function PostListingPage() {
             </select>
           </div>
 
+          {/* Nhập tên mẻ hàng */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label
               style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)" }}
@@ -658,6 +687,7 @@ export function PostListingPage() {
             />
           </div>
 
+          {/* Lưới nhập Giá và Trọng lượng */}
           <div
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}
           >
@@ -695,6 +725,7 @@ export function PostListingPage() {
             </div>
           </div>
 
+          {/* Ô nhập Mô tả */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label
               style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)" }}
@@ -712,6 +743,7 @@ export function PostListingPage() {
             />
           </div>
 
+          {/* Lựa chọn hình thức bán Sỉ / Bán lẻ */}
           <div
             style={{
               display: "grid",
@@ -750,6 +782,7 @@ export function PostListingPage() {
             ))}
           </div>
 
+          {/* Trường nhập bổ sung cho Tươi sống: Thời gian đánh bắt */}
           {type === "Fresh" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <label
@@ -767,6 +800,8 @@ export function PostListingPage() {
               />
             </div>
           )}
+          
+          {/* Trường nhập bổ sung cho Đồ khô: Xuất xứ & Hạn sử dụng */}
           {type === "Dried" && (
             <div
               style={{
@@ -818,6 +853,7 @@ export function PostListingPage() {
         </div>
       </section>
 
+      {/* Khối quản lý upload hình ảnh sản phẩm thực tế */}
       <section
         style={{
           background: C.white,
@@ -831,7 +867,7 @@ export function PostListingPage() {
         <div
           style={{
             display: "flex",
-            justifyContext: "space-between",
+            justifyContent: "space-between",
             alignItems: "center",
             marginBottom: 14,
           }}
@@ -854,6 +890,7 @@ export function PostListingPage() {
           )}
         </div>
 
+        {/* Nút chọn ảnh ẩn đằng sau nhãn nét vẽ đứt khúc */}
         <label
           style={{
             display: "block",
@@ -880,7 +917,7 @@ export function PostListingPage() {
             onChange={(e) =>
               setImages((prev) => {
                 const newFiles = Array.from(e.target.files);
-                return [...prev, ...newFiles].slice(0, 5);
+                return [...prev, ...newFiles].slice(0, 5); // Tối đa 5 ảnh
               })
             }
             style={{ display: "none" }}
@@ -902,6 +939,7 @@ export function PostListingPage() {
           )}
         </label>
 
+        {/* Hiển thị mảng ảnh đã chọn xem trước */}
         {images.length > 0 && (
           <div
             style={{
@@ -925,6 +963,7 @@ export function PostListingPage() {
                     display: "block",
                   }}
                 />
+                {/* Đánh dấu ảnh đầu tiên làm ảnh đại diện bìa */}
                 {i === 0 && (
                   <div
                     style={{
@@ -944,6 +983,7 @@ export function PostListingPage() {
                     Ảnh bìa chính
                   </div>
                 )}
+                {/* Nút X xóa ảnh khỏi danh sách */}
                 <button
                   type="button"
                   onClick={() =>
@@ -977,6 +1017,7 @@ export function PostListingPage() {
         )}
       </section>
 
+      {/* Banner thông báo lỗi nếu có */}
       {err && (
         <div
           style={{
@@ -993,6 +1034,7 @@ export function PostListingPage() {
         </div>
       )}
 
+      {/* Nút gửi Đăng bài viết: Nếu tài khoản thường đạt giới hạn thì nút đổi sang dạng Nâng cấp Premium */}
       <button
         onClick={
           postCount.count >= postCount.max && !postCount.isPremium
@@ -1032,3 +1074,4 @@ export function PostListingPage() {
     </div>
   );
 }
+

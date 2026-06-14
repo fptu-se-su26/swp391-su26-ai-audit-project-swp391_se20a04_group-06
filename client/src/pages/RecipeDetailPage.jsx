@@ -1,31 +1,40 @@
+// Import các React hook quan trọng từ thư viện react
 import { useState, useEffect, useRef } from "react";
+// Import các hook và component điều hướng từ react-router-dom
 import { useParams, Link } from "react-router-dom";
+// Import hook cập nhật SEO tiêu đề/mô tả trang
 import { useSEO } from "../hooks/useSEO";
+// Import hook context quản lý phiên đăng nhập của người dùng
 import { useAuth } from "../context/AuthContext";
+// Import hook hiển thị thông báo góc màn hình (Toast)
 import { useToast } from "../context/ToastContext";
+// Import hook điều hướng có tích hợp hiệu ứng View Transition API
 import { useViewTransitionNavigate } from "../hooks/useViewTransitionNavigate";
+// Import helper gọi API dùng chung
 import { api } from "../services/api";
+// Import component hiển thị badge tài khoản đã được admin xác minh
 import { VerifiedBadge } from "../components/VerifiedBadge";
+// Import định nghĩa bảng màu theme của dự án
 import { C } from "../utils/theme";
 
-/* Hộp thoại xác nhận tùy chỉnh cục bộ */
+/* Hộp thoại xác nhận tùy chỉnh cục bộ (ConfirmDialog) - hiển thị modal khi người dùng bấm xóa */
 function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
     <div
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(15, 23, 42, 0.75)",
-        zIndex: 99999,
+        background: "rgba(15, 23, 42, 0.75)", // Lớp phủ mờ màu tối phía sau modal
+        zIndex: 99999, // Đặt chỉ số z-index lớn để hiển thị đè lên mọi phần tử khác
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         padding: 16,
       }}
-      onClick={onCancel}
+      onClick={onCancel} // Click ra ngoài vùng trắng sẽ đóng modal
     >
       <div
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()} // Ngăn sự kiện click lan truyền vào lớp phủ phía sau
         style={{
           background: "#fff",
           borderRadius: 16,
@@ -48,6 +57,7 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
           {message}
         </p>
         <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+          {/* Nút hủy bỏ hành động */}
           <button
             onClick={onCancel}
             style={{
@@ -64,6 +74,7 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
           >
             Hủy
           </button>
+          {/* Nút chấp nhận hành động (Xóa) */}
           <button
             onClick={onConfirm}
             style={{
@@ -86,18 +97,28 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
   );
 }
 
+// Component chính hiển thị trang chi tiết công thức nấu ăn
 export function RecipeDetailPage() {
+  // Lấy id công thức từ đường dẫn URL
   const { id } = useParams();
+  // Lấy thông tin user hiện tại từ context Auth
   const { user } = useAuth();
+  // Khởi tạo các hàm hiển thị toast và hàm điều hướng
   const toast = useToast();
   const navigate = useViewTransitionNavigate();
 
+  // State quản lý dữ liệu chi tiết của công thức
   const [recipe, setRecipe] = useState(null);
+  // State quản lý trạng thái tải dữ liệu
   const [loading, setLoading] = useState(true);
+  // State quản lý xem user hiện tại đã thích công thức này chưa
   const [liked, setLiked] = useState(false);
+  // State quản lý tổng số lượt thích của công thức
   const [likeCount, setLikeCount] = useState(0);
+  // State điều khiển việc hiển thị hộp thoại xác nhận xóa
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // State lưu danh sách nguyên liệu đã được tích chọn (để gạch ngang khi đi chợ chuẩn bị)
   const [checkedIngredients, setCheckedIngredients] = useState({});
 
   // ✅ FIX Bug 2: Lưu toast và navigate vào refs để tránh chúng xuất hiện trong deps array.
@@ -106,12 +127,13 @@ export function RecipeDetailPage() {
   const toastRef = useRef(toast);
   const navigateRef = useRef(navigate);
 
-  // Cập nhật refs sau mỗi render để không bao giờ stale, nhưng KHÔNG trigger re-render
+  // Cập nhật refs sau mỗi render để không bao giờ stale, nhưng KHÔNG trigger re-render lại trang
   useEffect(() => {
     toastRef.current = toast;
     navigateRef.current = navigate;
   });
 
+  // Cập nhật thẻ tiêu đề (meta title) và mô tả (meta description) cho SEO dựa trên dữ liệu công thức
   useSEO({
     title: recipe ? `${recipe.title} | Haisan.vn` : "Đang tải công thức...",
     description: recipe
@@ -119,8 +141,9 @@ export function RecipeDetailPage() {
       : "Đang tải công thức chế biến hải sản...",
   });
 
+  // Tải thông tin chi tiết công thức từ backend khi id hoặc thông tin user thay đổi
   useEffect(() => {
-    let cancelled = false;
+    let cancelled = false; // Biến cờ hiệu để bỏ qua kết quả API nếu component bị unmount giữa chừng
 
     const loadData = async () => {
       try {
@@ -128,6 +151,7 @@ export function RecipeDetailPage() {
         if (cancelled) return;
         setRecipe(data);
         setLikeCount(data.likes?.length || 0);
+        // Kiểm tra xem ID người dùng hiện tại có nằm trong mảng thích (likes) của công thức không
         if (user && data.likes) {
           setLiked(data.likes.includes(user.userId || user.id));
         }
@@ -137,19 +161,21 @@ export function RecipeDetailPage() {
         toastRef.current.error(
           err.message || "Không thể tải chi tiết công thức",
         );
-        navigateRef.current("/cong-thuc");
+        navigateRef.current("/cong-thuc"); // Quay về trang danh sách nếu lỗi
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setLoading(false); // Kết thúc trạng thái loading
       }
     };
 
     loadData();
 
+    // Hủy bỏ trạng thái gọi API nếu component bị hủy
     return () => {
       cancelled = true;
     };
   }, [id, user]); // ← chỉ re-fetch khi id hoặc user thực sự thay đổi
 
+  // Hàm xử lý khi người dùng nhấn thích hoặc bỏ thích công thức nấu ăn
   const handleLike = async () => {
     if (!user) {
       toast.warn("Vui lòng đăng nhập để thích công thức này");
@@ -157,34 +183,38 @@ export function RecipeDetailPage() {
     }
 
     try {
+      // Gọi API POST thích/bỏ thích công thức
       const res = await api(`/recipes/${id}/like`, { method: "POST" });
-      setLiked(res.liked);
-      setLikeCount(res.likeCount);
+      setLiked(res.liked); // Cập nhật lại trạng thái thích (true/false)
+      setLikeCount(res.likeCount); // Cập nhật số lượt thích mới
       toast.success(res.liked ? "Đã thích công thức!" : "Đã bỏ thích");
     } catch (err) {
       toast.error(err.message || "Có lỗi xảy ra");
     }
   };
 
+  // Hàm xử lý xóa công thức (chỉ dành cho tác giả hoặc admin)
   const handleDelete = async () => {
     try {
       await api(`/recipes/${id}`, { method: "DELETE" });
       toast.success("Đã xóa công thức nấu ăn");
-      navigate("/cong-thuc");
+      navigate("/cong-thuc"); // Điều hướng về lại trang danh sách công thức
     } catch (err) {
       toast.error(err.message || "Không thể xóa công thức");
     } finally {
-      setShowDeleteConfirm(false);
+      setShowDeleteConfirm(false); // Đóng modal xác nhận xóa
     }
   };
 
+  // Thay đổi trạng thái checkbox nguyên liệu (gạch ngang hoặc bỏ gạch ngang tên nguyên liệu)
   const toggleIngredientCheck = (idx) => {
     setCheckedIngredients((prev) => ({
       ...prev,
-      [idx]: !prev[idx],
+      [idx]: !prev[idx], // Đảo trạng thái boolean tại chỉ mục idx tương ứng
     }));
   };
 
+  // Giao diện khi đang tải dữ liệu
   if (loading) {
     return (
       <div
@@ -199,6 +229,7 @@ export function RecipeDetailPage() {
     );
   }
 
+  // Giao diện khi không tìm thấy công thức nấu ăn
   if (!recipe) {
     return (
       <div style={{ textAlign: "center", padding: "100px 0" }}>
@@ -207,6 +238,7 @@ export function RecipeDetailPage() {
     );
   }
 
+  // Kiểm tra xem user hiện tại có phải tác giả của công thức này hoặc là Admin không
   const isAuthorOrAdmin =
     user &&
     (user.role === "Admin" ||
@@ -215,6 +247,7 @@ export function RecipeDetailPage() {
 
   return (
     <div className="page-wrap-sm fade-up">
+      {/* Hiển thị modal xác nhận xóa nếu state showDeleteConfirm là true */}
       {showDeleteConfirm && (
         <ConfirmDialog
           message="Bạn có chắc chắn muốn xóa công thức này? Thao tác không thể hoàn tác."
@@ -223,7 +256,7 @@ export function RecipeDetailPage() {
         />
       )}
 
-      {/* Nút quay lại */}
+      {/* Nút quay lại trang danh sách */}
       <Link
         to="/cong-thuc"
         style={{
@@ -240,7 +273,7 @@ export function RecipeDetailPage() {
         ← Quay lại danh sách công thức
       </Link>
 
-      {/* Header công thức */}
+      {/* Phần Header chứa tiêu đề, tags và tác giả */}
       <div style={{ marginBottom: "28px" }}>
         <div
           style={{
@@ -250,6 +283,7 @@ export function RecipeDetailPage() {
             marginBottom: "12px",
           }}
         >
+          {/* Hiển thị danh sách thẻ tags của món ăn */}
           {recipe.tags?.map((t) => (
             <span
               key={t}
@@ -265,6 +299,7 @@ export function RecipeDetailPage() {
               {t}
             </span>
           ))}
+          {/* Hiển thị nhãn độ khó dựa vào giá trị trả về từ server */}
           <span
             style={{
               background: "var(--bg-2)",
@@ -285,6 +320,7 @@ export function RecipeDetailPage() {
           </span>
         </div>
 
+        {/* Tiêu đề chính của công thức */}
         <h1
           style={{
             fontSize: "2.2rem",
@@ -297,10 +333,11 @@ export function RecipeDetailPage() {
           {recipe.title}
         </h1>
 
+        {/* Thông tin tác giả đăng tải và các lượt tương tác (xem, thích, xóa) */}
         <div
           style={{
             display: "flex",
-            justify: "space-between",
+            justifyContent: "space-between",
             alignItems: "center",
             flexWrap: "wrap",
             gap: "16px",
@@ -309,6 +346,7 @@ export function RecipeDetailPage() {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            {/* Ảnh đại diện giả lập bằng chữ cái đầu tiên trong tên tác giả */}
             <div
               style={{
                 width: "36px",
@@ -318,7 +356,7 @@ export function RecipeDetailPage() {
                 color: "var(--white)",
                 display: "flex",
                 alignItems: "center",
-                justify: "center",
+                justifyContent: "center",
                 fontWeight: "bold",
                 fontSize: "14px",
               }}
@@ -328,6 +366,7 @@ export function RecipeDetailPage() {
                 : "N"}
             </div>
             <div>
+              {/* Tên tác giả kèm badge xác minh nếu có */}
               <span
                 style={{
                   fontSize: "14px",
@@ -358,6 +397,7 @@ export function RecipeDetailPage() {
             }}
           >
             <span>👁️ {recipe.viewCount} lượt xem</span>
+            {/* Nút thích công thức */}
             <button
               onClick={handleLike}
               style={{
@@ -379,6 +419,7 @@ export function RecipeDetailPage() {
             >
               ❤️ {liked ? "Đã thích" : "Thích"} ({likeCount})
             </button>
+            {/* Nút xóa chỉ hiển thị nếu tài khoản đang đăng nhập là tác giả hoặc admin */}
             {isAuthorOrAdmin && (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
@@ -400,7 +441,7 @@ export function RecipeDetailPage() {
         </div>
       </div>
 
-      {/* Ảnh món ăn */}
+      {/* Ảnh lớn của món ăn */}
       {recipe.imageUrl && (
         <div
           style={{
@@ -420,6 +461,7 @@ export function RecipeDetailPage() {
         </div>
       )}
 
+      {/* Đoạn trích dẫn mô tả về món ăn */}
       <p
         style={{
           fontSize: "16px",
@@ -432,7 +474,7 @@ export function RecipeDetailPage() {
         "{recipe.description}"
       </p>
 
-      {/* Khối thông tin chế biến */}
+      {/* Hộp tóm tắt thời gian chuẩn bị, chế biến và khẩu phần */}
       <div
         style={{
           background: "var(--white)",
@@ -520,7 +562,7 @@ export function RecipeDetailPage() {
         </div>
       </div>
 
-      {/* Nguyên liệu */}
+      {/* Danh sách Nguyên liệu cần có */}
       <div style={{ marginBottom: "40px" }}>
         <h2
           style={{
@@ -552,10 +594,12 @@ export function RecipeDetailPage() {
                 gap: "12px",
                 padding: "10px 0",
                 borderBottom:
+                  // Nếu là nguyên liệu cuối cùng thì không vẽ đường viền dưới
                   idx === recipe.ingredients.length - 1
                     ? "none"
                     : "1px solid var(--border-l)",
                 cursor: "pointer",
+                // Chữ màu xám và gạch ngang khi đã tích chọn (chuẩn bị xong nguyên liệu)
                 color: checkedIngredients[idx] ? "var(--muted)" : "var(--text)",
                 textDecoration: checkedIngredients[idx]
                   ? "line-through"
@@ -581,7 +625,7 @@ export function RecipeDetailPage() {
         </div>
       </div>
 
-      {/* Các bước thực hiện */}
+      {/* Danh sách Các bước thực hiện */}
       <div style={{ marginBottom: "60px" }}>
         <h2
           style={{
@@ -602,6 +646,7 @@ export function RecipeDetailPage() {
               key={idx}
               style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}
             >
+              {/* Vòng tròn số thứ tự bước */}
               <span
                 style={{
                   background: "var(--ocean-p)",
@@ -611,7 +656,7 @@ export function RecipeDetailPage() {
                   borderRadius: "50%",
                   display: "flex",
                   alignItems: "center",
-                  justify: "center",
+                  justifyContent: "center",
                   fontWeight: "800",
                   fontSize: "14px",
                   flexShrink: 0,
@@ -619,6 +664,7 @@ export function RecipeDetailPage() {
               >
                 {idx + 1}
               </span>
+              {/* Nội dung chi tiết bước */}
               <p
                 style={{
                   fontSize: "15px",
@@ -636,3 +682,4 @@ export function RecipeDetailPage() {
     </div>
   );
 }
+

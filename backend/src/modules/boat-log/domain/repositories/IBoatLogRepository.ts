@@ -1,25 +1,17 @@
+// Import thực thể miền BoatLog phục vụ cho việc định nghĩa kiểu dữ liệu trong các phương thức của Interface
 import { BoatLog } from "../entities/BoatLog";
 
-/**
- * Interface Port đại diện cho các hành vi thao tác dữ liệu của Bounded Context Cabin Log.
- * Hỗ trợ nhóm 4 người trong việc phân tách rõ ràng Domain Core và Infrastructure.
- */
+// Định nghĩa giao diện IBoatLogRepository làm bản thiết kế giao thức truy xuất dữ liệu ở tầng Domain
 export interface IBoatLogRepository {
-  /**
-   * Tìm kiếm Nhật ký Cabin bằng ID.
-   * @param id ID của nhật ký.
-   */
+  // Phương thức tìm kiếm một Nhật ký Cabin dựa trên mã ID duy nhất
+  // Trả về một Promise chứa thực thể BoatLog nếu tìm thấy, ngược lại trả về null
   findById(id: string): Promise<BoatLog | null>;
 
-  /**
-   * Lưu hoặc cập nhật một Nhật ký Cabin.
-   * @param boatLog Thực thể Cabin Log cần lưu.
-   */
+  // Phương thức lưu mới hoặc cập nhật một thực thể Nhật ký Cabin vào cơ sở dữ liệu
+  // Nhận vào một thực thể BoatLog và trả về Promise kiểu void (không trả về kết quả)
   save(boatLog: BoatLog): Promise<void>;
 
-  /**
-   * Xóa một Nhật ký Cabin khỏi hệ thống.
-   * @param boatLog Thực thể cần xóa.
-   */
+  // Phương thức xóa bỏ hoàn toàn một thực thể Nhật ký Cabin khỏi hệ thống lưu trữ
+  // Nhận vào một thực thể BoatLog cần xóa và trả về Promise kiểu void
   delete(boatLog: BoatLog): Promise<void>;
 }

@@ -1,127 +1,205 @@
-/* Navbar.module.css — Ocean Gradient Navbar */
+/* Navbar.module.css — Hiệu ứng dải màu đại dương cho thanh định hướng Navbar */
 
-/* ─── MAIN NAV ───────────────────────────────────────────── */
+/* ─── MAIN NAV - KHUNG NAV CHÍNH TRÊN CÙNG ─── */
 .nav {
+  /* Màu nền dải gradient chéo từ xanh đậm sang xanh da trời đậm */
   background: linear-gradient(100deg, #082f49 0%, #0c4a6e 40%, #0369a1 100%);
+  /* Viền dưới mỏng mờ màu trắng */
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  /* Chữ màu trắng */
   color: #fff;
+  /* Khoảng đệm hai bên trái phải 28px */
   padding: 0 28px;
+  /* Hiển thị flexbox để căn chỉnh logo và các nút nằm ngang */
   display: flex;
+  /* Căn giữa các phần tử theo chiều dọc */
   align-items: center;
+  /* Chiều cao cố định của Navbar là 70px */
   height: 70px;
+  /* Bám dính ở đỉnh màn hình khi cuộn trang */
   position: sticky;
   top: 0;
+  /* Đặt z-index lớn để Navbar luôn nằm trên các thành phần trang khác */
   z-index: 999;
+  /* Bóng đổ mờ màu xanh đậm kết hợp viền sáng nhẹ phía trên bên trong */
   box-shadow:
     0 4px 24px rgba(8, 47, 73, 0.45),
     0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  /* Hiệu ứng chuyển đổi chiều cao và bóng đổ mượt mà khi cuộn trang */
   transition:
     height 0.3s ease,
     box-shadow 0.3s ease;
 }
 
+/* Kiểu dáng Navbar khi đã cuộn trang xuống dưới */
 .navScrolled {
+  /* Thu hẹp chiều cao Navbar xuống 60px để tiết kiệm diện tích */
   height: 60px;
+  /* Tăng độ đậm của bóng đổ để tạo cảm giác trôi nổi trên nội dung phía dưới */
   box-shadow:
     0 8px 32px rgba(8, 47, 73, 0.55),
     0 1px 0 rgba(255, 255, 255, 0.06) inset;
 }
 
-/* ─── LOGO ───────────────────────────────────────────────── */
+/* ─── LOGO ─── */
 .logo {
+  /* Căn logo dạng flex */
   display: flex;
+  /* Căn giữa các phần tử dọc */
   align-items: center;
+  /* Khoảng cách giữa icon và chữ là 10px */
   gap: 10px;
+  /* Con trỏ chuột hình bàn tay */
   cursor: pointer;
+  /* Khoảng cách lề phải 24px */
   margin-right: 24px;
+  /* Bỏ màu nền mặc định */
   background: none;
+  /* Bỏ viền mặc định */
   border: none;
+  /* Khoảng đệm bên trong logo */
   padding: 4px 6px 4px 0;
+  /* Căn lề trái văn bản */
   text-align: left;
+  /* Ngăn logo bị co nhỏ lại */
   flex-shrink: 0;
+  /* Bo tròn góc nền logo */
   border-radius: 10px;
+  /* Hiệu ứng chuyển đổi màu nền mượt mà khi hover */
   transition: background 0.2s;
 }
 
+/* Hiệu ứng khi hover chuột vào logo */
 .logo:hover {
+  /* Hiện nền màu trắng mờ nhẹ */
   background: rgba(255, 255, 255, 0.07);
 }
 
+/* Biểu tượng biểu trưng logo phía trước */
 .logoMark {
+  /* Màu nền trắng mờ */
   background: rgba(255, 255, 255, 0.12);
+  /* Viền màu trắng mờ */
   border: 1.5px solid rgba(255, 255, 255, 0.2);
+  /* Bo góc 10px */
   border-radius: 10px;
+  /* Chiều rộng cố định 40px */
   width: 40px;
+  /* Chiều cao cố định 40px */
   height: 40px;
+  /* Flexbox căn giữa icon lấp lánh */
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Màu sắc biểu tượng xanh da trời sáng */
   color: #7dd3fc;
+  /* Hiệu ứng phóng to xoay nhẹ có độ nảy bằng cubic-bezier */
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Ngăn co cụm kích thước */
   flex-shrink: 0;
 }
 
+/* Hiệu ứng khi hover logo tác động lên biểu tượng logoMark */
 .logo:hover .logoMark {
+  /* Phóng to 8% và xoay nghiêng -5 độ */
   transform: scale(1.08) rotate(-5deg);
 }
 
+/* Tên thương hiệu chính của logo */
 .logoName {
+  /* Chữ rất đậm */
   font-weight: 800;
+  /* Kích thước chữ 17px */
   font-size: 17px;
+  /* Màu chữ trắng */
   color: #fff;
+  /* Độ cao dòng sát nhau */
   line-height: 1.15;
+  /* Khoảng cách chữ thu hẹp nhẹ */
   letter-spacing: -0.3px;
 }
 
+/* Phần nhấn mạnh trong tên logo */
 .logoAccent {
+  /* Màu xanh da trời sáng */
   color: #7dd3fc;
 }
 
+/* Khẩu hiệu nhỏ của logo đặt phía dưới tên */
 .logoTagline {
+  /* Cỡ chữ siêu nhỏ */
   font-size: 8.5px;
+  /* Chữ màu trắng mờ 48% */
   color: rgba(255, 255, 255, 0.48);
+  /* Giãn cách chữ rộng 12% */
   letter-spacing: 0.12em;
+  /* Chuyển thành chữ viết hoa hoàn toàn */
   text-transform: uppercase;
+  /* Chữ đậm */
   font-weight: 700;
+  /* Hiển thị dạng khối để tự xuống dòng */
   display: block;
+  /* Khoảng cách trên 1px */
   margin-top: 1px;
 }
 
-/* ─── NAV LINKS ──────────────────────────────────────────── */
+/* ─── NAV LINKS - CÁC NÚT ĐỊNH HƯỚNG TRANG ─── */
 .navLinks {
+  /* Hiển thị ngang */
   display: flex;
+  /* Khoảng cách giữa các nút là 2px */
   gap: 2px;
+  /* Chiếm toàn bộ phần không gian trống ở giữa */
   flex: 1;
 }
 
+/* Định dạng kiểu dáng các nút điều hướng */
 .navBtn {
+  /* Nền trong suốt */
   background: transparent;
+  /* Màu chữ trắng mờ 65% */
   color: rgba(255, 255, 255, 0.65);
+  /* Bỏ viền */
   border: none;
+  /* Khoảng đệm trên dưới và hai bên */
   padding: 8px 14px;
+  /* Bo góc nhẹ 8px */
   border-radius: 8px;
+  /* Chuột hình bàn tay */
   cursor: pointer;
+  /* Cỡ chữ 13px */
   font-size: 13px;
+  /* Chữ đậm */
   font-weight: 600;
+  /* Flexbox căn giữa icon và chữ */
   display: flex;
   align-items: center;
   gap: 6px;
+  /* Hiệu ứng chuyển màu mượt mà */
   transition: all 0.2s;
+  /* Ngăn xuống dòng chữ trên nút */
   white-space: nowrap;
 }
 
+/* Hiệu ứng hover nút điều hướng */
 .navBtn:hover {
+  /* Đổi nền trắng mờ đậm hơn */
   background: rgba(255, 255, 255, 0.1);
+  /* Đổi chữ sang màu trắng đặc */
   color: #fff;
 }
 
+/* Trạng thái nút của trang hiện tại đang hoạt động */
 .navBtn.active {
+  /* Màu nền trắng mờ đậm */
   background: rgba(255, 255, 255, 0.15);
+  /* Chữ màu trắng đặc */
   color: #fff;
+  /* Thêm viền sáng nhẹ bên trong bằng bóng đổ inset */
   box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.22);
 }
 
-/* ─── SEARCH FORM ────────────────────────────────────────── */
+/* ─── SEARCH FORM - KHUNG TÌM KIẾM (ĐÃ LƯỢC BỎ NHƯNG GIỮ CSS TRÁNH LỖI PHỤ THUỘC) ─── */
 .searchForm {
   position: relative;
   display: flex;
@@ -183,407 +261,619 @@
     0 0 0 4px rgba(125, 211, 252, 0.25);
 }
 
-/* ─── RIGHT ACTIONS ──────────────────────────────────────── */
+/* ─── RIGHT ACTIONS - KHỐI NÚT CHỨC NĂNG BÊN PHẢI ─── */
 .actions {
+  /* Hiển thị ngang */
   display: flex;
+  /* Khoảng cách giữa các nút là 8px */
   gap: 8px;
+  /* Căn giữa dọc */
   align-items: center;
+  /* Ngăn khối bị co lại */
   flex-shrink: 0;
 }
 
-/* ─── POST BUTTON ────────────────────────────────────────── */
+/* ─── POST BUTTON - NÚT ĐĂNG BÁN MẺ HẢI SẢN ─── */
 .postBtn {
+  /* Nền dải màu cam gradient nổi bật hẳn để khuyến khích hành động đăng bài */
   background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  /* Chữ màu trắng */
   color: #fff;
+  /* Bỏ viền */
   border: none;
+  /* Khoảng đệm trên dưới 10px và hai bên 20px */
   padding: 10px 20px;
+  /* Bo góc nhẹ 9px */
   border-radius: 9px;
+  /* Chuột hình bàn tay */
   cursor: pointer;
+  /* Cỡ chữ 13px */
   font-size: 13px;
+  /* Chữ rất đậm */
   font-weight: 700;
+  /* Bóng đổ cam mờ và viền sáng nhẹ phía trên bên trong */
   box-shadow:
     0 4px 16px rgba(234, 88, 12, 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  /* Hiệu ứng chuyển động mượt mà khi hover */
   transition: all 0.2s;
+  /* Căn ngang icon dấu cộng và chữ */
   display: flex;
   align-items: center;
   gap: 6px;
+  /* Ngăn xuống dòng */
   white-space: nowrap;
+  /* Giãn chữ rất nhẹ */
   letter-spacing: 0.01em;
 }
 
+/* Hiệu ứng hover nút đăng bán */
 .postBtn:hover {
+  /* Nền cam sáng hơn */
   background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+  /* Dịch chuyển nhẹ lên trên 1px tạo cảm giác nổi */
   transform: translateY(-1px);
+  /* Tăng độ lan của bóng đổ cam */
   box-shadow:
     0 6px 22px rgba(234, 88, 12, 0.55),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
+/* Hiệu ứng click đè nút đăng bán */
 .postBtn:active {
+  /* Phục hồi vị trí cũ */
   transform: translateY(0);
 }
 
-/* ─── LOGIN BUTTON ───────────────────────────────────────── */
+/* ─── LOGIN BUTTON - NÚT ĐĂNG NHẬP ─── */
 .loginBtn {
+  /* Nền trong suốt */
   background: transparent;
+  /* Chữ trắng mờ 85% */
   color: rgba(255, 255, 255, 0.85);
+  /* Viền trắng mờ mảnh */
   border: 1.5px solid rgba(255, 255, 255, 0.35);
+  /* Khoảng đệm */
   padding: 9px 18px;
+  /* Bo góc 9px */
   border-radius: 9px;
+  /* Con trỏ chuột hình bàn tay */
   cursor: pointer;
+  /* Cỡ chữ 13px */
   font-size: 13px;
+  /* Chữ đậm */
   font-weight: 700;
+  /* Hiệu ứng chuyển đổi mượt mà */
   transition: all 0.2s;
+  /* Ngăn xuống dòng */
   white-space: nowrap;
 }
 
+/* Hiệu ứng hover nút đăng nhập */
 .loginBtn:hover {
+  /* Nền trắng mờ nhẹ */
   background: rgba(255, 255, 255, 0.12);
+  /* Đổi viền sang màu trắng rõ hơn */
   border-color: rgba(255, 255, 255, 0.6);
+  /* Đổi chữ sang trắng đặc */
   color: #fff;
 }
 
-/* ─── ICON BUTTONS (messages, notifications) ─────────────── */
+/* ─── ICON BUTTONS - CÁC NÚT DẠNG BIỂU TƯỢNG (chat, thông báo) ─── */
 .iconBtn {
+  /* Màu nền trắng mờ */
   background: rgba(255, 255, 255, 0.1);
+  /* Icon màu trắng mờ 75% */
   color: rgba(255, 255, 255, 0.75);
+  /* Viền trắng mờ rất mỏng */
   border: 1.5px solid rgba(255, 255, 255, 0.15);
+  /* Bo góc 9px */
   border-radius: 9px;
+  /* Chiều rộng cố định 40px */
   width: 40px;
+  /* Chiều cao cố định 40px */
   height: 40px;
+  /* Chuột hình bàn tay */
   cursor: pointer;
+  /* Căn giữa icon */
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Chuyển đổi mượt mà */
   transition: all 0.2s;
+  /* Đặt vị trí tương đối để định vị huy hiệu badge số đỏ */
   position: relative;
+  /* Ngăn co cụm kích thước */
   flex-shrink: 0;
 }
 
+/* Hiệu ứng hover nút icon */
 .iconBtn:hover {
+  /* Nền trắng sáng hơn */
   background: rgba(255, 255, 255, 0.18);
+  /* Viền rõ hơn */
   border-color: rgba(255, 255, 255, 0.3);
+  /* Icon trắng đặc */
   color: #fff;
 }
 
+/* Huy hiệu màu đỏ (Badge) thông báo số lượng chưa đọc */
 .badge {
+  /* Vị trí tuyệt đối lệch ra ngoài góc trên bên phải nút */
   position: absolute;
   top: -5px;
   right: -5px;
+  /* Màu nền đỏ tươi */
   background: #ef4444;
+  /* Chữ màu trắng */
   color: #fff;
+  /* Bo tròn hoàn toàn tạo hình tròn */
   border-radius: 50%;
+  /* Chiều rộng 18px */
   width: 18px;
+  /* Chiều cao 18px */
   height: 18px;
+  /* Căn giữa chữ số bên trong */
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Kích thước chữ số nhỏ */
   font-size: 10px;
+  /* Chữ đậm */
   font-weight: 700;
+  /* Viền ngoài màu xanh đại dương trùng màu nền Navbar để tạo ranh giới tách biệt */
   border: 2px solid #0c4a6e;
 }
 
-/* ─── PROFILE BUTTON ─────────────────────────────────────── */
+/* ─── PROFILE BUTTON - NÚT THÔNG TIN TÀI KHOẢN CÁ NHÂN ─── */
 .profileBtn {
+  /* Nền trắng mờ */
   background: rgba(255, 255, 255, 0.1);
+  /* Chữ trắng mờ 90% */
   color: rgba(255, 255, 255, 0.9);
+  /* Viền mỏng mờ */
   border: 1.5px solid rgba(255, 255, 255, 0.18);
+  /* Bo góc 9px */
   border-radius: 9px;
+  /* Khoảng đệm: bên trái ít hơn vì đã có avatar tròn */
   padding: 0 12px 0 6px;
+  /* Chiều cao 40px */
   height: 40px;
+  /* Chuột hình bàn tay */
   cursor: pointer;
+  /* Căn ngang avatar, tên và icon mũi tên */
   display: flex;
   align-items: center;
   gap: 8px;
+  /* Cỡ chữ 13px */
   font-size: 13px;
+  /* Chữ đậm vừa */
   font-weight: 600;
+  /* Chuyển đổi mượt mà */
   transition: all 0.2s;
+  /* Ngăn co cụm kích thước */
   flex-shrink: 0;
 }
 
+/* Hiệu ứng hover nút profile */
 .profileBtn:hover {
+  /* Đổi nền trắng sáng hơn */
   background: rgba(255, 255, 255, 0.18);
+  /* Viền rõ hơn */
   border-color: rgba(255, 255, 255, 0.3);
+  /* Chữ trắng đặc */
   color: #fff;
 }
 
+/* Ảnh đại diện hình tròn của người dùng */
 .avatar {
+  /* Chiều rộng 27px */
   width: 27px;
+  /* Chiều cao 27px */
   height: 27px;
+  /* Bo tròn hoàn toàn */
   border-radius: 50%;
+  /* Cắt ảnh vừa vặn hình tròn không bị méo */
   object-fit: cover;
+  /* Viền trắng mờ nhẹ */
   border: 1.5px solid rgba(255, 255, 255, 0.25);
 }
 
+/* Vòng tròn hiển thị chữ cái đầu tiên của tên khi người dùng chưa đăng tải avatar */
 .avatarInitial {
   width: 27px;
   height: 27px;
   border-radius: 50%;
+  /* Dải màu gradient từ xanh da trời sang xanh lam */
   background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+  /* Căn giữa chữ cái */
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Cỡ chữ nhỏ đậm */
   font-size: 11px;
   font-weight: 800;
+  /* Chữ trắng */
   color: #fff;
 }
 
-/* ─── DROPDOWN ───────────────────────────────────────────── */
+/* ─── DROPDOWN MENU CHI TIẾT TÀI KHOẢN ─── */
 .dropdown {
+  /* Đặt vị trí tuyệt đối nằm ngay phía dưới nút bấm profile */
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
+  /* Màu nền trắng đặc */
   background: #fff;
+  /* Bóng đổ lan rộng mịn màng tạo độ sâu 3D cao cấp */
   box-shadow:
     0 20px 48px rgba(0, 0, 0, 0.14),
     0 4px 14px rgba(0, 0, 0, 0.06);
+  /* Bo góc 14px */
   border-radius: 14px;
+  /* Chiều rộng menu dropdown 210px */
   width: 210px;
+  /* Đảm bảo nổi trên các thành phần khác */
   z-index: 1000;
+  /* Tránh tràn nội dung khỏi góc bo tròn */
   overflow: hidden;
+  /* Viền xám mỏng ngoài cùng */
   border: 1px solid #e2e8f0;
+  /* Chạy hiệu ứng trượt nhẹ từ trên xuống khi mở menu */
   animation: slideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* Khối đầu trang dropdown chứa tên và email */
 .dropdownHeader {
+  /* Khoảng đệm */
   padding: 14px 16px;
+  /* Nền dải màu xanh da trời nhạt mát mắt */
   background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  /* Đường viền dưới màu xanh mờ */
   border-bottom: 1px solid #bae6fd;
 }
 
+/* Dòng hiển thị tên đầy đủ trong dropdown */
 .dropdownName {
   font-size: 13px;
   font-weight: 700;
+  /* Màu chữ xanh đại dương đậm */
   color: #0c4a6e;
 }
 
+/* Dòng hiển thị địa chỉ email phụ phía dưới */
 .dropdownSub {
   font-size: 11px;
+  /* Chữ màu xám mờ */
   color: #64748b;
   margin-top: 2px;
 }
 
+/* Từng dòng tùy chọn (item) click trong menu dropdown */
 .dropdownItem {
+  /* Chiếm toàn bộ chiều rộng dropdown */
   width: 100%;
+  /* Khoảng đệm */
   padding: 10px 16px;
+  /* Bỏ nền mặc định */
   background: none;
+  /* Bỏ viền */
   border: none;
+  /* Căn chữ trái */
   text-align: left;
+  /* Chuột hình bàn tay */
   cursor: pointer;
+  /* Cỡ chữ 13px */
   font-size: 13px;
+  /* Màu chữ xám sẫm */
   color: #475569;
   font-weight: 500;
+  /* Căn ngang icon và chữ tùy chọn */
   display: flex;
   align-items: center;
   gap: 10px;
+  /* Hiệu ứng đổi màu nền mượt khi di chuột qua */
   transition: background 0.15s;
+  /* Chiều cao tối thiểu dòng 40px để dễ click chuột */
   min-height: 40px;
 }
 
+/* Hiệu ứng hover tùy chọn trong menu */
 .dropdownItem:hover {
+  /* Nền xám nhạt */
   background: #f1f5f9;
+  /* Chữ tối rõ hơn */
   color: #1e293b;
 }
 
+/* Tùy chọn có tính chất hủy/nguy hiểm (như Đăng xuất) */
 .dropdownItem.danger {
+  /* Chữ màu đỏ */
   color: #ef4444;
 }
 
+/* Hiệu ứng hover tùy chọn Đăng xuất */
 .dropdownItem.danger:hover {
+  /* Đổi sang nền đỏ hồng siêu nhạt */
   background: #fef2f2;
 }
 
+/* Đường vạch phân chia ngăn cách giữa các mục menu */
 .dropdownDivider {
   border: none;
+  /* Đường kẻ trên mảnh màu xám nhạt */
   border-top: 1px solid #f1f5f9;
+  /* Khoảng cách trên dưới là 4px */
   margin: 4px 0;
 }
 
-/* ─── MOBILE TOGGLE ──────────────────────────────────────── */
+/* ─── MOBILE TOGGLE - KHỐI ĐIỀU KHIỂN MENU TRÊN DI ĐỘNG ─── */
 .mobileActions {
+  /* Ẩn mặc định trên màn hình máy tính lớn */
   display: none;
+  /* Căn ngang các nút */
+  display: flex;
   align-items: center;
   gap: 8px;
 }
 
+/* Nút bấm hamburger ba gạch trên điện thoại */
 .hamburger {
+  /* Nền trắng mờ */
   background: rgba(255, 255, 255, 0.1);
+  /* Icon màu trắng mờ 85% */
   color: rgba(255, 255, 255, 0.85);
+  /* Viền mỏng mờ */
   border: 1.5px solid rgba(255, 255, 255, 0.2);
+  /* Bo góc 8px */
   border-radius: 8px;
+  /* Rộng 38px */
   width: 38px;
+  /* Cao 38px */
   height: 38px;
+  /* Chuột hình bàn tay */
   cursor: pointer;
+  /* Căn giữa icon hamburger/X */
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Chuyển đổi mượt mà */
   transition: all 0.2s;
 }
 
+/* Hover nút hamburger */
 .hamburger:hover {
+  /* Nền trắng rõ hơn */
   background: rgba(255, 255, 255, 0.18);
+  /* Icon trắng đặc */
   color: #fff;
 }
 
-/* ─── MOBILE MENU ────────────────────────────────────────── */
+/* ─── MOBILE MENU - MENU TRẢ RA TRÊN DI ĐỘNG KHI CLICK HAMBURGER ─── */
 .mobileMenu {
+  /* Nền trắng đặc */
   background: #fff;
+  /* Viền dưới màu xám */
   border-bottom: 1px solid #e2e8f0;
+  /* Khoảng đệm trên dưới 12px và hai bên 16px */
   padding: 12px 16px;
+  /* Sắp xếp dạng cột dọc chứa các nút liên kết */
   display: flex;
   flex-direction: column;
   gap: 6px;
+  /* Bám dính ngay dưới thanh Navbar (Navbar cao 58px trên mobile, top 60px là vừa vặn) */
   position: sticky;
   top: 60px;
+  /* z-index nhỏ hơn Navbar một chút để Navbar đè lên trên */
   z-index: 998;
+  /* Bóng đổ dưới nhẹ */
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
 }
 
+/* Từng nút tùy chọn trong menu di động */
 .mobileMenuItem {
+  /* Nền xám nhạt */
   background: #f8fafc;
+  /* Chữ xám đậm */
   color: #334155;
   border: none;
+  /* Khoảng đệm rộng rãi giúp ngón tay dễ chạm trúng */
   padding: 12px 16px;
   border-radius: 8px;
   cursor: pointer;
+  /* Kích thước chữ 14px */
   font-size: 14px;
   font-weight: 600;
+  /* Căn ngang icon và chữ */
   display: flex;
   align-items: center;
   gap: 10px;
+  /* Chiều cao tối thiểu 44px (đạt tiêu chuẩn trải nghiệm bấm tay của Apple/Google) */
   min-height: 44px;
   transition: background 0.15s;
 }
 
+/* Hover tùy chọn menu di động */
 .mobileMenuItem:hover {
+  /* Đổi sang nền xanh da trời nhạt */
   background: #e0f2fe;
+  /* Đổi chữ sang màu xanh lam đậm */
   color: #0369a1;
 }
 
+/* Nút đăng xuất di động */
 .mobileMenuItem.danger {
+  /* Màu chữ đỏ báo hiệu hủy bỏ */
   color: #ef4444;
 }
 
+/* Hover nút đăng xuất di động */
 .mobileMenuItem.danger:hover {
+  /* Nền hồng nhạt */
   background: #fef2f2;
 }
 
 /* ═══════════════════════════════════════════════════════════
-   RESPONSIVE
-═══════════════════════════════════════════════════════════ */
+   RESPONSIVE - CẤU HÌNH GIAO DIỆN THEO ĐỘ RỘNG MÀN HÌNH
+   ═══════════════════════════════════════════════════════════ */
+
+/* Màn hình máy tính bảng lớn hoặc laptop nhỏ (1025px tới 1280px) */
 @media (max-width: 1280px) and (min-width: 1025px) {
   .nav {
     padding: 0 20px;
+    /* Thu hẹp padding Navbar */
   }
+
   .navBtn {
     padding: 7px 11px;
+    /* Thu hẹp padding các nút */
     font-size: 12px;
+    /* Giảm cỡ chữ xuống 12px */
   }
+
   .postBtn,
   .loginBtn {
     padding: 9px 14px;
     font-size: 12px;
   }
+
   .logo {
     margin-right: 16px;
+    /* Giảm margin của logo */
   }
+
   .searchForm {
     max-width: 300px;
   }
 }
 
+/* Màn hình máy tính bảng hoặc iPad (769px tới 1024px) */
 @media (max-width: 1024px) and (min-width: 769px) {
   .nav {
     padding: 0 16px;
     height: 62px;
+    /* Giảm chiều cao Navbar */
   }
+
   .navScrolled {
     height: 54px;
   }
+
   .navBtn {
     padding: 7px 10px;
     font-size: 12px;
     gap: 4px;
   }
+
   .logoTagline {
     display: none;
+    /* Ẩn dòng khẩu hiệu nhỏ của logo cho đỡ chật */
   }
+
   .postBtn {
     padding: 8px 12px;
     font-size: 12px;
   }
+
   .loginBtn {
     padding: 8px 12px;
     font-size: 12px;
   }
+
   .logo {
     margin-right: 12px;
   }
+
   .searchForm {
     max-width: 240px;
     margin: 0 12px;
   }
 }
 
+/* Màn hình điện thoại di động (nhỏ hơn hoặc bằng 768px) */
 @media (max-width: 768px) {
   .nav {
     height: 58px !important;
+    /* Ép chiều cao Navbar cố định 58px */
     padding: 0 16px !important;
   }
+
   .navScrolled {
     height: 58px !important;
   }
+
   .navLinks {
     display: none !important;
+    /* Ẩn hoàn toàn các nút điều hướng máy tính */
   }
+
   .actions {
     display: none !important;
+    /* Ẩn khối hành động profile máy tính */
   }
+
   .searchForm {
     display: none !important;
+    /* Ẩn ô tìm kiếm */
   }
+
   .mobileActions {
     display: flex !important;
+    /* Hiện nút bấm hamburger di động ở góc phải */
     margin-left: auto;
   }
+
   .logoMark {
     width: 34px !important;
+    /* Thu nhỏ logo icon */
     height: 34px !important;
   }
+
   .logoName {
     font-size: 15px !important;
+    /* Thu nhỏ cỡ chữ logo */
   }
 }
 
+/* Màn hình điện thoại nhỏ (dưới 480px) */
 @media (max-width: 480px) {
   .nav {
     padding: 0 12px !important;
   }
+
   .logoTagline {
     display: none !important;
   }
+
   .mobileMenu {
     padding: 10px 12px;
     top: 58px;
+    /* Căn khớp menu di động ngay dưới Navbar */
   }
+
   .mobileMenuItem {
     padding: 11px 14px;
     font-size: 13px;
   }
+
   .dropdown {
     width: min(210px, calc(100vw - 32px));
+    /* Đảm bảo dropdown profile không tràn màn hình điện thoại */
     right: -8px;
   }
 }
 
+/* Định nghĩa hiệu ứng chuyển động keyframe trượt xuống dưới */
 @keyframes slideDown {
   from {
     opacity: 0;
     transform: translateY(-8px);
+    /* Trượt từ trên lên 8px */
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
+    /* Kết thúc tại vị trí chuẩn */
   }
 }

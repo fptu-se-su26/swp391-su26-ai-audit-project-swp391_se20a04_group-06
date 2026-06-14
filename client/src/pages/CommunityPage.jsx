@@ -1,24 +1,34 @@
+// Import hook useState từ React để quản lý state cục bộ
 import { useState } from "react";
+// Import hook tối ưu SEO tiêu đề, mô tả
 import { useSEO } from "../hooks/useSEO";
+// Import hook lấy thông tin tài khoản đăng nhập hiện hành
 import { useAuth } from "../context/AuthContext";
+// Import hook hiển thị thông báo popup (Toast)
 import { useToast } from "../context/ToastContext";
+// Import helper gọi API dùng chung
 import { api } from "../services/api";
+// Import hook tùy biến để tự động fetch API và theo dõi trạng thái tải
 import { useApiFetch } from "../hooks/useApiFetch";
+// Import định nghĩa bảng màu theme của dự án
 import { C } from "../utils/theme";
 
+// Hàm nén ảnh phía client trước khi upload lên Cloudinary nhằm giảm băng thông và dung lượng lưu trữ
 const compressImage = (file) => {
   return new Promise((resolve) => {
     const reader = new FileReader();
+    // Đọc file dưới dạng Data URL (Base64)
     reader.readAsDataURL(file);
     reader.onload = (event) => {
       const img = new Image();
       img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement("canvas");
-        const MAX_WIDTH = 1000;
+        const MAX_WIDTH = 1000; // Giới hạn chiều rộng tối đa là 1000px
         let width = img.width;
         let height = img.height;
 
+        // Tính toán tỷ lệ chiều cao tương ứng nếu chiều rộng vượt quá giới hạn
         if (width > MAX_WIDTH) {
           height = Math.round((height * MAX_WIDTH) / width);
           width = MAX_WIDTH;
@@ -27,8 +37,10 @@ const compressImage = (file) => {
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext("2d");
+        // Vẽ ảnh gốc lên canvas với kích thước mới đã thu nhỏ
         ctx.drawImage(img, 0, 0, width, height);
 
+        // Xuất canvas thành đối tượng Blob định dạng JPEG với chất lượng nén 85%
         canvas.toBlob(
           (blob) => {
             resolve(new File([blob], file.name, { type: "image/jpeg" }));
@@ -41,24 +53,24 @@ const compressImage = (file) => {
   });
 };
 
-/* Hộp thoại xác nhận tùy chỉnh dạng Modal */
+/* Hộp thoại xác nhận tùy chỉnh dạng Modal hiển thị xác nhận trước khi thực hiện hành động xóa */
 function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
     <div
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.45)",
-        zIndex: 99999,
+        background: "rgba(0,0,0,0.45)", // Lớp nền tối mờ
+        zIndex: 99999, // Đảm bảo đè lên trên mọi phần tử khác
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         animation: "fadeIn 0.15s ease",
       }}
-      onClick={onCancel}
+      onClick={onCancel} // Bấm ra ngoài vùng modal để đóng modal
     >
       <div
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()} // Ngăn sự kiện nổi bọt làm đóng modal
         style={{
           background: C.white,
           borderRadius: 16,
@@ -81,6 +93,7 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
           {message}
         </p>
         <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+          {/* Nút Hủy bỏ */}
           <button
             onClick={onCancel}
             style={{
@@ -98,6 +111,7 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
           >
             Hủy
           </button>
+          {/* Nút Đồng ý */}
           <button
             onClick={onConfirm}
             style={{
@@ -121,43 +135,52 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
   );
 }
 
+// Component chính hiển thị Diễn đàn cộng đồng
 export function CommunityPage() {
+  // Thiết lập SEO tiêu đề và mô tả cho trang Diễn đàn
   useSEO({
     title: "Diễn Đàn Cộng Đồng - Chia Sẻ Mâm Cơm Hải Sản | Haisan.vn",
     description:
       "Nơi giao lưu, chia sẻ những khoảnh khắc nấu nướng, mâm cơm gia đình ấm cúng và phản hồi về sản phẩm từ biển khơi.",
   });
 
+  // Lấy thông tin user đăng nhập hiện tại từ context Auth
   const { user } = useAuth();
+  // Khởi tạo hàm toast thông báo
   const toast = useToast();
 
+  // State quản lý số trang hiện tại của danh sách bài viết
   const [page, setPage] = useState(1);
+  // State phiên bản (version) để kích hoạt tải lại dữ liệu khi có bài viết mới được đăng
   const [version, setVersion] = useState(0);
 
-  // Áp dụng Custom Hook useApiFetch
+  // Áp dụng Custom Hook useApiFetch gọi API lấy danh sách bài đăng theo trang hiện tại và version
   const { data, loading, refetch } = useApiFetch(
     `/posts?page=${page}&limit=10`,
     [page, version],
   );
 
+  // Trích xuất mảng bài viết và tổng số trang từ kết quả API trả về
   const posts = data?.posts || [];
   const pages = data?.pages || 1;
 
-  // New Post Form
+  // States quản lý Form đăng bài viết mới
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
-  const [imageFiles, setImageFiles] = useState([]);
-  const [imagePreviews, setImagePreviews] = useState([]);
-  const [submittingPost, setSubmittingPost] = useState(false);
+  const [imageFiles, setImageFiles] = useState([]); // Mảng lưu các đối tượng File ảnh thực tế
+  const [imagePreviews, setImagePreviews] = useState([]); // Mảng lưu link URL.createObjectURL để xem trước ảnh
+  const [submittingPost, setSubmittingPost] = useState(false); // Trạng thái đang gửi bài viết
 
-  // Comment input state
+  // State lưu trữ văn bản bình luận đang gõ cho từng bài viết, tổ chức dưới dạng { [postId]: commentText }
   const [commentInputs, setCommentInputs] = useState({});
 
-  // Trạng thái cho hộp thoại xóa bài viết / bình luận
-  const [confirmDelete, setConfirmDelete] = useState(null); // { type: 'post' | 'comment', postId, commentId }
+  // Trạng thái cho modal xác nhận xóa bài viết hoặc xóa bình luận
+  const [confirmDelete, setConfirmDelete] = useState(null); // Đối tượng dạng { type: 'post' | 'comment', postId, commentId }
 
+  // Xử lý khi người dùng chọn tải ảnh lên từ máy tính
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
+    // Giới hạn tối đa được đăng 4 ảnh cho mỗi bài viết
     if (files.length + imageFiles.length > 4) {
       toast.warn("Bạn chỉ được tải lên tối đa 4 hình ảnh");
       return;
@@ -166,10 +189,12 @@ export function CommunityPage() {
     const newFiles = [...imageFiles, ...files];
     setImageFiles(newFiles);
 
+    // Tạo các đường dẫn blob xem trước cục bộ cho các ảnh vừa chọn
     const newPreviews = files.map((file) => URL.createObjectURL(file));
     setImagePreviews([...imagePreviews, ...newPreviews]);
   };
 
+  // Xóa ảnh đã chọn xem trước ra khỏi danh sách chuẩn bị đăng
   const removeSelectedImage = (idx) => {
     const updatedFiles = imageFiles.filter((_, i) => i !== idx);
     const updatedPreviews = imagePreviews.filter((_, i) => i !== idx);
@@ -177,6 +202,7 @@ export function CommunityPage() {
     setImagePreviews(updatedPreviews);
   };
 
+  // Xử lý hành động gửi đăng bài viết mới lên server
   const handleCreatePost = async (e) => {
     e.preventDefault();
     if (!newTitle.trim() || !newContent.trim()) {
@@ -188,11 +214,14 @@ export function CommunityPage() {
     try {
       let uploadedImageUrls = [];
 
+      // Nếu có hình ảnh đính kèm, thực hiện nén và tải lên Cloudinary
       if (imageFiles.length > 0) {
+        // Lấy thông tin chữ ký signature từ backend để cấp quyền upload an toàn lên Cloudinary
         const sigData = await api("/images/signature");
 
         uploadedImageUrls = await Promise.all(
           imageFiles.map(async (file) => {
+            // Nén ảnh client-side
             const compressed = await compressImage(file);
             const fd = new FormData();
             fd.append("file", compressed);
@@ -201,6 +230,7 @@ export function CommunityPage() {
             fd.append("signature", sigData.signature);
             fd.append("folder", sigData.folder);
 
+            // Gửi ảnh lên Cloudinary
             const cloudRes = await fetch(
               `https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`,
               { method: "POST", body: fd },
@@ -211,11 +241,12 @@ export function CommunityPage() {
             }
 
             const cloudData = await cloudRes.json();
-            return cloudData.secure_url;
+            return cloudData.secure_url; // Trả về link ảnh HTTPS an toàn
           }),
         );
       }
 
+      // Gửi bài đăng mới lên backend kèm mảng link ảnh đã upload
       await api("/posts", {
         method: "POST",
         body: {
@@ -227,10 +258,12 @@ export function CommunityPage() {
       });
 
       toast.success("Đăng bài viết thành công!");
+      // Reset lại toàn bộ form đăng bài
       setNewTitle("");
       setNewContent("");
       setImageFiles([]);
       setImagePreviews([]);
+      // Tăng version để trigger hook fetch bài viết tải lại danh sách mới
       setVersion((v) => v + 1);
     } catch (err) {
       toast.error(err.message || "Có lỗi xảy ra");
@@ -239,6 +272,7 @@ export function CommunityPage() {
     }
   };
 
+  // Xử lý thích/bỏ thích bài viết
   const handleLikePost = async (postId) => {
     if (!user) {
       toast.warn("Vui lòng đăng nhập để thích bài viết");
@@ -247,12 +281,13 @@ export function CommunityPage() {
 
     try {
       await api(`/posts/${postId}/like`, { method: "POST" });
-      refetch();
+      refetch(); // Tải lại dữ liệu bài viết để cập nhật số lượt thích và trạng thái
     } catch (err) {
       toast.error(err.message || "Có lỗi xảy ra");
     }
   };
 
+  // Xử lý gửi bình luận cho một bài viết
   const handleAddComment = async (e, postId) => {
     e.preventDefault();
     if (!user) {
@@ -264,45 +299,52 @@ export function CommunityPage() {
     if (!text.trim()) return;
 
     try {
+      // Gọi API POST gửi bình luận mới
       await api(`/posts/${postId}/comments`, {
         method: "POST",
         body: { text },
       });
 
+      // Reset lại ô nhập bình luận của bài đăng này về rỗng
       setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
-      refetch();
+      refetch(); // Tải lại bài đăng để hiển thị bình luận mới
     } catch (err) {
       toast.error(err.message || "Không thể gửi bình luận");
     }
   };
 
+  // Cập nhật state nội dung bình luận khi người dùng đang gõ phím
   const handleCommentInputChange = (postId, text) => {
     setCommentInputs((prev) => ({ ...prev, [postId]: text }));
   };
 
+  // Thực hiện hành động xóa bài viết hoặc xóa bình luận sau khi người dùng xác nhận "Đồng ý" trên Modal
   const executeDelete = async () => {
     if (!confirmDelete) return;
     const { type, postId, commentId } = confirmDelete;
     try {
       if (type === "post") {
+        // Gọi API DELETE xóa bài viết
         await api(`/posts/${postId}`, { method: "DELETE" });
         toast.success("Xóa bài viết thành công");
       } else if (type === "comment") {
+        // Gọi API DELETE xóa bình luận cụ thể của bài viết
         await api(`/posts/${postId}/comments/${commentId}`, {
           method: "DELETE",
         });
         toast.success("Đã xóa bình luận");
       }
-      refetch();
+      refetch(); // Tải lại danh sách
     } catch (err) {
       toast.error(err.message || "Có lỗi xảy ra");
     } finally {
-      setConfirmDelete(null);
+      setConfirmDelete(null); // Đóng hộp thoại xác nhận xóa
     }
   };
 
   return (
     <div className="page-wrap-sm fade-up">
+      {/* Hiển thị modal xác nhận xóa nếu confirmDelete có giá trị */}
       {confirmDelete && (
         <ConfirmDialog
           message={
@@ -329,7 +371,7 @@ export function CommunityPage() {
         </h1>
       </div>
 
-      {/* Form đăng bài mới */}
+      {/* Biểu mẫu đăng bài viết mới: Chỉ hiển thị nếu người dùng đã đăng nhập */}
       {user ? (
         <div
           style={{
@@ -355,6 +397,7 @@ export function CommunityPage() {
             onSubmit={handleCreatePost}
             style={{ display: "flex", flexDirection: "column", gap: "14px" }}
           >
+            {/* Ô nhập tiêu đề */}
             <input
               type="text"
               placeholder="Tiêu đề bài viết..."
@@ -370,6 +413,7 @@ export function CommunityPage() {
               }}
               required
             />
+            {/* Ô nhập nội dung bài viết */}
             <textarea
               rows="3"
               placeholder="Chia sẻ cảm nhận nấu nướng của bạn tại đây..."
@@ -387,6 +431,7 @@ export function CommunityPage() {
               required
             />
 
+            {/* Xem trước danh sách các ảnh đã chọn */}
             {imagePreviews.length > 0 && (
               <div
                 style={{
@@ -416,6 +461,7 @@ export function CommunityPage() {
                         objectFit: "cover",
                       }}
                     />
+                    {/* Nút hủy bỏ ảnh này */}
                     <button
                       type="button"
                       onClick={() => removeSelectedImage(idx)}
@@ -433,7 +479,7 @@ export function CommunityPage() {
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
-                        justifyCenter: "center",
+                        justifyContent: "center",
                       }}
                     >
                       &times;
@@ -446,11 +492,12 @@ export function CommunityPage() {
             <div
               style={{
                 display: "flex",
-                justify: "space-between",
+                justifyContent: "space-between",
                 alignItems: "center",
                 marginTop: "6px",
               }}
             >
+              {/* Nút chọn hình ảnh ẩn đằng sau nhãn nhấp chuột */}
               <label
                 style={{
                   cursor: "pointer",
@@ -472,6 +519,7 @@ export function CommunityPage() {
                 />
               </label>
 
+              {/* Nút đăng bài */}
               <button
                 type="submit"
                 disabled={submittingPost}
@@ -493,6 +541,7 @@ export function CommunityPage() {
           </form>
         </div>
       ) : (
+        // Banner thông báo nếu người dùng chưa đăng nhập
         <div
           style={{
             textAlign: "center",
@@ -509,7 +558,7 @@ export function CommunityPage() {
         </div>
       )}
 
-      {/* Danh sách bài đăng */}
+      {/* Hiển thị danh sách các bài đăng */}
       {loading ? (
         <div
           style={{
@@ -536,8 +585,10 @@ export function CommunityPage() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
           {posts.map((post) => {
+            // Kiểm tra xem người dùng hiện tại đã thích bài viết này hay chưa
             const hasLiked =
               user && post.likes.includes(user.userId || user.id);
+            // Kiểm tra quyền xóa (phải là tác giả bài viết hoặc tài khoản Admin)
             const isPostAuthor =
               user &&
               (user.role === "Admin" ||
@@ -555,10 +606,11 @@ export function CommunityPage() {
                   boxShadow: "var(--shadow-sm)",
                 }}
               >
+                {/* Header của thẻ bài viết: thông tin tác giả và nút xóa bài */}
                 <div
                   style={{
                     display: "flex",
-                    justify: "space-between",
+                    justifyContent: "space-between",
                     alignItems: "flex-start",
                     marginBottom: "16px",
                   }}
@@ -570,6 +622,7 @@ export function CommunityPage() {
                       gap: "10px",
                     }}
                   >
+                    {/* Avatar đại diện bằng ký tự đầu tiên */}
                     <div
                       style={{
                         width: "40px",
@@ -578,7 +631,7 @@ export function CommunityPage() {
                         background: "var(--bg-2)",
                         display: "flex",
                         alignItems: "center",
-                        justify: "center",
+                        justifyContent: "center",
                         fontWeight: "700",
                         color: "var(--ocean)",
                         fontSize: "16px",
@@ -609,6 +662,7 @@ export function CommunityPage() {
                     </div>
                   </div>
 
+                  {/* Nút xóa bài viết chỉ dành cho tác giả bài viết hoặc Admin */}
                   {isPostAuthor && (
                     <button
                       onClick={() =>
@@ -628,6 +682,7 @@ export function CommunityPage() {
                   )}
                 </div>
 
+                {/* Tiêu đề bài viết */}
                 <h4
                   style={{
                     fontSize: "16px",
@@ -638,6 +693,7 @@ export function CommunityPage() {
                 >
                   {post.title}
                 </h4>
+                {/* Nội dung bài viết */}
                 <p
                   style={{
                     fontSize: "14px",
@@ -650,10 +706,12 @@ export function CommunityPage() {
                   {post.content}
                 </p>
 
+                {/* Hiển thị danh sách hình ảnh đính kèm bài đăng dạng lưới */}
                 {post.images && post.images.length > 0 && (
                   <div
                     style={{
                       display: "grid",
+                      // Nếu có 1 ảnh thì chiếm toàn bộ chiều rộng, ngược lại chia đôi cột
                       gridTemplateColumns:
                         post.images.length === 1 ? "1fr" : "repeat(2, 1fr)",
                       gap: "8px",
@@ -677,6 +735,7 @@ export function CommunityPage() {
                   </div>
                 )}
 
+                {/* Các nút tương tác: Thích, số lượt Xem, số lượt bình luận */}
                 <div
                   style={{
                     display: "flex",
@@ -688,6 +747,7 @@ export function CommunityPage() {
                     marginBottom: "16px",
                   }}
                 >
+                  {/* Nút thích bài viết */}
                   <button
                     onClick={() => handleLikePost(post._id)}
                     style={{
@@ -724,6 +784,7 @@ export function CommunityPage() {
                   </span>
                 </div>
 
+                {/* Danh sách bình luận */}
                 <div
                   style={{
                     display: "flex",
@@ -744,6 +805,7 @@ export function CommunityPage() {
                       }}
                     >
                       {post.comments.map((comment) => {
+                        // Xác định xem user hiện tại có quyền xóa bình luận hay không (admin hoặc tác giả bình luận hoặc chủ bài viết)
                         const isCommentAuthor =
                           user &&
                           (user.role === "Admin" ||
@@ -756,7 +818,7 @@ export function CommunityPage() {
                             key={comment._id}
                             style={{
                               display: "flex",
-                              justify: "space-between",
+                              justifyContent: "space-between",
                               alignItems: "flex-start",
                               fontSize: "13px",
                             }}
@@ -770,7 +832,7 @@ export function CommunityPage() {
                                   color: "var(--text-2)",
                                   marginLeft: "6px",
                                 }}
-                              >
+                               >
                                 {comment.text}
                               </span>
                               <span
@@ -786,6 +848,7 @@ export function CommunityPage() {
                                 )}
                               </span>
                             </div>
+                            {/* Nút xóa bình luận (hiển thị dấu x) */}
                             {isCommentAuthor && (
                               <button
                                 onClick={() =>
@@ -812,6 +875,7 @@ export function CommunityPage() {
                     </div>
                   )}
 
+                  {/* Ô nhập gửi bình luận mới - chỉ hiển thị nếu người dùng đã đăng nhập */}
                   {user && (
                     <form
                       onSubmit={(e) => handleAddComment(e, post._id)}
@@ -857,7 +921,7 @@ export function CommunityPage() {
         </div>
       )}
 
-      {/* Phân trang */}
+      {/* Thanh phân trang ở đáy màn hình */}
       {pages > 1 && (
         <div
           style={{
@@ -867,6 +931,7 @@ export function CommunityPage() {
             marginTop: "24px",
           }}
         >
+          {/* Nút quay lại trang trước */}
           <button
             disabled={page === 1}
             onClick={() => {
@@ -883,6 +948,7 @@ export function CommunityPage() {
           >
             Trở lại
           </button>
+          {/* Số trang hiện tại */}
           <span
             style={{
               display: "flex",
@@ -894,6 +960,7 @@ export function CommunityPage() {
           >
             Trang {page} / {pages}
           </span>
+          {/* Nút sang trang tiếp theo */}
           <button
             disabled={page === pages}
             onClick={() => {
@@ -915,3 +982,4 @@ export function CommunityPage() {
     </div>
   );
 }
+

@@ -1,26 +1,39 @@
+// Nhập các React Hooks cần thiết để quản lý state, vòng đời component và memoize hàm (useCallback)
 import { useState, useEffect, useCallback } from "react";
+// Nhập hook điều hướng trang từ react-router-dom
 import { useNavigate } from "react-router-dom";
+// Nhập mã màu sắc và phong cách giao diện chung của hệ thống
 import { C } from "../utils/theme";
+// Nhập đối tượng gọi API (axios/fetch wrapper) đã được cấu hình sẵn
 import { api } from "../services/api";
+// Nhập các hàm tiện ích định dạng tiền tệ và hiển thị nhãn badge nhỏ (pill)
 import { fmt, pill } from "../utils/format";
+// Nhập component huy hiệu đếm ngược độ tươi của hải sản dựa vào thời điểm đánh bắt
 import { CountdownBadge } from "../components/ProductCard";
+// Nhập component tab quản lý hộp thư thoại nhắn tin trò chuyện
 import { InboxTab } from "../components/InboxTab";
+// Nhập hook lấy thông tin tài khoản đăng nhập hiện tại từ Auth Context
 import { useAuth } from "../context/AuthContext";
+// Nhập hook hiển thị các thông báo nhanh (toast notification) lên UI
 import { useToast } from "../context/ToastContext";
 
+// Hàm nén ảnh bằng phần cứng Canvas trình duyệt để giảm dung lượng file trước khi tải lên Cloudinary
 const compressImage = (file) => {
   return new Promise((resolve) => {
     const reader = new FileReader();
+    // Đọc file ảnh dưới dạng đường dẫn URL Base64
     reader.readAsDataURL(file);
     reader.onload = (event) => {
       const img = new Image();
       img.src = event.target.result;
       img.onload = () => {
+        // Khởi tạo một phần tử canvas ảo không hiển thị lên màn hình
         const canvas = document.createElement("canvas");
-        const MAX_WIDTH = 1000;
+        const MAX_WIDTH = 1000; // Chiều rộng tối đa cho phép của ảnh sau nén
         let width = img.width;
         let height = img.height;
 
+        // Tính toán tỷ lệ chiều cao tương ứng nếu ảnh vượt quá chiều rộng tối đa
         if (width > MAX_WIDTH) {
           height = Math.round((height * MAX_WIDTH) / width);
           width = MAX_WIDTH;
@@ -29,10 +42,13 @@ const compressImage = (file) => {
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext("2d");
+        // Vẽ lại ảnh lên canvas theo kích thước mới đã thu nhỏ
         ctx.drawImage(img, 0, 0, width, height);
 
+        // Xuất canvas ra định dạng Blob nhị phân dạng JPEG với chất lượng nén 85%
         canvas.toBlob(
           (blob) => {
+            // Trả về đối tượng File mới chứa dữ liệu ảnh đã nén để gửi lên server
             resolve(new File([blob], file.name, { type: "image/jpeg" }));
           },
           "image/jpeg",
@@ -43,9 +59,10 @@ const compressImage = (file) => {
   });
 };
 
-// ── ConfirmDialog — thay thế window.confirm() ───────────────
+// ── ConfirmDialog — Hộp thoại xác nhận hành động xóa tùy chỉnh ───────────────
 function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
+    // Lớp phủ nền mờ bao toàn bộ màn hình
     <div
       style={{
         position: "fixed",
@@ -57,10 +74,10 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
         justifyContent: "center",
         animation: "fadeIn 0.15s ease",
       }}
-      onClick={onCancel}
+      onClick={onCancel} // Click bên ngoài modal sẽ hủy hành động
     >
       <div
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()} // Ngăn sự kiện click lan ra ngoài
         style={{
           background: C.white,
           borderRadius: 16,
@@ -107,7 +124,7 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
               padding: "10px 0",
               borderRadius: 10,
               border: "none",
-              background: "#DC2626",
+              background: "#DC2626", // Màu đỏ cảnh báo xóa
               color: "#fff",
               fontWeight: 700,
               cursor: "pointer",
@@ -123,23 +140,25 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
   );
 }
 
-// ── EditProductModal — Sửa toàn bộ thông tin sản phẩm ───────
+// ── EditProductModal — Form sửa toàn bộ thông tin chi tiết sản phẩm ───────
 function EditProductModal({ product, onSave, onClose, loading }) {
+  // Khởi tạo state biểu mẫu chỉnh sửa từ dữ liệu gốc của sản phẩm truyền vào qua Props
   const [form, setForm] = useState({
     name: product.name || "",
     type: product.type || "Fresh",
     price: product.price ?? 0,
     remainingWeight: product.remainingWeight ?? 0,
     status: product.status || "Active",
-    // datetime-local cần định dạng "YYYY-MM-DDTHH:mm"
+    // Chuyển đổi định dạng ngày tháng catchTime sang "YYYY-MM-DDTHH:mm" để tương thích với input datetime-local
     catchTime: product.catchTime
       ? new Date(product.catchTime).toISOString().slice(0, 16)
       : "",
   });
 
+  // Hàm helper cập nhật nhanh giá trị của một thuộc tính cụ thể trong state form
   const set = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
 
-  // Kiểu input dùng chung
+  // Khai báo kiểu phong cách thiết kế dùng chung cho các ô input để đảm bảo tính đồng bộ
   const inputStyle = {
     width: "100%",
     padding: "10px 14px",
@@ -169,7 +188,7 @@ function EditProductModal({ product, onSave, onClose, loading }) {
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.45)",
+        background: "rgba(0,0,0,0.45)", // Lớp phủ nền tối mờ
         zIndex: 99998,
         display: "flex",
         alignItems: "center",
@@ -177,10 +196,10 @@ function EditProductModal({ product, onSave, onClose, loading }) {
         animation: "fadeIn 0.15s ease",
         padding: "16px",
       }}
-      onClick={onClose}
+      onClick={onClose} // Nhấp chuột ra vùng ngoài modal sẽ tự động đóng form
     >
       <div
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()} // Ngăn chặn sự kiện click lan ra vùng ngoài
         style={{
           background: C.white,
           borderRadius: 20,
@@ -188,11 +207,11 @@ function EditProductModal({ product, onSave, onClose, loading }) {
           maxWidth: 500,
           width: "100%",
           boxShadow: "0 24px 48px rgba(0,0,0,0.22)",
-          maxHeight: "90vh",
-          overflowY: "auto",
+          maxHeight: "90vh", // Giới hạn chiều cao tối đa của form theo màn hình
+          overflowY: "auto", // Bật thanh cuộn nếu form quá dài
         }}
       >
-        {/* Header */}
+        {/* Phần đầu Modal chứa tiêu đề và nút đóng (x) */}
         <div
           style={{
             display: "flex",
@@ -223,11 +242,11 @@ function EditProductModal({ product, onSave, onClose, loading }) {
               padding: "2px 6px",
             }}
           >
-            ×
+            &times;
           </button>
         </div>
 
-        {/* Tên sản phẩm */}
+        {/* Ô nhập tên sản phẩm */}
         <div style={fieldStyle}>
           <label style={labelStyle}>Tên sản phẩm</label>
           <input
@@ -238,7 +257,7 @@ function EditProductModal({ product, onSave, onClose, loading }) {
           />
         </div>
 
-        {/* Loại + Trạng thái — 2 cột */}
+        {/* Grid chia làm 2 cột: Loại hải sản và Trạng thái hiển thị */}
         <div
           style={{
             display: "grid",
@@ -272,7 +291,7 @@ function EditProductModal({ product, onSave, onClose, loading }) {
           </div>
         </div>
 
-        {/* Giá + Cân nặng — 2 cột */}
+        {/* Grid chia làm 2 cột: Đơn giá và Trọng lượng còn lại */}
         <div
           style={{
             display: "grid",
@@ -307,7 +326,7 @@ function EditProductModal({ product, onSave, onClose, loading }) {
           </div>
         </div>
 
-        {/* Thời gian đánh bắt — chỉ hiện khi loại = Fresh */}
+        {/* Ô nhập Thời gian đánh bắt — chỉ kết xuất (render) khi sản phẩm là hải sản Tươi (Fresh) */}
         {form.type === "Fresh" && (
           <div style={fieldStyle}>
             <label style={labelStyle}>Thời gian đánh bắt</label>
@@ -323,7 +342,7 @@ function EditProductModal({ product, onSave, onClose, loading }) {
           </div>
         )}
 
-        {/* Divider */}
+        {/* Đường gạch ngang phân chia thẩm mỹ */}
         <div
           style={{
             height: 1,
@@ -332,7 +351,7 @@ function EditProductModal({ product, onSave, onClose, loading }) {
           }}
         />
 
-        {/* Buttons */}
+        {/* Nhóm nút Hủy và Ghi lại thay đổi */}
         <div style={{ display: "flex", gap: 10 }}>
           <button
             onClick={onClose}
@@ -353,7 +372,7 @@ function EditProductModal({ product, onSave, onClose, loading }) {
           </button>
           <button
             onClick={() => onSave(form)}
-            disabled={loading || !form.name.trim()}
+            disabled={loading || !form.name.trim()} // Vô hiệu hóa nếu đang tải hoặc tên sản phẩm để trống
             style={{
               flex: 2,
               padding: "11px 0",
@@ -379,61 +398,79 @@ function EditProductModal({ product, onSave, onClose, loading }) {
   );
 }
 
-// ── Cooldown helpers ─────────────────────────────────────────
+// ── Cooldown helpers — Kiểm soát khoảng thời gian đẩy bài viết lên đầu trang ──
+// Một bài đăng chỉ được phép "đẩy tin" một lần duy nhất trong vòng 24 giờ (để tránh spam)
 const isBumpingOnCooldown = (bumpedAtStr) => {
   if (!bumpedAtStr) return false;
+  // Trả về true nếu thời gian từ lúc đẩy lần trước đến nay chưa đủ 24 tiếng (24 * 3600 * 1000 mili giây)
   return Date.now() - new Date(bumpedAtStr).getTime() < 24 * 3600 * 1000;
 };
 
+// Tính số giờ còn lại phải chờ để kết thúc cooldown đẩy bài
 const getCooldownHours = (bumpedAtStr) => {
   if (!bumpedAtStr) return 0;
   const diffMs = Date.now() - new Date(bumpedAtStr).getTime();
+  // Làm tròn lên số giờ còn lại
   return Math.ceil((24 * 3600 * 1000 - diffMs) / 3600000);
 };
 
-// ── Main Component ───────────────────────────────────────────
+// ── Main Component DashboardPage ───────────────────────────────────────────
+// Trang quản lý trung tâm (Dashboard) dành cho người bán và người mua
 export function DashboardPage() {
   const { user } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
 
+  // Quản lý tab giao diện đang mở, mặc định là danh sách sản phẩm đăng bán (listings)
   const [tab, setTab] = useState("listings");
+  // Lưu trữ danh sách bài đăng hải sản của người dùng
   const [listings, setListings] = useState([]);
   const [loadingListings, setLoadingListings] = useState(true);
+  // Lưu trữ tổng số tin nhắn thoại chưa đọc
   const [unread, setUnread] = useState(0);
 
-  // Phân trang
+  // Các state hỗ trợ phân trang cho danh sách sản phẩm
   const [listingsPage, setListingsPage] = useState(1);
   const [listingsTotalPages, setListingsTotalPages] = useState(1);
   const [listingsTotal, setListingsTotal] = useState(0);
 
-  // ── THAY ĐỔI: editId/editType/editVal → editProduct ─────────
-  // editProduct = null | product object đang được mở modal sửa
+  // State lưu đối tượng sản phẩm đang được admin chọn chỉnh sửa (khi khác null, Modal sẽ bật)
   const [editProduct, setEditProduct] = useState(null);
+  // Đang tải khi gọi API lưu cập nhật thông tin sản phẩm
   const [editLoading, setEditLoading] = useState(false);
 
+  // State lưu ID của sản phẩm đang được đẩy tin (bumping) để hiển thị spinner
   const [bumpingId, setBumpingId] = useState(null);
+  // Danh sách các sản phẩm ưa thích của người dùng này
   const [favorites, setFavorites] = useState([]);
   const [favLoading, setFavLoading] = useState(true);
+  // Lưu ID sản phẩm chuẩn bị bị xóa để hiện modal Confirm
   const [confirmDelete, setConfirmDelete] = useState(null);
 
-  // Boat logs state
+  // Các state phục vụ tính năng "Nhật ký cabin" (Boat logs) dành cho ngư dân
   const [myLogs, setMyLogs] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
+  // Nội dung nhật ký nhập vào ô textarea
   const [logContent, setLogContent] = useState("");
+  // Mảng chứa các đối tượng File ảnh thực tế được chọn để tải lên
   const [logImages, setLogImages] = useState([]);
+  // Mảng chứa các URL ảnh dạng blob cục bộ để hiển thị xem trước trước khi upload
   const [logPreviews, setLogPreviews] = useState([]);
+  // Trạng thái chờ trong khi đang nén ảnh và gửi nhật ký cabin lên server
   const [submittingLog, setSubmittingLog] = useState(false);
 
+  // Hàm gọi API lấy danh sách nhật ký boong tàu của chính mình
   const fetchMyLogs = useCallback(() => {
     if (!user) return;
     setLoadingLogs(true);
+    // Gửi request lấy nhật ký cabin theo ID người dùng
     api(`/boat-logs?userId=${user.userId || user.id}`)
       .then((res) => setMyLogs(res.boatLogs || []))
       .catch(() => {})
       .finally(() => setLoadingLogs(false));
   }, [user]);
 
+  // Tải lại nhật ký cabin mỗi khi tab được chuyển sang "boatlogs"
   useEffect(() => {
     if (tab === "boatlogs") {
       (async () => {
@@ -442,22 +479,27 @@ export function DashboardPage() {
     }
   }, [tab, fetchMyLogs]);
 
+  // Xử lý sự kiện khi ngư dân chọn các tệp hình ảnh thực tế đi kèm nhật ký
   const handleLogImageChange = (e) => {
     const files = Array.from(e.target.files);
+    // Giới hạn chỉ cho phép tải tối đa 4 hình ảnh minh họa cho mỗi bài nhật ký cabin
     if (files.length + logImages.length > 4) {
       toast.error("Bạn chỉ được tải lên tối đa 4 hình ảnh");
       return;
     }
     setLogImages([...logImages, ...files]);
+    // Tạo nhanh URL xem trước dạng blob cục bộ
     const previews = files.map((file) => URL.createObjectURL(file));
     setLogPreviews([...logPreviews, ...previews]);
   };
 
+  // Loại bỏ một ảnh ra khỏi danh sách đính kèm
   const removeLogImage = (idx) => {
     setLogImages(logImages.filter((_, i) => i !== idx));
     setLogPreviews(logPreviews.filter((_, i) => i !== idx));
   };
 
+  // Hàm gửi biểu mẫu đăng bài nhật ký cabin mới
   const handleCreateLog = async (e) => {
     e.preventDefault();
     if (!logContent.trim()) return;
@@ -465,10 +507,14 @@ export function DashboardPage() {
     setSubmittingLog(true);
     try {
       let uploadedImageUrls = [];
+      // Nếu có đính kèm hình ảnh thì thực hiện quy trình upload lên Cloudinary CDN
       if (logImages.length > 0) {
+        // 1. Gọi backend lấy chữ ký bảo mật signature và cấu hình API key Cloudinary
         const sigData = await api("/images/signature");
+        // 2. Chạy nén và upload song song tất cả các tệp tin
         uploadedImageUrls = await Promise.all(
           logImages.map(async (file) => {
+            // Nén ảnh bằng canvas trước khi upload để tiết kiệm băng thông
             const compressed = await compressImage(file);
             const fd = new FormData();
             fd.append("file", compressed);
@@ -477,17 +523,20 @@ export function DashboardPage() {
             fd.append("signature", sigData.signature);
             fd.append("folder", sigData.folder);
 
+            // Gửi trực tiếp FormData tới API upload của Cloudinary
             const cloudRes = await fetch(
               `https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`,
               { method: "POST", body: fd },
             );
             if (!cloudRes.ok) throw new Error("Không thể tải ảnh lên CDN");
             const cloudData = await cloudRes.json();
+            // Trả về địa chỉ URL bảo mật của ảnh trên CDN
             return cloudData.secure_url;
           }),
         );
       }
 
+      // 3. Gửi nội dung văn bản và mảng link ảnh nhật ký cabin về backend để lưu DB
       await api("/boat-logs", {
         method: "POST",
         body: {
@@ -497,9 +546,11 @@ export function DashboardPage() {
       });
 
       toast.success("✅ Đã đăng nhật ký boong tàu mới!");
+      // Reset sạch biểu mẫu
       setLogContent("");
       setLogImages([]);
       setLogPreviews([]);
+      // Tải lại danh sách nhật ký mới cập nhật
       fetchMyLogs();
     } catch (err) {
       toast.error(err.message || "Có lỗi xảy ra");
@@ -508,19 +559,20 @@ export function DashboardPage() {
     }
   };
 
+  // Xóa một bài viết nhật ký cabin
   const handleDeleteLog = async (logId) => {
     if (!window.confirm("Xóa bài nhật ký này? Thao tác không thể hoàn tác."))
       return;
     try {
       await api(`/boat-logs/${logId}`, { method: "DELETE" });
       toast.success("Đã xóa nhật ký.");
-      fetchMyLogs();
+      fetchMyLogs(); // Nạp lại danh sách
     } catch (err) {
       toast.error(err.message || "Không thể xóa nhật ký");
     }
   };
 
-  // Tải danh sách mẻ hàng
+  // Hàm gọi API lấy danh sách các mẻ sản phẩm mà mình đang đăng bán (có phân trang)
   const fetchMyListings = useCallback((pageNo) => {
     setLoadingListings(true);
     api(`/products/my?page=${pageNo}&limit=5`)
@@ -533,6 +585,7 @@ export function DashboardPage() {
       .finally(() => setLoadingListings(false));
   }, []);
 
+  // Gọi fetch danh sách sản phẩm mỗi khi tab chuyển sang listings hoặc số trang phân trang thay đổi
   useEffect(() => {
     if (tab === "listings") {
       (async () => {
@@ -541,47 +594,50 @@ export function DashboardPage() {
     }
   }, [tab, listingsPage, fetchMyListings]);
 
+  // useEffect tự động chạy một lần duy nhất khi người dùng mở trang để nạp số tin nhắn chưa đọc và các sản phẩm yêu thích
   useEffect(() => {
     (async () => {
       try {
         const data = await api("/messages/unread-count");
         setUnread(data.count);
       } catch {
-        // Bỏ qua lỗi — không cần xử lý
+        /* Bỏ qua lỗi kết nối */
       }
 
       try {
         const data = await api("/favorites");
         setFavorites(data);
       } catch {
-        // Bỏ qua lỗi — không cần xử lý
+        /* Bỏ qua lỗi kết nối */
       } finally {
         setFavLoading(false);
       }
     })();
   }, []);
 
-  // ── THAY ĐỔI: handleSave nhận (productId, formData) toàn bộ ─
+  // Xử lý lưu các thay đổi thông tin sản phẩm sau khi sửa ở Modal form
   const handleSave = async (productId, formData) => {
     setEditLoading(true);
-    // Chuẩn hoá: đảm bảo price & remainingWeight là số
+    // Chuẩn hoá kiểu dữ liệu số cho giá tiền và trọng lượng
     const payload = {
       ...formData,
       price: Number(formData.price),
       remainingWeight: Number(formData.remainingWeight),
-      // Nếu catchTime rỗng (hải sản khô) thì gửi null
+      // Nếu là đồ khô, thời điểm đánh bắt catchTime để trống sẽ được quy về giá trị null
       catchTime: formData.catchTime || null,
     };
 
     try {
+      // Gửi request PUT cập nhật thông tin sản phẩm
       await api(`/products/${productId}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       });
+      // Cập nhật giá trị mới vào state listings cục bộ ngay lập tức để đồng bộ UI không cần load lại trang
       setListings((prev) =>
         prev.map((p) => (p.id === productId ? { ...p, ...payload } : p)),
       );
-      setEditProduct(null);
+      setEditProduct(null); // Đóng modal
       toast.success("✅ Đã cập nhật thông tin sản phẩm!");
     } catch (e) {
       toast.error(e.message);
@@ -590,22 +646,27 @@ export function DashboardPage() {
     }
   };
 
+  // Thực hiện xóa mẻ hải sản ra khỏi hệ thống
   const doDelete = async (productId) => {
-    setConfirmDelete(null);
+    setConfirmDelete(null); // Đóng hộp thoại xác nhận
     try {
       await api(`/products/${productId}`, { method: "DELETE" });
       toast.success("Đã xoá bài đăng.");
+      // Tải lại danh sách mẻ hàng ở trang hiện tại
       fetchMyListings(listingsPage);
     } catch (e) {
       toast.error(e.message);
     }
   };
 
+  // Hàm đẩy tin đăng lên đầu danh sách tìm kiếm (bumping)
   const bumpProduct = async (productId) => {
     setBumpingId(productId);
     try {
+      // Gửi yêu cầu POST đẩy tin lên đầu
       const res = await api(`/products/${productId}/bump`, { method: "POST" });
       toast.success(res.message || "Đã đẩy tin lên đầu thành công!");
+      // Cập nhật lại thời gian bumpedAt của sản phẩm này thành thời điểm hiện tại để khóa nút đẩy tin
       setListings((prev) =>
         prev.map((p) =>
           p.id === productId ? { ...p, bumpedAt: new Date().toISOString() } : p,
@@ -618,7 +679,9 @@ export function DashboardPage() {
     }
   };
 
+  // Tính số lượng mẻ hàng đang hoạt động (Active) trên giao diện hiện tại
   const activeCount = listings.filter((p) => p.status === "Active").length;
+  // Tính tổng trọng lượng hải sản còn lại đang rao bán
   const totalRemaining = listings.reduce(
     (s, p) => s + (p.remainingWeight || 0),
     0,
@@ -626,7 +689,8 @@ export function DashboardPage() {
 
   return (
     <div style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px 80px" }}>
-      {/* ConfirmDialog */}
+      
+      {/* Khởi dựng Hộp thoại xác nhận xóa bài viết */}
       {confirmDelete && (
         <ConfirmDialog
           message="Xoá bài đăng này? Thao tác không thể hoàn tác."
@@ -635,7 +699,7 @@ export function DashboardPage() {
         />
       )}
 
-      {/* ── THAY ĐỔI: EditProductModal render khi editProduct != null ── */}
+      {/* Khởi dựng Modal Form sửa thông tin sản phẩm */}
       {editProduct && (
         <EditProductModal
           product={editProduct}
@@ -645,7 +709,7 @@ export function DashboardPage() {
         />
       )}
 
-      {/* Header */}
+      {/* Header chính của trang */}
       <div
         style={{
           display: "flex",
@@ -659,6 +723,7 @@ export function DashboardPage() {
         <h1 style={{ fontSize: 24, fontWeight: 800, color: C.dark, margin: 0 }}>
           📊 Bảng Điều Khiển — {user?.name}
         </h1>
+        {/* Nút bấm liên kết nhanh đến trang Đăng hải sản mới */}
         <button
           onClick={() => navigate("/dang-bai")}
           style={{
@@ -683,7 +748,7 @@ export function DashboardPage() {
         </button>
       </div>
 
-      {/* Stats Grid */}
+      {/* Lưới 3 ô thẻ Thống kê tổng quan nhanh */}
       <div
         style={{
           display: "grid",
@@ -751,7 +816,7 @@ export function DashboardPage() {
         ))}
       </div>
 
-      {/* Tabs */}
+      {/* Thanh Tabs chuyển đổi các hạng mục quản lý */}
       <div
         style={{
           display: "flex",
@@ -792,7 +857,9 @@ export function DashboardPage() {
         ))}
       </div>
 
-      {/* Tab: Listings */}
+      {/* NỘI DUNG CHI TIẾT TỪNG TAB */}
+      
+      {/* ── TAB 1: DANH SÁCH BÀI ĐĂNG (LISTINGS) ── */}
       {tab === "listings" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {loadingListings ? (
@@ -807,6 +874,7 @@ export function DashboardPage() {
               ⏳ Đang tải kho bài viết của bạn...
             </div>
           ) : listings.length === 0 ? (
+            // Nếu không có bài viết nào
             <div
               style={{
                 textAlign: "center",
@@ -839,6 +907,7 @@ export function DashboardPage() {
               </div>
             </div>
           ) : (
+            // Lặp danh sách tin đăng sản phẩm
             listings.map((p) => (
               <div
                 key={p.id}
@@ -870,6 +939,7 @@ export function DashboardPage() {
                     >
                       {p.name}
                     </div>
+                    {/* Các nhãn phân loại nhanh */}
                     <div
                       style={{
                         display: "flex",
@@ -889,6 +959,7 @@ export function DashboardPage() {
                         p.status === "Active" ? "Đang bán" : p.status,
                       )}
                     </div>
+                    {/* Giá cả và khối lượng tồn kho */}
                     <div style={{ fontSize: 13, color: C.muted }}>
                       Giá:{" "}
                       <strong style={{ color: C.dark }}>
@@ -898,12 +969,13 @@ export function DashboardPage() {
                       Còn:{" "}
                       <strong
                         style={{
-                          color: p.remainingWeight < 5 ? "#DC2626" : C.dark,
+                          color: p.remainingWeight < 5 ? "#DC2626" : C.dark, // Hiển thị màu đỏ nếu số lượng sắp hết (< 5kg)
                         }}
                       >
                         {p.remainingWeight} kg
                       </strong>
                     </div>
+                    {/* Huy hiệu đếm ngược độ tươi dành riêng cho đồ Tươi sống */}
                     {p.type === "Fresh" && p.catchTime && (
                       <div style={{ marginTop: 6 }}>
                         <CountdownBadge catchTime={p.catchTime} />
@@ -911,9 +983,9 @@ export function DashboardPage() {
                     )}
                   </div>
 
-                  {/* Actions */}
+                  {/* Cột nhóm nút Hành động trên bài viết */}
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {/* ── THAY ĐỔI: 1 nút Sửa thông tin duy nhất ── */}
+                    {/* Nút bấm mở Form Chỉnh sửa thông tin */}
                     <button
                       onClick={() => setEditProduct(p)}
                       style={{
@@ -931,7 +1003,7 @@ export function DashboardPage() {
                       ✏️ Sửa thông tin
                     </button>
 
-                    {/* Nút Đẩy tin */}
+                    {/* Nút Đẩy tin (Bump) — bị vô hiệu hóa nếu đang trong thời hạn cooldown 24h */}
                     <button
                       onClick={() => bumpProduct(p.id)}
                       disabled={
@@ -942,7 +1014,7 @@ export function DashboardPage() {
                         borderRadius: 8,
                         border: "none",
                         background: isBumpingOnCooldown(p.bumpedAt)
-                          ? "#64748B"
+                          ? "#64748B" // Nền xám đen nếu đang cooldown
                           : `linear-gradient(135deg, ${C.ocean}, ${C.oceanL})`,
                         color: "#fff",
                         fontWeight: 700,
@@ -960,11 +1032,11 @@ export function DashboardPage() {
                       {bumpingId === p.id
                         ? "…"
                         : isBumpingOnCooldown(p.bumpedAt)
-                          ? `⏳ Chờ (${getCooldownHours(p.bumpedAt)}h)`
+                          ? `⏳ Chờ (${getCooldownHours(p.bumpedAt)}h)` // Hiển thị số giờ còn lại phải đợi
                           : "🚀 Đẩy tin"}
                     </button>
 
-                    {/* Nút Xoá */}
+                    {/* Nút bấm xóa sản phẩm */}
                     <button
                       onClick={() => setConfirmDelete(p.id)}
                       style={{
@@ -987,7 +1059,7 @@ export function DashboardPage() {
             ))
           )}
 
-          {/* Phân trang */}
+          {/* Phân vùng Thanh Phân Trang */}
           {listingsTotalPages > 1 && (
             <div
               style={{
@@ -997,6 +1069,7 @@ export function DashboardPage() {
                 marginTop: 24,
               }}
             >
+              {/* Nút bấm lùi lại 1 trang */}
               <button
                 disabled={listingsPage === 1}
                 onClick={() => setListingsPage((p) => Math.max(1, p - 1))}
@@ -1015,6 +1088,7 @@ export function DashboardPage() {
               >
                 ‹ Trước
               </button>
+              {/* Hiển thị số trang hiện tại / tổng số trang */}
               <span
                 style={{
                   fontSize: 13,
@@ -1025,6 +1099,7 @@ export function DashboardPage() {
               >
                 Trang {listingsPage} / {listingsTotalPages}
               </span>
+              {/* Nút bấm tiến lên 1 trang */}
               <button
                 disabled={listingsPage === listingsTotalPages}
                 onClick={() =>
@@ -1054,15 +1129,16 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* Tab: Chats */}
+      {/* ── TAB 2: TIN NHẮN TRAO ĐỔI (CHATS) ── */}
+      {/* Nhúng Component InboxTab quản lý liên lạc chat và truyền đối tượng user đăng nhập */}
       {tab === "chats" && <InboxTab user={user} />}
 
-      {/* Tab: Favorites */}
+      {/* ── TAB 3: MỤC YÊU THÍCH (FAVORITES) ── */}
       {tab === "favorites" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {favLoading ? (
             <div style={{ textAlign: "center", padding: 40, color: C.muted }}>
-              ⏳ Đang tải...
+              ⏳ Đang tải danh sách yêu thích...
             </div>
           ) : favorites.length === 0 ? (
             <div
@@ -1077,10 +1153,11 @@ export function DashboardPage() {
             >
               <div style={{ fontSize: 56, marginBottom: 12 }}>❤️</div>
               <div style={{ fontWeight: 700, color: C.dark }}>
-                Chưa có sản phẩm yêu thích
+                Chưa có sản phẩm yêu thích nào
               </div>
             </div>
           ) : (
+            // Lặp danh sách mẻ hàng đã nhấn thích
             favorites.map((p) => (
               <div
                 key={p.id}
@@ -1094,6 +1171,7 @@ export function DashboardPage() {
                   gap: 14,
                 }}
               >
+                {/* Ảnh thu nhỏ đại diện (Thumbnail) của sản phẩm yêu thích */}
                 <div
                   style={{
                     width: 56,
@@ -1129,6 +1207,7 @@ export function DashboardPage() {
                     </div>
                   )}
                 </div>
+                {/* Thông tin tên và giá */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: C.dark }}>
                     {p.name}
@@ -1137,6 +1216,7 @@ export function DashboardPage() {
                     {fmt(p.price)}/kg · Còn {p.remainingWeight} kg
                   </div>
                 </div>
+                {/* Nút bấm xem chi tiết sản phẩm */}
                 <button
                   onClick={() => navigate(`/san-pham/${p.id}`)}
                   style={{
@@ -1159,9 +1239,10 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* Tab: BoatLogs */}
+      {/* ── TAB 4: NHẬT KÝ CABIN (BOATLOGS) ── */}
       {tab === "boatlogs" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* Cảnh báo: Chỉ cho phép người dùng đã xác minh (isVerified), Premium (isPremium) hoặc Admin viết nhật ký */}
           {!(user?.isVerified || user?.isPremium || user?.role === "Admin") ? (
             <div
               style={{
@@ -1184,8 +1265,9 @@ export function DashboardPage() {
               </p>
             </div>
           ) : (
+            // ── GIAO DIỆN ĐĂNG NHẬT KÝ VÀ LỊCH SỬ LOGS DÀNH CHO NGƯ DÂN ĐỦ TIÊU CHUẨN ──
             <>
-              {/* Write log form */}
+              {/* Form tạo mới bài viết cabin log */}
               <div
                 style={{
                   background: C.white,
@@ -1209,6 +1291,7 @@ export function DashboardPage() {
                   onSubmit={handleCreateLog}
                   style={{ display: "flex", flexDirection: "column", gap: 12 }}
                 >
+                  {/* Ô nhập nội dung văn bản */}
                   <textarea
                     rows={4}
                     value={logContent}
@@ -1227,7 +1310,7 @@ export function DashboardPage() {
                     required
                   />
 
-                  {/* Previews */}
+                  {/* Hiển thị mảng ảnh xem trước (Previews) dạng hình vuông nhỏ cạnh nhau */}
                   {logPreviews.length > 0 && (
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       {logPreviews.map((p, idx) => (
@@ -1250,6 +1333,7 @@ export function DashboardPage() {
                               objectFit: "cover",
                             }}
                           />
+                          {/* Nút bấm để gỡ bớt ảnh đã chọn */}
                           <button
                             type="button"
                             onClick={() => removeLogImage(idx)}
@@ -1277,6 +1361,7 @@ export function DashboardPage() {
                     </div>
                   )}
 
+                  {/* Dòng chân form chứa nút đính kèm ảnh và nút Đăng nhật ký */}
                   <div
                     style={{
                       display: "flex",
@@ -1284,6 +1369,7 @@ export function DashboardPage() {
                       alignItems: "center",
                     }}
                   >
+                    {/* Nhãn click kích hoạt chọn tệp tin ẩn */}
                     <label
                       style={{
                         cursor: "pointer",
@@ -1328,7 +1414,7 @@ export function DashboardPage() {
                 </form>
               </div>
 
-              {/* History logs list */}
+              {/* Danh sách các bài nhật ký cabin đã đăng trong quá khứ */}
               <div
                 style={{ display: "flex", flexDirection: "column", gap: 14 }}
               >
@@ -1343,11 +1429,12 @@ export function DashboardPage() {
                 >
                   Lịch sử nhật ký boong tàu của bạn
                 </h4>
+                
                 {loadingLogs ? (
                   <div
                     style={{ textAlign: "center", padding: 20, color: C.muted }}
                   >
-                    ⏳ Đang tải...
+                    ⏳ Đang tải danh sách nhật ký...
                   </div>
                 ) : myLogs.length === 0 ? (
                   <div
@@ -1363,6 +1450,7 @@ export function DashboardPage() {
                     Chưa đăng bài nhật ký cabin nào.
                   </div>
                 ) : (
+                  // Lặp danh sách nhật ký boong tàu
                   myLogs.map((log) => (
                     <div
                       key={log._id}
@@ -1383,10 +1471,12 @@ export function DashboardPage() {
                           alignItems: "center",
                         }}
                       >
+                        {/* Định dạng ngày giờ đăng theo ngôn ngữ Tiếng Việt */}
                         <span style={{ fontSize: 11, color: C.muted }}>
                           Đăng lúc{" "}
                           {new Date(log.createdAt).toLocaleString("vi-VN")}
                         </span>
+                        {/* Nút bấm xóa bài nhật ký cabin này */}
                         <button
                           onClick={() => handleDeleteLog(log._id)}
                           style={{
@@ -1402,6 +1492,7 @@ export function DashboardPage() {
                         </button>
                       </div>
 
+                      {/* Nội dung chữ của nhật ký, giữ nguyên ký tự xuống dòng nhờ whiteSpace: "pre-line" */}
                       <p
                         style={{
                           fontSize: 13.5,
@@ -1414,6 +1505,7 @@ export function DashboardPage() {
                         {log.content}
                       </p>
 
+                      {/* Hiển thị danh sách ảnh đính kèm (nếu có) của bài nhật ký cabin */}
                       {log.images && log.images.length > 0 && (
                         <div
                           style={{ display: "flex", gap: 6, flexWrap: "wrap" }}

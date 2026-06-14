@@ -1,18 +1,33 @@
+// Import hook quan trọng từ React
 import { useState, useEffect } from "react";
+// Import hook điều hướng chuyển trang trong ứng dụng
 import { useNavigate } from "react-router-dom";
+// Import cấu hình theme màu sắc chung
 import { C } from "../utils/theme";
+// Import helper gọi API dùng chung
 import { api } from "../services/api";
+// Import hàm định dạng tiền tệ hoặc dữ liệu số
 import { fmt } from "../utils/format";
+// Import component hiển thị bản đồ nhỏ định vị
 import { MapMini } from "../components/MapMini";
+// Import component hiển thị đếm ngược thời gian (CountdownBadge)
 import { CountdownBadge } from "../components/ProductCard";
+// Import component hiển thị danh sách đánh giá của sản phẩm (ReviewList)
 import { ReviewList } from "../components/ReviewList";
+// Import hook thiết lập SEO meta
 import { useSEO } from "../hooks/useSEO";
+// Import helper lấy link ảnh đại diện từ CDN phục vụ thẻ open graph meta
 import { ogImage } from "../utils/cloudinary";
+// Import hook lấy thông tin tài khoản đăng nhập hiện tại
 import { useAuth } from "../context/AuthContext";
+// Import hook hiển thị toast thông báo
 import { useToast } from "../context/ToastContext";
+// Import component badge tài khoản đã được xác minh
 import { VerifiedBadge } from "../components/VerifiedBadge";
+// Import các lớp định kiểu CSS module cho trang chi tiết sản phẩm
 import styles from "./ProductDetailPage.module.css";
 
+// Ánh xạ mã phân loại hải sản tiếng Anh sang nhãn tiếng Việt tương ứng
 const CATEGORY_MAP = {
   Fish: "🐟 Cá tươi câu",
   Shrimp: "🦐 Tôm sống",
@@ -23,18 +38,21 @@ const CATEGORY_MAP = {
 };
 
 /* ═══════════════════════════════════════════
-   Enhanced Image Gallery with Thumbnail Strip
-   (Inspired by umai.fish product gallery)
+   Component con hiển thị Album ảnh sản phẩm (ProductGallery)
+   Có hỗ trợ thanh ảnh thu nhỏ (Thumbnail Strip) bên dưới ảnh chính
    ═══════════════════════════════════════════ */
 function ProductGallery({ product }) {
+  // State quản lý chỉ mục (index) của ảnh đang được chọn hiển thị chính
   const [idx, setIdx] = useState(0);
   const images = product.images || [];
+  // Tổng số lượng ảnh của sản phẩm
   const n = images.length || product.imgCount || 1;
+  // Mảng màu nền ngẫu nhiên dùng làm hình nền cho icon cá nếu không có ảnh
   const bgs = ["#0B4F6C", "#1A7FA0", "#0097A7", "#2D7D46", "#8B5E3C"];
 
   return (
     <div className={styles.gallery}>
-      {/* Main Image */}
+      {/* Vùng ảnh chính đang được chọn hiển thị lớn */}
       <div className={styles.mainImage}>
         {images[idx] ? (
           <img src={images[idx].url} alt={`${product.name} — ảnh ${idx + 1}`} />
@@ -58,17 +76,19 @@ function ProductGallery({ product }) {
           </div>
         )}
 
+        {/* Khung đếm số thứ tự ảnh */}
         <div className={styles.imgCounter}>
           📸 {idx + 1}/{n}
         </div>
 
+        {/* Nút chuyển đổi ảnh trước/sau chỉ hiển thị khi có nhiều hơn 1 ảnh */}
         {n > 1 && (
           <>
             <button
               className={`${styles.navBtn} ${styles.navPrev}`}
               onClick={(e) => {
                 e.stopPropagation();
-                setIdx((idx - 1 + n) % n);
+                setIdx((idx - 1 + n) % n); // Quay lại ảnh trước
               }}
             >
               ‹
@@ -77,7 +97,7 @@ function ProductGallery({ product }) {
               className={`${styles.navBtn} ${styles.navNext}`}
               onClick={(e) => {
                 e.stopPropagation();
-                setIdx((idx + 1) % n);
+                setIdx((idx + 1) % n); // Sang ảnh kế tiếp
               }}
             >
               ›
@@ -86,7 +106,7 @@ function ProductGallery({ product }) {
         )}
       </div>
 
-      {/* Thumbnail Strip (umai.fish style) */}
+      {/* Dải ảnh nhỏ Thumbnail Strip bên dưới ảnh lớn */}
       {n > 1 && (
         <div className={styles.thumbStrip}>
           {Array.from({ length: n }).map((_, i) => (
@@ -109,25 +129,30 @@ function ProductGallery({ product }) {
 }
 
 /* ═══════════════════════════════════════════
-   Main ProductDetailPage Component
+   Component chính hiển thị chi tiết sản phẩm (ProductDetailPage)
    ═══════════════════════════════════════════ */
 export function ProductDetailPage({ product: initialProduct }) {
   const { user } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
 
+  // Khởi tạo state sản phẩm từ thông tin truyền từ component cha
   const [product, setProduct] = useState(initialProduct);
+  // Quản lý trạng thái đang tải dữ liệu (loading)
   const [loading, setLoading] = useState(!initialProduct?.images);
+  // State đánh dấu xem người dùng hiện tại có theo dõi ngư dân này hay không
   const [isFollowing, setIsFollowing] = useState(false);
-  const [togglingFollow, setTogglingFollow] = useState(false);
+  const [togglingFollow, setTogglingFollow] = useState(false); // Trạng thái đang chuyển đổi nút theo dõi
+  // States quản lý việc gửi phản hồi báo cáo sản phẩm xấu
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [reportLoading, setReportLoading] = useState(false);
   const [reportSent, setReportSent] = useState(false);
+  // States quản lý trạng thái sản phẩm yêu thích (Favorites)
   const [isFavorited, setIsFavorited] = useState(false);
   const [favLoading, setFavLoading] = useState(false);
 
-
+  // Thiết lập SEO tiêu đề, mô tả, ảnh bìa và URL của trang chi tiết hải sản
   useSEO({
     title: product
       ? `${product.name} — ${product.sellerName}`
@@ -148,9 +173,11 @@ export function ProductDetailPage({ product: initialProduct }) {
     scrollToReviewId: initialScrollId,
   } = initialProduct || {};
 
+  // Vòng đời tải thông tin chi tiết sản phẩm đầy đủ từ backend
   useEffect(() => {
     if (!productId) return;
 
+    // Tải thông tin chi tiết sản phẩm
     api(`/products/${productId}`)
       .then((data) =>
         setProduct({
@@ -162,13 +189,13 @@ export function ProductDetailPage({ product: initialProduct }) {
       .catch(() => {})
       .finally(() => setLoading(false));
 
-
-
+    // Kiểm tra xem người dùng hiện tại đã theo dõi ngư dân (seller) này chưa
     if (user && initialSellerId) {
       api(`/follows/${initialSellerId}/check`)
         .then((res) => setIsFollowing(res.isFollowing))
         .catch(() => {});
     }
+    // Kiểm tra xem sản phẩm đã có trong danh sách ưa thích của người dùng chưa
     if (user && productId) {
       api(`/favorites/ids`)
         .then((ids) => setIsFavorited(ids.includes(productId)))
@@ -176,6 +203,7 @@ export function ProductDetailPage({ product: initialProduct }) {
     }
   }, [productId, initialSellerId, initialScrollId, user]);
 
+  // Xử lý khi nhấn nút Nhắn tin: Mở khung chat nổi với ngư dân về sản phẩm này
   const handleOpenGlobalChat = () => {
     window.dispatchEvent(
       new CustomEvent("open-global-chat", {
@@ -190,6 +218,7 @@ export function ProductDetailPage({ product: initialProduct }) {
     );
   };
 
+  // Xử lý gửi báo cáo vi phạm sản phẩm
   const handleReport = async () => {
     if (!reportReason.trim()) return;
     setReportLoading(true);
@@ -211,6 +240,7 @@ export function ProductDetailPage({ product: initialProduct }) {
     }
   };
 
+  // Xử lý lưu hoặc bỏ lưu sản phẩm vào danh sách yêu thích
   const handleToggleFavorite = async () => {
     if (!user) {
       navigate("/dang-nhap");
@@ -221,12 +251,13 @@ export function ProductDetailPage({ product: initialProduct }) {
       const res = await api(`/favorites/${product.id}`, { method: "POST" });
       setIsFavorited(res.favorited);
     } catch {
-      /* silent */
+      /* silent - bỏ qua lỗi */
     } finally {
       setFavLoading(false);
     }
   };
 
+  // Xử lý theo dõi hoặc ngừng theo dõi tài khoản ngư dân này
   const handleToggleFollow = () => {
     if (!user) {
       toast.warn("Vui lòng đăng nhập để theo dõi!");
@@ -248,14 +279,18 @@ export function ProductDetailPage({ product: initialProduct }) {
 
   if (!product) return null;
 
+  // Tính phần trăm khối lượng hải sản còn lại so với trọng lượng đăng bán gốc
   const pct = Math.round((product.remainingWeight / product.totalWeight) * 100);
-  const isOwnProduct = user?.userId === product?.sellerId;
+  const isOwnProduct = user?.userId === product?.sellerId; // Kiểm tra xem có phải sản phẩm của chính mình không
+  // Quyết định màu sắc hiển thị thanh dung lượng kho tùy thuộc vào phần trăm còn lại
   const stockColor = pct > 50 ? "#10b981" : pct > 20 ? "#f59e0b" : "#ef4444";
 
+  // Phân tách văn bản mô tả thành các đoạn dựa trên khoảng trắng xuống dòng kép
   const paragraphs = product.description
     ? product.description.split(/\n\s*\n/).filter(Boolean)
     : [];
   const images = product.images || [];
+  // Tạo danh sách 8 ngày tiếp theo từ ngày hôm nay để hiển thị lịch cập bến
   const next7Days = Array.from({ length: 8 }).map((_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i);
@@ -267,7 +302,7 @@ export function ProductDetailPage({ product: initialProduct }) {
   return (
     <div className={styles.pageWrapper}>
       <div className={styles.container}>
-        {/* ── Breadcrumb Navigation ── */}
+        {/* ── Điều hướng Breadcrumb đường dẫn trang ── */}
         <nav className={styles.breadcrumb}>
           <a
             href="/"
@@ -298,16 +333,16 @@ export function ProductDetailPage({ product: initialProduct }) {
           </div>
         ) : (
           <>
-            {/* ══════ MAIN GRID ══════ */}
+            {/* ══════ BỐ CỤC LƯỚI CHÍNH (MAIN GRID) ══════ */}
             <div className={styles.grid}>
-              {/* ── GALLERY AREA ── */}
+              {/* ── KHU VỰC THƯ VIỆN ẢNH (LEFT COLUMN) ── */}
               <div className={styles.galleryArea}>
                 <ProductGallery product={product} />
               </div>
 
-              {/* ── DESCRIPTION & MAP AREA ── */}
+              {/* ── KHU VỰC CHI TIẾT VÀ BẢN ĐỒ (CENTER COLUMN) ── */}
               <div className={styles.descArea}>
-                {/* Description Section */}
+                {/* Khối mô tả sản phẩm */}
                 <div className={styles.descSection}>
                   <div className={styles.sectionTitle}>
                     <div className={styles.sectionTitleAccent} />
@@ -319,7 +354,7 @@ export function ProductDetailPage({ product: initialProduct }) {
                       "Ngư dân chưa thêm thông tin mô tả chi tiết cho sản phẩm này."}
                   </p>
 
-                  {/* Info Table (umai.fish inspired structured data) */}
+                  {/* Bảng thông số kỹ thuật chi tiết của mẻ hải sản */}
                   <table className={styles.infoTable}>
                     <tbody>
                       <tr>
@@ -381,7 +416,7 @@ export function ProductDetailPage({ product: initialProduct }) {
                   </table>
                 </div>
 
-                {/* Map Section */}
+                {/* Bản đồ định vị tọa độ đánh bắt và cảng cập bến (chỉ hiển thị với hải sản tươi) */}
                 {product.type === "Fresh" && product.lat && (
                   <div className={styles.mapSection}>
                     <MapMini
@@ -395,11 +430,11 @@ export function ProductDetailPage({ product: initialProduct }) {
                 )}
               </div>
 
-              {/* ── INFO & SIDEBAR AREA ── */}
+              {/* ── KHU VỰC THÔNG TIN & THANH CHỨC NĂNG BÊN PHẢI (RIGHT COLUMN - SIDEBAR) ── */}
               <div className={styles.infoArea}>
-                {/* Main Info Card */}
+                {/* Thẻ thông tin bán hàng chính */}
                 <div className={styles.infoCard}>
-                  {/* Badges */}
+                  {/* Nhãn loại hải sản và phân mục */}
                   <div className={styles.badges}>
                     <span
                       className={`${styles.badge} ${product.type === "Fresh" ? styles.badgeFresh : styles.badgeDried}`}
@@ -420,19 +455,17 @@ export function ProductDetailPage({ product: initialProduct }) {
                     )}
                   </div>
 
-                  {/* Title */}
+                  {/* Tên tiêu đề sản phẩm */}
                   <h1 className={styles.productTitle}>{product.name}</h1>
 
-                  {/* Price Block */}
+                  {/* Đơn giá */}
                   <div className={styles.priceBlock}>
                     <span className={styles.price}>{fmt(product.price)}</span>
                     <span className={styles.priceUnit}>/kg</span>
                     <span className={styles.priceTax}></span>
                   </div>
 
-
-
-                  {/* Stock Meter */}
+                  {/* Thanh đo lường dung lượng kho còn lại */}
                   <div className={styles.stockSection}>
                     <div className={styles.stockHeader}>
                       <span>
@@ -453,7 +486,7 @@ export function ProductDetailPage({ product: initialProduct }) {
                     </div>
                   </div>
 
-                  {/* Countdown for fresh */}
+                  {/* Huy hiệu đếm ngược tự động ẩn đối với hải sản tươi sống */}
                   {product.type === "Fresh" && product.catchTime && (
                     <div style={{ marginBottom: 14 }}>
                       <CountdownBadge catchTime={product.catchTime} />
@@ -462,7 +495,7 @@ export function ProductDetailPage({ product: initialProduct }) {
 
                   <hr className={styles.divider} />
 
-                  {/* ── Seller Card ── */}
+                  {/* ── Thẻ hiển thị thông tin Ngư dân ── */}
                   <div className={styles.sectionLabel}>🚢 Ngư dân đăng bán</div>
                   <div
                     className={styles.sellerCard}
@@ -491,7 +524,7 @@ export function ProductDetailPage({ product: initialProduct }) {
                     <span className={styles.sellerArrow}>›</span>
                   </div>
 
-                  {/* Fisherman Badges */}
+                  {/* Các huy hiệu danh hiệu của ngư dân */}
                   {product.sellerBadges && product.sellerBadges.length > 0 && (
                     <div className={styles.fishBadges}>
                       {product.sellerBadges.map((badge, idx) => (
@@ -504,8 +537,9 @@ export function ProductDetailPage({ product: initialProduct }) {
 
                   <hr className={styles.divider} />
 
-                  {/* ── CTA Buttons ── */}
+                  {/* ── Nhóm các nút hành động (Call To Action - CTA) ── */}
                   <div className={styles.ctaGroup}>
+                    {/* Nút chat liên hệ */}
                     <button
                       className={styles.ctaPrimary}
                       onClick={() => {
@@ -519,6 +553,7 @@ export function ProductDetailPage({ product: initialProduct }) {
                       💬 Nhắn tin với ngư dân
                     </button>
 
+                    {/* Nút thêm yêu thích */}
                     <button
                       className={styles.ctaSecondary}
                       onClick={handleToggleFavorite}
@@ -532,6 +567,7 @@ export function ProductDetailPage({ product: initialProduct }) {
                       {isFavorited ? "❤️ Đã lưu yêu thích" : "🤍 Lưu yêu thích"}
                     </button>
 
+                    {/* Nút theo dõi ngư dân (chỉ hiển thị nếu không phải sản phẩm của mình) */}
                     {!isOwnProduct && (
                       <button
                         className={styles.ctaSecondary}
@@ -549,6 +585,7 @@ export function ProductDetailPage({ product: initialProduct }) {
                       </button>
                     )}
 
+                    {/* Nút báo cáo sai phạm */}
                     <button
                       className={styles.reportLink}
                       onClick={() => setShowReportModal(true)}
@@ -558,7 +595,7 @@ export function ProductDetailPage({ product: initialProduct }) {
                   </div>
                 </div>
 
-                {/* highlights list */}
+                {/* Danh sách các cam kết nổi bật */}
                 <ul className={styles.highlightsList}>
                   <div className={styles.highlightsHeader}>
                     📌 Điểm nổi bật của mẻ hàng
@@ -579,7 +616,7 @@ export function ProductDetailPage({ product: initialProduct }) {
               </div>
             </div>
 
-            {/* ── Alternating detail sections ── */}
+            {/* ── Các phần chi tiết đan xen hiển thị hình ảnh và chữ xen kẽ ── */}
             <div className={styles.detailsSection}>
               {images.slice(1).map((img, i) => (
                 <div
@@ -594,7 +631,7 @@ export function ProductDetailPage({ product: initialProduct }) {
                       {i === 0
                         ? "⚓ Nguồn gốc và quy trình đánh bắt"
                         : i === 1
-                          ? "❄️ Quy trình bảo quan & đóng gói"
+                          ? "❄️ Quy trình bảo quản & đóng gói"
                           : "🍽️ Hướng dẫn chế biến & thưởng thức"}
                     </h3>
                     <p className={styles.detailRowText}>
@@ -605,7 +642,7 @@ export function ProductDetailPage({ product: initialProduct }) {
                 </div>
               ))}
 
-              {/* If there are no extra images, show at least 2 default blocks to mimic Umai.fish layout */}
+              {/* Nếu không có thêm hình ảnh phụ nào, vẽ tối thiểu 2 khối mẫu mặc định */}
               {images.length <= 1 && (
                 <>
                   <div className={`${styles.detailRow} ${styles.rowNormal}`}>
@@ -632,7 +669,7 @@ export function ProductDetailPage({ product: initialProduct }) {
                         ❄️ Bảo quản đông đá ngay tại tàu
                       </h3>
                       <p className={styles.detailRowText}>
-                        Sau khi kéo lưới, hải sản được phân loại và ủ đá lạnh
+                        After kéo lưới, hải sản được phân loại và ủ đá lạnh
                         hoặc cấp đông sâu ngay trong khoang tàu cá. Quy trình
                         đóng gói hút chân không kỹ lưỡng giúp ngăn ngừa vi khuẩn
                         và giữ chất lượng đạt chuẩn tươi sống.
@@ -643,7 +680,7 @@ export function ProductDetailPage({ product: initialProduct }) {
               )}
             </div>
 
-            {/* ── Producer introduction section ── */}
+            {/* ── Phần giới thiệu hồ sơ tác giả Ngư dân ── */}
             <div className={styles.producerCard}>
               <div className={styles.producerHeader}>
                 <div className={styles.sectionTitleAccent} />
@@ -698,7 +735,7 @@ export function ProductDetailPage({ product: initialProduct }) {
               </div>
             </div>
 
-            {/* ── Seasonal catch section ── */}
+            {/* ── Biểu đồ thông tin mùa vụ đánh bắt ── */}
             <div className={styles.seasonalCard}>
               <div className={styles.producerHeader}>
                 <div className={styles.sectionTitleAccent} />
@@ -734,7 +771,7 @@ export function ProductDetailPage({ product: initialProduct }) {
               </div>
             </div>
 
-            {/* ── Shipment schedule section ── */}
+            {/* ── Lịch cập cảng dự kiến trong tuần ── */}
             <div className={styles.scheduleCard}>
               <div className={styles.producerHeader}>
                 <div className={styles.sectionTitleAccent} />
@@ -770,13 +807,13 @@ export function ProductDetailPage({ product: initialProduct }) {
               </div>
             </div>
 
-            {/* ── Quality commitment banner ── */}
+            {/* ── Banner cam kết chất lượng ── */}
             <div className={styles.commitmentBanner}>
               🛡️ CAM KẾT CHẤT LƯỢNG: GIÁ HIỂN THỊ LÀ GIÁ TRỌN GÓI ĐÃ BAO GỒM VAT
               & MIỄN PHÍ VẬN CHUYỂN TOÀN QUỐC!
             </div>
 
-            {/* ── Reviews ── */}
+            {/* ── Khu vực nhận xét đánh giá từ khách hàng ── */}
             {product?.sellerId && (
               <ReviewList
                 sellerId={product.sellerId}
@@ -786,7 +823,7 @@ export function ProductDetailPage({ product: initialProduct }) {
               />
             )}
 
-            {/* ── Report Modal ── */}
+            {/* ── Modal Báo cáo vi phạm sản phẩm ── */}
             {showReportModal && (
               <div
                 className={styles.modalOverlay}

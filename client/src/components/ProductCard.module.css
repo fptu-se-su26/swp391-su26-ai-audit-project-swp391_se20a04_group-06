@@ -2,51 +2,54 @@
    ProductCard.module.css
    Umai.fish-inspired vertical card on teal bg
    ═══════════════════════════════════════════ */
-/* Thêm mới và cập nhật các lớp CSS sau vào ProductCard.module.css */
-
+/* Lớp CSS bao bọc hàng tiêu đề và giá sản phẩm gộp chung */
 .titlePriceRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 6px;
+  display: flex; /* Bố cục flexbox */
+  justify-content: space-between; /* Đẩy tên sang trái, giá sang phải */
+  align-items: flex-start; /* Căn thẳng hàng mép trên */
+  gap: 12px; /* Khoảng cách giữa tên và giá */
+  margin-bottom: 6px; /* Khoảng cách phía dưới */
 }
 
+/* Lớp CSS định dạng tên sản phẩm hải sản */
 .name {
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-  margin: 0;
-  line-height: 1.3;
-  display: -webkit-box;
-  -webkit-line-clamp: 1; /* Giới hạn tên sản phẩm trên 1 dòng */
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  flex: 1;
+  font-size: 14px; /* Cỡ chữ 14px */
+  font-weight: 700; /* Kiểu chữ in đậm */
+  color: #fff; /* Chữ màu trắng */
+  margin: 0; /* Loại bỏ margin mặc định */
+  line-height: 1.3; /* Chiều cao dòng */
+  display: -webkit-box; /* Bố cục box của Webkit để phục vụ cắt dòng */
+  -webkit-line-clamp: 1; /* Giới hạn tên sản phẩm hiển thị trên tối đa 1 dòng */
+  -webkit-box-orient: vertical; /* Sắp xếp theo chiều dọc */
+  overflow: hidden; /* Ẩn đi phần văn bản bị tràn */
+  flex: 1; /* Chiếm tối đa không gian còn lại */
 }
 
+/* Lớp CSS định dạng hiển thị giá tiền sản phẩm */
 .price {
-  font-size: 15px; /* Thu nhỏ nhẹ kích thước chữ để vừa vặn khi gộp dòng */
-  font-weight: 800;
-  color: #ecd223;
-  display: flex;
-  align-items: baseline;
-  gap: 2px;
-  white-space: nowrap;
+  font-size: 15px; /* Cỡ chữ giá tiền */
+  font-weight: 800; /* Chữ in siêu đậm */
+  color: #ecd223; /* Màu vàng mật ong nổi bật */
+  display: flex; /* Bố cục flex */
+  align-items: baseline; /* Căn chân chữ thẳng hàng */
+  gap: 2px; /* Khoảng cách giữa giá và đơn vị */
+  white-space: nowrap; /* Không cho xuống dòng */
   margin-bottom: 0;
 }
 
+/* Lớp CSS hiển thị dòng mô tả tóm tắt ngắn */
 .descSnippet {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.75);
-  line-height: 1.4;
-  margin-bottom: 8px;
+  font-size: 12px; /* Cỡ chữ 12px */
+  color: rgba(255, 255, 255, 0.75); /* Màu chữ trắng mờ 75% */
+  line-height: 1.4; /* Chiều cao dòng */
+  margin-bottom: 8px; /* Khoảng cách dưới */
   display: -webkit-box;
   -webkit-line-clamp: 1; /* Khống chế mô tả ngắn gọn chỉ trong 1 dòng */
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
+/* Lớp CSS hàng ngang chứa các thông số kỹ thuật và countdown */
 .metaRow {
   display: flex;
   justify-content: space-between;
@@ -55,6 +58,7 @@
   margin-bottom: 8px;
 }
 
+/* Lớp CSS chứa cụm stats cân nặng và lượt xem */
 .statsRow {
   display: flex;
   align-items: center;
@@ -62,29 +66,33 @@
   margin-bottom: 0; /* Triệt tiêu margin-bottom thừa */
 }
 
+/* Lớp CSS khung nền của thanh tiến trình hàng tồn kho */
 .stockBar {
-  height: 3px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-  margin-bottom: 12px; /* Tạo khoảng trống nhỏ trước nút xem chi tiết */
-  overflow: hidden;
-}
-/* ─── CARD ─── */
-.card {
-  position: relative;
-  cursor: pointer;
-  animation: cardAppear 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: calc(var(--card-i, 0) * 45ms);
-  transition: transform 0.3s ease;
-  contain: content;
-  content-visibility: auto;
-  contain-intrinsic-size: 0 420px;
+  height: 3px; /* Chiều cao thanh trượt 3px */
+  background: rgba(255, 255, 255, 0.15); /* Nền xám mờ */
+  border-radius: 4px; /* Bo tròn viền */
+  margin-bottom: 12px; /* Khoảng trống phía dưới */
+  overflow: hidden; /* Ẩn phần trượt tràn ra */
 }
 
+/* ─── CARD CHÍNH ─── */
+.card {
+  position: relative; /* Gốc định vị các badge tuyệt đối */
+  cursor: pointer; /* Hiển thị con trỏ tay */
+  animation: cardAppear 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; /* Hoạt ảnh xuất hiện mượt mà */
+  animation-delay: calc(var(--card-i, 0) * 45ms); /* Hiệu ứng xuất hiện trễ tuần tự dựa trên cardIndex */
+  transition: transform 0.3s ease; /* Hoạt ảnh phóng to mượt mà */
+  contain: content; /* Tối ưu hóa render của trình duyệt */
+  content-visibility: auto; /* Chỉ render khi xuất hiện trong khung nhìn */
+  contain-intrinsic-size: 0 420px; /* Ước lượng chiều cao card phục vụ lazy-render */
+}
+
+/* Hiệu ứng di chuột vào card: dịch chuyển nhẹ lên trên */
 .card:hover {
   transform: translateY(-6px);
 }
 
+/* Định nghĩa hoạt ảnh xuất hiện của card sản phẩm */
 @keyframes cardAppear {
   from {
     opacity: 0;
@@ -96,27 +104,30 @@
   }
 }
 
-/* ─── IMAGE ─── */
+/* ─── KHUNG ẢNH ─── */
 .imageWrap {
   position: relative;
   overflow: hidden;
   height: 220px;
   border-radius: 10px;
-  background: #1a7060;
+  background: #1a7060; /* Màu nền xanh lục đặc trưng */
 }
 
+/* Định dạng thẻ ảnh bên trong */
 .image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: cover; /* Cắt ảnh vừa vặn */
   display: block;
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); /* Hoạt ảnh zoom ảnh khi hover */
 }
 
+/* Zoom nhẹ ảnh sản phẩm khi hover vào card */
 .card:hover .image {
   transform: scale(1.06);
 }
 
+/* Khối placeholder hiển thị khi sản phẩm không có ảnh thực tế */
 .imagePlaceholder {
   height: 100%;
   display: flex;
@@ -127,6 +138,7 @@
   opacity: 0.9;
 }
 
+/* Lớp phủ gradient mờ ở đáy ảnh giúp tên và chữ hiển thị rõ ràng */
 .imageOverlay {
   position: absolute;
   inset: 0;
@@ -134,7 +146,7 @@
   pointer-events: none;
 }
 
-/* ─── BADGES (top-left over image) ─── */
+/* ─── NHÓM HUY HIỆU (Badges) ─── */
 .badgeGroup {
   position: absolute;
   top: 10px;
@@ -146,6 +158,7 @@
   max-width: calc(100% - 50px);
 }
 
+/* Style cho từng huy hiệu tag nhỏ */
 .badge {
   font-size: 9px;
   font-weight: 700;
@@ -153,14 +166,14 @@
   border-radius: 4px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px); /* Hiệu ứng kính mờ nền */
   -webkit-backdrop-filter: blur(4px);
   border: 1px solid rgba(255, 255, 255, 0.25);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   white-space: nowrap;
 }
 
-/* ─── FAVORITE BUTTON (top-right over image) ─── */
+/* ─── NÚT TRÁI TIM YÊU THÍCH ─── */
 .favBtn {
   position: absolute;
   top: 10px;
@@ -185,11 +198,13 @@
   color: #94a3b8;
 }
 
+/* Phóng to tim khi hover */
 .favBtn:hover {
   transform: scale(1.12);
   color: #ef4444;
 }
 
+/* Trạng thái đã yêu thích: đổi màu nền đỏ hồng và kích hoạt hoạt ảnh giật tim heartPop */
 .favBtn.favorited {
   background: #fff5f5;
   border-color: rgba(239, 68, 68, 0.15);
@@ -197,25 +212,16 @@
   animation: heartPop 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
+/* Hoạt ảnh giật nảy của trái tim khi click chọn */
 @keyframes heartPop {
-  0% {
-    transform: scale(1);
-  }
-  30% {
-    transform: scale(1.35);
-  }
-  55% {
-    transform: scale(0.9);
-  }
-  75% {
-    transform: scale(1.15);
-  }
-  100% {
-    transform: scale(1);
-  }
+  0% { transform: scale(1); }
+  30% { transform: scale(1.35); }
+  55% { transform: scale(0.9); }
+  75% { transform: scale(1.15); }
+  100% { transform: scale(1); }
 }
 
-/* ─── SELLER AVATAR OVERLAY (bottom-left of image) ─── */
+/* ─── LỚP PHỦ THÔNG TIN NGƯỜI BÁN ─── */
 .sellerOverlay {
   position: absolute;
   bottom: -20px;
@@ -226,6 +232,7 @@
   gap: 8px;
 }
 
+/* Vòng tròn avatar người bán nhỏ trên ảnh */
 .sellerAvatarCircle {
   width: 46px;
   height: 46px;
@@ -242,11 +249,12 @@
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
 }
 
+/* Tên hiển thị của người bán đè trên ảnh */
 .sellerOverlayName {
   font-size: 12px;
   font-weight: 700;
   color: #fff;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); /* Đổ bóng chữ để dễ nhìn trên mọi nền ảnh */
   display: flex;
   align-items: center;
   gap: 4px;
@@ -256,35 +264,13 @@
   white-space: nowrap;
 }
 
-/* ─── BODY (text content below image) ─── */
+/* ─── PHẦN THÂN CARD ─── */
 .body {
   padding: 24px 6px 8px;
   position: relative;
 }
 
-.name {
-  font-size: 14.5px;
-  font-weight: 700;
-  color: #fff;
-  margin: 0 0 6px;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  letter-spacing: -0.01em;
-}
-
-.price {
-  font-size: 17px;
-  font-weight: 800;
-  color: #ecd223;
-  margin-bottom: 4px;
-  display: flex;
-  align-items: baseline;
-  gap: 2px;
-}
-
+/* Định dạng nhãn đơn vị đo lường đằng sau giá (vd: /kg) */
 .priceUnit {
   font-size: 11px;
   font-weight: 600;
@@ -292,6 +278,7 @@
   margin-left: 2px;
 }
 
+/* Nhãn hiển thị thuế (nếu có) */
 .priceTaxLabel {
   font-size: 10px;
   font-weight: 500;
@@ -299,56 +286,16 @@
   margin-left: 6px;
 }
 
-/* ─── DESCRIPTION SNIPPET ─── */
-.descSnippet {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.75);
-  line-height: 1.55;
-  margin-bottom: 10px;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* ─── STATS ROW ─── */
-.statsRow {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.6);
-  margin-bottom: 8px;
-}
-
-.statItem {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.statValue {
-  color: #fff;
-  font-weight: 700;
-}
-
-/* ─── STOCK BAR ─── */
-.stockBar {
-  height: 3px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-  margin-bottom: 10px;
-  overflow: hidden;
-}
-
+/* Màu phần trăm fill cho thanh tồn kho */
 .stockFill {
   width: 100%;
   height: 100%;
   border-radius: 4px;
-  transform-origin: left;
-  transition: transform 0.6s ease-out;
+  transform-origin: left; /* Trượt co giãn từ mép trái sang phải */
+  transition: transform 0.6s ease-out; /* Hoạt ảnh trượt mượt mà */
 }
 
-/* ─── ORIGIN ─── */
+/* Nhãn địa điểm xuất xứ hải sản */
 .origin {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.55);
@@ -358,14 +305,14 @@
   gap: 4px;
 }
 
-/* ─── DIVIDER ─── */
+/* Đường kẻ chia cách mảnh */
 .divider {
   border: none;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   margin: 8px 0;
 }
 
-/* ─── CTA BUTTON (Order Now) ─── */
+/* NÚT KÊU GỌI HÀNH ĐỘNG (CTA Button) */
 .ctaBtn {
   display: flex;
   align-items: center;
@@ -386,6 +333,7 @@
   box-shadow: 0 3px 10px rgba(236, 210, 35, 0.2);
 }
 
+/* Hover: làm sáng nhẹ nút và nổi bóng mờ rộng hơn */
 .ctaBtn:hover {
   background: #f5e030;
   border-color: #f5e030;
@@ -393,6 +341,7 @@
   box-shadow: 0 5px 16px rgba(236, 210, 35, 0.35);
 }
 
+/* Chữ mũi tên bên trong nút bấm */
 .ctaArrow {
   display: inline-flex;
   align-items: center;
@@ -407,20 +356,12 @@
   flex-shrink: 0;
 }
 
-/* ─── SELLER ROW (hidden - replaced by overlay) ─── */
-.sellerRow {
-  display: none;
-}
+/* Các lớp cũ ẩn đi */
+.sellerRow { display: none; }
+.sellerLink { display: none; }
+.sellerAvatar { display: none; }
 
-.sellerLink {
-  display: none;
-}
-
-.sellerAvatar {
-  display: none;
-}
-
-/* ─── COUNTDOWN BADGE ─── */
+/* Huy hiệu bộ đếm thời gian tươi ngon */
 .countdownBadge {
   font-size: 10px;
   font-weight: 700;
@@ -435,7 +376,7 @@
   margin-bottom: 6px;
 }
 
-/* ─── SKELETON ─── */
+/* KHUNG XƯƠNG SKELETON */
 .skeleton {
   border-radius: 10px;
   overflow: hidden;
@@ -455,175 +396,70 @@
 }
 
 /* ═══════════════════════════════════════════
-   RESPONSIVE
+   CÁC THIẾT LẬP RESPONSIVE MÀN HÌNH (MEDIA QUERIES)
    ═══════════════════════════════════════════ */
+/* Màn hình lớn (Destop rộng) */
 @media (min-width: 1440px) {
-  .imageWrap {
-    height: 260px;
-  }
-  .name {
-    font-size: 15.5px;
-  }
-  .price {
-    font-size: 18px;
-  }
-  .body {
-    padding: 26px 8px 10px;
-  }
+  .imageWrap { height: 260px; }
+  .name { font-size: 15.5px; }
+  .price { font-size: 18px; }
+  .body { padding: 26px 8px 10px; }
 }
 
+/* Màn hình laptop trung bình */
 @media (max-width: 1024px) and (min-width: 769px) {
-  .imageWrap {
-    height: 200px;
-  }
+  .imageWrap { height: 200px; }
 }
 
+/* Màn hình máy tính bảng (Tablet) */
 @media (max-width: 768px) and (min-width: 641px) {
-  .imageWrap {
-    height: 180px;
-  }
-  .body {
-    padding: 22px 4px 6px;
-  }
-  .name {
-    font-size: 13px;
-    margin-bottom: 4px;
-  }
-  .price {
-    font-size: 15px;
-    margin-bottom: 3px;
-  }
-  .statsRow {
-    font-size: 10px;
-    margin-bottom: 6px;
-  }
-  .origin {
-    display: none;
-  }
-  .descSnippet {
-    -webkit-line-clamp: 2;
-    font-size: 11px;
-  }
-  .sellerAvatarCircle {
-    width: 38px;
-    height: 38px;
-    font-size: 13px;
-    border-width: 2px;
-  }
-  .sellerOverlay {
-    bottom: -16px;
-    left: 8px;
-  }
-  .ctaBtn {
-    font-size: 12px;
-    padding: 8px 0;
-  }
+  .imageWrap { height: 180px; }
+  .body { padding: 22px 4px 6px; }
+  .name { font-size: 13px; margin-bottom: 4px; }
+  .price { font-size: 15px; margin-bottom: 3px; }
+  .statsRow { font-size: 10px; margin-bottom: 6px; }
+  .origin { display: none; }
+  .descSnippet { -webkit-line-clamp: 2; font-size: 11px; }
+  .sellerAvatarCircle { width: 38px; height: 38px; font-size: 13px; border-width: 2px; }
+  .sellerOverlay { bottom: -16px; left: 8px; }
+  .ctaBtn { font-size: 12px; padding: 8px 0; }
 }
 
+/* Màn hình điện thoại di động (Mobile) */
 @media (max-width: 640px) {
-  .imageWrap {
-    height: 160px;
-  }
-  .body {
-    padding: 20px 4px 4px;
-  }
-  .name {
-    font-size: 12px;
-    margin-bottom: 3px;
-  }
-  .price {
-    font-size: 14px;
-    font-weight: 800;
-    margin-bottom: 3px;
-  }
-  .priceUnit {
-    font-size: 10px;
-  }
-  .statsRow {
-    font-size: 10px;
-    margin-bottom: 4px;
-  }
-  .statValue {
-    font-size: 11px;
-  }
-  .stockBar {
-    margin-bottom: 6px;
-  }
-  .origin {
-    font-size: 10px;
-    margin-bottom: 6px;
-  }
-  .divider {
-    margin: 6px 0;
-  }
-  .badge {
-    font-size: 8px;
-    padding: 2px 5px;
-  }
-  .favBtn {
-    width: 26px;
-    height: 26px;
-  }
-  .card:hover {
-    transform: none;
-  }
-  .sellerAvatarCircle {
-    width: 34px;
-    height: 34px;
-    font-size: 12px;
-    border-width: 2px;
-  }
-  .sellerOverlay {
-    bottom: -14px;
-    left: 6px;
-  }
-  .sellerOverlayName {
-    font-size: 10px;
-    max-width: 80px;
-  }
-  .descSnippet {
-    -webkit-line-clamp: 2;
-    font-size: 10.5px;
-    margin-bottom: 6px;
-  }
-  .ctaBtn {
-    font-size: 11px;
-    padding: 7px 0;
-    border-radius: 6px;
-  }
-  .ctaArrow {
-    width: 18px;
-    height: 18px;
-    font-size: 10px;
-  }
-  .skeletonBody {
-    padding: 18px 4px 6px;
-  }
+  .imageWrap { height: 160px; }
+  .body { padding: 20px 4px 4px; }
+  .name { font-size: 12px; margin-bottom: 3px; }
+  .price { font-size: 14px; font-weight: 800; margin-bottom: 3px; }
+  .priceUnit { font-size: 10px; }
+  .statsRow { font-size: 10px; margin-bottom: 4px; }
+  .statValue { font-size: 11px; }
+  .stockBar { margin-bottom: 6px; }
+  .origin { font-size: 10px; margin-bottom: 6px; }
+  .divider { margin: 6px 0; }
+  .badge { font-size: 8px; padding: 2px 5px; }
+  .favBtn { width: 26px; height: 26px; }
+  .card:hover { transform: none; }
+  .sellerAvatarCircle { width: 34px; height: 34px; font-size: 12px; border-width: 2px; }
+  .sellerOverlay { bottom: -14px; left: 6px; }
+  .sellerOverlayName { font-size: 10px; max-width: 80px; }
+  .descSnippet { -webkit-line-clamp: 2; font-size: 10.5px; margin-bottom: 6px; }
+  .ctaBtn { font-size: 11px; padding: 7px 0; border-radius: 6px; }
+  .ctaArrow { width: 18px; height: 18px; font-size: 10px; }
+  .skeletonBody { padding: 18px 4px 6px; }
 }
 
+/* Màn hình điện thoại cực nhỏ */
 @media (max-width: 380px) {
-  .imageWrap {
-    height: 140px;
-  }
-  .name {
-    font-size: 12px;
-  }
-  .body {
-    padding: 18px 2px 4px;
-  }
-  .statsRow {
-    display: none;
-  }
-  .descSnippet {
-    display: none;
-  }
+  .imageWrap { height: 140px; }
+  .name { font-size: 12px; }
+  .body { padding: 18px 2px 4px; }
+  .statsRow { display: none; }
+  .descSnippet { display: none; }
 }
 
+/* Tắt hiệu ứng hover zoom đối với thiết bị màn hình cảm ứng không có chuột */
 @media (hover: none) {
-  .card:hover {
-    transform: none;
-  }
-  .card:hover .image {
-    transform: none;
-  }
+  .card:hover { transform: none; }
+  .card:hover .image { transform: none; }
 }

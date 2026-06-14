@@ -1,13 +1,20 @@
 /**
  * AuthPage.jsx — Google-Only Auth & Quick Local Dev Login (Sửa đổi cho đăng nhập luôn)
+ * Trang xác thực người dùng sử dụng duy nhất tài khoản Google OAuth 2.0 hoặc tài khoản giả lập local
  */
 
+// Nhập các hook từ React: useState (quản lý state), useEffect (side effects), và useCallback (tối ưu hóa bộ nhớ hàm)
 import { useState, useEffect, useCallback } from "react";
+// Nhập hook useNavigate để điều hướng trang web trong React Router
 import { useNavigate } from "react-router-dom";
+// Nhập helper api dùng chung để thực hiện các yêu cầu HTTP Request tới backend
 import { api } from "../services/api";
+// Nhập các biểu tượng SparklesIcon và AlertCircleIcon từ thư mục icons
 import { SparklesIcon, AlertCircleIcon } from "../components/icons";
+// Nhập hook useAuth để đọc/ghi thông tin tài khoản đăng nhập hiện tại từ Context
 import { useAuth } from "../context/AuthContext";
 
+// Định nghĩa component GoogleLogo vẽ logo Google bằng mã SVG
 const GoogleLogo = () => (
   <svg
     width="18"
@@ -15,18 +22,22 @@ const GoogleLogo = () => (
     viewBox="0 0 18 18"
     xmlns="http://www.w3.org/2000/svg"
   >
+    {/* Vẽ chữ G màu xanh lam */}
     <path
       d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908C16.658 14.148 17.64 11.84 17.64 9.2z"
       fill="#4285F4"
     />
+    {/* Vẽ chân chữ G màu xanh lá */}
     <path
       d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
       fill="#34A853"
     />
+    {/* Vẽ sườn chữ G màu vàng */}
     <path
       d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
       fill="#FBBC05"
     />
+    {/* Vẽ vòm chữ G màu đỏ */}
     <path
       d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
       fill="#EA4335"
@@ -34,43 +45,61 @@ const GoogleLogo = () => (
   </svg>
 );
 
+// Định nghĩa và xuất ra component chính AuthPage quản trị luồng đăng nhập
 export function AuthPage() {
+  // Khởi tạo hàm điều hướng trang chuyển vùng URL
   const navigate = useNavigate();
+  // Lấy hàm setUser từ Context để cập nhật trạng thái người dùng sau khi đăng nhập thành công
   const { setUser } = useAuth();
 
+  // State quản lý thông điệp báo lỗi khi đăng nhập, mặc định ban đầu là chuỗi rỗng
   const [err, setErr] = useState("");
+  // State quản lý trạng thái hiển thị loading khi đang gọi API xác thực, mặc định là false
   const [loading, setLoading] = useState(false);
+  // State điều khiển ẩn/hiện popup giả lập tài khoản Google trên giao diện dev, mặc định là false
   const [showMockGooglePopup, setShowMockGooglePopup] = useState(false);
 
-  // Nhận diện trạng thái môi trường phát triển cục bộ
+  // Nhận diện xem trình duyệt đang chạy tại localhost (môi trường phát triển cục bộ) hay không
   const isLocal =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1";
 
+  // Lấy mã khóa Google Client ID từ biến cấu hình môi trường Vite
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+  // Nếu thiếu Google Client ID thì tự động bật chế độ Mock giả lập để tiện phát triển không cần internet/config
   const [hasMockMode, setHasMockMode] = useState(!clientId);
 
+  // Định nghĩa callback xử lý kết quả token trả về từ phía Google Identity Services
   const handleGoogleCredentialResponse = useCallback(
     async (response) => {
+      // Bật trạng thái loading xử lý thông tin
       setLoading(true);
+      // Reset lỗi cũ về rỗng
       setErr("");
       try {
+        // Gửi mã credential (ID Token) nhận từ Google lên Backend để xác thực
         const data = await api("/auth/google", {
-          method: "POST",
-          body: JSON.stringify({ idToken: response.credential }),
+          method: "POST", // Sử dụng phương thức POST
+          body: JSON.stringify({ idToken: response.credential }), // Gửi kèm token trong request body dạng JSON
         });
+        // Lưu thực thể thông tin User nhận về vào Context
         setUser(data.user);
+        // Điều hướng: Nếu là quản trị viên chuyển vào trang /admin, ngược lại chuyển ra trang chủ /
         navigate(data.user.role === "Admin" ? "/admin" : "/");
       } catch (e) {
+        // Lưu thông điệp báo lỗi nếu quá trình xác thực ở backend thất bại
         setErr(e.message || "Đăng nhập Google thất bại");
       } finally {
+        // Tắt trạng thái loading khi hoàn tất xử lý
         setLoading(false);
       }
     },
-    [navigate, setUser],
+    [navigate, setUser], // Các phụ thuộc của hook useCallback
   );
 
+  // useEffect dùng để cấu hình tự động nút bấm đăng nhập chính thức của Google Identity Services (GIS)
   useEffect(() => {
+    // Nếu thiếu Google Client ID thì không khởi tạo thư viện chính thức, chạy qua fallback mock
     if (!clientId) {
       console.warn(
         "VITE_GOOGLE_CLIENT_ID is missing. Mock Google Sign-In will be active.",
@@ -78,27 +107,36 @@ export function AuthPage() {
       return;
     }
 
+    // Định nghĩa hàm đệ quy an toàn khởi tạo thư viện GIS khi trình duyệt load xong file script Google
     const initGoogleGis = () => {
+      // Nếu đối tượng google chưa được gắn vào window (file script chưa tải xong)
       if (typeof window.google === "undefined") {
+        // Đợi 100ms rồi tự gọi lại chính nó
         setTimeout(initGoogleGis, 100);
         return;
       }
       try {
+        // Khởi tạo Client OAuth 2.0 bằng Client ID và truyền callback nhận dữ liệu
         window.google.accounts.id.initialize({
           client_id: clientId,
           callback: handleGoogleCredentialResponse,
-          auto_select: false,
+          auto_select: false, // Không tự động đăng nhập không hỏi
         });
+        
+        // Tìm thẻ div chứa nút bấm Google Sign-In trên giao diện
         const btnDiv = document.getElementById("google-signin-btn");
         if (btnDiv) {
+          // Ra lệnh render nút bấm chuẩn thương hiệu Google vào thẻ div tương ứng
           window.google.accounts.id.renderButton(btnDiv, {
-            theme: "outline",
-            size: "large",
-            width: btnDiv.clientWidth || 336,
-            text: "signin_with",
-            shape: "rectangular",
+            theme: "outline", // Kiểu viền mỏng
+            size: "large", // Kích thước lớn
+            width: btnDiv.clientWidth || 336, // Chiều rộng bằng khung chứa
+            text: "signin_with", // Hiển thị chữ "Sign in with..."
+            shape: "rectangular", // Hình chữ nhật phẳng
           });
         }
+        
+        // Gọi gợi ý đăng nhập One Tap của Google ở góc màn hình
         window.google.accounts.id.prompt((notification) => {
           if (notification.isNotDisplayed()) {
             console.log(
@@ -109,72 +147,89 @@ export function AuthPage() {
         });
       } catch (error) {
         console.error("Failed to initialize Google Identity Services:", error);
+        // Fallback sang chế độ mock nếu khởi tạo bị lỗi
         setHasMockMode(true);
       }
     };
 
+    // Gọi khởi chạy tiến trình GIS
     initGoogleGis();
   }, [clientId, handleGoogleCredentialResponse]);
 
-  // Hàm gọi API đăng nhập giả lập thông minh (Tự động đăng ký nếu chưa có tài khoản trong DB)
+  // Hàm gọi API đăng nhập giả lập thông minh phục vụ môi trường local (tự động đăng ký nếu email chưa tồn tại trong DB)
   const selectMockAccount = useCallback(
     async (email) => {
+      // Ẩn popup chọn tài khoản mock
       setShowMockGooglePopup(false);
+      // Bật trạng thái chờ
       setLoading(true);
+      // Reset thông điệp lỗi
       setErr("");
       try {
+        // Gửi request tới API backend /auth/google, truyền kèm mã mock token cấu trúc đặc biệt chứa email
         const data = await api("/auth/google", {
           method: "POST",
           body: JSON.stringify({
             idToken: `mock_google_token_${email.toLowerCase().trim()}_${Date.now()}`,
           }),
         });
+        // Lưu thông tin người dùng mock vào Context sau khi nhận xác nhận từ Backend
         setUser(data.user);
+        // Điều hướng người dùng dựa vào quyền hạn nhận được
         navigate(data.user.role === "Admin" ? "/admin" : "/");
       } catch (e) {
+        // Gắn lỗi
         setErr(
           e.message ||
             "Giả lập đăng nhập thất bại. Vui lòng kiểm tra file .env ở backend.",
         );
       } finally {
+        // Tắt loading
         setLoading(false);
       }
     },
     [navigate, setUser],
   );
 
-  // src/pages/AuthPage.jsx (Trích đoạn hàm handleMockOtherAccount)
+  // Hàm cho phép nhà phát triển tự nhập một địa chỉ email Google bất kỳ để giả lập đăng nhập
   const handleMockOtherAccount = async () => {
+    // Hiển thị hộp thoại prompt của trình duyệt để người dùng tự nhập email giả lập
     const mockEmail = window.prompt(
       "Nhập email Google muốn giả lập đăng nhập:",
       "nguyenvana@gmail.com",
     );
+    // Nếu bấm hủy hoặc để trống thì thoát hàm
     if (!mockEmail) return;
+    
+    // Sử dụng Regular Expression kiểm tra định dạng cấu trúc của email nhập vào
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!EMAIL_REGEX.test(mockEmail)) {
+      // Đặt thông báo lỗi nếu không khớp định dạng
       setErr("Địa chỉ email giả lập không đúng định dạng!");
       return;
     }
+    
+    // Thực thi gọi hàm đăng nhập giả lập với email vừa nhập
     await selectMockAccount(mockEmail);
   };
 
   return (
     <div
       className="container-fluid min-vh-100 d-flex align-items-center justify-content-center p-3 p-sm-4"
-      style={{ backgroundColor: "var(--bg)" }}
+      style={{ backgroundColor: "var(--bg)" }} // Thiết lập màu nền chung từ biến CSS hệ thống
     >
       <div
         className="card border-0 p-4 p-sm-5 w-100"
         style={{
           background: "var(--white)",
           borderRadius: 16,
-          maxWidth: 400,
+          maxWidth: 400, // Chiều rộng thẻ tối đa 400px
           border: "1.5px solid var(--border)",
           boxShadow: "var(--shadow-lg)",
           boxSizing: "border-box",
         }}
       >
-        {/* ── Header ── */}
+        {/* ── Tiêu đề thương hiệu (Header) ── */}
         <div className="text-center mb-4">
           <div
             className="d-flex align-items-center justify-content-center mx-auto mb-3"
@@ -187,6 +242,7 @@ export function AuthPage() {
               border: "1px solid rgba(8, 29, 44, 0.08)",
             }}
           >
+            {/* Hiển thị biểu tượng lấp lánh Sparkles */}
             <SparklesIcon size={24} />
           </div>
 
@@ -213,7 +269,7 @@ export function AuthPage() {
           </p>
         </div>
 
-        {/* ── Error ── */}
+        {/* ── Khung cảnh báo lỗi (Error Alert) ── */}
         {err && (
           <div
             className="alert alert-danger border-danger d-flex align-items-center gap-2 py-2 px-3 mb-3"
@@ -227,12 +283,13 @@ export function AuthPage() {
               lineHeight: 1.4,
             }}
           >
+            {/* Biểu tượng dấu chấm than báo lỗi */}
             <AlertCircleIcon size={14} className="flex-shrink-0" />
             <span>{err}</span>
           </div>
         )}
 
-        {/* ── PHÁT TRIỂN CỤC BỘ: QUICK LOGIN PANEL (ĐÃ SỬA GỌI LUÔN) ── */}
+        {/* ── BẢNG ĐIỀU KHIỂN ĐĂNG NHẬP NHANH DEV MODE (Chỉ hiển thị khi chạy ở localhost) ── */}
         {isLocal && (
           <div
             style={{
@@ -270,7 +327,7 @@ export function AuthPage() {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {/* Đổi toàn bộ các nút đăng nhập nhanh sang hàm selectMockAccount */}
+              {/* Nút đăng nhập giả lập quyền Admin */}
               <button
                 type="button"
                 onClick={() => selectMockAccount("admin@haisan.vn")}
@@ -291,6 +348,7 @@ export function AuthPage() {
                 👑 Đăng nhập Admin (admin@haisan.vn)
               </button>
 
+              {/* Nút đăng nhập giả lập vai trò Ngư dân / Người bán */}
               <button
                 type="button"
                 onClick={() => selectMockAccount("binh@haisan.vn")}
@@ -311,6 +369,7 @@ export function AuthPage() {
                 🎣 Đăng nhập Ngư dân / Người bán (binh@haisan.vn)
               </button>
 
+              {/* Nút đăng nhập giả lập vai trò Khách mua hàng */}
               <button
                 type="button"
                 onClick={() => selectMockAccount("lan@haisan.vn")}
@@ -340,13 +399,12 @@ export function AuthPage() {
                 textAlign: "center",
               }}
             >
-              💡 Hệ thống sẽ tự động tạo mới tài khoản nếu chưa tồn tại trong
-              DB.
+              💡 Hệ thống sẽ tự động tạo mới tài khoản nếu chưa tồn tại trong DB.
             </div>
           </div>
         )}
 
-        {/* ── Google Button (OAuth Google) ── */}
+        {/* ── Nút Đăng nhập Google (OAuth Google chính thức / giả lập) ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div
             style={{
@@ -362,9 +420,10 @@ export function AuthPage() {
             Hoặc sử dụng OAuth Google
           </div>
 
+          {/* Nếu hệ thống được cấu hình bắt buộc chạy mock (không có client ID) */}
           {hasMockMode ? (
             <button
-              onClick={() => setShowMockGooglePopup(true)}
+              onClick={() => setShowMockGooglePopup(true)} // Mở popup chọn tài khoản Google giả lập
               disabled={loading}
               className="btn w-100 d-flex align-items-center justify-content-center gap-2 fw-semibold"
               style={{
@@ -395,17 +454,20 @@ export function AuthPage() {
                 "⏳ Đang xử lý..."
               ) : (
                 <>
+                  {/* Vẽ logo Google và hiển thị chữ giả lập */}
                   <GoogleLogo />
                   Đăng nhập bằng Google (Giả lập)
                 </>
               )}
             </button>
           ) : (
+            // Nếu có Google Client ID đầy đủ: Render khung chứa nút bấm GIS chính thức
             <div className="w-100">
               <div
                 id="google-signin-btn"
                 className="w-100 d-flex justify-content-center"
               />
+              {/* Cho phép dev click mở popup chọn tài khoản mock để test nhanh ngay cả khi có client ID */}
               {isLocal && (
                 <div className="text-center mt-3">
                   <button
@@ -423,7 +485,7 @@ export function AuthPage() {
           )}
         </div>
 
-        {/* ── Footer Note ── */}
+        {/* ── Ghi chú dưới chân trang ── */}
         <p
           className="text-center mt-4 mb-0"
           style={{ color: "var(--muted)", fontSize: 11, lineHeight: 1.7 }}
@@ -440,21 +502,21 @@ export function AuthPage() {
         </p>
       </div>
 
-      {/* ── HIGH FIDELITY MOCK GOOGLE ACCOUNT CHOOSER POPUP ── */}
+      {/* ── POPUP GIẢ LẬP GIAO DIỆN CHỌN TÀI KHOẢN GOOGLE (HIGH FIDELITY MOCK POPUP) ── */}
       {showMockGooglePopup && (
         <div
           className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center p-3"
           style={{
-            background: "rgba(0, 0, 0, 0.65)",
-            zIndex: 99999,
+            background: "rgba(0, 0, 0, 0.65)", // Nền tối làm mờ phía sau
+            zIndex: 99999, // Đảm bảo nổi lên trên cùng
             fontFamily: "'Segoe UI', Roboto, sans-serif",
           }}
-          onClick={() => setShowMockGooglePopup(false)}
+          onClick={() => setShowMockGooglePopup(false)} // Click ra ngoài tự động đóng popup
         >
           <div
             className="card border-0 w-100"
             style={{
-              background: "#1E1E1E",
+              background: "#1E1E1E", // Màu tối giao diện Dark Mode
               color: "#E3E3E3",
               borderRadius: 8,
               maxWidth: 440,
@@ -464,9 +526,9 @@ export function AuthPage() {
               border: "1px solid #333333",
               textAlign: "left",
             }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()} // Chặn sự kiện nổi bọt tránh tự đóng khi click bên trong
           >
-            {/* Edge Window titlebar mockup */}
+            {/* Giả lập thanh tiêu đề cửa sổ trình duyệt Edge */}
             <div
               className="d-flex align-items-center justify-content-between px-3 py-2"
               style={{
@@ -493,7 +555,7 @@ export function AuthPage() {
               </button>
             </div>
 
-            {/* Google Identity Header */}
+            {/* Khung nội dung chọn tài khoản của Google Identity */}
             <div className="p-4 p-sm-5 pt-4 pb-3">
               <div
                 className="d-flex align-items-center gap-2 fw-semibold mb-3 text-white"
@@ -521,7 +583,7 @@ export function AuthPage() {
                 </span>
               </p>
 
-              {/* Accounts List */}
+              {/* Danh sách các tài khoản Google mẫu để chọn lựa nhanh */}
               <div
                 className="d-flex flex-column border-top border-bottom py-1"
                 style={{
@@ -564,6 +626,7 @@ export function AuthPage() {
                       e.currentTarget.style.background = "transparent";
                     }}
                   >
+                    {/* Ảnh đại diện giả lập bằng kí tự đầu tiên của tên */}
                     <div
                       className="rounded-circle d-flex align-items-center justify-content-center fw-semibold text-uppercase text-white"
                       style={{
@@ -590,7 +653,7 @@ export function AuthPage() {
                   </div>
                 ))}
 
-                {/* Use another account */}
+                {/* Mục cho phép nhập một tài khoản email giả lập khác tùy ý */}
                 <div
                   onClick={handleMockOtherAccount}
                   className="d-flex align-items-center gap-3 px-5 py-2"
@@ -623,7 +686,7 @@ export function AuthPage() {
                 </div>
               </div>
 
-              {/* Footer Note */}
+              {/* Điều khoản bảo mật Google bên dưới cùng của popup */}
               <div
                 className="mt-3 text-secondary"
                 style={{ fontSize: 11, lineHeight: 1.5 }}

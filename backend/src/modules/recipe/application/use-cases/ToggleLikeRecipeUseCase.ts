@@ -1,10 +1,13 @@
+// Import interface IRecipeRepository quản lý lưu trữ và thao tác dữ liệu công thức ở tầng Domain
 import { IRecipeRepository } from "../../domain/repositories/IRecipeRepository";
+// Import ngoại lệ nghiệp vụ NotFoundError để báo lỗi khi không tìm thấy công thức nấu ăn
 import { NotFoundError } from "../../../../shared/domain/exceptions/DomainException";
 
 /**
  * Use Case thực hiện việc thích (Like) hoặc bỏ thích (Unlike) một công thức món ăn.
  */
 export class ToggleLikeRecipeUseCase {
+  // Hàm khởi tạo nhận vào recipeRepository theo cơ chế Dependency Injection (DI)
   constructor(private recipeRepository: IRecipeRepository) {}
 
   /**
@@ -14,20 +17,24 @@ export class ToggleLikeRecipeUseCase {
    * @returns Đối tượng trả về trạng thái liked (true/false) và tổng số lượt thích.
    */
   async execute(recipeId: string, userId: string): Promise<{ liked: boolean; likeCount: number }> {
+    // Tìm kiếm thông tin công thức nấu ăn theo ID từ Repository
     const recipe = await this.recipeRepository.findById(recipeId);
+    // Nếu không tồn tại công thức, ném lỗi NotFoundError
     if (!recipe) {
       throw new NotFoundError("Không tìm thấy công thức");
     }
 
-    // Thực thi nghiệp vụ thay đổi trạng thái thích thông qua phương thức nghiệp vụ của Domain Entity
+    // Thực thi nghiệp vụ thay đổi trạng thái thích thông qua phương thức nghiệp vụ của Domain Entity bằng cách gọi toggleLike
     const liked = recipe.toggleLike(userId);
 
     // Lưu thực thể đã thay đổi trạng thái xuống Database
     await this.recipeRepository.save(recipe);
 
+    // Trả về trạng thái thích (true/false) và tổng số lượt thích hiện tại của công thức nấu ăn
     return {
       liked,
       likeCount: recipe.likes.length,
     };
   }
 }
+

@@ -1,12 +1,21 @@
+// Import hook quản lý state cục bộ từ React
 import { useState } from "react";
+// Import hook tối ưu SEO tiêu đề, mô tả
 import { useSEO } from "../hooks/useSEO";
+// Import hook lấy thông tin tài khoản đăng nhập hiện hành
 import { useAuth } from "../context/AuthContext";
+// Import hook hiển thị thông báo góc màn hình (Toast)
 import { useToast } from "../context/ToastContext";
+// Import helper gọi API dùng chung
 import { api } from "../services/api";
+// Import hook tùy biến để tự động fetch API và quản lý trạng thái load/data
 import { useApiFetch } from "../hooks/useApiFetch";
+// Import thẻ Link dùng để chuyển trang trong React Router
 import { Link } from "react-router-dom";
+// Import component hiển thị badge xác minh tài khoản
 import { VerifiedBadge } from "../components/VerifiedBadge";
 
+// Hàm nén ảnh phía client trước khi upload lên Cloudinary nhằm tiết kiệm băng thông và tăng tốc độ tải
 const compressImage = (file) => {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -16,10 +25,11 @@ const compressImage = (file) => {
       img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement("canvas");
-        const MAX_WIDTH = 1000;
+        const MAX_WIDTH = 1000; // Chiều rộng tối đa cho phép là 1000px
         let width = img.width;
         let height = img.height;
 
+        // Tính toán lại chiều cao theo tỷ lệ tương ứng nếu chiều rộng lớn hơn giới hạn
         if (width > MAX_WIDTH) {
           height = Math.round((height * MAX_WIDTH) / width);
           width = MAX_WIDTH;
@@ -30,6 +40,7 @@ const compressImage = (file) => {
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, width, height);
 
+        // Xuất canvas ra đối tượng Blob JPEG chất lượng nén 85%
         canvas.toBlob(
           (blob) => {
             resolve(new File([blob], file.name, { type: "image/jpeg" }));
@@ -42,33 +53,39 @@ const compressImage = (file) => {
   });
 };
 
+// Component chính hiển thị trang danh sách các công thức nấu ăn hải sản
 export function RecipeListPage() {
+  // Thiết lập SEO meta title và description cho trang danh sách công thức
   useSEO({
     title: "Bí Quyết Nấu Nướng - Công Thức Hải Sản | Haisan.vn",
     description:
       "Khám phá hàng trăm công thức chế biến hải sản hấp dẫn được chia sẻ trực tiếp từ các ngư dân và đầu bếp bản địa.",
   });
 
+  // Lấy thông tin user đăng nhập hiện tại từ AuthContext
   const { user } = useAuth();
+  // Lấy đối tượng hiển thị toast thông báo
   const toast = useToast();
 
-  // Filter UI states
-  const [search, setSearch] = useState("");
-  const [appliedSearch, setAppliedSearch] = useState("");
-  const [difficulty, setDifficulty] = useState("");
-  const [selectedTag, setSelectedTag] = useState("");
+  // Các States quản lý bộ lọc trên giao diện (UI Filters)
+  const [search, setSearch] = useState(""); // Lưu trữ giá trị gõ trong ô tìm kiếm
+  const [appliedSearch, setAppliedSearch] = useState(""); // Lưu giá trị tìm kiếm đã áp dụng thực tế sau khi nhấn Enter/Submit
+  const [difficulty, setDifficulty] = useState(""); // Lưu bộ lọc độ khó (Easy, Medium, Hard)
+  const [selectedTag, setSelectedTag] = useState(""); // Lưu bộ lọc theo thẻ tag món ăn (Cá, Tôm, Lẩu...)
 
+  // State quản lý số trang hiện tại của danh sách công thức
   const [currentPage, setCurrentPage] = useState(1);
+  // State phiên bản để kích hoạt tải lại danh sách khi đăng công thức mới thành công
   const [version, setVersion] = useState(0);
 
-  // Xây dựng truy vấn URL dựa trên bộ lọc
+  // Xây dựng chuỗi API query parameters dựa trên các trạng thái lọc hiện hành
   const queryUrl =
     `/recipes?page=${currentPage}&limit=9` +
     (appliedSearch ? `&search=${encodeURIComponent(appliedSearch)}` : "") +
     (difficulty ? `&difficulty=${difficulty}` : "") +
     (selectedTag ? `&tag=${encodeURIComponent(selectedTag)}` : "");
 
-  // Áp dụng Custom Hook useApiFetch
+  // Áp dụng Custom Hook useApiFetch gọi API lấy danh sách công thức, tự động gọi lại khi queryUrl hoặc version thay đổi
   const { data, loading } = useApiFetch(queryUrl, [
     currentPage,
     appliedSearch,
@@ -77,26 +94,28 @@ export function RecipeListPage() {
     version,
   ]);
 
+  // Trích xuất danh sách công thức và thông tin phân trang từ kết quả API
   const recipes = data?.recipes || [];
   const page = data?.page || 1;
   const pages = data?.pages || 1;
 
-  // Modal Creation states
+  // States quản lý việc đóng/mở và xử lý gửi modal đăng công thức nấu ăn mới
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // New Recipe Form states
+  // States quản lý dữ liệu nhập vào Form chia sẻ công thức nấu ăn mới
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
-  const [newIngredients, setNewIngredients] = useState("");
-  const [newInstructions, setNewInstructions] = useState("");
+  const [newIngredients, setNewIngredients] = useState(""); // Lưu dạng chuỗi, phân tách bằng xuống dòng
+  const [newInstructions, setNewInstructions] = useState(""); // Lưu dạng chuỗi, phân tách bằng xuống dòng
   const [newDifficulty, setNewDifficulty] = useState("Medium");
   const [newCookingTime, setNewCookingTime] = useState(30);
   const [newServings, setNewServings] = useState(2);
-  const [newTags, setNewTags] = useState("");
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [newTags, setNewTags] = useState(""); // Ngăn cách bởi dấu phẩy
+  const [imageFile, setImageFile] = useState(null); // Lưu đối tượng File hình ảnh
+  const [imagePreview, setImagePreview] = useState(null); // Lưu link URL xem trước hình ảnh
 
+  // Danh sách thẻ phân loại gợi ý sẵn hiển thị trên thanh bộ lọc
   const tagsList = [
     "Cá",
     "Tôm",
@@ -110,22 +129,26 @@ export function RecipeListPage() {
     "Xào",
   ];
 
+  // Xử lý khi người dùng nhấn nút Tìm kiếm công thức
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    setCurrentPage(1);
-    setAppliedSearch(search);
+    setCurrentPage(1); // Reset số trang về 1 khi bắt đầu tìm kiếm mới
+    setAppliedSearch(search); // Áp dụng từ khóa gõ vào state chính để kích hoạt fetch API
   };
 
+  // Xử lý khi người dùng chọn hình ảnh món ăn từ máy tính
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+      setImagePreview(URL.createObjectURL(file)); // Tạo link xem trước ảnh cục bộ
     }
   };
 
+  // Xử lý gửi biểu mẫu tạo công thức mới lên server
   const handleCreateRecipe = async (e) => {
     e.preventDefault();
+    // Kiểm tra tính hợp lệ dữ liệu nhập
     if (
       !newTitle.trim() ||
       !newDesc.trim() ||
@@ -140,8 +163,10 @@ export function RecipeListPage() {
     try {
       let imageUrl = null;
 
+      // Nếu người dùng có tải ảnh lên, tiến hành lấy chữ ký signature và đăng ảnh lên Cloudinary
       if (imageFile) {
         const sigData = await api("/images/signature");
+        // Nén ảnh cục bộ
         const compressed = await compressImage(imageFile);
 
         const fd = new FormData();
@@ -164,10 +189,13 @@ export function RecipeListPage() {
         imageUrl = cloudData.secure_url;
       }
 
+      // Chuẩn bị payload dữ liệu gửi lên API tạo công thức
       const payload = {
         title: newTitle,
         description: newDesc,
+        // Phân tách chuỗi nguyên liệu nhập vào theo ký tự xuống dòng
         ingredients: newIngredients.split("\n").filter((i) => i.trim() !== ""),
+        // Phân tách chuỗi các bước thực hiện theo ký tự xuống dòng
         instructions: newInstructions
           .split("\n")
           .filter((i) => i.trim() !== ""),
@@ -175,21 +203,23 @@ export function RecipeListPage() {
         difficulty: newDifficulty,
         cookingTime: Number(newCookingTime),
         servings: Number(newServings),
+        // Phân tách chuỗi thẻ tags theo dấu phẩy
         tags: newTags
           .split(",")
           .map((t) => t.trim())
           .filter((t) => t !== ""),
       };
 
+      // Gọi API POST tạo công thức nấu ăn
       await api("/recipes", {
         method: "POST",
         body: payload,
       });
 
       toast.success("Tạo công thức thành công!");
-      setShowCreateModal(false);
+      setShowCreateModal(false); // Đóng modal
 
-      // Reset form
+      // Thiết lập lại Form về giá trị rỗng mặc định
       setNewTitle("");
       setNewDesc("");
       setNewIngredients("");
@@ -201,8 +231,8 @@ export function RecipeListPage() {
       setImageFile(null);
       setImagePreview(null);
 
-      setCurrentPage(1);
-      setVersion((v) => v + 1);
+      setCurrentPage(1); // Quay về trang 1 để xem bài viết mới
+      setVersion((v) => v + 1); // Kích hoạt reload lại danh sách
     } catch (err) {
       toast.error(err.message || "Có lỗi xảy ra");
     } finally {
@@ -210,10 +240,11 @@ export function RecipeListPage() {
     }
   };
 
+  // Chỉ cho phép tài khoản Admin hoặc tài khoản đã được xác minh (Verified) đăng chia sẻ công thức nấu ăn
   const isVerifiedUser = user && (user.role === "Admin" || user.isVerified);
 
   return (
-    /* Wrapper ngoài cùng nhận diện màu nền trải rộng 100% chiều rộng */
+    /* Lớp bao bọc ngoài cùng chiếm toàn bộ chiều cao màn hình và căn lề giữa */
     <div
       style={{
         width: "100%",
@@ -234,7 +265,7 @@ export function RecipeListPage() {
           boxSizing: "border-box",
         }}
       >
-        {/* Intro Header */}
+        {/* Phần đầu giới thiệu trang (Intro Header) và Nút đăng bài */}
         <div
           style={{
             display: "flex",
@@ -269,6 +300,7 @@ export function RecipeListPage() {
             </p>
           </div>
 
+          {/* Chỉ hiển thị nút Chia sẻ nếu là tài khoản đã xác minh */}
           {isVerifiedUser && (
             <button
               onClick={() => setShowCreateModal(true)}
@@ -289,7 +321,7 @@ export function RecipeListPage() {
           )}
         </div>
 
-        {/* Bộ lọc tìm kiếm */}
+        {/* Khối Bộ lọc tìm kiếm */}
         <div
           style={{
             background: "var(--white)",
@@ -300,6 +332,7 @@ export function RecipeListPage() {
             boxShadow: "var(--shadow-sm)",
           }}
         >
+          {/* Form tìm kiếm văn bản */}
           <form
             onSubmit={handleSearchSubmit}
             style={{
@@ -340,16 +373,19 @@ export function RecipeListPage() {
             </button>
           </form>
 
+          {/* Dòng chọn thẻ tags bộ lọc và độ khó */}
           <div
             style={{
               display: "flex",
-              justify: "space-between",
+              justifyContent: "space-between",
               alignItems: "center",
               flexWrap: "wrap",
               gap: "16px",
             }}
           >
+            {/* Bộ lọc Thẻ Tag */}
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              {/* Nút reset chọn Tất cả */}
               <button
                 onClick={() => {
                   setSelectedTag("");
@@ -370,6 +406,7 @@ export function RecipeListPage() {
               >
                 Tất cả
               </button>
+              {/* Vòng lặp hiển thị danh sách các tag gợi ý */}
               {tagsList.map((t) => (
                 <button
                   key={t}
@@ -395,6 +432,7 @@ export function RecipeListPage() {
               ))}
             </div>
 
+            {/* Dropdown lọc Độ khó */}
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <span
                 style={{
@@ -429,7 +467,7 @@ export function RecipeListPage() {
           </div>
         </div>
 
-        {/* Hiển thị danh sách */}
+        {/* Hiển thị danh sách kết quả công thức */}
         {loading ? (
           <div
             style={{
@@ -441,6 +479,7 @@ export function RecipeListPage() {
             Đang tải công thức...
           </div>
         ) : recipes.length === 0 ? (
+          // Hiển thị khi không có kết quả phù hợp bộ lọc
           <div
             style={{
               textAlign: "center",
@@ -455,6 +494,7 @@ export function RecipeListPage() {
           </div>
         ) : (
           <>
+            {/* Grid hiển thị lưới danh sách công thức */}
             <div
               style={{
                 display: "grid",
@@ -481,6 +521,7 @@ export function RecipeListPage() {
                       flexDirection: "column",
                     }}
                   >
+                    {/* Phần hiển thị ảnh món ăn và nhãn độ khó đè lên ảnh */}
                     <div
                       style={{
                         position: "relative",
@@ -499,6 +540,7 @@ export function RecipeListPage() {
                           }}
                         />
                       ) : (
+                        // Biểu tượng cá mặc định nếu công thức không có ảnh
                         <div
                           style={{
                             display: "flex",
@@ -512,6 +554,7 @@ export function RecipeListPage() {
                           🐟
                         </div>
                       )}
+                      {/* Nhãn độ khó */}
                       <span
                         style={{
                           position: "absolute",
@@ -534,13 +577,14 @@ export function RecipeListPage() {
                       </span>
                     </div>
 
+                    {/* Phần thân thông tin văn bản */}
                     <div
                       style={{
                         padding: "20px",
                         flex: "1",
                         display: "flex",
                         flexDirection: "column",
-                        justify: "space-between",
+                        justifyContent: "space-between",
                       }}
                     >
                       <div>
@@ -571,12 +615,13 @@ export function RecipeListPage() {
                         </p>
                       </div>
 
+                      {/* Footer của thẻ: thông tin thời gian chế biến, khẩu phần và tác giả */}
                       <div
                         style={{
                           borderTop: "1px solid var(--border-l)",
                           paddingTop: "14px",
                           display: "flex",
-                          justify: "space-between",
+                          justifyContent: "space-between",
                           alignItems: "center",
                           fontSize: "12.5px",
                           color: "var(--text-2)",
@@ -619,7 +664,7 @@ export function RecipeListPage() {
               ))}
             </div>
 
-            {/* Phân trang */}
+            {/* Phân trang dưới lưới công thức */}
             {pages > 1 && (
               <div
                 style={{
@@ -674,7 +719,7 @@ export function RecipeListPage() {
         )}
       </div>
 
-      {/* Modal chia sẻ công thức mới */}
+      {/* Modal tạo/chia sẻ công thức mới */}
       {showCreateModal && (
         <div
           style={{
@@ -696,12 +741,13 @@ export function RecipeListPage() {
               width: "100%",
               maxWidth: "680px",
               maxHeight: "90vh",
-              overflowY: "auto",
+              overflowY: "auto", // Cho phép cuộn dọc nếu form quá dài
               padding: "36px",
               boxShadow: "var(--shadow-xl)",
               position: "relative",
             }}
           >
+            {/* Nút đóng Modal dấu X */}
             <button
               onClick={() => setShowCreateModal(false)}
               style={{
@@ -733,6 +779,7 @@ export function RecipeListPage() {
               onSubmit={handleCreateRecipe}
               style={{ display: "flex", flexDirection: "column", gap: "18px" }}
             >
+              {/* Tiêu đề món */}
               <div>
                 <label
                   style={{
@@ -760,6 +807,7 @@ export function RecipeListPage() {
                 />
               </div>
 
+              {/* Mô tả ngắn */}
               <div>
                 <label
                   style={{
@@ -788,6 +836,7 @@ export function RecipeListPage() {
                 />
               </div>
 
+              {/* Layout hai cột nhập Nguyên liệu & Các bước */}
               <div
                 style={{
                   display: "grid",
@@ -795,6 +844,7 @@ export function RecipeListPage() {
                   gap: "16px",
                 }}
               >
+                {/* Nguyên liệu */}
                 <div>
                   <label
                     style={{
@@ -822,6 +872,7 @@ export function RecipeListPage() {
                     required
                   />
                 </div>
+                {/* Các bước */}
                 <div>
                   <label
                     style={{
@@ -851,6 +902,7 @@ export function RecipeListPage() {
                 </div>
               </div>
 
+              {/* Các thông số: Độ khó, Thời gian, Khẩu phần */}
               <div
                 style={{
                   display: "grid",
@@ -932,6 +984,7 @@ export function RecipeListPage() {
                 </div>
               </div>
 
+              {/* Nhập tags ngăn cách dấu phẩy */}
               <div>
                 <label
                   style={{
@@ -958,6 +1011,7 @@ export function RecipeListPage() {
                 />
               </div>
 
+              {/* Upload hình ảnh đính kèm */}
               <div>
                 <label
                   style={{
@@ -989,6 +1043,7 @@ export function RecipeListPage() {
                 )}
               </div>
 
+              {/* Hai nút Hủy bỏ / Chia sẻ */}
               <div style={{ display: "flex", gap: "12px", marginTop: "12px" }}>
                 <button
                   type="button"
@@ -1029,3 +1084,4 @@ export function RecipeListPage() {
     </div>
   );
 }
+

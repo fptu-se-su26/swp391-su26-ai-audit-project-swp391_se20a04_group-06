@@ -1,0 +1,8 @@
+{"level":"error","message":"[Redis Error] read ECONNRESET","timestamp":"2026-06-16 23:21:04"}
+{"level":"error","message":"[Redis Error] ","timestamp":"2026-06-16 23:22:30"}
+{"level":"error","message":"[Redis Error] ","timestamp":"2026-06-16 23:22:31"}
+{"level":"error","message":"[Redis Error] ","timestamp":"2026-06-16 23:22:32"}
+{"level":"error","message":"[Redis] Không thể kết nối sau 5 lần thử. Thoát.","timestamp":"2026-06-16 23:22:32"}
+{"level":"error","message":"[Redis] Không thể kết nối sau 5 lần thử. Thoát.","timestamp":"2026-06-16 23:22:32"}
+{"level":"error","message":"[Redis] Không thể kết nối sau 5 lần thử. Thoát.","timestamp":"2026-06-16 23:22:32"}
+{"level":"error","message":"Error closing Socket.IO Adapter Redis clients: Connection is closed.","timestamp":"2026-06-16 23:22:53"}

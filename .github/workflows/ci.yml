@@ -1,0 +1,112 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+      - docs/HE186165-add-personal-folder
+  pull_request:
+    branches:
+      - main
+      - docs/HE186165-add-personal-folder
+
+permissions:
+  contents: write  # Bắt buộc để publish báo cáo lên GitHub Pages
+
+jobs:
+  backend-ci:
+    name: Backend CI (Build, Test & Allure)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js v20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm ci --ignore-scripts
+
+      - name: Build Backend (TypeScript)
+        working-directory: backend
+        run: npm run build
+
+      - name: Run Backend Tests with Coverage
+        working-directory: backend
+        run: npm run test:cov
+
+      - name: Upload Coverage Report Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-report
+          path: backend/coverage/
+          retention-days: 7
+
+      # Tích hợp Allure Report
+      - name: Install allure-jest for reporting
+        working-directory: backend
+        run: npm install --save-dev allure-jest
+
+      - name: Run tests to generate Allure Results
+        working-directory: backend
+        run: npx jest --reporters=default --reporters=allure-jest --forceExit
+        continue-on-error: true
+
+      - name: Get Allure history
+        uses: actions/checkout@v4
+        if: always()
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: gh-pages-dir
+
+      - name: Build Allure Report
+        uses: simple-elf/allure-report-action@master
+        if: always()
+        id: allure-report
+        with:
+          allure_results: backend/allure-results
+          gh_pages: gh-pages-dir
+          allure_report: allure-report
+          allure_history: allure-history
+
+      - name: Deploy Allure Report to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-history
+
+  client-ci:
+    name: Client CI (Build & Lint)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js v20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install Client Dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: Lint Client Code
+        working-directory: client
+        run: npm run lint
+
+      - name: Build Client (Vite Production)
+        working-directory: client
+        run: npm run build

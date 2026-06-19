@@ -1,0 +1,557 @@
+@charset "utf-8";
+
+/**************************************************************************************/
+
+/*　reset.css　→　各ブラウザ(IE・FireFox・safariなど)は、タグ毎にデフォルトスタイルをそれぞれ独自にもっており、それらをリセットするスタイルシート　*/
+
+/**************************************************************************************/
+
+
+
+/*
+html5doctor.com Reset Stylesheet
+v1.6.1
+Last Updated: 2010-09-17
+Author: Richard Clark - http://richclarkdesign.com
+Twitter: @rich_clark
+*/
+
+/*要素のフォントサイズやマージン・パディングをリセットしています*/
+html, body, div, span, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+abbr, address, cite, code,
+del, dfn, em, img, ins, kbd, q, samp,
+small, strong, sub, sup, var,
+b, i,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, figcaption, figure,
+footer, header, hgroup, menu, nav, section, summary,
+time, mark, audio, video {
+    margin:0;
+    padding:0;
+    border:0;
+    outline:0;
+    font-size:100%;
+    vertical-align:baseline;
+    background:transparent;
+}
+
+/*行の高さをフォントサイズと同じにしています*/
+body {
+    line-height:1;
+}
+
+/*新規追加要素のデフォルトはすべてインライン要素になっているので、section要素などをブロック要素へ変更しています*/
+article,aside,details,figcaption,figure,
+footer,header,hgroup,menu,nav,section {
+    display:block;
+}
+
+/*nav要素内ulのマーカー（行頭記号）を表示しないようにしています*/
+/*nav ul {
+    list-style:none;
+}*/
+
+
+/*どうやら制作者はあえてこうしているようなのですが、
+個人的にはul自体にリストスタイルを指定したかったので、
+元になっているEric Meyer氏のCSSを参考に変更*/
+ol, ul {
+    list-style: none;
+}
+
+/*引用符の表示が出ないようにしています*/
+blockquote, q {
+    quotes:none;
+}
+
+/*blockquote要素、q要素の前後にコンテンツを追加しないように指定しています*/
+blockquote:before, blockquote:after,
+q:before, q:after {
+    content:'';
+    content:none;
+}
+
+/*a要素のフォントサイズなどをリセットしフォントの縦方向の揃え位置を親要素のベースラインに揃えるようにしています*/
+a {
+    margin:0;
+    padding:0;
+    font-size:100%;
+    vertical-align:baseline;
+    background:transparent;
+}
+
+/* ins要素のデフォルトをセットし、色を変える場合はここで変更できるようにしています */
+ins {
+    background-color:#ff9;
+    color:#000;
+    text-decoration:none;
+}
+
+/* mark要素のデフォルトをセットし、色やフォントスタイルを変える場合はここで変更できるようにしています
+また、mark要素とは、文書内の検索結果で該当するフレーズをハイライトして、目立たせる際に使用するようです。*/
+mark {
+    background-color:#ff9;
+    color:#000;
+    font-style:italic;
+    font-weight:bold;
+}
+
+/*テキストに打ち消し線が付くようにしています*/
+del {
+    text-decoration: line-through;
+}
+
+/*IEではデフォルトで点線を下線表示する設定ではないので、下線がつくようにしています
+また、マウスオーバー時にヘルプカーソルの表示が出るようにしています*/
+abbr[title], dfn[title] {
+    border-bottom:1px dotted;
+    cursor:help;
+}
+
+/*隣接するセルのボーダーを重ねて表示し、間隔を0に指定しています*/
+table {
+    border-collapse:collapse;
+    border-spacing:0;
+}
+
+/*水平罫線のデフォルトである立体的な罫線を見えなくしています
+hr {
+    display:block;
+    height:1px;
+    border:0;
+    border-top:1px solid #cccccc;
+    margin:1em 0;
+    padding:0;
+}
+*/
+
+
+/*縦方向の揃え位置を中央揃えに指定しています*/
+input, select {
+    vertical-align:middle;
+}
+
+
+/*画像を縦に並べたときに余白が出てしまわないように追記*/
+img {
+        　　vertical-align: top;
+        　　font-size: 0;
+        　　line-height: 0;
+}
+
+
+
+
+
+/**************************************************************************************/
+
+/*　base.css　→　全頁に関わるものやheader・fooderなど基本的な部分のタイルシート　*/
+
+/**************************************************************************************/
+
+
+
+body {
+	margin: 0px;
+	text-align: center;
+	padding: 0px;
+	font-size: 14px;
+	line-height: 160%;
+	font-family: "ＭＳ ゴシック", "MS Gothic", "Osaka－等幅", Osaka-mono, monospace;
+	letter-spacing: 1px;
+	color: 202020;
+}
+
+/**************************************************************************************/
+/*↓コンテンツが少ないときにfirefoxでスクロールバーが消え中心がずれるのを防ぐ*/
+
+html{
+	overflow-y: scroll;
+}
+
+/**************************************************************************************/
+
+#container {
+	text-align: center;
+	width: auto;
+	margin-top: 0;
+	margin-right: auto;
+	margin-bottom: 0;
+	margin-left: auto;
+	background-color: #208F67;
+
+}
+
+.ov {
+	-webkit-transition: all 1s;
+	-o-transition: all 1s;
+	transition: all 1s;
+}
+.ov:hover {
+	-webkit-opacity: 0.6;
+	opacity: 0.6;
+}
+.head_back {
+	background-color: #FFFFFF;
+}
+
+
+/*
+h1{
+	background-image: url(../images//logo01.png);
+	background-attachment: scroll;
+	background-repeat: no-repeat;
+	height: 97px;
+	width: 256px;
+	position: absolute;
+	left: 13px;
+	top: 23px;
+}
+h1 a{
+	display: block;
+	height: 97px;
+	width: 256x;
+	text-indent: -9999px;
+}
+*/
+
+
+
+a:visited {
+	color: #208F67;
+	text-decoration: underline;
+}
+a:link {
+	color: #208F67;
+	text-decoration: underline;
+}
+a:active {
+	color: #2EAB7E;
+	text-decoration: none;
+}
+a:hover {
+	color: #2EAB7E;
+	text-decoration: none;
+}
+
+.ov {
+	-webkit-transition: all 1s;
+	-o-transition: all 1s;
+	transition: all 1s;
+}
+.ov:hover {
+	-webkit-opacity: 0.6;
+	opacity: 0.6;
+}
+
+
+.line_hight0 {
+	line-height: 0px;
+}
+
+.fisher_list li{
+float:left;
+}
+
+
+.ryoshi{
+width:660px;
+padding:0px 20px 10px 20px;
+margin:0 auto;
+line-height:200%;
+}
+
+.ryoshi_center{
+text-align:center;
+}
+
+.ryoshi_left{
+width:400px;
+float:left;
+}
+
+.ryoshi_left img{
+width:180px;
+height:130px;
+margin-right:20px;
+}
+
+.ryoshi_left_bottom{
+padding:10px 20px 10px 0px;
+line-height:20px;
+
+}
+
+.ryoshi_left2{
+width:420px;
+float:left;
+}
+
+.ryoshi_left2 img{
+width:190px;
+height:250px;
+margin-right:10px;
+}
+
+.ryoshi_right{
+width:260px;
+float:left;
+}
+
+.ryoshi_right img{
+width:260px;
+border:1px solid grey;
+}
+
+
+.ryoshi_left2{
+width:320px;
+margin-right:20px;
+float:left;
+}
+.ryoshi_right2{
+width:320px;
+float:left;
+}
+.ryoshi_right2 img{
+width:320px;
+}
+
+.ryoshi_gyoba_left{
+width:320px;
+margin-right:20px;
+float:left;
+}
+.ryoshi_gyoba_right{
+width:320px;
+float:left;
+}
+.ryoshi_gyoba_right img{
+width:320px;
+}
+
+
+.ryoshi_message_left{
+width:180px;
+float:left;
+margin-right:20px;
+text-align:center;
+}
+.ryoshi_message_right{
+width:450px;
+float:left;
+padding:0 10px 0 0;
+}
+
+
+.ryoshi_message_left2{
+width:320px;
+float:left;
+margin-right:20px;
+}
+
+.ryoshi_message_left2 img{
+width:320px;
+}
+
+.ryoshi_message_right2{
+width:320px;
+float:left;
+}
+
+.ryoshi_gyoho_left{
+width:320px;
+float:left;
+margin-right:20px;
+}
+
+.ryoshi_gyoho_left img{
+width:320px;
+}
+
+.ryoshi_gyoho_left2{
+text-align:center;
+}
+
+.ryoshi_gyoho_left2 img{
+max-width:200px;
+}
+
+.ryoshi_gyoho_left3{
+width:400px;
+float:left;
+margin-right:20px;
+}
+
+.ryoshi_gyoho_left3 img{
+width:400px;
+}
+
+.ryoshi_gyoho_right{
+width:320px;
+float:left;
+}
+
+.ryoshi_gyoho_right img{
+width:280px;
+}
+
+.ryoshi_gyoho_right3{
+width:400px;
+float:left;
+}
+
+.ryoshi_gyoho_right3 img{
+width:400px;
+}
+
+.ryoshi_kodawari_left{
+width:320px;
+float:left;
+margin-right:20px;
+}
+
+.ryoshi_kodawari_right{
+width:320px;
+float:left;
+}
+
+.ryoshi_kodawari_right img{
+width:320px;
+}
+
+.ryoshi_sakana{
+width:640px;
+padding:10px;
+line-height:100%;
+margin:0 auto;
+}
+
+.ryoshi_sakana_haru{
+width:150px;
+height:280px;
+float:left;
+margin:0px 10px 0px 0px;
+background-image: url("../img/ryoshi_sakana_haru.png");
+line-height:140%;
+}
+.ryoshi_sakana_natu{
+width:150px;
+height:280px;
+float:left;
+margin:0px 10px 0px 0px;
+background-image: url("../img/ryoshi_sakana_natu.png");
+line-height:140%;
+}
+.ryoshi_sakana_aki{                                                                                                                                                  
+width:150px;
+height:280px;
+float:left;
+margin:0px 10px 0px 0px;
+background-image: url("../img/ryoshi_sakana_aki.png");
+line-height:140%;
+}
+.ryoshi_sakana_fuyu{                                                                                                                                                  
+width:150px;
+height:280px;
+float:left;
+margin:0px 0px 0px 0px;
+background-image: url("../img/ryoshi_sakana_fuyu.png");
+line-height:140%;
+}
+
+.ryoshi_sakana_namae{
+position:relative;
+top:50px;
+text-align:center;
+font-weight:bold;
+}
+
+.background-color-yellow{
+background-color:LemonChiffon;
+}
+
+.background-color-red{
+background-color:MistyRose;
+}
+
+.background-color-green{
+background-color:palegreen;
+}
+
+.float_right{
+float:right;
+}
+
+.setumei{
+width:860px;
+margin:0 auto;
+}
+
+.setumei3{
+width:860px;
+margin:0 auto;
+text-align:center;
+}
+
+.hiduke1 h3{
+margin:0 auto;
+text-align:center;
+background-color:palegreen;
+padding:20px 10px;
+}
+
+.hiduke2 h3{
+margin:0 auto;
+text-align:center;
+background-color:MistyRose;
+padding:20px 10px;
+}
+
+.col1{
+width:220px;
+}
+
+.B_waku h1{
+line-height:120%;
+}
+
+.color_orange{
+color:orange;
+font-weight:bold;
+}
+
+.soryo-muryo{
+border:1px solid white;
+padding:20px;
+}
+
+#s-form {
+  position: relative;
+  height: 42px;
+}
+
+#s-box {
+  height: 38px;
+  padding: 0 10px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 2px solid #999;
+}
+
+#s-btn {
+  background: #208F67;
+  border: none;
+  font-size: 1rem;
+  color: #fff;
+  width: 60px;
+  height: 42px;
+  position: absolute;
+  top: 0;
+  left: 200px;
+  cursor: pointer;
+}

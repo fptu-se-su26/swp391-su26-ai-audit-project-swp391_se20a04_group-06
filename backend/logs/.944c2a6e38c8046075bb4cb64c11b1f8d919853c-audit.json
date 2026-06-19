@@ -1,0 +1,60 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "logs/.944c2a6e38c8046075bb4cb64c11b1f8d919853c-audit.json",
+    "files": [
+        {
+            "date": 1780876547724,
+            "name": "logs\\error-2026-06-08.log",
+            "hash": "77c55e3d38df7dabb0c2d2d1b1e5469ff001f2400ce1be92c95f160a56672db1"
+        },
+        {
+            "date": 1780997102264,
+            "name": "logs\\error-2026-06-09.log",
+            "hash": "1d28fca4d7a42ece50f51c24cbca1fb9a0651e90912d9079f26727c2937a7317"
+        },
+        {
+            "date": 1781117812452,
+            "name": "logs\\error-2026-06-11.log",
+            "hash": "8c45b18e67095538d019ca1a811a611e0a97e256a925268764748d178400ded8"
+        },
+        {
+            "date": 1781220950968,
+            "name": "logs\\error-2026-06-12.log",
+            "hash": "debfc9b5479f1f855f3da06afb6f22d71bb7fa74c7c8c2e3c4a41c4d486a2beb"
+        },
+        {
+            "date": 1781326666233,
+            "name": "logs\\error-2026-06-13.log",
+            "hash": "7030d9bb682c15c6e12619679dbf1edaca8dc36cc78eb0ec3ff6b5ce39584402"
+        },
+        {
+            "date": 1781418985196,
+            "name": "logs\\error-2026-06-14.log",
+            "hash": "8a7c1ef8047aa9a0ccc67a783fd65dab8790ead79070767d389a30a652650208"
+        },
+        {
+            "date": 1781477555817,
+            "name": "logs\\error-2026-06-15.log",
+            "hash": "63d38f03e0453045c69210ef4bbc39c7536510a8b0a23fcaa942772ef13824c9"
+        },
+        {
+            "date": 1781542826477,
+            "name": "logs\\error-2026-06-16.log",
+            "hash": "0fb6a5c94b09bad5376da7fd0afe88d683619b08f7fffaa4caef5bde0936794d"
+        },
+        {
+            "date": 1781630208144,
+            "name": "logs\\error-2026-06-17.log",
+            "hash": "5fcfea3945a9441de1e28ad577620989be7701e00435cc41ed788b8d3aab03fe"
+        },
+        {
+            "date": 1781806473311,
+            "name": "logs\\error-2026-06-19.log",
+            "hash": "ea45a355713feb049c2a46c0da2bb7bfd533f594b58e33dd7687099998ba9045"
+        }
+    ],
+    "hashType": "sha256"
+}

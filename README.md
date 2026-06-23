@@ -8,7 +8,7 @@
 | Class      | SE20A04            |
 | Semester   | SU26               |
 | Group      | 06                 |
-| Topic      | E-commerce website |
+| Topic      | Seafood Trading Platform |
 | Repository |                    |
 
 ---

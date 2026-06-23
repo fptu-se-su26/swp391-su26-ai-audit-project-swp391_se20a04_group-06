@@ -5634,6 +5634,3 @@
 {"level":"info","message":"HTTP Request: GET /stats - Status: 304 - Duration: 11ms - IP: ::1","timestamp":"2026-06-19 03:34:27"}
 {"level":"warn","message":"Received SIGINT. Starting Graceful Shutdown...","timestamp":"2026-06-19 03:34:44"}
 {"level":"info","message":"HTTP Server stopped accepting new connections.","timestamp":"2026-06-19 03:34:44"}
-{"level":"info","message":"✅ MongoDB connected successfully via Mongoose","timestamp":"2026-06-19 09:31:02"}
-{"level":"info","message":"✅ Redis connected","timestamp":"2026-06-19 09:31:02"}
-{"level":"info","message":"Socket.IO Redis Adapter configured successfully","timestamp":"2026-06-19 09:31:02"}

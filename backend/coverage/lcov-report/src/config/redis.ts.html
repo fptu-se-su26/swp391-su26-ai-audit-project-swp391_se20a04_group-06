@@ -1,0 +1,214 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/config/redis.ts</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/config</a> redis.ts</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">50% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>8/16</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">62.5% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>5/8</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/4</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">57.14% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>8/14</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line medium'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// Import thư viện ioredis và kiểu dữ liệu RedisOptions để quản lý bộ nhớ đệm cache Redis
+import Redis, { RedisOptions } from "ioredis";
+// Import logger dùng chung để ghi lại vết tiến trình kết nối và lỗi mạng
+import { logger } from "../utils/logger";
+&nbsp;
+// Cấu hình các thông số kết nối Redis sử dụng kiểu dữ liệu chuẩn của ioredis
+const redisConfig: RedisOptions = {
+  // Địa chỉ máy chủ Redis (Host) đọc từ biến môi trường .env, mặc định là "localhost"
+  host: process.env.REDIS_HOST || "localhost",
+  // Cổng kết nối (Port) của máy chủ Redis đọc từ .env, mặc định chuyển kiểu số là 6379
+  port: parseInt(process.env.REDIS_PORT || "6379"),
+  // Hoãn kết nối tự động (lazyConnect): Giúp ứng dụng không tự động chạy kết nối ngay khi file này được import, giúp khởi động có kiểm soát hơn
+  lazyConnect: true,
+  // Chiến thuật tự động kết nối lại khi Redis mất kết nối đột ngột (retryStrategy)
+  retryStrategy: <span class="fstat-no" title="function not covered" >(t</span>imes: number) =&gt; {
+    // Nếu số lần thử kết nối lại vượt quá 5 lần liên tiếp mà vẫn không thành công
+<span class="cstat-no" title="statement not covered" >    if (times &gt; 5) {</span>
+      // Ghi nhận lỗi hệ thống nghiêm trọng và ngừng kết nối lại
+<span class="cstat-no" title="statement not covered" >      logger.error("[Redis] Không thể kết nối sau 5 lần thử. Thoát.");</span>
+<span class="cstat-no" title="statement not covered" >      return null; </span>// Trả về null để ra lệnh cho thư viện ioredis ngừng thử kết nối lại, tránh lặp vô hạn gây đơ CPU
+    }
+    // Thời gian chờ giữa các lần thử lại tăng dần (số lần * 200 mili-giây), nhưng tối đa không quá 2 giây (2000ms)
+<span class="cstat-no" title="statement not covered" >    return Math.min(times * 200, 2000);</span>
+  },
+};
+&nbsp;
+// Nếu file cấu hình hệ thống .env có đặt mật khẩu đăng nhập cho Redis
+<span class="missing-if-branch" title="if path not taken" >I</span>if (process.env.REDIS_PASSWORD) {
+<span class="cstat-no" title="statement not covered" >  redisConfig.password = process.env.REDIS_PASSWORD; </span>// Bổ sung mật khẩu vào cấu hình kết nối
+}
+&nbsp;
+// Khởi tạo thực thể khách (Client) kết nối Redis dùng chung toàn bộ ứng dụng
+export const redis = new Redis(redisConfig);
+&nbsp;
+// Lắng nghe sự kiện kết nối thành công "connect" của Redis để ghi log thông báo hoạt động ổn định
+redis.on("connect", <span class="fstat-no" title="function not covered" >() =</span>&gt; <span class="cstat-no" title="statement not covered" >logger.info("✅ Redis connected"))</span>;
+// Lắng nghe sự kiện phát sinh lỗi "error" từ Redis và ghi nhận thông điệp lỗi chi tiết
+redis.on("error", <span class="fstat-no" title="function not covered" >(e</span>rr) =&gt; <span class="cstat-no" title="statement not covered" >logger.error(`[Redis Error] ${err.message}`))</span>;
+&nbsp;
+// Hàm kết nối thủ công đồng bộ dùng để gọi tập trung ở file khởi chạy server (app.ts)
+export async function <span class="fstat-no" title="function not covered" >connectRedis(</span>) {
+<span class="cstat-no" title="statement not covered" >  await redis.connect(); </span>// Kích hoạt kết nối thực tế tới máy chủ Redis
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-06-14T08:04:08.311Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

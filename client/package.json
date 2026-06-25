@@ -1,0 +1,10 @@
+{
+  "name": "haisan-frontend-phase-1",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Frontend phase 1 for HaiSan.vn guest and buyer experience.",
+  "scripts": {
+    "dev": "node server.cjs",
+    "start": "node server.cjs"
+  }
+}

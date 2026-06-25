@@ -1,1 +1,0 @@
-import{b as e,f as t}from"./index-BpeP-r1C.js";e();var n=t(),r=e=>new Intl.NumberFormat(`vi-VN`).format(e)+`đ`,i=(e,t,r)=>(0,n.jsxs)(`span`,{style:{background:e,color:t,borderRadius:4,padding:`2px 7px`,fontSize:11,fontWeight:700},children:[r,`                  `]});export{i as n,r as t};

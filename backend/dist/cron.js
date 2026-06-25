@@ -4,40 +4,85 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.startCronJobs = startCronJobs;
+// Import thư viện node-cron để thiết lập lịch trình tự động chạy các tác vụ nền
 const node_cron_1 = __importDefault(require("node-cron"));
-const db_1 = require("./db");
-/**
- * Chạy mỗi giờ: tự động chuyển hải sản tươi quá 24h sang Status = 'Expired'.
- * Theo test case TC-07: bài tươi đăng hơn 24h → Status = 'Expired', không còn trên trang chủ.
- */
+// Import đối tượng productRepository để thực hiện các truy vấn cập nhật trạng thái hết hạn của sản phẩm
+const product_repository_1 = require("./repositories/product.repository");
+// Import logger phục vụ ghi log hệ thống
+const logger_1 = require("./utils/logger");
+// Import kết nối redis phục vụ cơ chế khóa phân tán chống trùng lặp tiến trình
+const redis_1 = require("./config/redis");
+// Định nghĩa và xuất hàm startCronJobs để khởi tạo các công việc cron lập lịch tự động
 function startCronJobs() {
-    node_cron_1.default.schedule('0 * * * *', async () => {
+    // Định nghĩa hàm bất đồng bộ expireTask xử lý nghiệp vụ tự động chuyển trạng thái sản phẩm tươi sống quá hạn
+    const expireTask = async () => {
+        // Khóa phân tán lưu trữ trong Redis nhằm đảm bảo trong môi trường đa máy chủ (Multi-pod/Cluster) chỉ có duy nhất 1 luồng thực thi tác vụ
+        const lockKey = "cron:lock:expire_fresh";
         try {
-            const [result] = await db_1.pool.query(`UPDATE Product
-         SET Status = 'Expired'
-         WHERE Type = 'Fresh'
-           AND Status = 'Active'
-           AND CatchTime IS NOT NULL
-           AND CatchTime <= NOW() - INTERVAL 24 HOUR`);
-            if (result.affectedRows > 0) {
-                console.log(`⏰ [CRON] Đã hết hạn ${result.affectedRows} bài hải sản tươi`);
+            // KHẮC PHỤC XUNG ĐỘT PHÂN TÁN: Sử dụng cơ chế Khóa RAM Redis để chỉ cho phép 1 Pod thực thi tác vụ mỗi giờ
+            // Tính toán múi giờ GMT+7 của Việt Nam
+            const VN_TIMEZONE_OFFSET = 7 * 60 * 60 * 1000;
+            // Khởi tạo đối tượng Date chuyển đổi theo múi giờ Việt Nam
+            const nowVN = new Date(Date.now() + VN_TIMEZONE_OFFSET);
+            // Tạo chuỗi giá trị duy nhất đại diện cho giờ chạy hiện tại dạng YYYY-MM-DD:HH
+            const uniqueValue = `${nowVN.getUTCFullYear()}-${nowVN.getUTCMonth()}-${nowVN.getUTCDate()}:${nowVN.getUTCHours()}`;
+            // Giành quyền thực thi trong vòng 55 phút (3300 giây) bằng hàm ghi khóa Redis có cờ "NX" (chỉ ghi khi chưa tồn tại)
+            const lockAcquired = await redis_1.redis.set(
+            // Khóa Redis
+            lockKey, 
+            // Giá trị định danh độc nhất đại diện cho giờ chạy hiện tại
+            uniqueValue, 
+            // Cờ cấu hình thời gian hết hạn EX (giây)
+            "EX", 
+            // Thời gian hết hạn là 3300 giây (55 phút) để tự động giải phóng trước chu kỳ giờ tiếp theo
+            3300, 
+            // Chỉ ghi khóa khi chưa tồn tại (NX - Not eXists)
+            "NX");
+            // Nếu không giành được khóa (đã có một máy chủ khác ghi khóa giờ này trước)
+            if (!lockAcquired) {
+                // Ghi nhận log gỡ lỗi (debug) và dừng thực thi tác vụ ở máy chủ này
+                logger_1.logger.debug("[CRON] Một thực thể ứng dụng khác đã giành quyền thực thi tác vụ hết hạn.");
+                return;
+            }
+            // Ghi log thông báo khóa phân tán đã giành quyền thực thi thành công
+            logger_1.logger.info("[CRON] Khóa phân tán được thiết lập thành công. Tiến hành hết hạn hải sản tươi...");
+            // Khởi tạo mốc thời gian ngày hôm qua (trước 24 giờ)
+            const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            // Khởi tạo mốc thời gian hai ngày trước (trước 48 giờ)
+            const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+            // Thực hiện cập nhật hàng loạt các sản phẩm Fresh đang Active nhưng đã quá hạn bán
+            const result = await product_repository_1.productRepository.updateMany({
+                // Chỉ xét sản phẩm loại Fresh (tươi sống)
+                type: "Fresh",
+                // Đang hoạt động
+                status: "Active",
+                // Quá hạn: Thời gian đánh bắt quá 48 tiếng HOẶC thời gian tạo bài đăng quá 24 tiếng
+                $or: [
+                    { catchTime: { $lte: twoDaysAgo } },
+                    { createdAt: { $lte: yesterday } },
+                ],
+            }, 
+            // Chuyển đổi trạng thái sản phẩm sang Expired (Hết hạn)
+            { $set: { status: "Expired" } });
+            // Nếu có ít nhất một sản phẩm được cập nhật thành công
+            if (result.modifiedCount > 0) {
+                // Ghi log số lượng mẻ hàng đã bị cập nhật hết hạn thành công
+                logger_1.logger.info(`⏰ [CRON] Đã hết hạn ${result.modifiedCount} bài hải sản tươi`);
+                // Tăng phiên bản bộ nhớ cache để client cập nhật danh sách hải sản tươi mới nhất
+                await redis_1.redis.incr("product:list:version:Fresh");
             }
         }
         catch (err) {
-            console.error('[CRON] Lỗi khi expire sản phẩm tươi:', err);
+            // Ghi nhận log lỗi nếu quá trình cập nhật bị lỗi
+            logger_1.logger.error("[CRON] Lỗi khi expire sản phẩm tươi:", err);
         }
-    });
-    /* Chạy luôn một lần khi khởi động để đồng bộ */
-    (async () => {
-        try {
-            const [result] = await db_1.pool.query(`UPDATE Product SET Status = 'Expired'
-         WHERE Type = 'Fresh' AND Status = 'Active'
-           AND CatchTime IS NOT NULL AND CatchTime <= NOW() - INTERVAL 24 HOUR`);
-            console.log(`⏰ [CRON-BOOT] Khởi động: đã hết hạn ${result.affectedRows} bài tươi cũ`);
-        }
-        catch (err) {
-            console.error('[CRON-BOOT]', err);
-        }
-    })();
-    console.log('⏰ Cronjob expire hải sản tươi đã khởi động (mỗi giờ)');
+    };
+    // Thiết lập lịch trình chạy định kỳ tác vụ expireTask vào phút thứ 0 của mỗi giờ (0 * * * *)
+    node_cron_1.default.schedule("0 * * * *", expireTask);
+    // Kích hoạt chạy thử tác vụ expireTask ngay khi khởi chạy backend để đồng bộ nhanh dữ liệu ban đầu
+    expireTask().catch((err) => 
+    // Ghi log lỗi nếu chạy thử ban đầu thất bại
+    logger_1.logger.error("[CRON-BOOT] Lỗi đồng bộ ban đầu:", err));
+    // Ghi log thông báo tiến trình lập lịch hết hạn hải sản tươi đã khởi chạy thành công
+    logger_1.logger.info("⏰ Cronjob expire hải sản tươi đã khởi động (mỗi giờ)");
 }

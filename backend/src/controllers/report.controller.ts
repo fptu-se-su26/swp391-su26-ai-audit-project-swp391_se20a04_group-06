@@ -1,91 +1,97 @@
+// Import các kiểu dữ liệu Request và Response từ Express để định nghĩa kiểu cho các API
+import { Request, Response } from "express";
+// Import reportService chứa logic nghiệp vụ xử lý báo cáo vi phạm
+import { reportService } from "../services/report.service";
+// Import helper gửi phản hồi lỗi server chuẩn hóa
+import { sendServerError } from "../helpers/response.helper";
+// Import helper phân tích các tham số phân trang
+import { parsePagination } from "../utils/pagination";
+
 /**
- * report.controller.ts
- * Báo cáo vi phạm + admin xử lý
- *
- * BUG FIX: createReport dùng sai (req as any).user.id thay vì req.user.userId
- * → userId luôn undefined → INSERT nhận NULL ReporterID → lỗi FK constraint
+ * HÀM NGƯỜI DÙNG GỬI BÁO CÁO VI PHẠM (REPORT PRODUCT) CHO MỘT SẢN PHẨM KHÔNG HỢP LỆ
  */
-import { Request, Response } from 'express';
-import { RowDataPacket, ResultSetHeader } from 'mysql2';
-import { pool } from '../db';
-
-// POST /api/reports/:productId — tạo báo cáo
 export async function createReport(req: Request, res: Response) {
-  // ✅ FIX: dùng req.user.userId thay vì (req as any).user.id
+  // Lấy ID người dùng thực hiện báo cáo từ token xác thực
   const { userId } = req.user;
-  const productId = parseInt(req.params.productId, 10);
+  // Lấy ID sản phẩm bị báo cáo từ tham số URL (:productId)
+  const { productId } = req.params;
+  // Lấy lý do báo cáo (reason) từ body request
   const { reason } = req.body;
-  if (!productId || !reason) return res.status(400).json({ message: 'Thiếu thông tin' });
 
   try {
-    // Kiểm tra đã báo cáo chưa
-    const [existing] = await pool.query<RowDataPacket[]>(
-      `SELECT ReportID FROM Report WHERE ReporterID = ? AND ProductID = ?`,
-      [userId, productId]
-    );
-    if ((existing as RowDataPacket[]).length > 0) {
-      return res.status(400).json({ message: 'Bạn đã báo cáo bài đăng này rồi' });
-    }
-    await pool.query(
-      `INSERT INTO Report (ReporterID, ProductID, Reason) VALUES (?, ?, ?)`,
-      [userId, productId, reason]
-    );
-    return res.json({ message: 'Báo cáo đã gửi thành công' });
-  } catch (err) {
-    return res.status(500).json({ message: 'Lỗi server' });
+    // Gọi service xử lý tạo bản ghi báo cáo vi phạm mới trong database
+    await reportService.createReport(userId, productId, reason);
+    // Trả về thông báo thành công cho Client
+    return res.json({ message: "Báo cáo đã gửi thành công" });
+  } catch (err: any) {
+    // Trả về lỗi nghiệp vụ nếu có định nghĩa sẵn status code
+    if (err.status)
+      return res.status(err.status).json({ message: err.message });
+    // Trả về lỗi server 500 nếu gặp sự cố bất ngờ
+    return sendServerError(res, err);
   }
 }
 
-// GET /api/reports — admin lấy danh sách báo cáo (chỉ Admin, bảo vệ bởi adminOnly middleware)
+/**
+ * HÀM TRUY VẤN DANH SÁCH BÁO CÁO VI PHẠM (Dành cho trang Admin, có phân trang và lọc theo trạng thái)
+ */
 export async function getReports(req: Request, res: Response) {
-  const { status = 'Pending' } = req.query as Record<string, string>;
-  try {
-    const [rows] = await pool.query<RowDataPacket[]>(`
-      SELECT r.ReportID AS id, r.Reason AS reason, r.Status AS status,
-             r.AdminNote AS adminNote, r.CreatedAt AS createdAt,
-             u.Name AS reporterName,
-             p.Name AS productName, p.ProductID AS productId,
-             p.SellerID AS sellerId, s.Name AS sellerName
-      FROM Report r
-      JOIN User u ON u.UserID = r.ReporterID
-      JOIN Product p ON p.ProductID = r.ProductID
-      JOIN User s ON s.UserID = p.SellerID
-      WHERE r.Status = ?
-      ORDER BY r.CreatedAt DESC
-      LIMIT 100
-    `, [status]);
-    return res.json(rows);
-  } catch (err) {
-    return res.status(500).json({ message: 'Lỗi server' });
+  // Lấy trạng thái báo cáo cần lọc từ URL Query String (mặc định là "Pending" - Đang chờ xử lý)
+  const queryStatus = (req.query.status as string) || "Pending";
+  // Kiểm tra tính hợp lệ của trạng thái lọc, chỉ cho phép "Pending", "Resolved", "Dismissed"
+  if (!["Pending", "Resolved", "Dismissed"].includes(queryStatus)) {
+    return res.status(400).json({ message: "Trạng thái báo cáo không hợp lệ" });
   }
-}
 
-// PATCH /api/reports/:id — admin xử lý: Resolved (ẩn) | Dismissed (bỏ qua)
-// (chỉ Admin, bảo vệ bởi adminOnly middleware trong routes)
-export async function handleReport(req: Request, res: Response) {
-  const reportId = parseInt(req.params.id, 10);
-  const { action, adminNote } = req.body; // action: 'resolve' | 'dismiss'
-  if (!reportId || !action) return res.status(400).json({ message: 'Thiếu thông tin' });
+  // Phân tích tham số phân trang từ Query (page, limit) với giới hạn tối đa 100 dòng
+  const { page, limit, offset } = parsePagination(
+    req.query.page as string,
+    req.query.limit as string,
+    100,
+  );
 
-  const newStatus = action === 'resolve' ? 'Resolved' : 'Dismissed';
   try {
-    if (action === 'resolve') {
-      const [report] = await pool.query<RowDataPacket[]>(
-        `SELECT ProductID FROM Report WHERE ReportID = ?`, [reportId]
-      );
-      if ((report as RowDataPacket[])[0]) {
-        await pool.query(
-          `UPDATE Product SET Status = 'Deleted' WHERE ProductID = ?`,
-          [(report as RowDataPacket[])[0].ProductID]
-        );
-      }
-    }
-    await pool.query(
-      `UPDATE Report SET Status = ?, AdminNote = ? WHERE ReportID = ?`,
-      [newStatus, adminNote || null, reportId]
+    // Gọi service lấy danh sách báo cáo vi phạm khớp trạng thái và phân trang
+    const { formattedRows, total } = await reportService.listReports(
+      queryStatus as any,
+      offset,
+      limit,
     );
-    return res.json({ message: 'Đã xử lý báo cáo' });
+
+    // Gắn thêm các header tùy chỉnh chứa siêu dữ liệu phân trang vào response trả về (thông thường admin dashboard cần cái này)
+    res.setHeader("X-Total-Count", total.toString());
+    res.setHeader("X-Page", page.toString());
+    res.setHeader("X-Limit", limit.toString());
+
+    // Trả về danh sách báo cáo vi phạm cho Client dưới dạng JSON
+    return res.json(formattedRows);
   } catch (err) {
-    return res.status(500).json({ message: 'Lỗi server' });
+    return sendServerError(res, err);
   }
 }
+
+/**
+ * HÀM ADMIN XỬ LÝ BÁO CÁO VI PHẠM (Duyệt báo cáo / Hủy bỏ báo cáo / Xóa sản phẩm vi phạm)
+ */
+export async function handleReport(req: Request, res: Response) {
+  // Lấy ID báo cáo vi phạm cần xử lý từ tham số URL (:id)
+  const reportId = req.params.id;
+  // Lấy hành động xử lý (action: "Resolve"/"Dismiss") và ghi chú của Admin (adminNote) từ body request
+  const { action, adminNote } = req.body;
+  // Lấy ID của Admin đang thực hiện thao tác này từ token xác thực
+  const adminId = req.user.userId;
+
+  try {
+    // Gọi service xử lý báo cáo: cập nhật trạng thái báo cáo, gửi thông báo hoặc xóa bài đăng vi phạm nếu action là Resolve
+    await reportService.handleReport(reportId, action, adminNote, adminId);
+    // Trả về phản hồi thành công
+    return res.json({
+      message: "Đã xử lý báo cáo và dọn dẹp tài nguyên thành công!",
+    });
+  } catch (err: any) {
+    if (err.status)
+      return res.status(err.status).json({ message: err.message });
+    return sendServerError(res, err);
+  }
+}
+

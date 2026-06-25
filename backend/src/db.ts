@@ -1,95 +1,46 @@
-import mysql from 'mysql2/promise';
-import dotenv from 'dotenv';
-<<<<<<< HEAD
-dotenv.config();
+// Import thư viện mongoose để tương tác với cơ sở dữ liệu MongoDB
+import mongoose from "mongoose";
+// Import logger phục vụ ghi log hệ thống
+import { logger } from "./utils/logger";
 
-export const pool = mysql.createPool({
-  host:            process.env.DB_HOST     || 'localhost',
-  port:            parseInt(process.env.DB_PORT || '3306'),
-  user:            process.env.DB_USER     || 'root',
-  password:        process.env.DB_PASS     || '',
-  database:        process.env.DB_NAME     || 'seafood_db',
-  waitForConnections: true,
-  connectionLimit: 10,
-  charset:         'utf8mb4',
-});
+// Định nghĩa và xuất hàm testConnection thực hiện kết nối tới MongoDB
+export const testConnection = async () => {
+  // Lấy đường dẫn kết nối MongoDB từ biến môi trường MONGO_URI, mặc định kết nối localhost nếu thiếu
+  const mongoUri =
+    process.env.MONGO_URI || "mongodb://localhost:27017/seafood_db";
 
-export async function testConnection() {
-  const conn = await pool.getConnection();
-  console.log('✅ MySQL connected');
-
-  // Tự động tạo bảng Notification nếu chưa có
-  await conn.query(`
-    CREATE TABLE IF NOT EXISTS Notification (
-      NotificationID INT AUTO_INCREMENT PRIMARY KEY,
-      UserID INT NOT NULL,
-      Type VARCHAR(50) NOT NULL,
-      Content TEXT NOT NULL,
-      IsRead TINYINT(1) NOT NULL DEFAULT 0,
-      CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      ProductID INT NULL,
-      ReviewID INT NULL,
-      FOREIGN KEY (UserID) REFERENCES User(UserID) ON DELETE CASCADE,
-      FOREIGN KEY (ProductID) REFERENCES Product(ProductID) ON DELETE CASCADE,
-      FOREIGN KEY (ReviewID) REFERENCES Review(ReviewID) ON DELETE CASCADE
-    )
-  `);
-
-  // Tự động thêm cột ProductID nếu cơ sở dữ liệu cũ chưa có
   try {
-    const [cols] = await conn.query("SHOW COLUMNS FROM Notification LIKE 'ProductID'");
-    if ((cols as any[]).length === 0) {
-      await conn.query(`
-        ALTER TABLE Notification 
-        ADD COLUMN ProductID INT NULL, 
-        ADD CONSTRAINT fk_notification_product FOREIGN KEY (ProductID) REFERENCES Product(ProductID) ON DELETE CASCADE
-      `);
-      console.log('✅ Added ProductID column and foreign key to Notification table');
+    // Chờ kết nối MongoDB thông qua Mongoose với cấu hình bổ sung
+    await mongoose.connect(mongoUri, {
+      // Tự động đồng bộ xây dựng các chỉ mục (như 2dsphere cho GPS và text cho tìm kiếm toàn văn) khi khởi chạy ứng dụng
+      autoIndex: true,
+    });
+    // Ghi nhận log thông báo kết nối cơ sở dữ liệu MongoDB thành công
+    logger.info("✅ MongoDB connected successfully via Mongoose");
+
+    // Thử dọn dẹp và xóa bỏ chỉ mục duy nhất 'phone_1' (nếu tồn tại) của phiên bản cũ để tránh lỗi xung đột số điện thoại rỗng
+    try {
+      // Truy cập trực tiếp vào collection "users" từ kết nối Mongoose hiện hành
+      const usersCollection = mongoose.connection.collection("users");
+      // Truy vấn danh sách toàn bộ các chỉ mục indexes hiện có của bảng users
+      const indexes = await usersCollection.indexes();
+      // Kiểm tra xem có tồn tại chỉ mục nào có tên là "phone_1" hay không
+      const hasPhoneIndex = indexes.some(idx => idx.name === "phone_1");
+      // Nếu tồn tại chỉ mục cũ "phone_1"
+      if (hasPhoneIndex) {
+        // Thực hiện xóa bỏ chỉ mục này khỏi database
+        await usersCollection.dropIndex("phone_1");
+        // Ghi nhận log đã xóa thành công chỉ mục cũ
+        logger.info("🗑️ Dropped legacy unique index 'phone_1' successfully");
+      }
+    } catch (indexErr: any) {
+      // Ghi log cảnh báo nếu không xóa được chỉ mục (có thể do chỉ mục không tồn tại)
+      logger.warn(`Could not drop phone_1 index (it might not exist): ${indexErr.message}`);
     }
-  } catch (errCol) {
-    console.error('Lỗi khi nâng cấp bảng Notification:', errCol);
+  } catch (err: any) {
+    // Ghi log lỗi nghiêm trọng nếu kết nối cơ sở dữ liệu thất bại
+    logger.error(`❌ MongoDB connection failed: ${err.message}`);
+    // Thoát tiến trình ngay lập tức với mã lỗi 1 để hệ thống quản lý container tự động khởi động lại ứng dụng
+    process.exit(1);
   }
-
-  // Tự động thêm cột ReviewID nếu cơ sở dữ liệu cũ chưa có
-  try {
-    const [reviewCols] = await conn.query("SHOW COLUMNS FROM Notification LIKE 'ReviewID'");
-    if ((reviewCols as any[]).length === 0) {
-      await conn.query(`
-        ALTER TABLE Notification 
-        ADD COLUMN ReviewID INT NULL,
-        ADD CONSTRAINT fk_notification_review FOREIGN KEY (ReviewID) REFERENCES Review(ReviewID) ON DELETE CASCADE
-      `);
-      console.log('✅ Added ReviewID column and foreign key to Notification table');
-    }
-  } catch (errReviewCol) {
-    console.error('Lỗi khi thêm cột ReviewID vào Notification:', errReviewCol);
-  }
-
-  console.log('✅ Checked/Created Notification table');
-
-=======
-import { runMigrations } from './db.migrations';
-dotenv.config();
-
-export const pool = mysql.createPool({
-  host:               process.env.DB_HOST     || 'localhost',
-  port:               parseInt(process.env.DB_PORT || '3306'),
-  user:               process.env.DB_USER     || 'root',
-  password:           process.env.DB_PASS     || '',
-  database:           process.env.DB_NAME     || 'seafood_db',
-  waitForConnections: true,
-  connectionLimit:    10,
-  charset:            'utf8mb4',
-});
-
-/**
- * Kiểm tra kết nối và chạy migrations khi khởi động.
- * Logic migrations được tách sang db.migrations.ts để dễ bảo trì.
- */
-export async function testConnection() {
-  const conn = await pool.getConnection();
-  console.log('✅ MySQL connected');
-  await runMigrations(conn);
->>>>>>> origin/main
-  conn.release();
 }

@@ -4,44 +4,99 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.upload = void 0;
+exports.handleUploadError = handleUploadError;
 exports.uploadToCloudinary = uploadToCloudinary;
 exports.deleteFromCloudinary = deleteFromCloudinary;
+/// <reference path="../types/streamifier.d.ts" />
+// Import thư viện multer để xử lý tải lên tệp tin dạng multipart/form-data
 const multer_1 = __importDefault(require("multer"));
-const cloudinary_1 = require("cloudinary");
+// Import thư viện streamifier để chuyển đổi bộ đệm Buffer thành luồng đọc dữ liệu (Read Stream)
 const streamifier_1 = __importDefault(require("streamifier"));
-const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config();
-cloudinary_1.v2.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-/* Lưu file vào memory (buffer) trước, rồi stream lên Cloudinary */
+// Import cấu hình Cloudinary để tải ảnh lên máy chủ đám mây
+const cloudinary_1 = require("../config/cloudinary");
+// Cấu hình lưu trữ bộ đệm ảnh trong RAM (Memory Storage) để dễ dàng chuyển tiếp lên Cloudinary mà không cần lưu tạm ở ổ cứng máy chủ
 const storage = multer_1.default.memoryStorage();
+/**
+ * BỘ LỌC ĐỊNH DẠNG TỆP TIN: Chỉ cho phép tải lên các định dạng ảnh JPEG, PNG, WEBP phổ biến
+ */
 const fileFilter = (_req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    // Nếu loại tệp tin (mimetype) nằm trong danh sách cho phép, gọi callback(null, true)
     if (allowed.includes(file.mimetype))
         cb(null, true);
+    // Ngược lại, trả về lỗi báo định dạng không được hỗ trợ
     else
-        cb(new Error('Chỉ chấp nhận ảnh JPEG, PNG, WEBP'));
+        cb(new Error("Chỉ chấp nhận ảnh JPEG, PNG, WEBP"));
 };
+// [FIX HIGH] Giảm dung lượng từ 5MB xuống 2MB để tránh OOM (Out of Memory) trên máy chủ Node.js khi xử lý đồng thời nhiều ảnh lớn
+// YÊU CẦU: Phía Frontend (React/Next) NÊN nén ảnh (compress) trước khi gửi yêu cầu gọi API upload để tối ưu hóa băng thông
 exports.upload = (0, multer_1.default)({
     storage,
     fileFilter,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB / ảnh
+    limits: {
+        fileSize: 2 * 1024 * 1024, // Giới hạn kích thước tối đa 2 MB mỗi file ảnh (Ngăn Nodejs ngốn RAM đột biến)
+        files: 5, // Giới hạn tối đa 5 file ảnh trong mỗi yêu cầu gửi lên
+    },
 });
-/* Upload 1 buffer lên Cloudinary, trả về { url, publicId } */
-function uploadToCloudinary(buffer, folder = 'seafood') {
+/**
+ * MIDDLEWARE XỬ LÝ LỖI PHÁT SINH TỪ MULTER (Xử lý các lỗi vượt giới hạn tệp tin hoặc số lượng)
+ * Chuyển các lỗi này về định dạng HTTP 400 Bad Request kèm thông điệp tiếng Việt dễ hiểu
+ */
+function handleUploadError(err, _req, res, next) {
+    // Nếu lỗi thuộc nhóm lỗi của thư viện Multer
+    if (err instanceof multer_1.default.MulterError) {
+        // Lỗi tệp tin vượt quá dung lượng 2MB cấu hình ở trên
+        if (err.code === "LIMIT_FILE_SIZE")
+            return res
+                .status(400)
+                .json({
+                message: "File ảnh quá lớn. Tối đa 2MB mỗi ảnh. Vui lòng thu nhỏ ảnh.",
+            });
+        // Lỗi số lượng tệp tin gửi vượt quá 5 ảnh
+        if (err.code === "LIMIT_FILE_COUNT")
+            return res.status(400).json({ message: "Tối đa 5 ảnh mỗi lần upload." });
+        // Các lỗi Multer khác
+        return res.status(400).json({ message: `Upload lỗi: ${err.message}` });
+    }
+    // Nếu lỗi do bộ lọc định dạng ảnh fileFilter ném ra
+    if (err?.message?.includes("Chỉ chấp nhận"))
+        return res.status(400).json({ message: err.message });
+    // Chuyển các lỗi không xác định khác cho middleware xử lý lỗi tiếp theo
+    next(err);
+}
+/**
+ * HÀM TIỆN ÍCH TẢI LÊN MỘT BUFFER ẢNH LÊN CLOUDINARY (TRẢ VỀ HỨA HẸN PROMISE URL VÀ PUBLICID)
+ * Tích hợp cơ chế Timeout tự động ngắt kết nối nếu thời gian tải lên quá lâu
+ */
+function uploadToCloudinary(buffer, folder = "seafood") {
     return new Promise((resolve, reject) => {
-        const stream = cloudinary_1.v2.uploader.upload_stream({ folder, resource_type: 'image', quality: 'auto', fetch_format: 'auto' }, (err, result) => {
+        // Thiết lập cơ chế tự động ngắt (Timeout): ngắt luồng tải lên và ném lỗi nếu quá 15 giây mà chưa hoàn tất
+        const timeout = setTimeout(() => {
+            reject(new Error("Tải lên Cloudinary thất bại do hết thời gian chờ (Timeout)"));
+        }, 15000);
+        // Khởi tạo luồng tải lên (Upload Stream) của SDK Cloudinary
+        const stream = cloudinary_1.cloudinary.uploader.upload_stream({
+            folder, // Thư mục chứa ảnh trên Cloudinary
+            resource_type: "image", // Loại tài nguyên là hình ảnh
+            quality: "auto", // Tự động tối ưu hóa chất lượng nén ảnh
+            fetch_format: "auto", // Tự động chuyển đổi định dạng ảnh phù hợp với thiết bị người dùng (như WEBP)
+        }, (err, result) => {
+            // Hủy bỏ bộ đếm thời gian Timeout khi nhận được phản hồi (thành công hoặc thất bại)
+            clearTimeout(timeout);
+            // Nếu xảy ra lỗi hoặc kết quả trống, ném lỗi từ chối Promise
             if (err || !result)
-                return reject(err ?? new Error('Upload thất bại'));
+                return reject(err ?? new Error("Upload thất bại"));
+            // Trả về kết quả gồm URL ảnh bảo mật (secure_url) và mã định danh ảnh (public_id) trên Cloudinary
             resolve({ url: result.secure_url, publicId: result.public_id });
         });
+        // Chuyển bộ đệm Buffer trong bộ nhớ thành một luồng đọc và truyền (pipe) dữ liệu trực tiếp vào luồng tải lên của Cloudinary
         streamifier_1.default.createReadStream(buffer).pipe(stream);
     });
 }
-/* Xoá ảnh khỏi Cloudinary */
+/**
+ * HÀM TIỆN ÍCH XÓA ẢNH KHỎI MÁY CHỦ CLOUDINARY QUA PUBLIC ID
+ */
 function deleteFromCloudinary(publicId) {
-    return cloudinary_1.v2.uploader.destroy(publicId).then(() => undefined);
+    // Gọi SDK Cloudinary thực thi lệnh destroy để xóa tài nguyên và trả về promise rỗng
+    return cloudinary_1.cloudinary.uploader.destroy(publicId).then(() => undefined);
 }

@@ -1,0 +1,32 @@
+name: Seafood Backend Unit Test CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Unit Tests with Coverage
+        run: npm run test:cov
+        env:
+          # Cung cấp các biến môi trường giả lập cơ bản nếu code yêu cầu khi nạp
+          NODE_ENV: test
+          JWT_SECRET: test_super_secret_key_jwt_seafood
+          OTP_SECRET: test_otp_secret_key_secure_32_chars

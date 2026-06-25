@@ -1,70 +1,63 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.addReview = addReview;
 exports.getReviewsBySeller = getReviewsBySeller;
-const db_1 = require("../db");
-const upload_1 = require("../middlewares/upload");
-const socket_1 = require("../socket");
+// Import reviewService chứa logic nghiệp vụ thêm/lấy đánh giá người bán
+const review_service_1 = require("../services/review.service");
+// Import helper gửi phản hồi lỗi server chuẩn hóa
+const response_helper_1 = require("../helpers/response.helper");
+// Import thư viện Mongoose để kiểm tra kiểu dữ liệu ID của MongoDB
+const mongoose_1 = __importDefault(require("mongoose"));
+/**
+ * HÀM NGƯỜI DÙNG GỬI ĐÁNH GIÁ (REVIEW/FEEDBACK) CHO NGƯỜI BÁN
+ */
 async function addReview(req, res) {
-    const reviewerId = req.user.userId;
-    const { productId, sellerId, rating, comment } = req.body;
-    if (!productId || !sellerId || !rating) {
-        return res.status(400).json({ message: 'Thiếu thông tin đánh giá' });
-    }
-    const numRating = Number(rating);
-    if (isNaN(numRating) || numRating < 1 || numRating > 5) {
-        return res.status(400).json({ message: 'Đánh giá phải từ 1 đến 5 sao' });
-    }
+    // Lấy ID người thực hiện đánh giá từ token xác thực
+    const { userId: reviewerId } = req.user;
     try {
-        let finalImageUrl = req.body.imageUrl || null;
-        if (req.file) {
-            const { url } = await (0, upload_1.uploadToCloudinary)(req.file.buffer, 'reviews');
-            finalImageUrl = url;
-        }
-        const [result] = await db_1.pool.query('INSERT INTO Review (ProductID, ReviewerID, SellerID, Rating, Comment, ImageURL) VALUES (?, ?, ?, ?, ?, ?)', [Number(productId), reviewerId, Number(sellerId), numRating, comment || null, finalImageUrl]);
-        // Lấy thông tin người đánh giá và sản phẩm để gửi thông báo
-        try {
-            const [reviewerRows] = await db_1.pool.query('SELECT Name FROM User WHERE UserID = ?', [reviewerId]);
-            const reviewerName = reviewerRows[0]?.Name || 'Một người dùng';
-            const [productRows] = await db_1.pool.query('SELECT Name FROM Product WHERE ProductID = ?', [Number(productId)]);
-            const productName = productRows[0]?.Name || 'sản phẩm';
-            const previewText = `${reviewerName} đã đánh giá ${numRating}⭐ cho "${productName}": "${comment ? comment.slice(0, 40) : 'Không có nhận xét'}"`;
-            // 1. Lưu thông báo vào CSDL
-            await db_1.pool.query('INSERT INTO Notification (UserID, Type, Content, ProductID) VALUES (?, ?, ?, ?)', [Number(sellerId), 'new_review', previewText, Number(productId)]);
-            // 2. Phát Socket.IO thời gian thực
-            const io = (0, socket_1.getIO)();
-            io.to(`user_${Number(sellerId)}`).emit('notification', {
-                type: 'new_review',
-                productId: Number(productId),
-                sellerId: Number(sellerId),
-                preview: previewText,
-            });
-        }
-        catch (socketErr) {
-            console.error('Lỗi khi lưu và phát thông báo đánh giá:', socketErr);
-        }
-        res.status(201).json({ message: 'Đánh giá thành công', reviewId: result.insertId });
+        // Gọi service xử lý thêm đánh giá mới, truyền vào ID người đánh giá, dữ liệu body (sao, nội dung...) và tệp tin hình ảnh đính kèm (nếu có) dưới dạng buffer
+        const reviewId = await review_service_1.reviewService.addReview(reviewerId, req.body, req.file?.buffer);
+        // Trả về mã thành công 201 cùng ID của đánh giá vừa tạo cho Client
+        return res.status(201).json({ message: "Đánh giá thành công", reviewId });
     }
-    catch (error) {
-        res.status(500).json({ message: error.message });
+    catch (err) {
+        // Trả về lỗi nghiệp vụ nếu có định nghĩa sẵn status code
+        if (err.status)
+            return res.status(err.status).json({ message: err.message });
+        // Trả về lỗi server 500 nếu có sự cố bất ngờ
+        return (0, response_helper_1.sendServerError)(res, err);
     }
 }
+/**
+ * HÀM TRUY VẤN DANH SÁCH ĐÁNH GIÁ CỦA MỘT NGƯỜI BÁN (CÓ PHÂN TRANG)
+ */
 async function getReviewsBySeller(req, res) {
-    const sellerId = parseInt(req.params.sellerId);
-    if (!sellerId) {
-        return res.status(400).json({ message: 'Thiếu ID người bán' });
+    // Lấy ID người bán cần truy vấn đánh giá từ tham số URL (:sellerId)
+    const { sellerId } = req.params;
+    // Validate: Đảm bảo ID người bán hợp lệ định dạng MongoDB ObjectId
+    if (!sellerId || !mongoose_1.default.Types.ObjectId.isValid(sellerId)) {
+        return res.status(400).json({ message: "ID người bán không hợp lệ" });
     }
+    // Tự thực hiện logic phân trang thủ công và giới hạn cận trên limit tối đa 100
+    const page = Math.max(1, parseInt(req.query.page || "1", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit || "20", 10)));
+    const skip = (page - 1) * limit; // Tính số bản ghi bỏ qua (offset)
     try {
-        const [rows] = await db_1.pool.query(`SELECT r.ReviewID, r.Rating, r.Comment, r.ImageURL, r.CreatedAt, 
-              u.Name as ReviewerName, p.Name as ProductName
-       FROM Review r
-       JOIN User u ON r.ReviewerID = u.UserID
-       JOIN Product p ON r.ProductID = p.ProductID
-       WHERE r.SellerID = ?
-       ORDER BY r.CreatedAt DESC`, [sellerId]);
-        res.json(rows);
+        // Gọi service lấy danh sách đánh giá của người bán theo skip/limit
+        const { formatted, total } = await review_service_1.reviewService.listSellerReviews(sellerId, skip, limit);
+        // Trả về dữ liệu phân trang đánh giá cho Client dạng JSON
+        return res.json({
+            data: formatted, // Mảng danh sách đánh giá chi tiết
+            page, // Số trang hiện tại
+            limit, // Giới hạn số phần tử trên trang
+            total, // Tổng số đánh giá của người bán này
+            totalPages: Math.ceil(total / limit), // Tổng số trang tính được
+        });
     }
-    catch (error) {
-        res.status(500).json({ message: error.message });
+    catch (err) {
+        return (0, response_helper_1.sendServerError)(res, err);
     }
 }

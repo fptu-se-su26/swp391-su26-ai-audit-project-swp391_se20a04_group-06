@@ -1,8 +1,8 @@
 {
-  "name": "haisan-frontend-phase-1",
+  "name": "haisan-frontend-role-split",
   "version": "1.0.0",
   "private": true,
-  "description": "Frontend phase 1 for HaiSan.vn guest and buyer experience.",
+  "description": "Role-split frontend for HaiSan.vn Buyer, Seller, and Admin experiences.",
   "scripts": {
     "dev": "node server.cjs",
     "start": "node server.cjs"

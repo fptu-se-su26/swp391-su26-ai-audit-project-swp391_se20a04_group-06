@@ -2,6 +2,14 @@
 
 Frontend mới cho cả 3 giai đoạn: Guest/Buyer dùng chung giao diện, Seller có workspace quản lý riêng, Admin có control room màu đỏ sáng.
 
+## Đăng nhập theo role
+
+- Guest chưa đăng nhập luôn nhìn thấy frontend Buyer.
+- Nút `Đăng nhập` mở modal chọn Buyer, Seller hoặc Admin.
+- Buyer/Seller/Admin demo được lưu bằng `localStorage` key `haisan-demo-user` để xem nhanh 3 frontend đã tách.
+- Backend hiện có `/auth/google`, `/auth/me`, `/auth/logout`; nút Google OAuth đang để sẵn điểm nối khi có credential thật.
+- Đăng xuất xóa session demo và đưa về giao diện Guest/Buyer.
+
 ## Chạy local
 
 Từ thư mục `client`:

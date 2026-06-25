@@ -6,6 +6,7 @@ const API_BASE =
 const app = document.querySelector("#app");
 const toastRoot = document.querySelector("#toast-root");
 const sectionIds = ["market", "fishermen", "recipes", "community", "seller", "admin"];
+const DEMO_USER_KEY = "haisan-demo-user";
 
 function sectionFromHash() {
   const section = window.location.hash.replace("#", "");
@@ -17,6 +18,9 @@ const state = {
   apiOnline: false,
   loading: true,
   activeSection: sectionFromHash(),
+  auth: {
+    modalOpen: false,
+  },
   filters: {
     search: "",
     type: "All",
@@ -240,13 +244,25 @@ const fallbackPosts = [
   },
 ];
 
+const demoBuyerUser = {
+  id: "demo-buyer-1",
+  name: "Buyer Minh",
+  role: "Buyer",
+  accountType: "Buyer",
+  email: "buyer@haisan.vn",
+  isDemo: true,
+};
+
 const demoSellerUser = {
   id: "demo-seller-1",
   name: "Tàu Cô Ba Cần Giờ",
-  role: "User",
+  role: "Seller",
+  accountType: "Seller",
+  email: "seller@haisan.vn",
   isVerified: true,
   isPremium: true,
   avatarUrl: "",
+  isDemo: true,
 };
 
 const productCategories = [
@@ -268,7 +284,9 @@ const demoAdminUser = {
   id: "demo-admin-1",
   name: "Admin HaiSan.vn",
   role: "Admin",
+  accountType: "Admin",
   email: "admin@haisan.vn",
+  isDemo: true,
 };
 
 const adminStatusLabels = {
@@ -378,23 +396,6 @@ const demoAdminBroadcasts = [
   },
 ];
 
-function currentAdmin() {
-  return state.user?.role === "Admin" ? state.user : demoAdminUser;
-}
-
-function isDemoAdminMode() {
-  return state.user?.role !== "Admin";
-}
-
-function adminProfile() {
-  const admin = currentAdmin();
-  return {
-    id: admin.id,
-    name: admin.name || "Admin",
-    email: admin.email || "admin@haisan.vn",
-  };
-}
-
 function buildDemoAdminListings() {
   return fallbackProducts.map((item, index) => ({
     id: getId(item),
@@ -448,12 +449,68 @@ function buildDemoAdminStats() {
   };
 }
 
+function userAudience(user = state.user) {
+  if (!user) return "buyer";
+  if (user.role === "Admin" || user.accountType === "Admin") return "admin";
+  if (
+    user.role === "Seller" ||
+    user.accountType === "Seller" ||
+    user.isSeller ||
+    user.isVerified ||
+    user.isPremium
+  ) {
+    return "seller";
+  }
+  return "buyer";
+}
+
+function defaultSectionForAudience(audience = userAudience()) {
+  if (audience === "admin") return "admin";
+  if (audience === "seller") return "seller";
+  return "market";
+}
+
+function sectionsForAudience(audience = userAudience()) {
+  if (audience === "admin") return ["admin"];
+  if (audience === "seller") return ["seller"];
+  return ["market", "fishermen", "recipes", "community"];
+}
+
+function normalizeSectionForAudience(section = state.activeSection, audience = userAudience()) {
+  const allowed = sectionsForAudience(audience);
+  return allowed.includes(section) ? section : defaultSectionForAudience(audience);
+}
+
+function roleLabel(user = state.user) {
+  if (!user) return "Guest";
+  const audience = userAudience(user);
+  if (audience === "admin") return "Admin";
+  if (audience === "seller") return "Seller";
+  return "Buyer";
+}
+
+function storedDemoUser() {
+  try {
+    const raw = localStorage.getItem(DEMO_USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    localStorage.removeItem(DEMO_USER_KEY);
+    return null;
+  }
+}
+
+function demoUserForAudience(audience) {
+  if (audience === "admin") return { ...demoAdminUser };
+  if (audience === "seller") return { ...demoSellerUser };
+  return { ...demoBuyerUser };
+}
+
 function currentSeller() {
-  return state.user || demoSellerUser;
+  return userAudience() === "seller" ? state.user || demoSellerUser : demoSellerUser;
 }
 
 function isDemoSellerMode() {
-  return !state.user;
+  return state.user?.isDemo || userAudience() !== "seller";
 }
 
 function sellerProfile() {
@@ -464,6 +521,23 @@ function sellerProfile() {
     isVerified: !!seller.isVerified,
     isPremium: !!seller.isPremium,
     avatarUrl: seller.avatarUrl || seller.avatar || "",
+  };
+}
+
+function currentAdmin() {
+  return userAudience() === "admin" ? state.user || demoAdminUser : demoAdminUser;
+}
+
+function isDemoAdminMode() {
+  return state.user?.isDemo || userAudience() !== "admin";
+}
+
+function adminProfile() {
+  const admin = currentAdmin();
+  return {
+    id: admin.id,
+    name: admin.name || "Admin",
+    email: admin.email || "admin@haisan.vn",
   };
 }
 
@@ -619,6 +693,49 @@ function showToast(message, type = "info") {
   }, 3200);
 }
 
+function activateSectionForCurrentUser() {
+  state.activeSection = normalizeSectionForAudience(sectionFromHash());
+  const desiredHash = `#${state.activeSection}`;
+  if (window.location.hash !== desiredHash) {
+    window.history.replaceState(null, "", desiredHash);
+  }
+}
+
+function setDemoUser(audience) {
+  state.user = demoUserForAudience(audience);
+  localStorage.setItem(DEMO_USER_KEY, JSON.stringify(state.user));
+  state.auth.modalOpen = false;
+  state.selectedProduct = null;
+  state.selectedSeller = null;
+  state.activeSection = defaultSectionForAudience(userAudience());
+  window.history.replaceState(null, "", `#${state.activeSection}`);
+  render();
+  if (userAudience() === "seller") loadSellerData();
+  if (userAudience() === "admin") loadAdminData();
+  showToast(`Đã đăng nhập demo ${roleLabel(state.user)}.`);
+}
+
+async function logoutUser() {
+  const wasDemo = !!state.user?.isDemo;
+  try {
+    if (!wasDemo && state.user) {
+      await apiFetch("/auth/logout", { method: "POST", timeoutMs: 5000 });
+    }
+  } catch {
+    showToast("Đã đăng xuất ở frontend; backend chưa phản hồi logout.", "warn");
+  }
+
+  localStorage.removeItem(DEMO_USER_KEY);
+  state.user = null;
+  state.auth.modalOpen = false;
+  state.selectedProduct = null;
+  state.selectedSeller = null;
+  state.activeSection = "market";
+  window.history.replaceState(null, "", "#market");
+  render();
+  showToast("Đã về chế độ Guest/Buyer.");
+}
+
 async function loadData() {
   state.loading = true;
   render();
@@ -686,14 +803,20 @@ async function loadUser() {
   try {
     state.user = await apiFetch("/auth/me");
   } catch {
-    state.user = null;
+    state.user = storedDemoUser();
   }
-  renderHeaderOnly();
-  loadSellerData();
-  loadAdminData();
+  activateSectionForCurrentUser();
+  render();
+  if (userAudience() === "seller") loadSellerData();
+  if (userAudience() === "admin") loadAdminData();
 }
 
 async function loadSellerData() {
+  if (userAudience() !== "seller") {
+    state.seller.loading = false;
+    return;
+  }
+
   state.seller.loading = true;
   render();
 
@@ -757,6 +880,11 @@ async function loadSellerData() {
 }
 
 async function loadAdminData() {
+  if (userAudience() !== "admin") {
+    state.admin.loading = false;
+    return;
+  }
+
   state.admin.loading = true;
   render();
 
@@ -852,47 +980,61 @@ function renderHeaderOnly() {
 
 function render() {
   const products = visibleProducts();
+  const audience = userAudience();
+  const startSection = defaultSectionForAudience(audience);
   app.innerHTML = `
-    <header class="shell-header">
-      <a class="brand" href="#market" data-nav="market" aria-label="HaiSan.vn">
+    <header class="shell-header ${audience}-header">
+      <a class="brand" href="#${startSection}" data-nav="${startSection}" aria-label="HaiSan.vn">
         <span class="brand-mark">HS</span>
         <span>
           <strong>HaiSan.vn</strong>
-          <small>Buyer market</small>
+          <small>${escapeHtml(roleLabel(state.user))} frontend</small>
         </span>
       </a>
-      <nav class="top-nav" aria-label="Khu vực chính">
-        ${navButton("market", "Chợ biển")}
-        ${navButton("fishermen", "Ngư dân")}
-        ${navButton("recipes", "Bếp biển")}
-        ${navButton("community", "Cộng đồng")}
-        ${navButton("seller", "Seller")}
-        ${navButton("admin", "Admin")}
+      <nav class="top-nav ${audience}-top-nav" aria-label="Khu vực chính">
+        ${renderNavForAudience(audience)}
       </nav>
       <div class="header-actions" data-header-user>${renderUserButton()}</div>
     </header>
 
     <main>
-      ${renderMarket(products)}
-      ${renderFishermen()}
-      ${renderRecipes()}
-      ${renderCommunity()}
-      ${renderSellerWorkspace()}
-      ${renderAdminWorkspace()}
-      ${renderRoadmap()}
+      ${renderMainForAudience(audience, products)}
     </main>
 
     <footer class="site-footer">
-      <span>HaiSan.vn phase 3</span>
+      <span>HaiSan.vn phase 3 role split</span>
       <span>${state.apiOnline ? "API online" : "Đang dùng dữ liệu mẫu"}</span>
       <span>${escapeHtml(API_BASE)}</span>
     </footer>
 
     ${state.selectedProduct ? renderProductModal(state.selectedProduct) : ""}
     ${state.selectedSeller ? renderSellerModal(state.selectedSeller) : ""}
+    ${state.auth.modalOpen ? renderLoginModal() : ""}
   `;
 
   bindEvents();
+}
+
+function renderNavForAudience(audience) {
+  if (audience === "admin") return renderAdminHeaderTabs();
+  if (audience === "seller") return renderSellerHeaderTabs();
+  return `
+    ${navButton("market", "Chợ biển")}
+    ${navButton("fishermen", "Ngư dân")}
+    ${navButton("recipes", "Bếp biển")}
+    ${navButton("community", "Cộng đồng")}
+  `;
+}
+
+function renderMainForAudience(audience, products) {
+  if (audience === "admin") return renderAdminWorkspace();
+  if (audience === "seller") return renderSellerWorkspace();
+  return `
+    ${renderMarket(products)}
+    ${renderFishermen()}
+    ${renderRecipes()}
+    ${renderCommunity()}
+  `;
 }
 
 function navButton(section, label) {
@@ -900,13 +1042,51 @@ function navButton(section, label) {
   return `<a class="nav-link ${active}" href="#${section}" data-nav="${section}">${label}</a>`;
 }
 
+function renderSellerHeaderTabs() {
+  return `
+    ${sellerHeaderTabButton("overview", "Tổng quan")}
+    ${sellerHeaderTabButton("products", "Mẻ hàng")}
+    ${sellerHeaderTabButton("recipes", "Công thức")}
+    ${sellerHeaderTabButton("posts", "Bài viết")}
+    ${sellerHeaderTabButton("messages", "Tin nhắn")}
+  `;
+}
+
+function sellerHeaderTabButton(tab, label) {
+  const active = state.seller.tab === tab ? "is-active" : "";
+  return `<button class="nav-link ${active}" type="button" data-seller-tab="${tab}">${escapeHtml(label)}</button>`;
+}
+
+function renderAdminHeaderTabs() {
+  return `
+    ${adminHeaderTabButton("overview", "Tổng quan")}
+    ${adminHeaderTabButton("users", "User/Seller")}
+    ${adminHeaderTabButton("listings", "Sản phẩm")}
+    ${adminHeaderTabButton("reports", "Báo cáo")}
+    ${adminHeaderTabButton("broadcasts", "Broadcast")}
+  `;
+}
+
+function adminHeaderTabButton(tab, label) {
+  const active = state.admin.tab === tab ? "is-active" : "";
+  return `<button class="nav-link ${active}" type="button" data-admin-tab="${tab}">${escapeHtml(label)}</button>`;
+}
+
 function renderUserButton() {
   if (state.user) {
     return `
-      <button class="user-chip" type="button" title="Tài khoản hiện tại">
-        <span class="avatar mini">${escapeHtml(initials(state.user.name))}</span>
-        <span>${escapeHtml(state.user.name || "Buyer")}</span>
-      </button>
+      <div class="auth-actions">
+        <button class="user-chip" type="button" data-login title="Đổi tài khoản">
+          <span class="avatar mini">${escapeHtml(initials(state.user.name))}</span>
+          <span>
+            ${escapeHtml(state.user.name || "User")}
+            <small>${escapeHtml(roleLabel(state.user))}${state.user.isDemo ? " demo" : ""}</small>
+          </span>
+        </button>
+        <button class="ghost-button icon-only" type="button" data-logout title="Đăng xuất" aria-label="Đăng xuất">
+          <span class="button-icon">×</span>
+        </button>
+      </div>
     `;
   }
 
@@ -914,6 +1094,44 @@ function renderUserButton() {
     <button class="ghost-button" type="button" data-login title="Đăng nhập buyer">
       <span class="button-icon">↗</span>
       <span>Đăng nhập</span>
+    </button>
+  `;
+}
+
+function renderLoginModal() {
+  return `
+    <div class="modal-layer" role="dialog" aria-modal="true" aria-label="Đăng nhập">
+      <div class="modal-panel auth-modal">
+        <button class="icon-button close-button" type="button" data-close-auth aria-label="Đóng">×</button>
+        <div class="auth-head">
+          <span class="eyebrow">Role login</span>
+          <h2>Chọn giao diện đăng nhập</h2>
+          <p>Guest chưa đăng nhập luôn dùng frontend Buyer. Ba nút dưới đây tạo session demo để xem đúng frontend theo từng loại user.</p>
+        </div>
+        <div class="auth-role-grid">
+          ${renderAuthRoleCard("buyer", "Buyer", "Mua hải sản, xem seller, lưu sản phẩm quan tâm.", "Chợ biển")}
+          ${renderAuthRoleCard("seller", "Seller", "Quản lý mẻ hàng, công thức, bài viết và tin nhắn buyer.", "Workspace")}
+          ${renderAuthRoleCard("admin", "Admin", "Theo dõi hệ thống, duyệt seller, xử lý report và broadcast.", "Control room")}
+        </div>
+        <div class="auth-note">
+          <button class="ghost-button" type="button" data-google-login>
+            <span class="button-icon">G</span>
+            <span>Nối Google OAuth backend</span>
+          </button>
+          <small>Backend hiện có <code>/auth/google</code>, <code>/auth/me</code>, <code>/auth/logout</code>; frontend demo dùng localStorage để test đủ role khi chưa có OAuth credential.</small>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderAuthRoleCard(audience, title, description, cta) {
+  return `
+    <button class="auth-role-card ${audience}" type="button" data-demo-login="${audience}">
+      <span class="avatar large">${escapeHtml(initials(title))}</span>
+      <strong>${escapeHtml(title)}</strong>
+      <span>${escapeHtml(description)}</span>
+      <small>${escapeHtml(cta)}</small>
     </button>
   `;
 }
@@ -1214,14 +1432,6 @@ function renderSellerWorkspace() {
           ${renderMetric("Hạn mức hôm nay", `${today.count || 0}/${today.isPremium ? "∞" : today.max || 5}`, "bài đăng")}
         </div>
 
-        <div class="seller-tabs" role="tablist" aria-label="Seller tools">
-          ${sellerTabButton("overview", "Tổng quan")}
-          ${sellerTabButton("products", "Mẻ hàng")}
-          ${sellerTabButton("recipes", "Công thức")}
-          ${sellerTabButton("posts", "Bài viết")}
-          ${sellerTabButton("messages", "Tin nhắn")}
-        </div>
-
         <div class="seller-panel">
           ${renderSellerPanel()}
         </div>
@@ -1238,11 +1448,6 @@ function renderMetric(label, value, suffix) {
       <small>${escapeHtml(suffix)}</small>
     </article>
   `;
-}
-
-function sellerTabButton(tab, label) {
-  const active = state.seller.tab === tab ? "is-selected" : "";
-  return `<button class="${active}" type="button" data-seller-tab="${tab}">${label}</button>`;
 }
 
 function renderSellerPanel() {
@@ -1692,14 +1897,6 @@ function renderAdminWorkspace() {
           ${renderAdminMetric("Báo cáo chờ", pendingReports, "cần xử lý")}
         </div>
 
-        <div class="admin-tabs" role="tablist" aria-label="Admin tools">
-          ${adminTabButton("overview", "Tổng quan")}
-          ${adminTabButton("users", "User/Seller")}
-          ${adminTabButton("listings", "Sản phẩm")}
-          ${adminTabButton("reports", "Báo cáo")}
-          ${adminTabButton("broadcasts", "Broadcast")}
-        </div>
-
         <div class="admin-panel">
           ${renderAdminPanel()}
         </div>
@@ -1716,11 +1913,6 @@ function renderAdminMetric(label, value, suffix) {
       <small>${escapeHtml(suffix)}</small>
     </article>
   `;
-}
-
-function adminTabButton(tab, label) {
-  const active = state.admin.tab === tab ? "is-selected" : "";
-  return `<button class="${active}" type="button" data-admin-tab="${tab}">${label}</button>`;
 }
 
 function renderAdminPanel() {
@@ -2284,7 +2476,7 @@ function renderSkeletonGrid(count) {
 function bindEvents() {
   document.querySelectorAll("[data-nav]").forEach((node) => {
     node.addEventListener("click", () => {
-      state.activeSection = node.dataset.nav;
+      state.activeSection = normalizeSectionForAudience(node.dataset.nav);
       render();
     });
   });
@@ -2781,12 +2973,37 @@ function bindEvents() {
 
   document.querySelectorAll("[data-login]").forEach((button) => {
     button.addEventListener("click", () => {
-      showToast("Frontend hiện tại dùng demo khi chưa đăng nhập; Google OAuth sẽ nối theo cấu hình backend.");
+      state.auth.modalOpen = true;
+      render();
     });
   });
 
+  document.querySelectorAll("[data-demo-login]").forEach((button) => {
+    button.addEventListener("click", () => {
+      setDemoUser(button.dataset.demoLogin || "buyer");
+    });
+  });
+
+  document.querySelector("[data-close-auth]")?.addEventListener("click", () => {
+    state.auth.modalOpen = false;
+    render();
+  });
+
+  document.querySelector("[data-google-login]")?.addEventListener("click", () => {
+    showToast("Google OAuth cần credential từ Google Identity; frontend đã sẵn endpoint backend /auth/google.", "warn");
+  });
+
+  document.querySelectorAll("[data-logout]").forEach((button) => {
+    button.addEventListener("click", () => logoutUser());
+  });
+
   document.querySelector("[data-contact-seller]")?.addEventListener("click", () => {
-    showToast("Buyer cần đăng nhập để mở chat hoặc đặt lịch gọi.");
+    if (!state.user) {
+      state.auth.modalOpen = true;
+      render();
+      return;
+    }
+    showToast("Buyer đã đăng nhập sẽ mở chat hoặc đặt lịch gọi khi backend realtime được nối.");
   });
 
   document.querySelector("[data-filter-seller]")?.addEventListener("click", (event) => {
@@ -2809,6 +3026,11 @@ function bindEvents() {
 }
 
 function handleEscape(event) {
+  if (event.key === "Escape" && state.auth.modalOpen) {
+    state.auth.modalOpen = false;
+    render();
+    return;
+  }
   if (event.key === "Escape" && (state.selectedProduct || state.selectedSeller)) {
     state.selectedProduct = null;
     state.selectedSeller = null;
@@ -2816,13 +3038,13 @@ function handleEscape(event) {
   }
 }
 
+activateSectionForCurrentUser();
 render();
 loadData();
 loadUser();
 
 window.addEventListener("hashchange", () => {
-  const section = sectionFromHash();
-  if (state.activeSection === section) return;
-  state.activeSection = section;
-  render();
+  const previousSection = state.activeSection;
+  activateSectionForCurrentUser();
+  if (state.activeSection !== previousSection) render();
 });

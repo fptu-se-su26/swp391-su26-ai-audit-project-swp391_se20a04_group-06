@@ -1,4 +1,10 @@
 node_modules/
 dist/
-.env
 *.log
+.env
+.env.*
+.env.local
+coverage/
+logs/
+repomix-output.xml
+system.docx

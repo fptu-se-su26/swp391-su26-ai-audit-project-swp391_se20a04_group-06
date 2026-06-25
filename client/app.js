@@ -26,6 +26,15 @@ const state = {
     recipes: [],
     posts: [],
   },
+  seller: {
+    loading: false,
+    tab: "overview",
+    products: [],
+    recipes: [],
+    posts: [],
+    todayCount: null,
+    lastSync: null,
+  },
   meta: {
     products: { total: 0, page: 1, totalPages: 1 },
   },
@@ -211,6 +220,67 @@ const fallbackPosts = [
     createdAt: new Date(Date.now() - 3600000 * 12).toISOString(),
   },
 ];
+
+const demoSellerUser = {
+  id: "demo-seller-1",
+  name: "Tàu Cô Ba Cần Giờ",
+  role: "User",
+  isVerified: true,
+  isPremium: true,
+  avatarUrl: "",
+};
+
+const productCategories = [
+  ["Fish", "Cá"],
+  ["Shrimp", "Tôm"],
+  ["Squid", "Mực"],
+  ["Crab", "Cua, ghẹ"],
+  ["Shellfish", "Nghêu, sò, ốc"],
+  ["Others", "Khác"],
+];
+
+const sellerStatusLabels = {
+  Active: "Đang bán",
+  Expired: "Hết hạn",
+  Deleted: "Đã xóa",
+};
+
+function currentSeller() {
+  return state.user || demoSellerUser;
+}
+
+function isDemoSellerMode() {
+  return !state.user;
+}
+
+function sellerProfile() {
+  const seller = currentSeller();
+  return {
+    id: seller.id,
+    name: seller.name || "Seller",
+    isVerified: !!seller.isVerified,
+    isPremium: !!seller.isPremium,
+    avatarUrl: seller.avatarUrl || seller.avatar || "",
+  };
+}
+
+function categoryLabel(value) {
+  return productCategories.find(([key]) => key === value)?.[1] || value || "Hải sản";
+}
+
+function splitLines(value) {
+  return String(value || "")
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function splitTags(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
 
 function normalizeList(payload, key) {
   if (Array.isArray(payload)) return payload;
@@ -416,6 +486,70 @@ async function loadUser() {
     state.user = null;
   }
   renderHeaderOnly();
+  loadSellerData();
+}
+
+async function loadSellerData() {
+  state.seller.loading = true;
+  render();
+
+  const demoProducts = fallbackProducts
+    .filter((item) => item.sellerId === demoSellerUser.id)
+    .map((item) => ({ ...item, status: item.status || "Active", category: "Crab" }));
+  const demoRecipes = fallbackRecipes.map((item) => ({
+    ...item,
+    authorId: demoSellerUser.id,
+  }));
+  const demoPosts = fallbackPosts.map((item) => ({
+    ...item,
+    userId: demoSellerUser.id,
+  }));
+
+  if (!state.user) {
+    state.seller.products = demoProducts;
+    state.seller.recipes = demoRecipes;
+    state.seller.posts = demoPosts;
+    state.seller.todayCount = { count: demoProducts.length, max: 5, isPremium: true };
+    state.seller.lastSync = new Date().toISOString();
+    state.seller.loading = false;
+    render();
+    return;
+  }
+
+  try {
+    const [products, todayCount, recipes, posts] = await Promise.allSettled([
+      apiFetch("/products/my", { params: { limit: 50 }, timeoutMs: 5000 }),
+      apiFetch("/products/today-count", { timeoutMs: 5000 }),
+      apiFetch("/recipes", {
+        params: { authorId: state.user.id, limit: 24 },
+        timeoutMs: 5000,
+      }),
+      apiFetch("/posts", {
+        params: { userId: state.user.id, limit: 24 },
+        timeoutMs: 5000,
+      }),
+    ]);
+
+    state.seller.products =
+      products.status === "fulfilled" ? normalizeList(products.value, "products") : demoProducts;
+    state.seller.todayCount =
+      todayCount.status === "fulfilled"
+        ? todayCount.value
+        : { count: state.seller.products.length, max: 5, isPremium: !!state.user.isPremium };
+    state.seller.recipes =
+      recipes.status === "fulfilled" ? normalizeList(recipes.value, "recipes") : demoRecipes;
+    state.seller.posts =
+      posts.status === "fulfilled" ? normalizeList(posts.value, "posts") : demoPosts;
+    state.seller.lastSync = new Date().toISOString();
+  } catch {
+    state.seller.products = demoProducts;
+    state.seller.recipes = demoRecipes;
+    state.seller.posts = demoPosts;
+    state.seller.todayCount = { count: demoProducts.length, max: 5, isPremium: true };
+  } finally {
+    state.seller.loading = false;
+    render();
+  }
 }
 
 function visibleProducts() {
@@ -463,6 +597,7 @@ function render() {
         ${navButton("fishermen", "Ngư dân")}
         ${navButton("recipes", "Bếp biển")}
         ${navButton("community", "Cộng đồng")}
+        ${navButton("seller", "Seller")}
       </nav>
       <div class="header-actions" data-header-user>${renderUserButton()}</div>
     </header>
@@ -472,11 +607,12 @@ function render() {
       ${renderFishermen()}
       ${renderRecipes()}
       ${renderCommunity()}
+      ${renderSellerWorkspace()}
       ${renderRoadmap()}
     </main>
 
     <footer class="site-footer">
-      <span>HaiSan.vn phase 1</span>
+      <span>HaiSan.vn phase 2</span>
       <span>${state.apiOnline ? "API online" : "Đang dùng dữ liệu mẫu"}</span>
       <span>${escapeHtml(API_BASE)}</span>
     </footer>
@@ -756,6 +892,496 @@ function renderCommunity() {
   `;
 }
 
+function renderSellerWorkspace() {
+  const profile = sellerProfile();
+  const products = state.seller.products;
+  const activeProducts = products.filter((item) => (item.status || "Active") === "Active");
+  const totalStock = products.reduce(
+    (sum, item) => sum + Number(item.remainingWeight || item.totalWeight || 0),
+    0,
+  );
+  const stockValue = products.reduce(
+    (sum, item) =>
+      sum + Number(item.price || 0) * Number(item.remainingWeight || item.totalWeight || 0),
+    0,
+  );
+  const today = state.seller.todayCount || {
+    count: products.length,
+    max: 5,
+    isPremium: profile.isPremium,
+  };
+
+  return `
+    <section id="seller" class="section-band seller-band" data-section="seller">
+      <div class="section-container seller-shell">
+        <div class="seller-hero">
+          <div class="seller-identity">
+            <span class="avatar xl">${escapeHtml(initials(profile.name))}</span>
+            <div>
+              <span class="eyebrow">Seller workspace</span>
+              <h2>${escapeHtml(profile.name)}</h2>
+              <p>
+                Quản lý mẻ hàng, nội dung bán hàng và tương tác buyer trong một màn hình làm việc gọn.
+              </p>
+              <div class="tag-row">
+                <span>${profile.isVerified ? "Đã xác minh" : "Chưa xác minh"}</span>
+                <span>${profile.isPremium ? "Premium" : "Tài khoản thường"}</span>
+                <span>${isDemoSellerMode() ? "Demo mode" : "Đang dùng tài khoản thật"}</span>
+              </div>
+            </div>
+          </div>
+          <div class="seller-sync">
+            <strong>${state.seller.loading ? "Đang đồng bộ" : "Sẵn sàng"}</strong>
+            <span>${state.seller.lastSync ? `Cập nhật ${formatDate(state.seller.lastSync)}` : "Chưa đồng bộ"}</span>
+          </div>
+        </div>
+
+        <div class="seller-metrics">
+          ${renderMetric("Mẻ đang bán", activeProducts.length, "sản phẩm")}
+          ${renderMetric("Tồn khả dụng", totalStock.toFixed(1), "kg")}
+          ${renderMetric("Giá trị tồn", formatCurrency(stockValue), "ước tính")}
+          ${renderMetric("Hạn mức hôm nay", `${today.count || 0}/${today.isPremium ? "∞" : today.max || 5}`, "bài đăng")}
+        </div>
+
+        <div class="seller-tabs" role="tablist" aria-label="Seller tools">
+          ${sellerTabButton("overview", "Tổng quan")}
+          ${sellerTabButton("products", "Mẻ hàng")}
+          ${sellerTabButton("recipes", "Công thức")}
+          ${sellerTabButton("posts", "Bài viết")}
+          ${sellerTabButton("messages", "Tin nhắn")}
+        </div>
+
+        <div class="seller-panel">
+          ${renderSellerPanel()}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderMetric(label, value, suffix) {
+  return `
+    <article class="seller-metric">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+      <small>${escapeHtml(suffix)}</small>
+    </article>
+  `;
+}
+
+function sellerTabButton(tab, label) {
+  const active = state.seller.tab === tab ? "is-selected" : "";
+  return `<button class="${active}" type="button" data-seller-tab="${tab}">${label}</button>`;
+}
+
+function renderSellerPanel() {
+  if (state.seller.tab === "products") return renderSellerProducts();
+  if (state.seller.tab === "recipes") return renderSellerRecipes();
+  if (state.seller.tab === "posts") return renderSellerPosts();
+  if (state.seller.tab === "messages") return renderSellerMessages();
+  return renderSellerOverview();
+}
+
+function renderSellerOverview() {
+  const newestProducts = state.seller.products.slice(0, 3);
+  return `
+    <div class="seller-overview">
+      <section class="seller-work-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">Next actions</span>
+            <h3>Việc nên làm hôm nay</h3>
+          </div>
+        </div>
+        <div class="task-list">
+          <button type="button" data-seller-tab="products">
+            <strong>Đăng mẻ hàng mới</strong>
+            <span>Thêm giá, tồn kho, vị trí bán và ảnh đại diện.</span>
+          </button>
+          <button type="button" data-seller-tab="recipes">
+            <strong>Chia sẻ công thức</strong>
+            <span>Tăng độ tin cậy bằng nội dung bếp biển.</span>
+          </button>
+          <button type="button" data-seller-tab="messages">
+            <strong>Kiểm tra buyer</strong>
+            <span>Theo dõi tin nhắn, thông báo và yêu cầu gọi.</span>
+          </button>
+        </div>
+      </section>
+      <section class="seller-work-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">Inventory</span>
+            <h3>Mẻ hàng mới nhất</h3>
+          </div>
+          <button class="ghost-button" type="button" data-refresh-seller>
+            <span class="button-icon">↻</span>
+            <span>Đồng bộ</span>
+          </button>
+        </div>
+        <div class="seller-mini-list">
+          ${
+            newestProducts.length
+              ? newestProducts.map(renderSellerMiniProduct).join("")
+              : `<p class="empty-note">Chưa có mẻ hàng nào.</p>`
+          }
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function renderSellerMiniProduct(product) {
+  return `
+    <article class="mini-product">
+      <img src="${escapeHtml(productImage(product))}" alt="${escapeHtml(product.name)}" />
+      <div>
+        <strong>${escapeHtml(product.name || "Mẻ hàng")}</strong>
+        <span>${formatCurrency(product.price)} · ${Number(product.remainingWeight || product.totalWeight || 0)} kg</span>
+      </div>
+      <small>${escapeHtml(sellerStatusLabels[product.status] || product.status || "Đang bán")}</small>
+    </article>
+  `;
+}
+
+function renderSellerProducts() {
+  return `
+    <div class="seller-two-column">
+      <section class="seller-work-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">Create listing</span>
+            <h3>Đăng mẻ hàng</h3>
+          </div>
+        </div>
+        <form class="seller-form" data-seller-product-form>
+          <label>
+            <span>Tên mẻ hàng</span>
+            <input name="name" required minlength="2" placeholder="Cua gạch Cần Giờ" />
+          </label>
+          <div class="form-grid-2">
+            <label>
+              <span>Loại</span>
+              <select name="type">
+                <option value="Fresh">Tươi sống</option>
+                <option value="Dried">Đồ khô</option>
+              </select>
+            </label>
+            <label>
+              <span>Danh mục</span>
+              <select name="category">
+                ${productCategories
+                  .map(([value, label]) => `<option value="${value}">${label}</option>`)
+                  .join("")}
+              </select>
+            </label>
+          </div>
+          <div class="form-grid-2">
+            <label>
+              <span>Giá / kg</span>
+              <input name="price" type="number" min="1" required placeholder="250000" />
+            </label>
+            <label>
+              <span>Khối lượng kg</span>
+              <input name="totalWeight" type="number" min="0.1" step="0.1" required placeholder="20" />
+            </label>
+          </div>
+          <div class="form-grid-2">
+            <label>
+              <span>Hình thức</span>
+              <select name="salesType">
+                <option value="Retail">Bán lẻ</option>
+                <option value="Wholesale">Bán sỉ</option>
+              </select>
+            </label>
+            <label>
+              <span>Xuất xứ</span>
+              <input name="origin" placeholder="Cần Giờ, TP.HCM" />
+            </label>
+          </div>
+          <div class="form-grid-2">
+            <label>
+              <span>Vĩ độ bán</span>
+              <input name="lat" type="number" step="0.000001" value="10.762622" />
+            </label>
+            <label>
+              <span>Kinh độ bán</span>
+              <input name="lng" type="number" step="0.000001" value="106.660172" />
+            </label>
+          </div>
+          <label>
+            <span>Ảnh URL</span>
+            <input name="imageUrl" type="url" placeholder="https://..." />
+          </label>
+          <label>
+            <span>Mô tả</span>
+            <textarea name="description" rows="4" placeholder="Mô tả độ tươi, cách đóng gói, thời gian giao..."></textarea>
+          </label>
+          <button class="primary-button" type="submit">
+            <span class="button-icon">＋</span>
+            <span>Đăng mẻ hàng</span>
+          </button>
+        </form>
+      </section>
+
+      <section class="seller-work-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">Listings</span>
+            <h3>Sản phẩm của tôi</h3>
+          </div>
+          <button class="ghost-button" type="button" data-refresh-seller>
+            <span class="button-icon">↻</span>
+            <span>Tải lại</span>
+          </button>
+        </div>
+        <div class="seller-product-list">
+          ${
+            state.seller.products.length
+              ? state.seller.products.map(renderSellerProductItem).join("")
+              : `<p class="empty-note">Chưa có sản phẩm. Hãy đăng mẻ đầu tiên.</p>`
+          }
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function renderSellerProductItem(product) {
+  const id = getId(product);
+  return `
+    <article class="seller-product-item">
+      <img src="${escapeHtml(productImage(product))}" alt="${escapeHtml(product.name)}" />
+      <div>
+        <div class="card-topline">
+          <span>${escapeHtml(categoryLabel(product.category))}</span>
+          <span>${escapeHtml(sellerStatusLabels[product.status] || product.status || "Đang bán")}</span>
+        </div>
+        <h4>${escapeHtml(product.name || "Mẻ hàng")}</h4>
+        <p>${escapeHtml(product.description || "Chưa có mô tả.")}</p>
+        <div class="meta-row">
+          <span>${formatCurrency(product.price)}</span>
+          <span>${Number(product.remainingWeight || product.totalWeight || 0)} kg còn</span>
+          <span>${formatDate(product.bumpedAt || product.createdAt)}</span>
+        </div>
+      </div>
+      <div class="item-actions">
+        <button class="ghost-button" type="button" data-seller-bump="${escapeHtml(id)}">
+          <span class="button-icon">↑</span>
+          <span>Đẩy tin</span>
+        </button>
+        <button class="ghost-button danger" type="button" data-seller-delete="${escapeHtml(id)}">
+          <span class="button-icon">×</span>
+          <span>Xóa</span>
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+function renderSellerRecipes() {
+  return `
+    <div class="seller-two-column">
+      <section class="seller-work-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">Kitchen content</span>
+            <h3>Viết công thức</h3>
+          </div>
+        </div>
+        <form class="seller-form" data-seller-recipe-form>
+          <label>
+            <span>Tiêu đề</span>
+            <input name="title" required placeholder="Cua hấp sả gừng" />
+          </label>
+          <label>
+            <span>Mô tả</span>
+            <textarea name="description" required rows="3" placeholder="Giới thiệu ngắn về món ăn"></textarea>
+          </label>
+          <div class="form-grid-2">
+            <label>
+              <span>Độ khó</span>
+              <select name="difficulty">
+                <option value="Easy">Dễ</option>
+                <option value="Medium">Vừa</option>
+                <option value="Hard">Khó</option>
+              </select>
+            </label>
+            <label>
+              <span>Thời gian phút</span>
+              <input name="cookingTime" type="number" min="1" value="30" />
+            </label>
+          </div>
+          <label>
+            <span>Nguyên liệu mỗi dòng</span>
+            <textarea name="ingredients" required rows="4" placeholder="2 con cua&#10;3 cây sả&#10;Gừng, muối tiêu"></textarea>
+          </label>
+          <label>
+            <span>Các bước mỗi dòng</span>
+            <textarea name="instructions" required rows="4" placeholder="Rửa sạch cua&#10;Đập dập sả gừng&#10;Hấp 15 phút"></textarea>
+          </label>
+          <label>
+            <span>Tags</span>
+            <input name="tags" placeholder="Cua, Hấp, Nhanh" />
+          </label>
+          <button class="primary-button" type="submit">
+            <span class="button-icon">＋</span>
+            <span>Đăng công thức</span>
+          </button>
+        </form>
+      </section>
+      <section class="seller-work-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">My recipes</span>
+            <h3>Công thức của tôi</h3>
+          </div>
+        </div>
+        <div class="seller-content-list">
+          ${
+            state.seller.recipes.length
+              ? state.seller.recipes.map(renderSellerRecipeItem).join("")
+              : `<p class="empty-note">Chưa có công thức.</p>`
+          }
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function renderSellerRecipeItem(recipe) {
+  const likes = Array.isArray(recipe.likes) ? recipe.likes.length : Number(recipe.likeCount || 0);
+  return `
+    <article class="seller-content-item">
+      <span class="pill">${escapeHtml(recipe.difficulty || "Medium")}</span>
+      <h4>${escapeHtml(recipe.title || "Công thức")}</h4>
+      <p>${escapeHtml(recipe.description || "Chưa có mô tả.")}</p>
+      <div class="meta-row">
+        <span>${Number(recipe.cookingTime || 30)} phút</span>
+        <span>${likes} thích</span>
+      </div>
+    </article>
+  `;
+}
+
+function renderSellerPosts() {
+  return `
+    <div class="seller-two-column">
+      <section class="seller-work-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">Community</span>
+            <h3>Viết bài bán hàng</h3>
+          </div>
+        </div>
+        <form class="seller-form" data-seller-post-form>
+          <label>
+            <span>Tiêu đề</span>
+            <input name="title" required placeholder="Mẻ cua sáng nay đã cập bến" />
+          </label>
+          <label>
+            <span>Nội dung</span>
+            <textarea name="content" required rows="7" placeholder="Kể câu chuyện mẻ hàng, cách đặt, khu vực giao..."></textarea>
+          </label>
+          <label>
+            <span>Ảnh URL, cách nhau bằng dấu phẩy</span>
+            <input name="images" placeholder="https://..." />
+          </label>
+          <label>
+            <span>Tags</span>
+            <input name="tags" placeholder="Cua, Cần Giờ, Giao sáng" />
+          </label>
+          <button class="primary-button" type="submit">
+            <span class="button-icon">＋</span>
+            <span>Đăng bài</span>
+          </button>
+        </form>
+      </section>
+      <section class="seller-work-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">My posts</span>
+            <h3>Bài viết của tôi</h3>
+          </div>
+        </div>
+        <div class="seller-content-list">
+          ${
+            state.seller.posts.length
+              ? state.seller.posts.map(renderSellerPostItem).join("")
+              : `<p class="empty-note">Chưa có bài viết.</p>`
+          }
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function renderSellerPostItem(post) {
+  const likes = Array.isArray(post.likes) ? post.likes.length : Number(post.likeCount || 0);
+  const comments = Array.isArray(post.comments) ? post.comments.length : 0;
+  return `
+    <article class="seller-content-item">
+      <h4>${escapeHtml(post.title || "Bài viết")}</h4>
+      <p>${escapeHtml(post.content || "")}</p>
+      <div class="meta-row">
+        <span>${likes} thích</span>
+        <span>${comments} bình luận</span>
+        <span>${formatDate(post.createdAt)}</span>
+      </div>
+    </article>
+  `;
+}
+
+function renderSellerMessages() {
+  return `
+    <div class="seller-overview">
+      <section class="seller-work-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">Inbox</span>
+            <h3>Tin nhắn buyer</h3>
+          </div>
+        </div>
+        <div class="message-list">
+          <article>
+            <strong>Buyer Minh</strong>
+            <span>Hỏi còn cua size lớn giao Bình Thạnh sáng mai không?</span>
+            <small>Chờ phản hồi</small>
+          </article>
+          <article>
+            <strong>Bếp Mộc</strong>
+            <span>Cần báo giá sỉ tôm sú 15kg mỗi ngày.</span>
+            <small>Ưu tiên</small>
+          </article>
+          <article>
+            <strong>Lan Anh</strong>
+            <span>Muốn đặt lịch gọi video xem mẻ hàng trước khi chốt.</span>
+            <small>Video call</small>
+          </article>
+        </div>
+      </section>
+      <section class="seller-work-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">Notifications</span>
+            <h3>Thông báo vận hành</h3>
+          </div>
+        </div>
+        <div class="task-list">
+          <button type="button" data-login>
+            <strong>Kết nối Socket.IO</strong>
+            <span>Đăng nhập seller thật để nhận realtime message từ backend.</span>
+          </button>
+          <button type="button" data-seller-tab="products">
+            <strong>Cập nhật tồn kho</strong>
+            <span>Ưu tiên các mẻ còn ít hàng hoặc đã quá 24 giờ chưa đẩy tin.</span>
+          </button>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
 function renderPostCard(post) {
   const tags = Array.isArray(post.tags) ? post.tags.slice(0, 4) : [];
   const likes = Array.isArray(post.likes) ? post.likes.length : Number(post.likeCount || 0);
@@ -798,7 +1424,7 @@ function renderRoadmap() {
             <h3>Guest và Buyer</h3>
             <p>Chợ biển, hồ sơ ngư dân, công thức, cộng đồng, lưu quan tâm.</p>
           </article>
-          <article class="roadmap-item">
+          <article class="roadmap-item is-done">
             <span>02</span>
             <h3>Seller</h3>
             <p>Quản lý mẻ hàng, bài viết, công thức, tin nhắn và thông báo.</p>
@@ -966,6 +1592,200 @@ function bindEvents() {
 
   document.querySelector("[data-refresh]")?.addEventListener("click", () => loadData());
 
+  document.querySelectorAll("[data-refresh-seller]").forEach((button) => {
+    button.addEventListener("click", () => loadSellerData());
+  });
+
+  document.querySelectorAll("[data-seller-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.seller.tab = button.dataset.sellerTab || "overview";
+      state.activeSection = "seller";
+      render();
+    });
+  });
+
+  document.querySelector("[data-seller-product-form]")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const totalWeight = Number(formData.get("totalWeight") || 0);
+    const imageUrl = String(formData.get("imageUrl") || "").trim();
+    const body = {
+      type: String(formData.get("type") || "Fresh"),
+      category: String(formData.get("category") || "Others"),
+      name: String(formData.get("name") || "").trim(),
+      price: Number(formData.get("price") || 0),
+      totalWeight,
+      remainingWeight: totalWeight,
+      salesType: String(formData.get("salesType") || "Retail"),
+      origin: String(formData.get("origin") || "").trim(),
+      lat: Number(formData.get("lat") || 0),
+      lng: Number(formData.get("lng") || 0),
+      description: String(formData.get("description") || "").trim(),
+      images: imageUrl ? [imageUrl] : [],
+    };
+
+    if (isDemoSellerMode()) {
+      const profile = sellerProfile();
+      state.seller.products = [
+        {
+          ...body,
+          id: `demo-product-${Date.now()}`,
+          sellerId: profile.id,
+          sellerName: profile.name,
+          sellerIsVerified: profile.isVerified,
+          sellerIsPremium: profile.isPremium,
+          status: "Active",
+          coverImg: imageUrl || null,
+          viewCount: 0,
+          createdAt: new Date().toISOString(),
+        },
+        ...state.seller.products,
+      ];
+      form.reset();
+      showToast("Đã thêm mẻ hàng demo.");
+      render();
+      return;
+    }
+
+    try {
+      await apiFetch("/products", { method: "POST", body, timeoutMs: 7000 });
+      form.reset();
+      showToast("Đã đăng mẻ hàng mới.");
+      loadSellerData();
+    } catch (error) {
+      showToast(error.message || "Không đăng được sản phẩm.", "warn");
+    }
+  });
+
+  document.querySelectorAll("[data-seller-bump]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const id = button.dataset.sellerBump;
+      if (!id) return;
+      if (isDemoSellerMode() || id.startsWith("demo-")) {
+        state.seller.products = state.seller.products.map((item) =>
+          getId(item) === id ? { ...item, bumpedAt: new Date().toISOString() } : item,
+        );
+        showToast("Đã đẩy tin demo lên đầu danh sách.");
+        render();
+        return;
+      }
+
+      try {
+        await apiFetch(`/products/${id}/bump`, { method: "POST", timeoutMs: 7000 });
+        showToast("Đã đẩy tin sản phẩm.");
+        loadSellerData();
+      } catch (error) {
+        showToast(error.message || "Không đẩy được tin.", "warn");
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-seller-delete]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const id = button.dataset.sellerDelete;
+      if (!id) return;
+      if (isDemoSellerMode() || id.startsWith("demo-")) {
+        state.seller.products = state.seller.products.filter((item) => getId(item) !== id);
+        showToast("Đã xóa sản phẩm demo.");
+        render();
+        return;
+      }
+
+      if (!window.confirm("Xóa sản phẩm này?")) return;
+      try {
+        await apiFetch(`/products/${id}`, { method: "DELETE", timeoutMs: 7000 });
+        showToast("Đã xóa sản phẩm.");
+        loadSellerData();
+      } catch (error) {
+        showToast(error.message || "Không xóa được sản phẩm.", "warn");
+      }
+    });
+  });
+
+  document.querySelector("[data-seller-recipe-form]")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const body = {
+      title: String(formData.get("title") || "").trim(),
+      description: String(formData.get("description") || "").trim(),
+      ingredients: splitLines(formData.get("ingredients")),
+      instructions: splitLines(formData.get("instructions")),
+      difficulty: String(formData.get("difficulty") || "Medium"),
+      cookingTime: Number(formData.get("cookingTime") || 30),
+      servings: Number(formData.get("servings") || 2),
+      tags: splitTags(formData.get("tags")),
+    };
+
+    if (isDemoSellerMode()) {
+      state.seller.recipes = [
+        {
+          ...body,
+          id: `demo-recipe-${Date.now()}`,
+          authorId: sellerProfile().id,
+          likes: [],
+          views: 0,
+          createdAt: new Date().toISOString(),
+        },
+        ...state.seller.recipes,
+      ];
+      form.reset();
+      showToast("Đã thêm công thức demo.");
+      render();
+      return;
+    }
+
+    try {
+      await apiFetch("/recipes", { method: "POST", body, timeoutMs: 7000 });
+      form.reset();
+      showToast("Đã đăng công thức.");
+      loadSellerData();
+    } catch (error) {
+      showToast(error.message || "Không đăng được công thức.", "warn");
+    }
+  });
+
+  document.querySelector("[data-seller-post-form]")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const body = {
+      title: String(formData.get("title") || "").trim(),
+      content: String(formData.get("content") || "").trim(),
+      images: splitTags(formData.get("images")),
+      tags: splitTags(formData.get("tags")),
+    };
+
+    if (isDemoSellerMode()) {
+      state.seller.posts = [
+        {
+          ...body,
+          id: `demo-post-${Date.now()}`,
+          userId: sellerProfile().id,
+          userName: sellerProfile().name,
+          likes: [],
+          comments: [],
+          createdAt: new Date().toISOString(),
+        },
+        ...state.seller.posts,
+      ];
+      form.reset();
+      showToast("Đã thêm bài viết demo.");
+      render();
+      return;
+    }
+
+    try {
+      await apiFetch("/posts", { method: "POST", body, timeoutMs: 7000 });
+      form.reset();
+      showToast("Đã đăng bài viết.");
+      loadSellerData();
+    } catch (error) {
+      showToast(error.message || "Không đăng được bài viết.", "warn");
+    }
+  });
+
   document.querySelectorAll("[data-product]").forEach((button) => {
     button.addEventListener("click", async () => {
       const product = state.data.products.find((item) => getId(item) === button.dataset.product);
@@ -1032,7 +1852,7 @@ function bindEvents() {
 
   document.querySelectorAll("[data-login]").forEach((button) => {
     button.addEventListener("click", () => {
-      showToast("Phase 1 dùng giao diện chung Guest/Buyer; Google OAuth sẽ nối theo cấu hình backend.");
+      showToast("Frontend hiện tại dùng demo khi chưa đăng nhập; Google OAuth sẽ nối theo cấu hình backend.");
     });
   });
 

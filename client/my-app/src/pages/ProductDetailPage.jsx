@@ -1,0 +1,739 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { C } from "../utils/theme";
+import { api } from "../services/api";
+import { fmt, pill } from "../utils/format";
+import { ImageSlider } from "../components/ImageSlider";
+import { MapMini } from "../components/MapMini";
+import { ChatBox } from "../components/ChatBox";
+import { CountdownBadge } from "../components/ProductCard";
+import { ReviewList } from "../components/ReviewList";
+import { useSEO } from "../hooks/useSEO";
+import { ogImage } from "../utils/cloudinary";
+
+export function ProductDetailPage({
+  product: initialProduct,
+  setPage,
+  user,
+  setSelectedSeller,
+}) {
+  const navigate = useNavigate();
+  const [product, setProduct] = useState(initialProduct);
+  const [showChat, setShowChat] = useState(false);
+  const [loading, setLoading] = useState(!initialProduct?.images);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [togglingFollow, setTogglingFollow] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportSent, setReportSent] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
+
+  // ── SEO: dynamic meta per product ────────────────────────────
+  useSEO({
+    title: product
+      ? `${product.name} — ${product.sellerName}`
+      : "Chi tiết sản phẩm",
+    description: product
+      ? `${product.type === "Fresh" ? "🌊 Hải sản tươi" : "🔥 Hải sản khô"} — ${product.name}. Còn ${product.remainingWeight}kg. Giá ${parseFloat(product.price || 0).toLocaleString("vi-VN")}đ/kg.`
+      : undefined,
+    image: product ? ogImage(product.coverImg) : undefined,
+    url: product
+      ? `${window.location.origin}/san-pham/${product.id}`
+      : undefined,
+    product: product || undefined,
+  });
+
+  useEffect(() => {
+    if (!initialProduct?.id) {
+      if (setPage) setPage("home");
+      return;
+    }
+    // Fetch đầy đủ chi tiết (có images + rating)
+    api(`/products/${initialProduct.id}`)
+      .then((data) =>
+        setProduct({
+          ...data,
+          description: data.description || data.desc,
+          scrollToReviewId: initialProduct.scrollToReviewId || null,
+        }),
+      )
+      .catch(() => {})
+      .finally(() => setLoading(false));
+
+    if (user && initialProduct.sellerId) {
+      api(`/follows/${initialProduct.sellerId}/check`)
+        .then((res) => setIsFollowing(res.isFollowing))
+        .catch(() => {});
+    }
+    if (user && initialProduct.id) {
+      api(`/favorites/ids`)
+        .then((ids) => setIsFavorited(ids.includes(initialProduct.id)))
+        .catch(() => {});
+    }
+  }, [initialProduct?.id, user]);
+
+  const handleReport = async () => {
+    if (!reportReason.trim()) return;
+    setReportLoading(true);
+    try {
+      const res = await api(`/reports/${product.id}`, {
+        method: "POST",
+        body: JSON.stringify({ reason: reportReason }),
+      });
+      setReportSent(true);
+      setTimeout(() => {
+        setShowReportModal(false);
+        setReportSent(false);
+        setReportReason("");
+      }, 2000);
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!user) {
+      navigate("/dang-nhap");
+      return;
+    }
+    setFavLoading(true);
+    try {
+      const res = await api(`/favorites/${product.id}`, { method: "POST" });
+      setIsFavorited(res.favorited);
+    } catch {
+    } finally {
+      setFavLoading(false);
+    }
+  };
+
+  const handleToggleFollow = () => {
+    if (!user) return alert("Vui lòng đăng nhập để theo dõi!");
+    setTogglingFollow(true);
+    api(`/follows/${product.sellerId}/toggle`, { method: "POST" })
+      .then((res) => {
+        setIsFollowing(res.isFollowing);
+        alert(res.message);
+      })
+      .catch((err) => alert(err.message))
+      .finally(() => setTogglingFollow(false));
+  };
+
+  if (!product) {
+    if (setPage) setPage("home");
+    return null;
+  }
+
+  const pct = Math.round((product.remainingWeight / product.totalWeight) * 100);
+
+  return (
+    <div style={{ maxWidth: 960, margin: "0 auto", padding: "20px 20px 80px" }}>
+      <button
+        onClick={() => (setPage ? setPage("home") : navigate(-1))} // ✅ FIX: setPage may be undefined in router mode
+        style={{
+          background: "none",
+          border: "none",
+          color: C.ocean,
+          cursor: "pointer",
+          fontWeight: 700,
+          fontSize: 14,
+          marginBottom: 16,
+          padding: 0,
+          fontFamily: "inherit",
+        }}
+      >
+        ← Quay lại
+      </button>
+
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 80, color: C.muted }}>
+          ⏳ Đang tải...
+        </div>
+      ) : (
+        <>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 360px",
+              gap: 24,
+            }}
+          >
+            {/* LEFT */}
+            <div>
+              <ImageSlider product={product} />
+              <div
+                style={{
+                  background: C.white,
+                  borderRadius: 12,
+                  border: `1px solid ${C.border}`,
+                  padding: 20,
+                  marginTop: 16,
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 15,
+                    marginBottom: 10,
+                    color: C.dark,
+                  }}
+                >
+                  📝 Mô tả sản phẩm
+                </div>
+                <p
+                  style={{
+                    fontSize: 14,
+                    color: C.text,
+                    lineHeight: 1.75,
+                    margin: 0,
+                  }}
+                >
+                  {product.description || "Chưa có mô tả."}
+                </p>
+                {product.origin && (
+                  <div style={{ marginTop: 10, fontSize: 13, color: C.muted }}>
+                    🏷️ Xuất xứ:{" "}
+                    <strong style={{ color: C.text }}>{product.origin}</strong>
+                  </div>
+                )}
+                {product.expiryDate && (
+                  <div style={{ marginTop: 4, fontSize: 13, color: C.muted }}>
+                    📅 Hạn sử dụng:{" "}
+                    <strong style={{ color: C.text }}>
+                      {product.expiryDate}
+                    </strong>
+                  </div>
+                )}
+              </div>
+              {product.type === "Fresh" && product.lat && (
+                <div style={{ marginTop: 16 }}>
+                  <MapMini lat={product.lat} lng={product.lng} />
+                </div>
+              )}
+              {showChat && user && (
+                <div style={{ marginTop: 16 }}>
+                  <ChatBox
+                    product={product}
+                    onClose={() => setShowChat(false)}
+                    user={user}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* RIGHT */}
+            <div>
+              <div
+                style={{
+                  background: C.white,
+                  borderRadius: 12,
+                  border: `1px solid ${C.border}`,
+                  padding: 20,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    marginBottom: 10,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <span
+                    style={{
+                      background:
+                        product.type === "Fresh" ? "#FDE8E0" : "#FEF5E4",
+                      color: product.type === "Fresh" ? C.coral : C.warn,
+                      borderRadius: 6,
+                      padding: "4px 10px",
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {product.type === "Fresh"
+                      ? "🌊 Hải sản Tươi"
+                      : "🔥 Hải sản Khô"}
+                  </span>
+                  {product.salesType === "Wholesale" && (
+                    <span
+                      style={{
+                        background: C.oceanP,
+                        color: C.ocean,
+                        borderRadius: 6,
+                        padding: "4px 10px",
+                        fontSize: 12,
+                        fontWeight: 700,
+                      }}
+                    >
+                      📦 Bán Buôn
+                    </span>
+                  )}
+                </div>
+                <h1
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 800,
+                    color: C.dark,
+                    margin: "0 0 12px",
+                  }}
+                >
+                  {product.name}
+                </h1>
+                <div
+                  style={{
+                    fontSize: 28,
+                    fontWeight: 800,
+                    color: C.coral,
+                    marginBottom: 16,
+                  }}
+                >
+                  {fmt(product.price)}
+                  <span
+                    style={{ fontSize: 14, fontWeight: 400, color: C.muted }}
+                  >
+                    /kg
+                  </span>
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: 13,
+                      color: C.muted,
+                      marginBottom: 6,
+                    }}
+                  >
+                    <span>
+                      Còn lại:{" "}
+                      <strong style={{ color: C.text }}>
+                        {product.remainingWeight}kg
+                      </strong>
+                    </span>
+                    <span>Tổng: {product.totalWeight}kg</span>
+                  </div>
+                  <div
+                    style={{ height: 8, background: C.border, borderRadius: 4 }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        width: `${pct}%`,
+                        background:
+                          pct > 50 ? C.ok : pct > 20 ? C.warn : "#EF4444",
+                        borderRadius: 4,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {product.type === "Fresh" && product.catchTime && (
+                  <div
+                    style={{
+                      background: C.warnL,
+                      borderRadius: 8,
+                      padding: "10px 12px",
+                      marginBottom: 12,
+                      fontSize: 13,
+                    }}
+                  >
+                    ⏱ Bắt lúc:{" "}
+                    <strong>
+                      {new Date(product.catchTime).toLocaleString("vi")}
+                    </strong>
+                    <div style={{ marginTop: 4 }}>
+                      <CountdownBadge catchTime={product.catchTime} />
+                    </div>
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    borderTop: `1px solid ${C.border}`,
+                    paddingTop: 14,
+                    marginBottom: 14,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 13,
+                      color: C.dark,
+                      marginBottom: 8,
+                    }}
+                  >
+                    👤 Thông tin người bán
+                  </div>
+                  <div
+                    onClick={() => {
+                      if (setSelectedSeller) {
+                        setSelectedSeller({
+                          id: product.sellerId,
+                          name: product.sellerName,
+                        });
+                        if (setPage) setPage("seller");
+                      } else {
+                        navigate(`/nguoi-ban/${product.sellerId}`);
+                      }
+                    }}
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: C.ocean,
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                    }}
+                  >
+                    {product.sellerName}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: C.muted,
+                      marginTop: 2,
+                      marginBottom: 8,
+                    }}
+                  >
+                    📞 {product.sellerPhone}
+                  </div>
+
+                  {user && user.id !== product.sellerId && (
+                    <button
+                      onClick={handleToggleFollow}
+                      disabled={togglingFollow}
+                      style={{
+                        padding: "6px 12px",
+                        background: isFollowing ? "#f1f1f1" : C.ocean,
+                        color: isFollowing ? C.dark : "#fff",
+                        border: "none",
+                        borderRadius: 6,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        marginBottom: 8,
+                      }}
+                    >
+                      {isFollowing ? "✔️ Đang theo dõi" : "❤️ Theo dõi"}
+                    </button>
+                  )}
+                  {product.sellerRating > 0 && (
+                    <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>
+                      ⭐ {parseFloat(product.sellerRating).toFixed(1)} (
+                      {product.ratingCount} đánh giá)
+                    </div>
+                  )}
+                </div>
+
+                {user ? (
+                  user.id !== product.sellerId ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 10,
+                      }}
+                    >
+                      <button
+                        onClick={() => setShowChat(!showChat)}
+                        style={{
+                          width: "100%",
+                          padding: 13,
+                          background: C.ocean,
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 10,
+                          cursor: "pointer",
+                          fontSize: 15,
+                          fontWeight: 700,
+                          fontFamily: "inherit",
+                        }}
+                      >
+                        💬 {showChat ? "Đóng chat" : "Liên hệ người bán"}
+                      </button>
+                      <a
+                        href={`tel:${product.sellerPhone}`}
+                        style={{
+                          display: "block",
+                          textAlign: "center",
+                          width: "100%",
+                          padding: 13,
+                          background: C.ok,
+                          color: "#fff",
+                          borderRadius: 10,
+                          fontSize: 14,
+                          fontWeight: 700,
+                          textDecoration: "none",
+                          boxSizing: "border-box",
+                        }}
+                      >
+                        📞 Gọi ngay: {product.sellerPhone}
+                      </a>
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          background: C.oceanP,
+                          borderRadius: 8,
+                          padding: "10px 14px",
+                          fontSize: 13,
+                          color: C.ocean,
+                          textAlign: "center",
+                        }}
+                      >
+                        Đây là bài đăng của bạn
+                      </div>
+                      <button
+                        onClick={() => setShowChat(!showChat)}
+                        style={{
+                          width: "100%",
+                          padding: 13,
+                          background: C.ocean,
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 10,
+                          cursor: "pointer",
+                          fontSize: 15,
+                          fontWeight: 700,
+                          fontFamily: "inherit",
+                        }}
+                      >
+                        💬{" "}
+                        {showChat ? "Đóng chat" : "Xem tin nhắn từ người mua"}
+                      </button>
+                    </div>
+                  )
+                ) : (
+                  <button
+                    onClick={() =>
+                      setPage ? setPage("auth") : navigate("/dang-nhap")
+                    }
+                    style={{
+                      width: "100%",
+                      padding: 13,
+                      background: C.coral,
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 10,
+                      cursor: "pointer",
+                      fontSize: 14,
+                      fontWeight: 700,
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    🔐 Đăng nhập để liên hệ
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Nút Yêu thích + Báo cáo */}
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              marginBottom: 24,
+              alignItems: "center",
+            }}
+          >
+            <button
+              onClick={handleToggleFavorite}
+              disabled={favLoading}
+              style={{
+                background: isFavorited ? "#FEE2E2" : "#fff",
+                color: isFavorited ? "#DC2626" : "#6B7280",
+                border: "1px solid #e5e7eb",
+                padding: "9px 18px",
+                borderRadius: 10,
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 600,
+                fontFamily: "inherit",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              {isFavorited ? "❤️ Đã lưu" : "🤍 Lưu yêu thích"}
+            </button>
+            {user && user.id !== product.sellerId && (
+              <button
+                onClick={() => setShowReportModal(true)}
+                style={{
+                  background: "#fff",
+                  color: "#9CA3AF",
+                  border: "1px solid #e5e7eb",
+                  padding: "9px 14px",
+                  borderRadius: 10,
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontFamily: "inherit",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                }}
+              >
+                🚩 Báo cáo
+              </button>
+            )}
+            {product.viewCount > 0 && (
+              <span
+                style={{ fontSize: 13, color: "#9CA3AF", marginLeft: "auto" }}
+              >
+                👁 {product.viewCount} lượt xem
+              </span>
+            )}
+          </div>
+
+          {/* Report modal */}
+          {showReportModal && (
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0,0,0,0.5)",
+                zIndex: 9999,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 16,
+              }}
+              onClick={() => setShowReportModal(false)}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  background: "#fff",
+                  borderRadius: 16,
+                  padding: 24,
+                  width: "100%",
+                  maxWidth: 420,
+                  boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+                }}
+              >
+                <h3
+                  style={{ margin: "0 0 16px", fontSize: 17, fontWeight: 800 }}
+                >
+                  🚩 Báo cáo bài đăng
+                </h3>
+                {reportSent ? (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: "20px 0",
+                      color: "#059669",
+                      fontWeight: 700,
+                      fontSize: 16,
+                    }}
+                  >
+                    ✅ Báo cáo đã gửi thành công!
+                  </div>
+                ) : (
+                  <>
+                    <p
+                      style={{
+                        fontSize: 13,
+                        color: "#6B7280",
+                        marginBottom: 12,
+                      }}
+                    >
+                      Chọn lý do báo cáo bài đăng "{product.name}":
+                    </p>
+                    {[
+                      "Thông tin sai sự thật",
+                      "Hàng giả/kém chất lượng",
+                      "Giá cả gian lận",
+                      "Nội dung không phù hợp",
+                      "Người bán lừa đảo",
+                    ].map((r) => (
+                      <label
+                        key={r}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          padding: "8px 0",
+                          cursor: "pointer",
+                          fontSize: 14,
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="reason"
+                          value={r}
+                          checked={reportReason === r}
+                          onChange={() => setReportReason(r)}
+                        />
+                        {r}
+                      </label>
+                    ))}
+                    <div
+                      style={{
+                        marginTop: 16,
+                        display: "flex",
+                        gap: 10,
+                        justifyContent: "flex-end",
+                      }}
+                    >
+                      <button
+                        onClick={() => setShowReportModal(false)}
+                        style={{
+                          background: "#F3F4F6",
+                          border: "none",
+                          padding: "10px 18px",
+                          borderRadius: 8,
+                          cursor: "pointer",
+                          fontSize: 14,
+                          fontFamily: "inherit",
+                        }}
+                      >
+                        Huỷ
+                      </button>
+                      <button
+                        onClick={handleReport}
+                        disabled={!reportReason || reportLoading}
+                        style={{
+                          background: reportReason ? "#EF4444" : "#F3F4F6",
+                          color: reportReason ? "#fff" : "#9CA3AF",
+                          border: "none",
+                          padding: "10px 18px",
+                          borderRadius: 8,
+                          cursor: reportReason ? "pointer" : "default",
+                          fontSize: 14,
+                          fontWeight: 700,
+                          fontFamily: "inherit",
+                        }}
+                      >
+                        {reportLoading ? "Đang gửi..." : "Gửi báo cáo"}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div id="reviews-section">
+            <ReviewList
+              sellerId={product.sellerId}
+              user={user}
+              productId={product.id}
+              scrollToReviewId={product.scrollToReviewId || null}
+            />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

@@ -2,12 +2,20 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import http from 'http';
+<<<<<<< HEAD
+=======
+import helmet from 'helmet';
+>>>>>>> origin/main
 
 import { testConnection } from './db';
 import { initSocket }     from './socket';
 import { startCronJobs }  from './cron';
 
+<<<<<<< HEAD
 import authRoutes    from './routes/auth.routes';
+=======
+import authRoutes, { userRouter } from './routes/auth.routes';
+>>>>>>> origin/main
 import productRoutes from './routes/product.routes';
 import imageRoutes   from './routes/image.routes';
 import messageRoutes from './routes/message.routes';
@@ -15,15 +23,31 @@ import adminRoutes   from './routes/admin.routes';
 import followRoutes  from './routes/follow.routes';
 import reviewRoutes  from './routes/review.routes';
 import notificationRoutes from './routes/notification.routes';
+<<<<<<< HEAD
+=======
+import favoriteRoutes from './routes/favorite.routes';
+import reportRoutes  from './routes/report.routes';
+>>>>>>> origin/main
 
 const app    = express();
 const server = http.createServer(app);
 
+<<<<<<< HEAD
 /* ─── Middleware ────────────────────────────────────────── */
+=======
+/* ─── Security ────────────────────────────────────────────── */
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow Cloudinary images
+  contentSecurityPolicy: false, // configured separately if needed
+}));
+
+/* ─── Middleware ────────────────────────────────────────────── */
+>>>>>>> origin/main
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:3000',
   credentials: true,
 }));
+<<<<<<< HEAD
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -44,11 +68,37 @@ app.use('/api/notifications', notificationRoutes);
 app.use((_req, res) => res.status(404).json({ message: 'Không tìm thấy endpoint này' }));
 
 /* ─── Global error handler ──────────────────────────────── */
+=======
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+
+/* ─── Health check ─────────────────────────────────────────── */
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', time: new Date() }));
+
+/* ─── Routes ────────────────────────────────────────────────── */
+app.use('/api/auth',          authRoutes);
+app.use('/api/users',         userRouter);
+app.use('/api/products',      productRoutes);
+app.use('/api',               imageRoutes);
+app.use('/api/messages',      messageRoutes);
+app.use('/api/admin',         adminRoutes);
+app.use('/api/follows',       followRoutes);
+app.use('/api/reviews',       reviewRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/favorites',     favoriteRoutes);
+app.use('/api/reports',       reportRoutes);
+
+/* ─── 404 handler ───────────────────────────────────────────── */
+app.use((_req, res) => res.status(404).json({ message: 'Không tìm thấy endpoint này' }));
+
+/* ─── Global error handler ──────────────────────────────────── */
+>>>>>>> origin/main
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('[ERROR]', err.message);
   res.status(500).json({ message: err.message || 'Lỗi máy chủ' });
 });
 
+<<<<<<< HEAD
 /* ─── Start ─────────────────────────────────────────────── */
 const PORT = parseInt(process.env.PORT || '5000');
 
@@ -233,12 +283,21 @@ let serverInstance: any;
 
 // Hàm bootstrap thực hiện khởi chạy các tiến trình nền và lắng nghe máy chủ hoạt động
 >>>>>>> Stashed changes
+=======
+/* ─── Start ─────────────────────────────────────────────────── */
+const PORT = parseInt(process.env.PORT || '5000');
+
+>>>>>>> origin/main
 async function bootstrap() {
   await testConnection();
   initSocket(server);
   startCronJobs();
   server.listen(PORT, () => {
     console.log(`\n🚀 Server chạy tại http://localhost:${PORT}`);
+<<<<<<< HEAD
+=======
+    console.log(`🔒 Helmet security headers: BẬT`);
+>>>>>>> origin/main
     console.log(`📡 Socket.IO sẵn sàng`);
     console.log(`🗄️  Database: ${process.env.DB_NAME || 'seafood_db'}\n`);
   });

@@ -1,6 +1,6 @@
-# HaiSan.vn Frontend Phase 2
+# HaiSan.vn Frontend Phase 3
 
-Frontend mới cho giai đoạn 1 và 2: Guest/Buyer dùng chung giao diện, Seller có workspace quản lý riêng.
+Frontend mới cho cả 3 giai đoạn: Guest/Buyer dùng chung giao diện, Seller có workspace quản lý riêng, Admin có control room màu đỏ sáng.
 
 ## Chạy local
 
@@ -42,3 +42,8 @@ Backend: `http://localhost:5000`
 - Quản lý mẻ hàng: tạo sản phẩm, đẩy tin, xóa sản phẩm; có demo mode khi chưa đăng nhập.
 - Seller tạo công thức và bài viết cộng đồng.
 - Mock inbox/thông báo để chuẩn bị nối realtime message/video call.
+- Admin control room với dashboard thống kê, biểu đồ 7 ngày và top seller.
+- Admin quản lý user/seller: tìm kiếm, khóa/mở tài khoản, duyệt/thu hồi xác minh.
+- Admin quản lý sản phẩm toàn sàn và xóa listing vi phạm.
+- Admin xử lý report và gửi broadcast theo nhóm người nhận.
+- Tông màu: Buyer xanh da trời, Seller cam sáng, Admin đỏ sáng.

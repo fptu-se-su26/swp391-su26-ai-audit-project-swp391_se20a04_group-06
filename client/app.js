@@ -5,12 +5,18 @@ const API_BASE =
 
 const app = document.querySelector("#app");
 const toastRoot = document.querySelector("#toast-root");
+const sectionIds = ["market", "fishermen", "recipes", "community", "seller", "admin"];
+
+function sectionFromHash() {
+  const section = window.location.hash.replace("#", "");
+  return sectionIds.includes(section) ? section : "market";
+}
 
 const state = {
   user: null,
   apiOnline: false,
   loading: true,
-  activeSection: "market",
+  activeSection: sectionFromHash(),
   filters: {
     search: "",
     type: "All",
@@ -33,6 +39,19 @@ const state = {
     recipes: [],
     posts: [],
     todayCount: null,
+    lastSync: null,
+  },
+  admin: {
+    loading: false,
+    tab: "overview",
+    stats: null,
+    users: [],
+    listings: [],
+    reports: [],
+    broadcasts: [],
+    reportStatus: "Pending",
+    search: "",
+    listingStatus: "",
     lastSync: null,
   },
   meta: {
@@ -244,6 +263,190 @@ const sellerStatusLabels = {
   Expired: "Hết hạn",
   Deleted: "Đã xóa",
 };
+
+const demoAdminUser = {
+  id: "demo-admin-1",
+  name: "Admin HaiSan.vn",
+  role: "Admin",
+  email: "admin@haisan.vn",
+};
+
+const adminStatusLabels = {
+  Active: "Đang bán",
+  Expired: "Hết hạn",
+  Deleted: "Đã xóa",
+  Pending: "Chờ xử lý",
+  Resolved: "Đã xử lý",
+  Dismissed: "Đã bỏ qua",
+};
+
+const demoAdminUsers = [
+  {
+    id: "demo-seller-1",
+    name: "Tàu Cô Ba Cần Giờ",
+    email: "coba@haisan.vn",
+    role: "User",
+    isActive: 1,
+    isVerified: 1,
+    postCount: 18,
+  },
+  {
+    id: "demo-seller-2",
+    name: "Vựa Biển Bạc Liêu",
+    email: "baclieu@haisan.vn",
+    role: "User",
+    isActive: 1,
+    isVerified: 1,
+    postCount: 22,
+  },
+  {
+    id: "demo-seller-3",
+    name: "Làng Chài Phú Quốc",
+    email: "phuquoc@haisan.vn",
+    role: "User",
+    isActive: 1,
+    isVerified: 1,
+    postCount: 31,
+  },
+  {
+    id: "demo-buyer-1",
+    name: "Buyer Minh",
+    email: "minh@example.com",
+    role: "User",
+    isActive: 1,
+    isVerified: 0,
+    postCount: 0,
+  },
+  {
+    id: "demo-buyer-2",
+    name: "Bếp Mộc",
+    email: "bepmoc@example.com",
+    role: "User",
+    isActive: 0,
+    isVerified: 0,
+    postCount: 0,
+  },
+];
+
+const demoAdminReports = [
+  {
+    id: "demo-report-1",
+    reason: "Ảnh sản phẩm chưa khớp mô tả mẻ hàng.",
+    status: "Pending",
+    reporterName: "Buyer Minh",
+    productName: "Tôm sú oxy",
+    sellerName: "Vựa Biển Bạc Liêu",
+    productId: "demo-shrimp",
+    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+  },
+  {
+    id: "demo-report-2",
+    reason: "Giá hiển thị khác giá chốt trong chat.",
+    status: "Pending",
+    reporterName: "Lan Anh",
+    productName: "Cá thu cắt khoanh",
+    sellerName: "Thuyền Nhà Trần",
+    productId: "demo-fish",
+    createdAt: new Date(Date.now() - 3600000 * 9).toISOString(),
+  },
+  {
+    id: "demo-report-3",
+    reason: "Báo cáo trùng, seller đã cập nhật lại ảnh.",
+    status: "Dismissed",
+    reporterName: "Bếp Mộc",
+    productName: "Mực một nắng Phú Quốc",
+    sellerName: "Làng Chài Phú Quốc",
+    productId: "demo-dried-squid",
+    createdAt: new Date(Date.now() - 3600000 * 30).toISOString(),
+  },
+];
+
+const demoAdminBroadcasts = [
+  {
+    id: "demo-broadcast-1",
+    content: "Nhắc seller cập nhật tồn kho trước 9h sáng để buyer đặt hàng chính xác.",
+    targetRole: "Seller",
+    sentCount: 72,
+    createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
+  },
+  {
+    id: "demo-broadcast-2",
+    content: "HaiSan.vn sẽ bảo trì ngắn lúc 23h tối nay.",
+    targetRole: "all",
+    sentCount: 1280,
+    createdAt: new Date(Date.now() - 3600000 * 36).toISOString(),
+  },
+];
+
+function currentAdmin() {
+  return state.user?.role === "Admin" ? state.user : demoAdminUser;
+}
+
+function isDemoAdminMode() {
+  return state.user?.role !== "Admin";
+}
+
+function adminProfile() {
+  const admin = currentAdmin();
+  return {
+    id: admin.id,
+    name: admin.name || "Admin",
+    email: admin.email || "admin@haisan.vn",
+  };
+}
+
+function buildDemoAdminListings() {
+  return fallbackProducts.map((item, index) => ({
+    id: getId(item),
+    name: item.name,
+    type: item.type,
+    status: index === fallbackProducts.length - 1 ? "Expired" : item.status || "Active",
+    price: item.price,
+    remainingWeight: item.remainingWeight,
+    createdAt: item.createdAt,
+    sellerName: item.sellerName,
+    sellerEmail: `seller${index + 1}@haisan.vn`,
+    coverImg: productImage(item),
+  }));
+}
+
+function buildDemoTrend(seed) {
+  return Array.from({ length: 7 }).map((_, index) => {
+    const date = new Date(Date.now() - (6 - index) * 86400000);
+    return {
+      date: date.toISOString().slice(0, 10),
+      count: seed + ((index * 3) % 7),
+    };
+  });
+}
+
+function buildDemoAdminStats() {
+  const listings = buildDemoAdminListings();
+  return {
+    totalUsers: demoAdminUsers.length,
+    verifiedUsers: demoAdminUsers.filter((item) => Number(item.isVerified) === 1).length,
+    activeFresh: listings.filter((item) => item.type === "Fresh" && item.status === "Active").length,
+    activeDried: listings.filter((item) => item.type === "Dried" && item.status === "Active").length,
+    expiredTotal: listings.filter((item) => item.status === "Expired").length,
+    totalReviews: 47,
+    avgRating: 4.8,
+    totalMessages: 128,
+    totalFollows: 421,
+    postsPerDay: buildDemoTrend(3),
+    usersPerDay: buildDemoTrend(2),
+    topSellers: demoAdminUsers
+      .filter((item) => item.postCount > 0)
+      .sort((a, b) => b.postCount - a.postCount)
+      .slice(0, 5)
+      .map((item) => ({
+        id: item.id,
+        name: item.name,
+        isVerified: item.isVerified,
+        postCount: item.postCount,
+        avgRating: item.id === "demo-seller-3" ? 5 : 4.8,
+      })),
+  };
+}
 
 function currentSeller() {
   return state.user || demoSellerUser;
@@ -487,6 +690,7 @@ async function loadUser() {
   }
   renderHeaderOnly();
   loadSellerData();
+  loadAdminData();
 }
 
 async function loadSellerData() {
@@ -552,6 +756,71 @@ async function loadSellerData() {
   }
 }
 
+async function loadAdminData() {
+  state.admin.loading = true;
+  render();
+
+  const demoListings = buildDemoAdminListings();
+  const demoReports = demoAdminReports.filter((item) => item.status === state.admin.reportStatus);
+
+  if (isDemoAdminMode()) {
+    state.admin.stats = buildDemoAdminStats();
+    state.admin.users = demoAdminUsers;
+    state.admin.listings = demoListings;
+    state.admin.reports = demoReports;
+    state.admin.broadcasts = demoAdminBroadcasts;
+    state.admin.lastSync = new Date().toISOString();
+    state.admin.loading = false;
+    render();
+    return;
+  }
+
+  try {
+    const [stats, users, listings, reports, broadcasts] = await Promise.allSettled([
+      apiFetch("/admin/stats", { timeoutMs: 6000 }),
+      apiFetch("/admin/users", {
+        params: { limit: 20, search: state.admin.search },
+        timeoutMs: 6000,
+      }),
+      apiFetch("/admin/listings", {
+        params: {
+          limit: 20,
+          search: state.admin.search,
+          status: state.admin.listingStatus,
+        },
+        timeoutMs: 6000,
+      }),
+      apiFetch("/reports", {
+        params: { limit: 20, status: state.admin.reportStatus },
+        timeoutMs: 6000,
+      }),
+      apiFetch("/admin/notifications/broadcasts", { timeoutMs: 6000 }),
+    ]);
+
+    state.admin.stats = stats.status === "fulfilled" ? stats.value : buildDemoAdminStats();
+    state.admin.users =
+      users.status === "fulfilled" ? normalizeList(users.value, "users") : demoAdminUsers;
+    state.admin.listings =
+      listings.status === "fulfilled" ? normalizeList(listings.value, "listings") : demoListings;
+    state.admin.reports =
+      reports.status === "fulfilled" ? normalizeList(reports.value, "reports") : demoReports;
+    state.admin.broadcasts =
+      broadcasts.status === "fulfilled"
+        ? normalizeList(broadcasts.value, "broadcasts")
+        : demoAdminBroadcasts;
+    state.admin.lastSync = new Date().toISOString();
+  } catch {
+    state.admin.stats = buildDemoAdminStats();
+    state.admin.users = demoAdminUsers;
+    state.admin.listings = demoListings;
+    state.admin.reports = demoReports;
+    state.admin.broadcasts = demoAdminBroadcasts;
+  } finally {
+    state.admin.loading = false;
+    render();
+  }
+}
+
 function visibleProducts() {
   const term = state.filters.search.trim().toLowerCase();
   const products = state.data.products.filter((item) => {
@@ -598,6 +867,7 @@ function render() {
         ${navButton("recipes", "Bếp biển")}
         ${navButton("community", "Cộng đồng")}
         ${navButton("seller", "Seller")}
+        ${navButton("admin", "Admin")}
       </nav>
       <div class="header-actions" data-header-user>${renderUserButton()}</div>
     </header>
@@ -608,11 +878,12 @@ function render() {
       ${renderRecipes()}
       ${renderCommunity()}
       ${renderSellerWorkspace()}
+      ${renderAdminWorkspace()}
       ${renderRoadmap()}
     </main>
 
     <footer class="site-footer">
-      <span>HaiSan.vn phase 2</span>
+      <span>HaiSan.vn phase 3</span>
       <span>${state.apiOnline ? "API online" : "Đang dùng dữ liệu mẫu"}</span>
       <span>${escapeHtml(API_BASE)}</span>
     </footer>
@@ -1382,6 +1653,484 @@ function renderSellerMessages() {
   `;
 }
 
+function renderAdminWorkspace() {
+  const profile = adminProfile();
+  const stats = state.admin.stats || buildDemoAdminStats();
+  const pendingReports = state.admin.reports.filter((item) => item.status === "Pending").length;
+  const totalListings =
+    Number(stats.activeFresh || 0) + Number(stats.activeDried || 0) + Number(stats.expiredTotal || 0);
+
+  return `
+    <section id="admin" class="section-band admin-band" data-section="admin">
+      <div class="section-container admin-shell">
+        <div class="admin-hero">
+          <div class="admin-identity">
+            <span class="avatar xl">${escapeHtml(initials(profile.name))}</span>
+            <div>
+              <span class="eyebrow">Admin control</span>
+              <h2>${escapeHtml(profile.name)}</h2>
+              <p>
+                Theo dõi vận hành, duyệt seller, kiểm soát sản phẩm bị báo cáo và phát thông báo hệ thống.
+              </p>
+              <div class="tag-row">
+                <span>${escapeHtml(profile.email)}</span>
+                <span>${isDemoAdminMode() ? "Demo mode" : "Admin session"}</span>
+                <span>${state.admin.loading ? "Đang đồng bộ" : "Sẵn sàng"}</span>
+              </div>
+            </div>
+          </div>
+          <div class="admin-sync">
+            <strong>${state.admin.loading ? "Đang tải" : "Control room"}</strong>
+            <span>${state.admin.lastSync ? `Cập nhật ${formatDate(state.admin.lastSync)}` : "Chưa đồng bộ"}</span>
+          </div>
+        </div>
+
+        <div class="admin-metrics">
+          ${renderAdminMetric("Người dùng", stats.totalUsers || 0, `${stats.verifiedUsers || 0} đã xác minh`)}
+          ${renderAdminMetric("Tin đang kiểm soát", totalListings, `${stats.expiredTotal || 0} hết hạn`)}
+          ${renderAdminMetric("Tin nhắn", stats.totalMessages || 0, "toàn hệ thống")}
+          ${renderAdminMetric("Báo cáo chờ", pendingReports, "cần xử lý")}
+        </div>
+
+        <div class="admin-tabs" role="tablist" aria-label="Admin tools">
+          ${adminTabButton("overview", "Tổng quan")}
+          ${adminTabButton("users", "User/Seller")}
+          ${adminTabButton("listings", "Sản phẩm")}
+          ${adminTabButton("reports", "Báo cáo")}
+          ${adminTabButton("broadcasts", "Broadcast")}
+        </div>
+
+        <div class="admin-panel">
+          ${renderAdminPanel()}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderAdminMetric(label, value, suffix) {
+  return `
+    <article class="admin-metric">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+      <small>${escapeHtml(suffix)}</small>
+    </article>
+  `;
+}
+
+function adminTabButton(tab, label) {
+  const active = state.admin.tab === tab ? "is-selected" : "";
+  return `<button class="${active}" type="button" data-admin-tab="${tab}">${label}</button>`;
+}
+
+function renderAdminPanel() {
+  if (state.admin.tab === "users") return renderAdminUsers();
+  if (state.admin.tab === "listings") return renderAdminListings();
+  if (state.admin.tab === "reports") return renderAdminReports();
+  if (state.admin.tab === "broadcasts") return renderAdminBroadcasts();
+  return renderAdminOverview();
+}
+
+function renderAdminOverview() {
+  const stats = state.admin.stats || buildDemoAdminStats();
+  const newestReports = state.admin.reports.slice(0, 3);
+  return `
+    <div class="admin-two-column">
+      <section class="admin-work-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">Operations</span>
+            <h3>Tín hiệu 7 ngày</h3>
+          </div>
+          <button class="ghost-button" type="button" data-refresh-admin>
+            <span class="button-icon">↻</span>
+            <span>Đồng bộ</span>
+          </button>
+        </div>
+        <div class="admin-chart">
+          <div>
+            <strong>Bài đăng</strong>
+            ${renderAdminTrendBars(stats.postsPerDay || [])}
+          </div>
+          <div>
+            <strong>User mới</strong>
+            ${renderAdminTrendBars(stats.usersPerDay || [])}
+          </div>
+        </div>
+      </section>
+      <section class="admin-work-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">Moderation</span>
+            <h3>Việc cần xử lý</h3>
+          </div>
+        </div>
+        <div class="task-list admin-task-list">
+          <button type="button" data-admin-tab="reports">
+            <strong>${newestReports.length} báo cáo đang hiển thị</strong>
+            <span>Kiểm tra lý do, seller liên quan và quyết định giải quyết hoặc bỏ qua.</span>
+          </button>
+          <button type="button" data-admin-tab="users">
+            <strong>${state.admin.users.filter((item) => Number(item.isVerified) !== 1).length} hồ sơ chưa xác minh</strong>
+            <span>Duyệt tích xanh cho seller đủ thông tin nguồn hàng.</span>
+          </button>
+          <button type="button" data-admin-tab="broadcasts">
+            <strong>${state.admin.broadcasts.length} broadcast gần đây</strong>
+            <span>Gửi thông báo vận hành theo nhóm người nhận.</span>
+          </button>
+        </div>
+      </section>
+      <section class="admin-work-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">Top sellers</span>
+            <h3>Người bán nổi bật</h3>
+          </div>
+        </div>
+        <div class="admin-list">
+          ${
+            (stats.topSellers || []).length
+              ? stats.topSellers.map(renderAdminTopSeller).join("")
+              : `<p class="empty-note">Chưa có dữ liệu seller.</p>`
+          }
+        </div>
+      </section>
+      <section class="admin-work-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">Reports</span>
+            <h3>Báo cáo mới</h3>
+          </div>
+        </div>
+        <div class="admin-list">
+          ${
+            newestReports.length
+              ? newestReports.map(renderAdminReportMini).join("")
+              : `<p class="empty-note">Không có báo cáo trong bộ lọc hiện tại.</p>`
+          }
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function renderAdminTrendBars(rows) {
+  const max = Math.max(1, ...rows.map((item) => Number(item.count || 0)));
+  return `
+    <div class="admin-bars">
+      ${rows
+        .map(
+          (item) => `
+            <span title="${escapeHtml(item.date)}: ${Number(item.count || 0)}">
+              <i style="height: ${Math.max(10, (Number(item.count || 0) / max) * 100)}%"></i>
+            </span>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderAdminTopSeller(seller) {
+  return `
+    <article class="admin-list-item">
+      <span class="avatar mini">${escapeHtml(initials(seller.name))}</span>
+      <div>
+        <strong>${escapeHtml(seller.name || "Seller")}</strong>
+        <span>${Number(seller.postCount || 0)} bài đăng · ${Number(seller.avgRating || 0).toFixed(1)} sao</span>
+      </div>
+      <small>${Number(seller.isVerified) === 1 ? "Đã xác minh" : "Chưa xác minh"}</small>
+    </article>
+  `;
+}
+
+function renderAdminReportMini(report) {
+  return `
+    <article class="admin-list-item">
+      <span class="status-dot"></span>
+      <div>
+        <strong>${escapeHtml(report.productName || "Sản phẩm")}</strong>
+        <span>${escapeHtml(report.reason || "Không có lý do")} · ${escapeHtml(report.sellerName || "Seller")}</span>
+      </div>
+      <small>${formatDate(report.createdAt)}</small>
+    </article>
+  `;
+}
+
+function renderAdminUsers() {
+  return `
+    <div class="admin-two-column">
+      <section class="admin-work-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">Directory</span>
+            <h3>Tra cứu tài khoản</h3>
+          </div>
+        </div>
+        <form class="admin-form" data-admin-search-form>
+          <label>
+            <span>Từ khóa</span>
+            <input name="search" value="${escapeHtml(state.admin.search)}" placeholder="Tên hoặc email" />
+          </label>
+          <button class="primary-button" type="submit">
+            <span class="button-icon">⌕</span>
+            <span>Tìm</span>
+          </button>
+        </form>
+      </section>
+      <section class="admin-work-card admin-wide-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">Accounts</span>
+            <h3>User và seller</h3>
+          </div>
+          <button class="ghost-button" type="button" data-refresh-admin>
+            <span class="button-icon">↻</span>
+            <span>Tải lại</span>
+          </button>
+        </div>
+        <div class="admin-table-list">
+          ${
+            state.admin.users.length
+              ? state.admin.users.map(renderAdminUserItem).join("")
+              : `<p class="empty-note">Chưa có tài khoản phù hợp.</p>`
+          }
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function renderAdminUserItem(user) {
+  const id = getId(user);
+  const active = Number(user.isActive) !== 0;
+  const verified = Number(user.isVerified) === 1 || user.isVerified === true;
+  return `
+    <article class="admin-row">
+      <div>
+        <strong>${escapeHtml(user.name || "Người dùng")}</strong>
+        <span>${escapeHtml(user.email || "Chưa có email")}</span>
+      </div>
+      <span>${escapeHtml(user.role || "User")}</span>
+      <span>${Number(user.postCount || 0)} bài</span>
+      <span>${verified ? "Đã xác minh" : "Chưa xác minh"}</span>
+      <span>${active ? "Đang hoạt động" : "Đang khóa"}</span>
+      <div class="item-actions">
+        <button class="ghost-button" type="button" data-admin-verify="${escapeHtml(id)}">
+          <span class="button-icon">✓</span>
+          <span>${verified ? "Thu hồi" : "Duyệt"}</span>
+        </button>
+        <button class="ghost-button danger" type="button" data-admin-toggle-user="${escapeHtml(id)}">
+          <span class="button-icon">${active ? "×" : "↻"}</span>
+          <span>${active ? "Khóa" : "Mở"}</span>
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+function renderAdminListings() {
+  return `
+    <div class="admin-two-column">
+      <section class="admin-work-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">Inventory control</span>
+            <h3>Lọc sản phẩm</h3>
+          </div>
+        </div>
+        <form class="admin-form" data-admin-listing-filter>
+          <label>
+            <span>Từ khóa</span>
+            <input name="search" value="${escapeHtml(state.admin.search)}" placeholder="Tên sản phẩm hoặc seller" />
+          </label>
+          <label>
+            <span>Trạng thái</span>
+            <select name="status">
+              <option value="" ${state.admin.listingStatus === "" ? "selected" : ""}>Tất cả</option>
+              <option value="Active" ${state.admin.listingStatus === "Active" ? "selected" : ""}>Đang bán</option>
+              <option value="Expired" ${state.admin.listingStatus === "Expired" ? "selected" : ""}>Hết hạn</option>
+              <option value="Deleted" ${state.admin.listingStatus === "Deleted" ? "selected" : ""}>Đã xóa</option>
+            </select>
+          </label>
+          <button class="primary-button" type="submit">
+            <span class="button-icon">⌕</span>
+            <span>Lọc</span>
+          </button>
+        </form>
+      </section>
+      <section class="admin-work-card admin-wide-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">Listings</span>
+            <h3>Sản phẩm toàn sàn</h3>
+          </div>
+        </div>
+        <div class="admin-table-list">
+          ${
+            state.admin.listings.length
+              ? state.admin.listings.map(renderAdminListingItem).join("")
+              : `<p class="empty-note">Không có sản phẩm phù hợp.</p>`
+          }
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function renderAdminListingItem(listing) {
+  const id = getId(listing);
+  return `
+    <article class="admin-row listing-row">
+      <img src="${escapeHtml(productImage(listing))}" alt="${escapeHtml(listing.name)}" />
+      <div>
+        <strong>${escapeHtml(listing.name || "Sản phẩm")}</strong>
+        <span>${escapeHtml(listing.sellerName || "Seller")} · ${formatCurrency(listing.price)}</span>
+      </div>
+      <span>${escapeHtml(listing.type || "Fresh")}</span>
+      <span>${escapeHtml(adminStatusLabels[listing.status] || listing.status || "Đang bán")}</span>
+      <span>${Number(listing.remainingWeight || 0)} kg</span>
+      <div class="item-actions">
+        <button class="ghost-button danger" type="button" data-admin-delete-listing="${escapeHtml(id)}">
+          <span class="button-icon">×</span>
+          <span>Xóa</span>
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+function renderAdminReports() {
+  return `
+    <div class="admin-two-column">
+      <section class="admin-work-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">Reports</span>
+            <h3>Bộ lọc báo cáo</h3>
+          </div>
+        </div>
+        <form class="admin-form" data-admin-report-filter>
+          <label>
+            <span>Trạng thái</span>
+            <select name="status">
+              <option value="Pending" ${state.admin.reportStatus === "Pending" ? "selected" : ""}>Chờ xử lý</option>
+              <option value="Resolved" ${state.admin.reportStatus === "Resolved" ? "selected" : ""}>Đã xử lý</option>
+              <option value="Dismissed" ${state.admin.reportStatus === "Dismissed" ? "selected" : ""}>Đã bỏ qua</option>
+            </select>
+          </label>
+          <button class="primary-button" type="submit">
+            <span class="button-icon">⌕</span>
+            <span>Lọc báo cáo</span>
+          </button>
+        </form>
+      </section>
+      <section class="admin-work-card admin-wide-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">Moderation queue</span>
+            <h3>Hàng chờ xử lý</h3>
+          </div>
+        </div>
+        <div class="admin-table-list">
+          ${
+            state.admin.reports.length
+              ? state.admin.reports.map(renderAdminReportItem).join("")
+              : `<p class="empty-note">Không có báo cáo trong trạng thái này.</p>`
+          }
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function renderAdminReportItem(report) {
+  const id = getId(report);
+  return `
+    <article class="admin-row report-row">
+      <div>
+        <strong>${escapeHtml(report.productName || "Sản phẩm")}</strong>
+        <span>${escapeHtml(report.reason || "Không có lý do")}</span>
+      </div>
+      <span>${escapeHtml(report.reporterName || "Người báo cáo")}</span>
+      <span>${escapeHtml(report.sellerName || "Seller")}</span>
+      <span>${escapeHtml(adminStatusLabels[report.status] || report.status || "Chờ xử lý")}</span>
+      <span>${formatDate(report.createdAt)}</span>
+      <div class="item-actions">
+        <button class="ghost-button danger" type="button" data-admin-resolve-report="${escapeHtml(id)}">
+          <span class="button-icon">!</span>
+          <span>Giải quyết</span>
+        </button>
+        <button class="ghost-button" type="button" data-admin-dismiss-report="${escapeHtml(id)}">
+          <span class="button-icon">✓</span>
+          <span>Bỏ qua</span>
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+function renderAdminBroadcasts() {
+  return `
+    <div class="admin-two-column">
+      <section class="admin-work-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">Broadcast</span>
+            <h3>Gửi thông báo</h3>
+          </div>
+        </div>
+        <form class="admin-form" data-admin-broadcast-form>
+          <label>
+            <span>Nhóm nhận</span>
+            <select name="targetRole">
+              <option value="all">Tất cả</option>
+              <option value="Seller">Seller</option>
+              <option value="Buyer">Buyer</option>
+            </select>
+          </label>
+          <label>
+            <span>Nội dung</span>
+            <textarea name="content" maxlength="200" required rows="5" placeholder="Thông báo vận hành tối đa 200 ký tự"></textarea>
+          </label>
+          <button class="primary-button" type="submit">
+            <span class="button-icon">↗</span>
+            <span>Phát thông báo</span>
+          </button>
+        </form>
+      </section>
+      <section class="admin-work-card admin-wide-card">
+        <div class="section-title-row compact-title">
+          <div>
+            <span class="eyebrow">History</span>
+            <h3>Lịch sử broadcast</h3>
+          </div>
+        </div>
+        <div class="admin-list">
+          ${
+            state.admin.broadcasts.length
+              ? state.admin.broadcasts.map(renderAdminBroadcastItem).join("")
+              : `<p class="empty-note">Chưa có broadcast.</p>`
+          }
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function renderAdminBroadcastItem(item) {
+  return `
+    <article class="admin-list-item">
+      <span class="status-dot"></span>
+      <div>
+        <strong>${escapeHtml(item.content || "Thông báo")}</strong>
+        <span>${escapeHtml(item.targetRole || "all")} · ${Number(item.sentCount || 0)} người nhận</span>
+      </div>
+      <small>${formatDate(item.createdAt)}</small>
+    </article>
+  `;
+}
+
 function renderPostCard(post) {
   const tags = Array.isArray(post.tags) ? post.tags.slice(0, 4) : [];
   const likes = Array.isArray(post.likes) ? post.likes.length : Number(post.likeCount || 0);
@@ -1429,7 +2178,7 @@ function renderRoadmap() {
             <h3>Seller</h3>
             <p>Quản lý mẻ hàng, bài viết, công thức, tin nhắn và thông báo.</p>
           </article>
-          <article class="roadmap-item">
+          <article class="roadmap-item is-done">
             <span>03</span>
             <h3>Admin</h3>
             <p>Duyệt người bán, kiểm soát sản phẩm, báo cáo và broadcast.</p>
@@ -1596,12 +2345,192 @@ function bindEvents() {
     button.addEventListener("click", () => loadSellerData());
   });
 
+  document.querySelectorAll("[data-refresh-admin]").forEach((button) => {
+    button.addEventListener("click", () => loadAdminData());
+  });
+
   document.querySelectorAll("[data-seller-tab]").forEach((button) => {
     button.addEventListener("click", () => {
       state.seller.tab = button.dataset.sellerTab || "overview";
       state.activeSection = "seller";
       render();
     });
+  });
+
+  document.querySelectorAll("[data-admin-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.admin.tab = button.dataset.adminTab || "overview";
+      state.activeSection = "admin";
+      render();
+    });
+  });
+
+  document.querySelector("[data-admin-search-form]")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    state.admin.search = String(formData.get("search") || "").trim();
+    state.admin.tab = "users";
+    loadAdminData();
+  });
+
+  document.querySelector("[data-admin-listing-filter]")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    state.admin.search = String(formData.get("search") || "").trim();
+    state.admin.listingStatus = String(formData.get("status") || "");
+    state.admin.tab = "listings";
+    loadAdminData();
+  });
+
+  document.querySelector("[data-admin-report-filter]")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    state.admin.reportStatus = String(formData.get("status") || "Pending");
+    state.admin.tab = "reports";
+    loadAdminData();
+  });
+
+  document.querySelectorAll("[data-admin-verify]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const id = button.dataset.adminVerify;
+      if (!id) return;
+      if (isDemoAdminMode() || id.startsWith("demo-")) {
+        state.admin.users = state.admin.users.map((item) =>
+          getId(item) === id
+            ? { ...item, isVerified: Number(item.isVerified) === 1 ? 0 : 1 }
+            : item,
+        );
+        state.admin.stats = buildDemoAdminStats();
+        showToast("Đã cập nhật trạng thái xác minh demo.");
+        render();
+        return;
+      }
+
+      try {
+        await apiFetch(`/admin/users/${id}/verify`, { method: "PATCH", timeoutMs: 7000 });
+        showToast("Đã cập nhật xác minh.");
+        loadAdminData();
+      } catch (error) {
+        showToast(error.message || "Không cập nhật được xác minh.", "warn");
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-admin-toggle-user]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const id = button.dataset.adminToggleUser;
+      if (!id) return;
+      if (isDemoAdminMode() || id.startsWith("demo-")) {
+        state.admin.users = state.admin.users.map((item) =>
+          getId(item) === id ? { ...item, isActive: Number(item.isActive) === 1 ? 0 : 1 } : item,
+        );
+        showToast("Đã cập nhật trạng thái tài khoản demo.");
+        render();
+        return;
+      }
+
+      try {
+        await apiFetch(`/admin/users/${id}/toggle`, { method: "PATCH", timeoutMs: 7000 });
+        showToast("Đã cập nhật trạng thái tài khoản.");
+        loadAdminData();
+      } catch (error) {
+        showToast(error.message || "Không cập nhật được tài khoản.", "warn");
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-admin-delete-listing]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const id = button.dataset.adminDeleteListing;
+      if (!id) return;
+      if (isDemoAdminMode() || id.startsWith("demo-")) {
+        state.admin.listings = state.admin.listings.filter((item) => getId(item) !== id);
+        showToast("Đã xóa listing demo.");
+        render();
+        return;
+      }
+
+      if (!window.confirm("Admin xóa sản phẩm này khỏi sàn?")) return;
+      try {
+        await apiFetch(`/admin/listings/${id}`, { method: "DELETE", timeoutMs: 7000 });
+        showToast("Đã xóa sản phẩm khỏi sàn.");
+        loadAdminData();
+      } catch (error) {
+        showToast(error.message || "Không xóa được sản phẩm.", "warn");
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-admin-resolve-report], [data-admin-dismiss-report]").forEach(
+    (button) => {
+      button.addEventListener("click", async () => {
+        const id = button.dataset.adminResolveReport || button.dataset.adminDismissReport;
+        const action = button.dataset.adminResolveReport ? "resolve" : "dismiss";
+        if (!id) return;
+        if (isDemoAdminMode() || id.startsWith("demo-")) {
+          state.admin.reports = state.admin.reports.filter((item) => getId(item) !== id);
+          showToast(action === "resolve" ? "Đã xử lý report demo." : "Đã bỏ qua report demo.");
+          render();
+          return;
+        }
+
+        try {
+          await apiFetch(`/reports/${id}`, {
+            method: "PATCH",
+            body: {
+              action,
+              adminNote:
+                action === "resolve"
+                  ? "Admin đã xử lý từ dashboard."
+                  : "Admin đã bỏ qua từ dashboard.",
+            },
+            timeoutMs: 7000,
+          });
+          showToast(action === "resolve" ? "Đã xử lý báo cáo." : "Đã bỏ qua báo cáo.");
+          loadAdminData();
+        } catch (error) {
+          showToast(error.message || "Không xử lý được báo cáo.", "warn");
+        }
+      });
+    },
+  );
+
+  document.querySelector("[data-admin-broadcast-form]")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const content = String(formData.get("content") || "").trim();
+    const targetRole = String(formData.get("targetRole") || "all");
+    const body = { content, targetRole };
+
+    if (isDemoAdminMode()) {
+      state.admin.broadcasts = [
+        {
+          id: `demo-broadcast-${Date.now()}`,
+          ...body,
+          sentCount: targetRole === "Seller" ? 72 : targetRole === "Buyer" ? 1208 : 1280,
+          createdAt: new Date().toISOString(),
+        },
+        ...state.admin.broadcasts,
+      ];
+      form.reset();
+      showToast("Đã phát broadcast demo.");
+      render();
+      return;
+    }
+
+    try {
+      await apiFetch("/admin/notifications/broadcast", {
+        method: "POST",
+        body,
+        timeoutMs: 7000,
+      });
+      form.reset();
+      showToast("Đã phát broadcast.");
+      loadAdminData();
+    } catch (error) {
+      showToast(error.message || "Không phát được broadcast.", "warn");
+    }
   });
 
   document.querySelector("[data-seller-product-form]")?.addEventListener("submit", async (event) => {
@@ -1890,3 +2819,10 @@ function handleEscape(event) {
 render();
 loadData();
 loadUser();
+
+window.addEventListener("hashchange", () => {
+  const section = sectionFromHash();
+  if (state.activeSection === section) return;
+  state.activeSection = section;
+  render();
+});

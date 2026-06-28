@@ -27,13 +27,13 @@
 | | |
 |---|---|
 | **Ngày** | 19/05/2026 |
-| **Sinh viên** | *(Họ tên — MSSV)* |
+| **Sinh viên** | HE186165 |
 | **Công cụ AI** | Claude Sonnet |
-| **Branch** | `feature/SEXXXXXX-database-schema` |
+| **Branch** | `docs/HE186165-add-personal-folder` |
 | **Nhiệm vụ** | Thiết kế database schema cho hệ thống mua bán hải sản |
-| **Mục đích** | Gợi ý các bảng cần thiết và quan hệ giữa chúng |
+| **Mục đích** | Gợi ý các collection cần thiết và quan hệ giữa chúng |
 | **Prompt tham chiếu** | PROMPTS.md → P-001 |
-| **Kết quả** | AI đề xuất 9 bảng: `users`, `products`, `categories`, `orders`, `reviews`, `messages`, `notifications`, `follows`, `images`. Đã điều chỉnh thêm cột `location` (lat/lng) vào bảng `products` và `users` để phục vụ tính năng bản đồ |
+| **Kết quả** | AI đề xuất các collection chính: `User`, `Product`, `Message`, `Notification`, `Review`. Đã điều chỉnh lưu trực tiếp mảng `images` trong Product schema để tận dụng cấu trúc lồng nhau của MongoDB |
 | **Đánh giá** | ✅ Tốt — dùng làm nền, tự chỉnh sửa ~30% |
 
 ---
@@ -43,13 +43,13 @@
 | | |
 |---|---|
 | **Ngày** | 19/05/2026 |
-| **Sinh viên** | *(Họ tên — MSSV)* |
+| **Sinh viên** | HE186165 |
 | **Công cụ AI** | Claude Sonnet |
-| **Branch** | `feature/SEXXXXXX-auth-backend` |
+| **Branch** | `docs/HE186165-add-personal-folder` |
 | **Nhiệm vụ** | Xây dựng API đăng ký / đăng nhập với JWT |
 | **Mục đích** | Tạo nhanh boilerplate cho `auth.controller.ts` và middleware xác thực |
 | **Prompt tham chiếu** | PROMPTS.md → P-002 |
-| **Kết quả** | AI sinh ra controller với bcrypt hash password, tạo JWT, middleware `verifyToken`. Đã thêm refresh token logic và kiểm tra email trùng lặp |
+| **Kết quả** | AI sinh ra controller với bcrypt hash password, tạo JWT, middleware `verifyToken`. Đã thêm pre-save hook trong Schema để tự động hash mật khẩu |
 | **Đánh giá** | ✅ Tốt — dùng trực tiếp, thêm xử lý lỗi chi tiết hơn |
 
 ---
@@ -59,14 +59,14 @@
 | | |
 |---|---|
 | **Ngày** | 20/05/2026 |
-| **Sinh viên** | *(Họ tên — MSSV)* |
+| **Sinh viên** | HE186165 |
 | **Công cụ AI** | GitHub Copilot |
-| **Branch** | `feature/SEXXXXXX-product-crud` |
+| **Branch** | `docs/HE186165-add-personal-folder` |
 | **Nhiệm vụ** | Viết CRUD cho sản phẩm (product.controller.ts) |
-| **Mục đích** | Autocomplete và gợi ý xử lý query MySQL phức tạp (filter, pagination, search) |
+| **Mục đích** | Autocomplete và gợi ý xử lý query MongoDB phức tạp (filter, pagination, search) |
 | **Prompt tham chiếu** | PROMPTS.md → P-003 |
-| **Kết quả** | Copilot gợi ý truy vấn có `LIKE`, `BETWEEN`, `ORDER BY`, `LIMIT OFFSET`. Đã kiểm tra lại logic và thêm filter theo khoảng cách địa lý (Haversine formula) |
-| **Đánh giá** | ✅ Tốt — hỗ trợ tốt phần SQL, phần Haversine tự viết |
+| **Kết quả** | Copilot gợi ý truy vấn có `$regex`, `$gte`, `$lte` và `.sort()`. Đã kiểm tra lại logic và thêm truy vấn khoảng cách địa lý sử dụng `$near` của MongoDB |
+| **Đánh giá** | ✅ Tốt — hỗ trợ tốt phần MongoDB query |
 
 ---
 
@@ -75,13 +75,13 @@
 | | |
 |---|---|
 | **Ngày** | 20/05/2026 |
-| **Sinh viên** | *(Họ tên — MSSV)* |
+| **Sinh viên** | HE186165 |
 | **Công cụ AI** | Claude Sonnet |
-| **Branch** | `feature/SEXXXXXX-chat-realtime` |
+| **Branch** | `docs/HE186165-add-personal-folder` |
 | **Nhiệm vụ** | Tích hợp Socket.io cho chat realtime giữa người mua và người bán |
 | **Mục đích** | Thiết kế kiến trúc room/event của Socket.io cho use-case 1-1 messaging |
 | **Prompt tham chiếu** | PROMPTS.md → P-004 |
-| **Kết quả** | AI đề xuất pattern: join room theo `conversationId`, emit/listen các event `sendMessage`, `receiveMessage`, `userOnline`. Đã tích hợp vào `socket.ts` và `ChatBox.jsx` |
+| **Kết quả** | AI đề xuất pattern: join room theo `conversationId`, emit/listen các event `sendMessage`, `receiveMessage`, `userOnline`. Đã tích hợp vào `socket.ts` và lưu chat vào MongoDB |
 | **Đánh giá** | ✅ Tốt — kiến trúc rõ ràng, ít phải chỉnh sửa |
 
 ---
@@ -91,9 +91,9 @@
 | | |
 |---|---|
 | **Ngày** | 20/05/2026 |
-| **Sinh viên** | *(Họ tên — MSSV)* |
+| **Sinh viên** | HE186165 |
 | **Công cụ AI** | Claude Sonnet |
-| **Branch** | `feature/SEXXXXXX-map-integration` |
+| **Branch** | `docs/HE186165-add-personal-folder` |
 | **Nhiệm vụ** | Tích hợp bản đồ Leaflet vào trang khám phá sản phẩm theo vị trí |
 | **Mục đích** | Gợi ý cách dùng Leaflet với React (không dùng react-leaflet) |
 | **Prompt tham chiếu** | PROMPTS.md → P-005 |
@@ -107,9 +107,9 @@
 | | |
 |---|---|
 | **Ngày** | 20/05/2026 |
-| **Sinh viên** | *(Họ tên — MSSV)* |
+| **Sinh viên** | HE186165 |
 | **Công cụ AI** | ChatGPT |
-| **Branch** | `feature/SEXXXXXX-image-upload` |
+| **Branch** | `docs/HE186165-add-personal-folder` |
 | **Nhiệm vụ** | Upload ảnh sản phẩm lên Cloudinary qua backend |
 | **Mục đích** | Cách dùng multer + streamifier để upload stream lên Cloudinary (không lưu file local) |
 | **Prompt tham chiếu** | PROMPTS.md → P-006 |
@@ -123,14 +123,30 @@
 | | |
 |---|---|
 | **Ngày** | 20/05/2026 |
-| **Sinh viên** | *(Họ tên — MSSV)* |
+| **Sinh viên** | HE186165 |
 | **Công cụ AI** | Claude Sonnet |
-| **Branch** | `feature/SEXXXXXX-review-system` |
+| **Branch** | `docs/HE186165-add-personal-folder` |
 | **Nhiệm vụ** | Hệ thống đánh giá sản phẩm với xếp hạng sao và bình luận |
 | **Mục đích** | Thiết kế UI component ReviewList và logic tính trung bình sao |
 | **Prompt tham chiếu** | PROMPTS.md → P-007 |
-| **Kết quả** | AI tạo component có hiển thị sao, phân trang, sắp xếp theo mới nhất. Đã tích hợp vào `ReviewList.jsx` và `ProductDetailPage.jsx` |
+| **Kết quả** | AI tạo component có hiển thị sao, phân trang, sắp xếp theo mới nhất. Đã tích hợp vào `ReviewList.jsx` and `ProductDetailPage.jsx` |
 | **Đánh giá** | ✅ Tốt |
+
+---
+
+### AL-008
+
+| | |
+|---|---|
+| **Ngày** | 11/06/2026 |
+| **Sinh viên** | HE186165 |
+| **Công cụ AI** | Claude Sonnet |
+| **Branch** | `docs/HE186165-add-personal-folder` |
+| **Nhiệm vụ** | Tích hợp CI/CD tự động, Swagger API docs, Mock Auth, Unit tests và khắc phục lỗi linter trên GitHub Actions |
+| **Mục đích** | Triển khai 4 thành phần quan trọng của real product (Automated Testing, CI/CD Pipeline, Logging/Monitoring, Swagger Docs) và sửa lỗi lint trong React Vite |
+| **Prompt tham chiếu** | N/A (Hỗ trợ trực tiếp qua mã nguồn dự án) |
+| **Kết quả** | Tạo file `ci.yml` chạy trên GitHub Actions, viết tài liệu Swagger API tại endpoint `/api-docs` trong `swagger.ts`, tạo mock auth cho môi trường dev, viết các file unit tests, và sửa lỗi linter liên quan đến biến toàn cục `process` trong `vite.config.js` cùng import dư thừa trong `format.jsx` |
+| **Đánh giá** | ✅ Tốt — hoàn thành tất cả mục tiêu tích hợp và sửa lỗi CI thành công |
 
 ---
 
@@ -142,7 +158,7 @@
 
 | Công cụ | Số lần dùng | Tỷ lệ dùng được |
 |---|---|---|
-| Claude Sonnet | 5 | 80% dùng trực tiếp, 20% cần chỉnh |
+| Claude Sonnet | 6 | 85% dùng trực tiếp, 15% cần chỉnh |
 | GitHub Copilot | 1 | ✅ |
 | ChatGPT | 1 | ✅ |
 

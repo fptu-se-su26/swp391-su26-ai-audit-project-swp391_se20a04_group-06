@@ -18,6 +18,7 @@ import { ToggleLikePostUseCase } from "../../application/use-cases/ToggleLikePos
 import { AddCommentUseCase } from "../../application/use-cases/AddCommentUseCase";
 // Import lớp DeleteCommentUseCase để thực hiện nghiệp vụ xóa bình luận
 import { DeleteCommentUseCase } from "../../application/use-cases/DeleteCommentUseCase";
+import { ToggleLikeCommentUseCase } from "../../application/use-cases/ToggleLikeCommentUseCase";
 
 // Khởi tạo đối tượng Repository dùng chung cho các Use Cases
 const postRepository = new MongoosePostRepository();
@@ -31,6 +32,8 @@ const toggleLikePostUseCase = new ToggleLikePostUseCase(postRepository);
 const addCommentUseCase = new AddCommentUseCase(postRepository);
 // Khởi tạo Use Case xóa bình luận, tiêm Repository vào qua Constructor
 const deleteCommentUseCase = new DeleteCommentUseCase(postRepository);
+// Khởi tạo Use Case thích/bỏ thích bình luận, tiêm Repository vào qua Constructor
+const toggleLikeCommentUseCase = new ToggleLikeCommentUseCase(postRepository);
 
 // ── QUERIES (Read-Side CQRS) ──────────────────────────────────────────────
 
@@ -122,14 +125,14 @@ export async function addComment(req: Request, res: Response, next: NextFunction
   // Trích xuất ID người bình luận từ token
   const { userId } = req.user;
   // Lấy nội dung bình luận từ body của request
-  const { text } = req.body;
+  const { text, parentId } = req.body;
 
   // Nếu ID bài đăng không hợp lệ, phản hồi lỗi 400
   if (!id) return res.status(400).json({ message: "ID bài đăng không hợp lệ" });
 
   try {
     // Thực thi Use Case thêm bình luận
-    const comments = await addCommentUseCase.execute(id, userId, text);
+    const comments = await addCommentUseCase.execute(id, userId, text, parentId);
     // Trả về thông báo thành công kèm danh sách bình luận mới cập nhật
     return res.json({
       message: "Bình luận thành công",
@@ -187,6 +190,62 @@ export async function deleteComment(req: Request, res: Response, next: NextFunct
     });
   } catch (err) {
     // Chuyển tiếp lỗi phát sinh
+    next(err);
+  }
+}
+
+/**
+ * Cập nhật thông tin bài đăng.
+ */
+export async function updatePost(req: Request, res: Response, next: NextFunction) {
+  const id = parseId(req.params.id);
+  const { userId, role } = req.user;
+  if (!id) return res.status(400).json({ message: "ID bài đăng không hợp lệ" });
+
+  try {
+    const post = await postRepository.findById(id);
+    if (!post) {
+      return res.status(404).json({ message: "Không tìm thấy bài đăng" });
+    }
+
+    if (role !== "Admin" && post.userId !== userId) {
+      return res.status(403).json({ message: "Bạn không có quyền chỉnh sửa bài đăng này" });
+    }
+
+    const { title, content, images, tags } = req.body;
+    post.props.title = title || post.props.title;
+    post.props.content = content || post.props.content;
+    if (images !== undefined) post.props.images = images;
+    if (tags !== undefined) post.props.tags = tags;
+
+    await postRepository.save(post);
+
+    return res.json({
+      message: "Cập nhật bài đăng thành công",
+      post: post.toProps(),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Thích hoặc bỏ thích bình luận của bài đăng.
+ */
+export async function toggleLikeComment(req: Request, res: Response, next: NextFunction) {
+  const id = parseId(req.params.id);
+  const { commentId } = req.params;
+  const { userId } = req.user;
+
+  if (!id) return res.status(400).json({ message: "ID bài đăng không hợp lệ" });
+
+  try {
+    const comments = await toggleLikeCommentUseCase.execute(id, commentId, userId);
+    return res.json({
+      message: "Thao tác thích bình luận thành công",
+      comments,
+    });
+  } catch (err) {
     next(err);
   }
 }

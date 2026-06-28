@@ -57,9 +57,25 @@ const router = Router();
  *       401:
  *         description: Chưa đăng nhập
  */
-// Định nghĩa tuyến đường POST /:productId để gửi một báo cáo vi phạm liên quan đến sản phẩm (yêu cầu đăng nhập, validate cấu trúc báo cáo, rồi gọi controller createReport)
+// Định nghĩa tuyến đường POST /:productId để gửi một báo cáo vi phạm liên quan đến sản phẩm
 router.post(
   "/:productId",
+  authenticate,
+  validateSchema(createReportSchema),
+  createReport,
+);
+
+// Tuyển đường POST /posts/:postId để báo cáo vi phạm bài viết
+router.post(
+  "/posts/:postId",
+  authenticate,
+  validateSchema(createReportSchema),
+  createReport,
+);
+
+// Tuyển đường POST /recipes/:recipeId để báo cáo vi phạm công thức
+router.post(
+  "/recipes/:recipeId",
   authenticate,
   validateSchema(createReportSchema),
   createReport,

@@ -88,11 +88,22 @@ app.use(
 );
 
 // Áp dụng middleware CORS cho phép liên kết tài nguyên với trang web của khách hàng
+const allowedOrigins = [
+  process.env.CLIENT_URL || "http://localhost:5173",
+  "http://localhost:5173",   // Vite dev server (frontend)
+  "http://127.0.0.1:5173",
+  "http://localhost:3000",   // Giữ lại cho trường hợp test trực tiếp qua backend port
+  "http://127.0.0.1:3000"
+];
 app.use(
   cors({
-    // Nguồn gốc cho phép lấy từ biến môi trường CLIENT_URL hoặc mặc định localhost:3000
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
-    // Cho phép truyền kèm thông tin cookies/credentials trong các yêu cầu chéo nguồn gốc
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   }),
 );

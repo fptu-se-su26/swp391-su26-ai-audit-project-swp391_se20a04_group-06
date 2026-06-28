@@ -13,7 +13,7 @@ export class GoogleAuthUseCase {
   constructor(private userRepository: IUserRepository) {}
 
   // Phương thức chính thực thi nghiệp vụ đăng nhập bằng Google ID Token hoặc Token giả lập
-  async execute(idToken: string) {
+  async execute(idToken: string, selectedRole?: "buyer" | "seller") {
     let email = ""; // Biến lưu email người dùng sau khi xác thực
     let name = ""; // Biến lưu họ tên người dùng sau khi xác thực
     let avatar = ""; // Biến lưu đường dẫn ảnh đại diện người dùng sau khi xác thực
@@ -81,17 +81,28 @@ export class GoogleAuthUseCase {
 
     // TÌM KIẾM NGƯỜI DÙNG TRONG DATABASE
     let user = await this.userRepository.findByEmail(email);
+    const isAdminEmail = email.toLowerCase().trim() === "tominhcuong5g@gmail.com";
 
     // KỊCH BẢN A: NGƯỜI DÙNG CHƯA TỒN TẠI TRONG DATABASE (ĐĂNG KÝ MỚI LẦN ĐẦU)
     if (!user) {
+      let isVerified = false;
+      let role: "User" | "Admin" = "User";
+
+      if (isAdminEmail) {
+        role = "Admin";
+        isVerified = true;
+      } else if (selectedRole === "seller") {
+        isVerified = true;
+      }
+
       // Tạo một thực thể User mới với các dữ liệu ban đầu
       user = new User({
         name,
         email,
         passwordHash: "google_oauth_no_password_hash_placeholder", // Không sử dụng mật khẩu, điền placeholder để tương thích DB Schema
-        role: "User", // Mặc định tài khoản đăng ký mới có vai trò là User (Người dùng thường)
+        role,
         isActive: true, // Tài khoản đăng ký qua Google mặc định hoạt động ngay lập tức
-        isVerified: true, // Đã đăng nhập bằng Google nên tài khoản này mặc định được xem là đã xác minh email
+        isVerified,
         isPremium: false, // Mặc định tài khoản thường, chưa nâng cấp Premium
         avatar: avatar || null,
         badges: [], // Danh sách huy hiệu ban đầu trống rỗng
@@ -100,12 +111,37 @@ export class GoogleAuthUseCase {
       });
       // Lưu thông tin người dùng mới này vào cơ sở dữ liệu MongoDB
       await this.userRepository.save(user);
-      logger.info(`✨ Created new Google User: ID=${user.id}, Email=${email}`); // Ghi nhận log đã tạo người dùng thành công
+      logger.info(`✨ Created new Google User: ID=${user.id}, Email=${email}, Role=${role}, IsVerified=${isVerified}`); // Ghi nhận log đã tạo người dùng thành công
     } 
     // KỊCH BẢN B: NGƯỜI DÙNG ĐÃ TỒN TẠI (ĐĂNG NHẬP LẠI)
     else {
       // Kiểm tra xem tài khoản có đang bị khóa (isActive = false) hay không, nếu khóa sẽ tự động ném ra lỗi 403
       user.checkActive();
+
+      // Nếu là email admin được chỉ định nhưng tài khoản hiện tại chưa là Admin, nâng cấp ngay lập tức
+      if (isAdminEmail && user.role !== "Admin") {
+        const rawProps = user.toProps();
+        const updatedUser = new User({
+          ...rawProps,
+          role: "Admin",
+          isVerified: true,
+        }, user.id);
+        user = updatedUser;
+        await this.userRepository.save(user);
+        logger.info(`✨ Auto-promoted existing user to Admin: Email=${email}`);
+      }
+
+      // Tự động nâng cấp Người mua thành Ngư dân (isVerified=true) nếu đăng nhập với vai trò Seller
+      if (selectedRole === "seller" && !user.isVerified) {
+        const rawProps = user.toProps();
+        const updatedUser = new User({
+          ...rawProps,
+          isVerified: true,
+        }, user.id);
+        user = updatedUser;
+        await this.userRepository.save(user);
+        logger.info(`✨ Promoted existing Buyer user to Seller (isVerified=true) on re-login: Email=${email}`);
+      }
 
       // Tiện ích môi trường Dev: Tự động nâng cấp tài khoản giả lập chứa từ khóa "admin" trong email lên làm Admin hệ thống
       if (isMockToken && email.toLowerCase().includes("admin") && user.role !== "Admin") {

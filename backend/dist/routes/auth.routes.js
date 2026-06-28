@@ -135,6 +135,10 @@ router.put("/profile", auth_1.authenticate, upload_1.upload.single("avatar"), up
  */
 // Tuyến đường DELETE /account để người dùng tự xóa tài khoản của chính mình (yêu cầu đăng nhập)
 router.delete("/account", auth_1.authenticate, AuthController_1.deleteAccount);
+// Tuyến đường PUT /password dùng để đổi mật khẩu (yêu cầu đăng nhập)
+router.put("/password", auth_1.authenticate, AuthController_1.changePassword);
+// Tuyến đường DELETE /password dùng để xóa/gỡ mật khẩu (yêu cầu đăng nhập)
+router.delete("/password", auth_1.authenticate, AuthController_1.deletePassword);
 // Xuất mặc định router auth để sử dụng
 exports.default = router;
 // Khởi tạo một đối tượng router riêng biệt quản lý thông tin công khai của người dùng (user routes)

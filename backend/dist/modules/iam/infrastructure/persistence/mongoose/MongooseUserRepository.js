@@ -76,5 +76,13 @@ class MongooseUserRepository {
         // Sử dụng hàm exists giúp tối ưu hiệu năng (chỉ check sự tồn tại thay vì tải toàn bộ document người dùng lên RAM)
         return !!(await User_1.User.exists({ email: email.toLowerCase().trim() }));
     }
+    /**
+     * TÌM KIẾM TÀI LIỆU MONGOOSE RAW CỦA NGƯỜI DÙNG THEO ID
+     */
+    async findRawById(id) {
+        if (!mongoose_1.default.Types.ObjectId.isValid(id))
+            return null;
+        return await User_1.User.findById(id);
+    }
 }
 exports.MongooseUserRepository = MongooseUserRepository;

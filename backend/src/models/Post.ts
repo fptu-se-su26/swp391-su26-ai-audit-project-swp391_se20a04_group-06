@@ -11,6 +11,10 @@ export interface IComment {
   userAvatar: string | null;
   // Nội dung văn bản bình luận
   text: string;
+  // ID bình luận cha (nếu có, để hỗ trợ tính năng reply)
+  parentId?: Types.ObjectId;
+  // Danh sách ID những người dùng thích bình luận này
+  likes?: Types.ObjectId[];
   // Thời điểm bình luận được viết
   createdAt: Date;
 }
@@ -76,6 +80,10 @@ const postSchema = new Schema<IPost>(
         userAvatar: { type: String, default: null },
         // Nội dung bình luận: bắt buộc nhập
         text: { type: String, required: true },
+        // ID bình luận cha (nếu có, để hỗ trợ tính năng reply)
+        parentId: { type: Schema.Types.ObjectId, default: null },
+        // Lượt thích bình luận
+        likes: [{ type: Schema.Types.ObjectId, ref: "User" }],
         // Mốc thời gian tạo bình luận: mặc định lấy thời gian hiện tại
         createdAt: { type: Date, default: Date.now },
       },

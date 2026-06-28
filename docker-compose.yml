@@ -1,37 +1,20 @@
 services:
+  # 🌟 Cập nhật cơ sở dữ liệu sang MongoDB
   db:
-    image: mysql:8.0
-    container_name: seafood_db
-    command: --lower_case_table_names=1
+    image: mongo:latest
+    container_name: seafood_mongo
     restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: root123
-      MYSQL_DATABASE: seafood_db
-      MYSQL_USER: seafood_user
-      MYSQL_PASSWORD: seafood_pass
     ports:
-      - "3306:3306"
+      - "27017:27017"
     volumes:
-      - mysql_data:/var/lib/mysql
-      # ⚠️ SQL init nằm ở database/seafood_db.sql trong seafood_complete
-      - ./database/seafood_db.sql:/docker-entrypoint-initdb.d/01_init.sql
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "mysqladmin",
-          "ping",
-          "-h",
-          "127.0.0.1",
-          "-P",
-          "3306",
-          "-uroot",
-          "-proot123",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 60s
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: seafood_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
 
   backend:
     build:
@@ -41,40 +24,29 @@ services:
     restart: unless-stopped
     env_file: ./backend/.env
     environment:
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_USER: seafood_user
-      DB_PASS: seafood_pass
-      DB_NAME: seafood_db
+      MONGO_URI: mongodb://db:27017/seafood_db # 🌟 Trỏ uri kết nối tới container db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       PORT: 5000
       CLIENT_URL: http://localhost:3000
+      ALLOW_MOCK_AUTH: "true"
+      NODE_ENV: "development"
     ports:
       - "5000:5000"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
     depends_on:
-      db:
-        condition: service_healthy
-    command: npm run dev
+      - db
+      - redis
 
   frontend:
     build:
-      # ⚠️ Context là client/my-app/ (khác với new_folder dùng client/)
-      context: ./client/my-app
+      context: ./client
       dockerfile: Dockerfile
     container_name: seafood_frontend
     restart: unless-stopped
-    environment:
-      VITE_API_TARGET: http://backend:5000
     ports:
       - "3000:3000"
-    volumes:
-      - ./client/my-app:/app
-      - /app/node_modules
     depends_on:
       - backend
-    command: npm run dev
 
 volumes:
-  mysql_data:
+  mongo_data:

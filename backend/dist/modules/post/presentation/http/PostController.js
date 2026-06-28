@@ -7,6 +7,7 @@ exports.toggleLikePost = toggleLikePost;
 exports.addComment = addComment;
 exports.deletePost = deletePost;
 exports.deleteComment = deleteComment;
+exports.updatePost = updatePost;
 // Import hàm parseId từ helper để định dạng và xác thực mã định danh truyền lên
 const response_helper_1 = require("../../../../helpers/response.helper");
 // Import đối tượng postService quản lý các tác vụ truy vấn đọc dữ liệu bài viết
@@ -188,6 +189,39 @@ async function deleteComment(req, res, next) {
     }
     catch (err) {
         // Chuyển tiếp lỗi phát sinh
+        next(err);
+    }
+}
+/**
+ * Cập nhật thông tin bài đăng.
+ */
+async function updatePost(req, res, next) {
+    const id = (0, response_helper_1.parseId)(req.params.id);
+    const { userId, role } = req.user;
+    if (!id)
+        return res.status(400).json({ message: "ID bài đăng không hợp lệ" });
+    try {
+        const post = await postRepository.findById(id);
+        if (!post) {
+            return res.status(404).json({ message: "Không tìm thấy bài đăng" });
+        }
+        if (role !== "Admin" && post.userId !== userId) {
+            return res.status(403).json({ message: "Bạn không có quyền chỉnh sửa bài đăng này" });
+        }
+        const { title, content, images, tags } = req.body;
+        post.props.title = title || post.props.title;
+        post.props.content = content || post.props.content;
+        if (images !== undefined)
+            post.props.images = images;
+        if (tags !== undefined)
+            post.props.tags = tags;
+        await postRepository.save(post);
+        return res.json({
+            message: "Cập nhật bài đăng thành công",
+            post: post.toProps(),
+        });
+    }
+    catch (err) {
         next(err);
     }
 }

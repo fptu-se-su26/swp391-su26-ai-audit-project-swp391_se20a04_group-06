@@ -16,6 +16,10 @@ import {
   deletePost,
   // Xóa bình luận
   deleteComment,
+  // Cập nhật bài viết
+  updatePost,
+  // Thích bình luận
+  toggleLikeComment,
 } from "../modules/post/presentation/http/PostController";
 // Import middleware xác thực người dùng đã đăng nhập (authenticate)
 import { authenticate } from "../middlewares/auth";
@@ -25,6 +29,7 @@ import { validateSchema } from "../middlewares/validate";
 import {
   createPostSchema,
   commentSchema,
+  updatePostSchema,
 } from "../validations/post.validation";
 
 // Khởi tạo đối tượng router từ Express Router
@@ -208,6 +213,9 @@ router.post(
  *       404:
  *         description: Không tìm thấy bài đăng
  */
+// Định nghĩa tuyến đường PUT /:id để chỉnh sửa bài viết của chính mình theo ID bài viết (yêu cầu đăng nhập, validate dữ liệu cập nhật, rồi gọi controller updatePost)
+router.put("/:id", authenticate, validateSchema(updatePostSchema), updatePost);
+
 // Định nghĩa tuyến đường DELETE /:id để xóa bài đăng của chính mình theo ID bài viết (yêu cầu đăng nhập)
 router.delete("/:id", authenticate, deletePost);
 
@@ -244,6 +252,9 @@ router.delete("/:id", authenticate, deletePost);
  */
 // Định nghĩa tuyến đường DELETE /:postId/comments/:commentId để xóa một bình luận cụ thể theo ID bài viết và ID bình luận (yêu cầu đăng nhập)
 router.delete("/:postId/comments/:commentId", authenticate, deleteComment);
+
+// Định nghĩa tuyến đường POST /:id/comments/:commentId/like để thích hoặc bỏ thích một bình luận cụ thể (yêu cầu đăng nhập)
+router.post("/:id/comments/:commentId/like", authenticate, toggleLikeComment);
 
 // Xuất mặc định router để cấu hình vào app chính app.ts
 export default router;

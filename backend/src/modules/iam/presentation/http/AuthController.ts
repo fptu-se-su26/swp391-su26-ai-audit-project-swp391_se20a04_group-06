@@ -1,9 +1,7 @@
-// Import kiểu dữ liệu Request và Response từ Express để định nghĩa kiểu cho tham số đầu vào
 import { Request, Response } from "express";
-// Import thư viện jsonwebtoken để mã hóa và giải mã các thẻ Token JWT
 import jwt, { SignOptions } from "jsonwebtoken";
-// Import thư viện mã hóa crypto có sẵn của Node.js để sinh chuỗi ngẫu nhiên bảo mật
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 // Import logger dùng chung của dự án để ghi nhận tiến trình hoạt động
 import { logger } from "../../../../utils/logger";
 // Import cấu hình cookie lưu trữ tùy chỉnh cho việc phân phối JWT Token
@@ -13,6 +11,9 @@ import {
 } from "../../../../config/cookie";
 // Import middleware sinh và làm mới CSRF token để phòng chống lỗ hổng bảo mật CSRF
 import { rotateCsrfToken } from "../../../../middlewares/csrf";
+
+import { User } from "../../../../models/User";
+import { Product } from "../../../../models/Product";
 
 // DDD Components - Import các Repository, Service và Use Cases nghiệp vụ
 import { MongooseUserRepository } from "../../infrastructure/persistence/mongoose/MongooseUserRepository";
@@ -37,11 +38,11 @@ const REFRESH_COOKIE_OPTS = {
 const redis = require("../../../../config/redis").redis;
 
 // Hàm tiện ích để ký (tạo mới) Access Token mã hóa chứa ID người dùng và Quyền (Role)
-function signToken(userId: string, role: string): string {
+function signToken(userId: string, role: string, sessionRole?: string): string {
   const secret = process.env.JWT_SECRET; // Đọc khóa bí mật JWT_SECRET từ biến môi trường .env
   if (!secret) throw new Error("JWT_SECRET chưa được cấu hình");
   const options: SignOptions = { expiresIn: "15m" }; // Cấu hình thời gian hết hạn của token là 15 phút
-  return jwt.sign({ userId, role }, secret, options); // Trả về chuỗi JWT đã ký
+  return jwt.sign({ userId, role, sessionRole }, secret, options); // Trả về chuỗi JWT đã ký
 }
 
 // Khởi tạo các Adapter hạ tầng (Infrastructure) duy nhất một lần
@@ -150,24 +151,38 @@ export async function me(req: Request, res: Response, next: any) {
     const payload = jwt.verify(token, process.env.JWT_SECRET as string) as {
       userId: string;
       role: "User" | "Admin";
+      sessionRole?: string;
     };
 
-    // Tìm thực thể Domain User từ Database bằng ID giải mã được
-    const domainUser = await userRepository.findById(payload.userId);
-    if (!domainUser) return res.json(null); // Trả về null nếu không tìm thấy người dùng
+    const userDoc = await userRepository.findRawById(payload.userId);
+    if (!userDoc) return res.json(null);
 
-    const props = domainUser.toProps(); // Trích xuất các thuộc tính thô từ thực thể Domain
-    // Đóng gói và gửi trả thông tin cần thiết về phía Client
+    let stats = null;
+    if (userDoc.isVerified) {
+      const postCount = await Product.countDocuments({ sellerId: userDoc._id, status: { $ne: "Deleted" } });
+      const viewsRes = await Product.aggregate([
+        { $match: { sellerId: userDoc._id, status: { $ne: "Deleted" } } },
+        { $group: { _id: null, total: { $sum: "$viewCount" } } }
+      ]);
+      const totalViews = viewsRes.length > 0 ? viewsRes[0].total : 0;
+      const followers = await User.countDocuments({ following: userDoc._id });
+      stats = { postCount, totalViews, followers };
+    }
+
     return res.json({
-      id: props.id,
-      name: props.name,
-      email: props.email,
-      role: props.role,
-      isActive: props.isActive,
-      isVerified: props.isVerified,
-      avatarUrl: props.avatar,
-      isPremium: props.isPremium,
-      badges: props.badges,
+      id: userDoc._id.toString(),
+      name: userDoc.name,
+      email: userDoc.email,
+      role: userDoc.role,
+      isActive: userDoc.isActive,
+      isVerified: userDoc.isVerified,
+      avatarUrl: userDoc.avatar,
+      isPremium: userDoc.isPremium,
+      badges: userDoc.badges,
+      createdAt: userDoc.createdAt,
+      hasPassword: userDoc.passwordHash !== "google_oauth_no_password_hash_placeholder",
+      stats,
+      sessionRole: payload.sessionRole || (userDoc.isVerified ? "seller" : "buyer"),
     });
   } catch (err: any) {
     logger.warn(`Invalid access token provided: ${err.message}`);
@@ -186,12 +201,12 @@ export async function refreshToken(req: Request, res: Response, next: any) {
   }
 
   try {
-    let decoded: { userId: string; role: string };
+    let decoded: { userId: string; role: string; sessionRole?: string };
     try {
       // Giải mã Access Token nhưng bỏ qua việc kiểm tra hết hạn (vì chắc chắn nó đã hết hạn thì mới cần gọi làm mới)
       decoded = jwt.verify(token, process.env.JWT_SECRET as string, {
         ignoreExpiration: true,
-      }) as { userId: string; role: string };
+      }) as { userId: string; role: string; sessionRole?: string };
     } catch (verifyErr: any) {
       logger.warn(`refreshToken: invalid signature — ${verifyErr.message}`);
       // Nếu chữ ký Access Token bị lỗi (giả mạo token), lập tức xóa sạch cookie để bắt người dùng đăng nhập lại
@@ -248,7 +263,7 @@ export async function refreshToken(req: Request, res: Response, next: any) {
     await redis.del(redisKey);
 
     // Ký Access Token mới chứa thông tin ID người dùng và quyền hạn
-    const newAccessToken = signToken(decoded.userId, decoded.role);
+    const newAccessToken = signToken(decoded.userId, decoded.role, decoded.sessionRole);
     // Sinh Refresh Token mới ngẫu nhiên dài 40 bytes dưới dạng chuỗi hexa
     const newRefreshToken = crypto.randomBytes(40).toString("hex");
 
@@ -284,11 +299,14 @@ export async function googleAuth(req: Request, res: Response, next: any) {
   }
 
   try {
+    const { selectedRole } = req.body;
     // Gọi UseCase xử lý đăng nhập Google ở tầng nghiệp vụ và lấy thông tin người dùng sạch
-    const authResult = await googleAuthUseCase.execute(idToken);
+    const authResult = await googleAuthUseCase.execute(idToken, selectedRole);
+
+    const sessionRole = selectedRole || (authResult.isVerified ? "seller" : "buyer");
 
     // Ký Access Token mới từ thông tin đăng nhập thành công
-    const accessToken = signToken(authResult.userId, authResult.role);
+    const accessToken = signToken(authResult.userId, authResult.role, sessionRole);
     // Sinh Refresh Token dài hạn ngẫu nhiên
     const refreshToken = crypto.randomBytes(40).toString("hex");
 
@@ -304,8 +322,67 @@ export async function googleAuth(req: Request, res: Response, next: any) {
     res.cookie("token", accessToken, ACCESS_COOKIE_OPTS);
     res.cookie("refreshToken", refreshToken, REFRESH_COOKIE_OPTS);
 
-    return res.json({ user: authResult }); // Trả về thông tin người dùng dạng JSON
+    return res.json({ user: { ...authResult, sessionRole } }); // Trả về thông tin người dùng dạng JSON
   } catch (err: any) {
     next(err); // Đẩy lỗi sang Global Error Handler để đóng gói JSON trả về Client
+  }
+}
+
+// HÀM ĐỔI MẬT KHẨU HOẶC THIẾT LẬP MẬT KHẨU MỚI
+export async function changePassword(req: Request, res: Response, next: any) {
+  const { userId } = req.user;
+  const { currentPassword, newPassword } = req.body;
+
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ message: "Mật khẩu mới phải từ 6 ký tự trở lên" });
+  }
+
+  try {
+    const rawUser = await userRepository.findRawById(userId);
+    if (!rawUser) {
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    }
+
+    const hasPassword = rawUser.passwordHash !== "google_oauth_no_password_hash_placeholder";
+
+    if (hasPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({ message: "Vui lòng nhập mật khẩu hiện tại" });
+      }
+      const ok = await bcrypt.compare(currentPassword, rawUser.passwordHash);
+      if (!ok) {
+        return res.status(401).json({ message: "Mật khẩu hiện tại không đúng" });
+      }
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    rawUser.passwordHash = newHash;
+    await rawUser.save();
+
+    logger.info(`Password updated for UserID=${userId}`);
+    return res.json({ message: "Đổi mật khẩu thành công!" });
+  } catch (err: any) {
+    next(err);
+  }
+}
+
+// HÀM XÓA/GỠ MẬT KHẨU (CHỈ ĐĂNG NHẬP QUA GOOGLE)
+export async function deletePassword(req: Request, res: Response, next: any) {
+  const { userId } = req.user;
+
+  try {
+    const rawUser = await userRepository.findRawById(userId);
+    if (!rawUser) {
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    }
+
+    // Gán lại placeholder của Google OAuth
+    rawUser.passwordHash = "google_oauth_no_password_hash_placeholder";
+    await rawUser.save();
+
+    logger.info(`Password cleared (Google login only) for UserID=${userId}`);
+    return res.json({ message: "Đã gỡ mật khẩu thành công! Bây giờ bạn chỉ có thể đăng nhập bằng Google." });
+  } catch (err: any) {
+    next(err);
   }
 }

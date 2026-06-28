@@ -21,7 +21,7 @@ export class AddCommentUseCase {
    * @param text Nội dung bình luận.
    * @returns Danh sách bình luận hiện tại sau khi đã thêm mới (kèm ID).
    */
-  async execute(postId: string, userId: string, text: string): Promise<CommentProps[]> {
+  async execute(postId: string, userId: string, text: string, parentId?: string): Promise<CommentProps[]> {
     // 1. Tìm kiếm bài đăng cần bình luận từ Repository
     const post = await this.postRepository.findById(postId);
     // Nếu không tồn tại bài viết, ném lỗi NotFoundError
@@ -37,7 +37,7 @@ export class AddCommentUseCase {
     }
 
     // 3. Thực thi nghiệp vụ qua domain entity bằng cách gọi phương thức addComment
-    post.addComment(userId, user.name, user.avatar || null, text);
+    post.addComment(userId, user.name, user.avatar || null, text, parentId);
 
     // 4. Lưu lại bài viết đã cập nhật danh sách bình luận mới vào cơ sở dữ liệu
     await this.postRepository.save(post);

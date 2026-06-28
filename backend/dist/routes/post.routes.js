@@ -180,6 +180,8 @@ router.post("/:id/comments", auth_1.authenticate, (0, validate_1.validateSchema)
  *       404:
  *         description: Không tìm thấy bài đăng
  */
+// Định nghĩa tuyến đường PUT /:id để chỉnh sửa bài viết của chính mình theo ID bài viết (yêu cầu đăng nhập, validate dữ liệu cập nhật, rồi gọi controller updatePost)
+router.put("/:id", auth_1.authenticate, (0, validate_1.validateSchema)(post_validation_1.updatePostSchema), PostController_1.updatePost);
 // Định nghĩa tuyến đường DELETE /:id để xóa bài đăng của chính mình theo ID bài viết (yêu cầu đăng nhập)
 router.delete("/:id", auth_1.authenticate, PostController_1.deletePost);
 /**

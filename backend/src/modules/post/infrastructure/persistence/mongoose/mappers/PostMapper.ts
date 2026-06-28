@@ -32,6 +32,10 @@ export class PostMapper {
       userAvatar: c.userAvatar,
       // Lấy nội dung bình luận
       text: c.text,
+      // Lấy ID bình luận cha nếu có
+      parentId: c.parentId ? c.parentId.toString() : undefined,
+      // Lấy danh sách ID người thích bình luận
+      likes: (c.likes || []).map((id: any) => id.toString()),
       // Lấy thời điểm tạo bình luận
       createdAt: c.createdAt,
     }));
@@ -106,6 +110,12 @@ export class PostMapper {
         userAvatar: c.userAvatar,
         // Thiết lập nội dung bình luận
         text: c.text,
+        // Thiết lập ID bình luận cha nếu có
+        parentId: c.parentId && mongoose.Types.ObjectId.isValid(c.parentId)
+          ? new mongoose.Types.ObjectId(c.parentId)
+          : null,
+        // Thiết lập danh sách ID người thích bình luận
+        likes: (c.likes || []).map((id) => new mongoose.Types.ObjectId(id)),
         // Thiết lập thời điểm tạo bình luận (nếu chưa có thì lấy thời điểm hiện tại)
         createdAt: c.createdAt || new Date(),
       })),

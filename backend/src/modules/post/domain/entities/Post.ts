@@ -17,6 +17,10 @@ export interface CommentProps {
   userAvatar: string | null;
   // Nội dung văn bản của bình luận
   text: string;
+  // ID bình luận cha (nếu có, để hỗ trợ tính năng reply)
+  parentId?: string;
+  // Mảng chứa danh sách ID những người dùng thích bình luận này
+  likes?: string[];
   // Thời điểm bình luận được tạo ra
   createdAt?: Date;
 }
@@ -90,7 +94,7 @@ export class Post extends AggregateRoot<PostProps> {
   }
 
   // Nghiệp vụ thêm bình luận mới vào bài viết
-  public addComment(userId: string, userName: string, userAvatar: string | null, text: string): void {
+  public addComment(userId: string, userName: string, userAvatar: string | null, text: string, parentId?: string): void {
     // Kiểm tra xem nội dung bình luận có bị bỏ trống hay không
     if (!text || text.trim() === "") {
       // Ném lỗi nếu nội dung bình luận trống
@@ -108,9 +112,32 @@ export class Post extends AggregateRoot<PostProps> {
       userAvatar,
       // Gán nội dung bình luận đã được làm sạch khoảng trắng
       text: text.trim(),
+      // Gán ID bình luận cha nếu có
+      parentId,
+      // Khởi tạo mảng thích bình luận rỗng
+      likes: [],
       // Gán thời điểm tạo bình luận là thời gian hiện tại
       createdAt: new Date(),
     });
+  }
+
+  // Nghiệp vụ thích/bỏ thích bình luận của người dùng
+  public toggleCommentLike(commentId: string, userId: string): boolean {
+    const comment = this.props.comments.find((c) => c.id === commentId);
+    if (!comment) {
+      throw new ValidationError("Không tìm thấy bình luận.");
+    }
+    if (!comment.likes) {
+      comment.likes = [];
+    }
+    const index = comment.likes.indexOf(userId);
+    if (index === -1) {
+      comment.likes.push(userId);
+      return true;
+    } else {
+      comment.likes.splice(index, 1);
+      return false;
+    }
   }
 
   // Nghiệp vụ xóa bình luận khỏi bài viết

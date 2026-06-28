@@ -91,8 +91,9 @@ class PostMapper {
             // Ánh xạ danh sách bình luận sang mảng các tài liệu con (subdocuments) MongoDB
             comments: props.comments.map((c) => ({
                 // Tạo mới hoặc giữ lại ObjectId cũ của bình luận
-                _id: c.id ? new mongoose_1.default.Types.ObjectId(c.id) : new mongoose_1.default.Types.ObjectId(),
-                // Chuyển đổi ID người bình luận sang ObjectId
+                _id: c.id && mongoose_1.default.Types.ObjectId.isValid(c.id)
+                    ? new mongoose_1.default.Types.ObjectId(c.id)
+                    : new mongoose_1.default.Types.ObjectId(), // Chuyển đổi ID người bình luận sang ObjectId
                 userId: new mongoose_1.default.Types.ObjectId(c.userId),
                 // Thiết lập tên người bình luận
                 userName: c.userName,

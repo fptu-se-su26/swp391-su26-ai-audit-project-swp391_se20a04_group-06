@@ -9,10 +9,11 @@ exports.updateProfile = updateProfile;
 exports.me = me;
 exports.refreshToken = refreshToken;
 exports.googleAuth = googleAuth;
-// Import thư viện jsonwebtoken để mã hóa và giải mã các thẻ Token JWT
+exports.changePassword = changePassword;
+exports.deletePassword = deletePassword;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-// Import thư viện mã hóa crypto có sẵn của Node.js để sinh chuỗi ngẫu nhiên bảo mật
 const crypto_1 = __importDefault(require("crypto"));
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
 // Import logger dùng chung của dự án để ghi nhận tiến trình hoạt động
 const logger_1 = require("../../../../utils/logger");
 // Import cấu hình cookie lưu trữ tùy chỉnh cho việc phân phối JWT Token
@@ -84,6 +85,7 @@ async function logout(req, res, next) {
     res.clearCookie("token", cookie_1.CLEAR_COOKIE_OPTIONS); // Xóa cookie Access Token
     res.clearCookie("refreshToken", cookie_1.CLEAR_COOKIE_OPTIONS); // Xóa cookie Refresh Token
     res.clearCookie("csrfToken", {
+        // Xóa cookie CSRF Token
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
     });
@@ -137,22 +139,21 @@ async function me(req, res, next) {
     try {
         // Xác thực chữ ký token, nếu không khớp hoặc đã quá hạn sẽ tự động nhảy vào khối catch
         const payload = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
-        // Tìm thực thể Domain User từ Database bằng ID giải mã được
-        const domainUser = await userRepository.findById(payload.userId);
-        if (!domainUser)
-            return res.json(null); // Trả về null nếu không tìm thấy người dùng
-        const props = domainUser.toProps(); // Trích xuất các thuộc tính thô từ thực thể Domain
-        // Đóng gói và gửi trả thông tin cần thiết về phía Client
+        const userDoc = await userRepository.findRawById(payload.userId);
+        if (!userDoc)
+            return res.json(null);
         return res.json({
-            id: props.id,
-            name: props.name,
-            email: props.email,
-            role: props.role,
-            isActive: props.isActive,
-            isVerified: props.isVerified,
-            avatarUrl: props.avatar,
-            isPremium: props.isPremium,
-            badges: props.badges,
+            id: userDoc._id.toString(),
+            name: userDoc.name,
+            email: userDoc.email,
+            role: userDoc.role,
+            isActive: userDoc.isActive,
+            isVerified: userDoc.isVerified,
+            avatarUrl: userDoc.avatar,
+            isPremium: userDoc.isPremium,
+            badges: userDoc.badges,
+            createdAt: userDoc.createdAt,
+            hasPassword: userDoc.passwordHash !== "google_oauth_no_password_hash_placeholder",
         });
     }
     catch (err) {
@@ -235,9 +236,11 @@ async function refreshToken(req, res, next) {
 }
 // HÀM XỬ LÝ ĐĂNG NHẬP GOOGLE OAUTH
 async function googleAuth(req, res, next) {
-    const { idToken } = req.body; // Đọc mã idToken từ yêu cầu gửi lên của Client
+    const { idToken } = req.body; // Đọc mã idToken từ yêu cầu gửi lên của Client (idtoken này do google tạo ra)
     if (!idToken) {
-        return res.status(400).json({ message: "Thiếu ID Token bảo mật từ Google" }); // Trả về lỗi 400 nếu trống token
+        return res
+            .status(400)
+            .json({ message: "Thiếu ID Token bảo mật từ Google" }); // Trả về lỗi 400 nếu trống token
     }
     try {
         // Gọi UseCase xử lý đăng nhập Google ở tầng nghiệp vụ và lấy thông tin người dùng sạch
@@ -255,5 +258,55 @@ async function googleAuth(req, res, next) {
     }
     catch (err) {
         next(err); // Đẩy lỗi sang Global Error Handler để đóng gói JSON trả về Client
+    }
+}
+// HÀM ĐỔI MẬT KHẨU HOẶC THIẾT LẬP MẬT KHẨU MỚI
+async function changePassword(req, res, next) {
+    const { userId } = req.user;
+    const { currentPassword, newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({ message: "Mật khẩu mới phải từ 6 ký tự trở lên" });
+    }
+    try {
+        const rawUser = await userRepository.findRawById(userId);
+        if (!rawUser) {
+            return res.status(404).json({ message: "Không tìm thấy người dùng" });
+        }
+        const hasPassword = rawUser.passwordHash !== "google_oauth_no_password_hash_placeholder";
+        if (hasPassword) {
+            if (!currentPassword) {
+                return res.status(400).json({ message: "Vui lòng nhập mật khẩu hiện tại" });
+            }
+            const ok = await bcryptjs_1.default.compare(currentPassword, rawUser.passwordHash);
+            if (!ok) {
+                return res.status(401).json({ message: "Mật khẩu hiện tại không đúng" });
+            }
+        }
+        const newHash = await bcryptjs_1.default.hash(newPassword, 10);
+        rawUser.passwordHash = newHash;
+        await rawUser.save();
+        logger_1.logger.info(`Password updated for UserID=${userId}`);
+        return res.json({ message: "Đổi mật khẩu thành công!" });
+    }
+    catch (err) {
+        next(err);
+    }
+}
+// HÀM XÓA/GỠ MẬT KHẨU (CHỈ ĐĂNG NHẬP QUA GOOGLE)
+async function deletePassword(req, res, next) {
+    const { userId } = req.user;
+    try {
+        const rawUser = await userRepository.findRawById(userId);
+        if (!rawUser) {
+            return res.status(404).json({ message: "Không tìm thấy người dùng" });
+        }
+        // Gán lại placeholder của Google OAuth
+        rawUser.passwordHash = "google_oauth_no_password_hash_placeholder";
+        await rawUser.save();
+        logger_1.logger.info(`Password cleared (Google login only) for UserID=${userId}`);
+        return res.json({ message: "Đã gỡ mật khẩu thành công! Bây giờ bạn chỉ có thể đăng nhập bằng Google." });
+    }
+    catch (err) {
+        next(err);
     }
 }

@@ -1,57 +1,16 @@
-# HaiSan.vn Frontend Phase 3
+# React + Vite
 
-Frontend mới cho cả 3 giai đoạn: Guest/Buyer dùng chung giao diện, Seller có workspace quản lý riêng, Admin có control room màu đỏ sáng.
+This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
-## Đăng nhập theo role
+Currently, two official plugins are available:
 
-- Guest chưa đăng nhập luôn nhìn thấy frontend Buyer.
-- Nút `Đăng nhập` mở modal chọn Buyer, Seller hoặc Admin.
-- Buyer/Seller/Admin demo được lưu bằng `localStorage` key `haisan-demo-user` để xem nhanh 3 frontend đã tách.
-- Backend hiện có `/auth/google`, `/auth/me`, `/auth/logout`; nút Google OAuth đang để sẵn điểm nối khi có credential thật.
-- Đăng xuất xóa session demo và đưa về giao diện Guest/Buyer.
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-## Chạy local
+## React Compiler
 
-Từ thư mục `client`:
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-```powershell
-npm run dev
-```
+## Expanding the Oxlint configuration
 
-Mở `http://localhost:3000`.
-
-Không cần `npm install` vì frontend hiện tại không dùng dependency ngoài.
-
-Backend mặc định được gọi ở `http://localhost:5000/api`. Nếu cần đổi API:
-
-```js
-localStorage.setItem("haisan-api-base", "http://localhost:5000/api");
-```
-
-## Chạy bằng Docker Compose
-
-Từ thư mục gốc dự án:
-
-```powershell
-docker compose up --build
-```
-
-Frontend: `http://localhost:3000`
-Backend: `http://localhost:5000`
-
-## Phạm vi hiện tại
-
-- Chợ hải sản public cho guest/buyer.
-- Tìm kiếm, lọc loại hàng, lọc gần tôi, sắp xếp.
-- Hồ sơ ngư dân public.
-- Công thức và bài viết cộng đồng public.
-- Lưu sản phẩm quan tâm bằng localStorage; nếu có phiên đăng nhập thì thử đồng bộ API favorites.
-- Seller workspace với dashboard tổng quan, tồn kho, hạn mức đăng bài trong ngày.
-- Quản lý mẻ hàng: tạo sản phẩm, đẩy tin, xóa sản phẩm; có demo mode khi chưa đăng nhập.
-- Seller tạo công thức và bài viết cộng đồng.
-- Mock inbox/thông báo để chuẩn bị nối realtime message/video call.
-- Admin control room với dashboard thống kê, biểu đồ 7 ngày và top seller.
-- Admin quản lý user/seller: tìm kiếm, khóa/mở tài khoản, duyệt/thu hồi xác minh.
-- Admin quản lý sản phẩm toàn sàn và xóa listing vi phạm.
-- Admin xử lý report và gửi broadcast theo nhóm người nhận.
-- Tông màu: Buyer xanh da trời, Seller cam sáng, Admin đỏ sáng.
+If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.

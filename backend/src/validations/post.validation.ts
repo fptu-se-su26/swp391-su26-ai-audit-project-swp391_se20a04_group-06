@@ -25,5 +25,17 @@ export const commentSchema = z.object({
       .string()
       .min(1, "Nội dung bình luận không được để trống")
       .max(1000, "Bình luận tối đa 1000 ký tự"),
+    // ID bình luận cha (nếu có, để hỗ trợ tính năng reply)
+    parentId: z.string().optional(),
+  }),
+});
+
+// Xuất ra schema định nghĩa quy tắc kiểm thực yêu cầu cập nhật bài đăng
+export const updatePostSchema = z.object({
+  body: z.object({
+    title: z.string().min(1, "Tiêu đề không được để trống").optional(),
+    content: z.string().min(1, "Nội dung không được để trống").optional(),
+    images: z.array(z.string()).optional(),
+    tags: z.array(z.string()).optional(),
   }),
 });

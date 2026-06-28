@@ -77,5 +77,13 @@ export class MongooseUserRepository implements IUserRepository {
     // Sử dụng hàm exists giúp tối ưu hiệu năng (chỉ check sự tồn tại thay vì tải toàn bộ document người dùng lên RAM)
     return !!(await MongooseUser.exists({ email: email.toLowerCase().trim() }));
   }
+
+  /**
+   * TÌM KIẾM TÀI LIỆU MONGOOSE RAW CỦA NGƯỜI DÙNG THEO ID
+   */
+  async findRawById(id: string): Promise<any | null> {
+    if (!mongoose.Types.ObjectId.isValid(id)) return null;
+    return await MongooseUser.findById(id);
+  }
 }
 

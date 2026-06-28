@@ -53,8 +53,14 @@ export function initSocket(server: HttpServer) {
   // Khởi tạo máy chủ Socket.IO gắn vào HTTP server hiện hành kèm theo cấu hình CORS
   const io = new IOServer(server, {
     cors: {
-      // Cho phép nguồn trang khách kết nối lấy từ CLIENT_URL hoặc mặc định localhost:3000
-      origin: process.env.CLIENT_URL || "http://localhost:3000",
+      // Chấp nhận kết nối từ Vite (5173) và backend truy cập trực tiếp (3000)
+      origin: [
+        process.env.CLIENT_URL || "http://localhost:5173",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+      ],
       // Chỉ cho phép các phương thức GET và POST
       methods: ["GET", "POST"],
       // Cho phép truyền kèm cookie/credentials

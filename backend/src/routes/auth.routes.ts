@@ -8,6 +8,8 @@ import {
   updateProfile,
   deleteAccount,
   googleAuth,
+  changePassword,
+  deletePassword,
 } from "../modules/iam/presentation/http/AuthController";
 // Import middleware xác thực người dùng đã đăng nhập hay chưa (authenticate)
 import { authenticate } from "../middlewares/auth";
@@ -158,6 +160,12 @@ router.put(
  */
 // Tuyến đường DELETE /account để người dùng tự xóa tài khoản của chính mình (yêu cầu đăng nhập)
 router.delete("/account", authenticate, deleteAccount);
+
+// Tuyến đường PUT /password dùng để đổi mật khẩu (yêu cầu đăng nhập)
+router.put("/password", authenticate, changePassword);
+
+// Tuyến đường DELETE /password dùng để xóa/gỡ mật khẩu (yêu cầu đăng nhập)
+router.delete("/password", authenticate, deletePassword);
 
 // Xuất mặc định router auth để sử dụng
 export default router;

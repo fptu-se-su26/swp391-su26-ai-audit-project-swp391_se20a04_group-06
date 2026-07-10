@@ -87,13 +87,15 @@ jobs:
       - name: Post-process Allure Report
         if: always()
         run: |
-          sudo chown -R $USER:$USER allure-report || true
-          chmod -R u+rwX allure-report || true
-          mkdir -p allure-report
+          sudo chown -R $USER:$USER allure-report allure-history gh-pages-dir || true
+          sudo chmod -R u+rwX allure-report allure-history gh-pages-dir || true
+          sudo mkdir -p allure-report
           if [ ! -f allure-report/index.html ]; then
-            echo "<html><body><h1>Allure Test Report</h1><p>No test results available.</p></body></html>" > allure-report/index.html
+            sudo sh -c 'echo "<html><body><h1>Allure Test Report</h1><p>No test results available.</p></body></html>" > allure-report/index.html'
           fi
-          touch allure-report/.nojekyll
+          sudo touch allure-report/.nojekyll
+          sudo chown -R $USER:$USER allure-report allure-history gh-pages-dir || true
+          sudo chmod -R u+rwX allure-report allure-history gh-pages-dir || true
 
       - name: List Allure report files
         if: always()

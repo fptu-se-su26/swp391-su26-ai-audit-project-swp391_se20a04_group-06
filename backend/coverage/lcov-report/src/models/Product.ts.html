@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>7/7</span>
+                <span class='fraction'>8/8</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>7/7</span>
+                <span class='fraction'>8/8</span>
             </div>
         
             
@@ -217,8 +217,16 @@
 <a name='L152'></a><a href='#L152'>152</a>
 <a name='L153'></a><a href='#L153'>153</a>
 <a name='L154'></a><a href='#L154'>154</a>
-<a name='L155'></a><a href='#L155'>155</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
+<a name='L155'></a><a href='#L155'>155</a>
+<a name='L156'></a><a href='#L156'>156</a>
+<a name='L157'></a><a href='#L157'>157</a>
+<a name='L158'></a><a href='#L158'>158</a>
+<a name='L159'></a><a href='#L159'>159</a>
+<a name='L160'></a><a href='#L160'>160</a>
+<a name='L161'></a><a href='#L161'>161</a>
+<a name='L162'></a><a href='#L162'>162</a>
+<a name='L163'></a><a href='#L163'>163</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -276,9 +284,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -360,17 +368,25 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// Import các đối tượng Schema, model, Document và Types từ thư viện mongoose để thiết kế lược đồ sản phẩm hải sản
 import { Schema, model, Document, Types } from "mongoose";
 &nbsp;
@@ -378,6 +394,8 @@ import { Schema, model, Document, Types } from "mongoose";
 export interface IProduct extends Document {
   // Mã ID của người bán sở hữu sản phẩm này (kiểu ObjectId liên kết bảng User)
   sellerId: Types.ObjectId;
+  // Vựa cá / phiên cập bến chứa sản phẩm (tùy chọn để tương thích dữ liệu cũ)
+  batchId?: Types.ObjectId;
   // Loại sản phẩm: hải sản tươi sống (Fresh) hoặc đồ khô (Dried)
   type: "Fresh" | "Dried";
   // Danh mục phân loại hải sản cụ thể
@@ -437,6 +455,11 @@ const productSchema = new Schema&lt;IProduct&gt;(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
+    },
+    batchId: {
+      type: Schema.Types.ObjectId,
+      ref: "LandingBatch",
       index: true,
     },
     // Cấu hình trường type: kiểu chuỗi, bắt buộc nhập và nhận giá trị trong mảng enum
@@ -519,6 +542,7 @@ productSchema.index({ location: "2dsphere" });
 productSchema.index({ status: 1, type: 1, bumpedAt: -1, createdAt: -1 });
 // Thiết lập chỉ mục index phức hợp tối ưu hóa tìm kiếm sản phẩm của một shop sắp xếp theo mốc đẩy bài
 productSchema.index({ sellerId: 1, bumpedAt: -1, createdAt: -1 });
+productSchema.index({ batchId: 1, status: 1, createdAt: -1 });
 &nbsp;
 // Thiết lập chỉ mục tìm kiếm văn bản toàn diện (Full-Text Search) trên hai trường name và description để hỗ trợ tìm kiếm bằng từ khóa tiếng Việt
 productSchema.index({ name: "text", description: "text" });
@@ -532,7 +556,7 @@ export const Product = model&lt;IProduct&gt;("Product", productSchema);
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-06-30T12:23:15.868Z
+                at 2026-07-10T04:35:53.585Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

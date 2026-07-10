@@ -87,6 +87,8 @@ jobs:
       - name: Post-process Allure Report
         if: always()
         run: |
+          sudo chown -R $USER:$USER allure-report || true
+          chmod -R u+rwX allure-report || true
           mkdir -p allure-report
           if [ ! -f allure-report/index.html ]; then
             echo "<html><body><h1>Allure Test Report</h1><p>No test results available.</p></body></html>" > allure-report/index.html

@@ -72,7 +72,7 @@ jobs:
           mkdir -p backend/allure-results
           mkdir -p allure-report
           mkdir -p allure-history
-          touch allure-history/.nojekyll
+          mkdir -p gh-pages-dir
 
       - name: Build Allure Report
         uses: simple-elf/allure-report-action@master
@@ -87,12 +87,15 @@ jobs:
       - name: Post-process Allure Report
         if: always()
         run: |
-          mkdir -p allure-history
-          touch allure-history/.nojekyll
+          mkdir -p allure-report
+          if [ ! -f allure-report/index.html ]; then
+            echo "<html><body><h1>Allure Test Report</h1><p>No test results available.</p></body></html>" > allure-report/index.html
+          fi
+          touch allure-report/.nojekyll
 
-      - name: List Allure history files
+      - name: List Allure report files
         if: always()
-        run: ls -la allure-history
+        run: ls -la allure-report
 
       - name: Deploy Allure Report to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -100,7 +103,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: allure-history
+          publish_dir: ./allure-report
           force_orphan: true
 
   client-ci:

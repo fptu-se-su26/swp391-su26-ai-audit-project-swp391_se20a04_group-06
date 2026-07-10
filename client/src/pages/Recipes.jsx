@@ -322,8 +322,8 @@ export default function Recipes() {
       </header>
 
       {formOpen && (
-        <div className="split-view-container" style={{ marginBottom: "28px" }}>
-          <form className="dashboard-panel feature-form split-view-container__form recipe-form-layout" onSubmit={createRecipe}>
+        <div className="recipe-editor-layout" style={{ marginBottom: "28px" }}>
+          <form className="dashboard-panel feature-form recipe-form-card recipe-form-layout" onSubmit={createRecipe}>
             <label className="form-field recipe-form-layout__full">
               <span>Tên món ăn *</span>
               <input onChange={update("title")} placeholder="Ví dụ: Lẩu hải sản chua cay" required value={form.title} />
@@ -382,12 +382,12 @@ export default function Recipes() {
               <input onChange={update("tags")} placeholder="Ví dụ: cay, lẩu, tôm, mực" value={form.tags} />
             </label>
 
-            <div className="form-actions recipe-form-layout__full" style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
+            <div className="recipe-form-footer recipe-form-layout__full">
               <button className="button button--primary" type="submit">Đăng công thức</button>
             </div>
           </form>
 
-          <div className="split-view-container__preview-column">
+          <div className="recipe-preview-panel">
             <LivePreviewShell title="Xem trước công thức" subtext="Giao diện mô phỏng khi chia sẻ" badge="XEM TRƯỚC">
               <RecipeLivePreview form={form} />
             </LivePreviewShell>
@@ -426,8 +426,8 @@ export default function Recipes() {
             </div>
 
             <div className="recipe-edit-modal__body" ref={editModalBodyRef}>
-              <div className="split-view-container">
-                <div className="split-view-container__form recipe-form-layout">
+              <div className="recipe-editor-layout">
+                <div className="recipe-form-card recipe-form-layout">
                   <label className="form-field recipe-form-layout__full">
                     <span>Tên món ăn *</span>
                     <input
@@ -500,23 +500,23 @@ export default function Recipes() {
                     <span>Thẻ, phân cách bằng dấu phẩy</span>
                     <input onChange={updateEdit("tags")} value={editForm.tags} />
                   </label>
+
+                  <div className="recipe-form-footer recipe-form-layout__full">
+                    <button className="button button--secondary" disabled={savingEdit} onClick={closeEditForm} type="button">
+                      Hủy
+                    </button>
+                    <button className="button button--primary" disabled={savingEdit} type="submit">
+                      <Pencil size={16} /> {savingEdit ? "Đang lưu..." : "Lưu thay đổi"}
+                    </button>
+                  </div>
                 </div>
 
-                <div className="split-view-container__preview-column">
+                <div className="recipe-preview-panel">
                   <LivePreviewShell title="Xem trước công thức" subtext="Giao diện mô phỏng khi chia sẻ" badge="XEM TRƯỚC">
                     <RecipeLivePreview form={editForm} />
                   </LivePreviewShell>
                 </div>
               </div>
-            </div>
-
-            <div className="recipe-edit-modal__footer">
-              <button className="button button--secondary" disabled={savingEdit} onClick={closeEditForm} type="button">
-                Hủy
-              </button>
-              <button className="button button--primary" disabled={savingEdit} type="submit">
-                <Pencil size={16} /> {savingEdit ? "Đang lưu..." : "Lưu thay đổi"}
-              </button>
             </div>
           </form>
         </div>,

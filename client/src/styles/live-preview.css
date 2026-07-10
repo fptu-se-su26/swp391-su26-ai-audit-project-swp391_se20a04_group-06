@@ -1,4 +1,63 @@
-/* Split View Editor styles */
+/* Recipe Split View Layout */
+.recipe-editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(360px, 0.9fr);
+  gap: 28px;
+  align-items: stretch;
+  width: 100%;
+}
+
+.recipe-form-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.recipe-preview-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.recipe-preview-panel .live-preview-shell-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.recipe-preview-panel .live-preview-shell {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.recipe-preview-panel .live-preview-shell__content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Scrollbar styling for recipe preview content */
+.recipe-preview-panel .live-preview-shell__content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.recipe-preview-panel .live-preview-shell__content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.recipe-preview-panel .live-preview-shell__content::-webkit-scrollbar-thumb {
+  background: rgba(34, 243, 255, 0.2);
+  border-radius: 3px;
+}
+
+.recipe-preview-panel .live-preview-shell__content::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 243, 255, 0.35);
+}
+
+/* General Split View Editor styles (for landing batch etc.) */
 .split-view-container {
   display: flex;
   gap: 28px;
@@ -15,10 +74,6 @@
   flex: 1;
   min-width: 0;
   max-width: 440px;
-  position: sticky;
-  top: 96px;
-  max-height: calc(100vh - 120px);
-  overflow-y: auto;
 }
 
 .live-preview-shell {
@@ -69,37 +124,32 @@
   flex-shrink: 0;
 }
 
-/* Modal styling adjustments for recipes edit modal */
-.recipe-edit-modal .split-view-container {
-  max-height: 100%;
-}
 
-.recipe-edit-modal .split-view-container__preview-column {
-  position: static;
-  max-height: none;
-  overflow-y: visible;
-}
-
-/* Scrollbar styling for sticky preview */
-.split-view-container__preview-column::-webkit-scrollbar {
-  width: 6px;
-}
-
-.split-view-container__preview-column::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.split-view-container__preview-column::-webkit-scrollbar-thumb {
-  background: rgba(34, 243, 255, 0.2);
-  border-radius: 3px;
-}
-
-.split-view-container__preview-column::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 243, 255, 0.35);
-}
 
 /* Responsive Rules */
 @media (max-width: 1199px) {
+  .recipe-editor-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .recipe-form-card {
+    height: auto;
+  }
+
+  .recipe-preview-panel {
+    width: 100%;
+    height: auto;
+  }
+
+  .recipe-preview-panel .live-preview-shell {
+    height: auto;
+  }
+
+  .recipe-preview-panel .live-preview-shell__content {
+    overflow-y: visible;
+  }
+
   .split-view-container {
     flex-direction: column;
     gap: 0;

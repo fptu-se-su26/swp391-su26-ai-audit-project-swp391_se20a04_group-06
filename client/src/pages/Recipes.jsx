@@ -2,6 +2,7 @@ import { ChefHat, Clock3, Heart, Pencil, Plus, Trash2, Users, X } from "lucide-r
 import ImageUploader from "../components/shared/ImageUploader";
 
 import { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { apiRecipes } from "../services/api";
@@ -340,18 +341,19 @@ export default function Recipes() {
         </form>
       )}
 
-      {editingRecipe && (
+      {editingRecipe && createPortal(
         <div
-          className="recipe-edit-modal"
+          className="recipe-edit-modal-overlay"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) void closeEditForm();
           }}
           role="presentation"
         >
-          <section
+          <form
             aria-labelledby="recipe-edit-title"
             aria-modal="true"
-            className="recipe-edit-dialog"
+            className="recipe-edit-modal"
+            onSubmit={saveRecipe}
             role="dialog"
           >
             <div className="recipe-edit-modal__header">
@@ -369,85 +371,84 @@ export default function Recipes() {
               </button>
             </div>
 
-            <form className="feature-form recipe-edit-form" onSubmit={saveRecipe}>
-              <div className="recipe-edit-modal__body" ref={editModalBodyRef}>
+            <div className="recipe-edit-modal__body" ref={editModalBodyRef}>
+              <label className="form-field">
+                <span>Tên món ăn</span>
+                <input
+                  ref={editTitleInputRef}
+                  onChange={updateEdit("title")}
+                  required
+                  value={editForm.title}
+                />
+              </label>
+              <label className="form-field">
+                <span>Mô tả</span>
+                <textarea onChange={updateEdit("description")} required rows="3" value={editForm.description} />
+              </label>
+              <div className="recipe-edit-form__columns">
                 <label className="form-field">
-                  <span>Tên món ăn</span>
-                  <input
-                    ref={editTitleInputRef}
-                    onChange={updateEdit("title")}
-                    required
-                    value={editForm.title}
+                  <span>Nguyên liệu</span>
+                  <textarea onChange={updateEdit("ingredients")} required rows="6" value={editForm.ingredients} />
+                </label>
+                <label className="form-field">
+                  <span>Các bước thực hiện</span>
+                  <textarea onChange={updateEdit("instructions")} required rows="6" value={editForm.instructions} />
+                </label>
+              </div>
+              <div className="recipe-edit-form__details">
+                <label className="form-field">
+                  <span>Độ khó</span>
+                  <select onChange={updateEdit("difficulty")} value={editForm.difficulty}>
+                    <option value="Easy">Dễ</option>
+                    <option value="Medium">Trung bình</option>
+                    <option value="Hard">Khó</option>
+                  </select>
+                </label>
+                <label className="form-field">
+                  <span>Thời gian (phút)</span>
+                  <input min="1" onChange={updateEdit("cookingTime")} required type="number" value={editForm.cookingTime} />
+                </label>
+                <label className="form-field">
+                  <span>Khẩu phần</span>
+                  <input min="1" onChange={updateEdit("servings")} required type="number" value={editForm.servings} />
+                </label>
+              </div>
+              <label className="form-field">
+                <span>Thẻ, phân cách bằng dấu phẩy</span>
+                <input onChange={updateEdit("tags")} value={editForm.tags} />
+              </label>
+
+              <div className="recipe-edit-image">
+                {editForm.imageUrl && (
+                  <figure>
+                    <img alt={`Ảnh hiện tại của ${editForm.title}`} src={getOptimizedImageUrl(editForm.imageUrl, 320, 200)} />
+                    <figcaption>Ảnh hiện tại</figcaption>
+                  </figure>
+                )}
+                <div className="recipe-image-field">
+                  <ImageUploader
+                    files={editForm.imageFile ? [editForm.imageFile] : []}
+                    maxFiles={1}
+                    onChange={(files) =>
+                      setEditForm((current) => ({ ...current, imageFile: files[0] || null }))
+                    }
                   />
-                </label>
-                <label className="form-field">
-                  <span>Mô tả</span>
-                  <textarea onChange={updateEdit("description")} required rows="3" value={editForm.description} />
-                </label>
-                <div className="recipe-edit-form__columns">
-                  <label className="form-field">
-                    <span>Nguyên liệu</span>
-                    <textarea onChange={updateEdit("ingredients")} required rows="6" value={editForm.ingredients} />
-                  </label>
-                  <label className="form-field">
-                    <span>Các bước thực hiện</span>
-                    <textarea onChange={updateEdit("instructions")} required rows="6" value={editForm.instructions} />
-                  </label>
-                </div>
-                <div className="recipe-edit-form__details">
-                  <label className="form-field">
-                    <span>Độ khó</span>
-                    <select onChange={updateEdit("difficulty")} value={editForm.difficulty}>
-                      <option value="Easy">Dễ</option>
-                      <option value="Medium">Trung bình</option>
-                      <option value="Hard">Khó</option>
-                    </select>
-                  </label>
-                  <label className="form-field">
-                    <span>Thời gian (phút)</span>
-                    <input min="1" onChange={updateEdit("cookingTime")} required type="number" value={editForm.cookingTime} />
-                  </label>
-                  <label className="form-field">
-                    <span>Khẩu phần</span>
-                    <input min="1" onChange={updateEdit("servings")} required type="number" value={editForm.servings} />
-                  </label>
-                </div>
-                <label className="form-field">
-                  <span>Thẻ, phân cách bằng dấu phẩy</span>
-                  <input onChange={updateEdit("tags")} value={editForm.tags} />
-                </label>
-
-                <div className="recipe-edit-image">
-                  {editForm.imageUrl && (
-                    <figure>
-                      <img alt={`Ảnh hiện tại của ${editForm.title}`} src={getOptimizedImageUrl(editForm.imageUrl, 320, 200)} />
-                      <figcaption>Ảnh hiện tại</figcaption>
-                    </figure>
-                  )}
-                  <div className="recipe-image-field">
-                    <ImageUploader
-                      files={editForm.imageFile ? [editForm.imageFile] : []}
-                      maxFiles={1}
-                      onChange={(files) =>
-                        setEditForm((current) => ({ ...current, imageFile: files[0] || null }))
-                      }
-                    />
-                    <small>Chọn ảnh mới nếu muốn thay ảnh hiện tại. Khuyến nghị tối thiểu 800 × 500 px.</small>
-                  </div>
+                  <small>Chọn ảnh mới nếu muốn thay ảnh hiện tại. Khuyến nghị tối thiểu 800 × 500 px.</small>
                 </div>
               </div>
+            </div>
 
-              <div className="recipe-edit-modal__footer">
-                <button className="button button--secondary" disabled={savingEdit} onClick={closeEditForm} type="button">
-                  Hủy
-                </button>
-                <button className="button button--primary" disabled={savingEdit} type="submit">
-                  <Pencil size={16} /> {savingEdit ? "Đang lưu..." : "Lưu thay đổi"}
-                </button>
-              </div>
-            </form>
-          </section>
-        </div>
+            <div className="recipe-edit-modal__footer">
+              <button className="button button--secondary" disabled={savingEdit} onClick={closeEditForm} type="button">
+                Hủy
+              </button>
+              <button className="button button--primary" disabled={savingEdit} type="submit">
+                <Pencil size={16} /> {savingEdit ? "Đang lưu..." : "Lưu thay đổi"}
+              </button>
+            </div>
+          </form>
+        </div>,
+        document.body
       )}
 
       {loading && <div className="page-state">Đang tải công thức...</div>}

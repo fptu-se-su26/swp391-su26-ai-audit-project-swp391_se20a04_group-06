@@ -53,10 +53,45 @@ export default function RecipeDetail() {
 
   const like = async () => {
     if (!requireLogin()) return;
+    const currentUserId = String(user.id || user._id);
+    const originalRecipe = { ...recipe };
+
+    // Optimistic UI update
+    setRecipe((current) => {
+      if (!current) return current;
+      let nextLikes = [...(current.likes || [])].map(String);
+      const wasLiked = nextLikes.includes(currentUserId);
+      if (wasLiked) {
+        nextLikes = nextLikes.filter((uid) => uid !== currentUserId);
+      } else {
+        nextLikes.push(currentUserId);
+      }
+      const delta = wasLiked ? -1 : 1;
+      return {
+        ...current,
+        likeCount: Math.max(0, (current.likeCount ?? current.likes?.length ?? 0) + delta),
+        likes: nextLikes,
+      };
+    });
+
     try {
       const result = await apiRecipes.toggleLike(id);
-      setRecipe((current) => ({ ...current, likeCount: result.likeCount }));
+      setRecipe((current) => {
+        if (!current) return current;
+        let nextLikes = [...(current.likes || [])].map(String);
+        if (result.liked) {
+          if (!nextLikes.includes(currentUserId)) nextLikes.push(currentUserId);
+        } else {
+          nextLikes = nextLikes.filter((uid) => uid !== currentUserId);
+        }
+        return {
+          ...current,
+          likeCount: result.likeCount,
+          likes: nextLikes,
+        };
+      });
     } catch (error) {
+      setRecipe(originalRecipe);
       await alert({
         title: "Lỗi tương tác",
         message: error.message,
@@ -206,8 +241,14 @@ export default function RecipeDetail() {
           )}
 
           <div className="recipe-detail__actions">
-            <button className="button button--primary" onClick={like} type="button">
-              <Heart size={17} /> Thích ({recipe.likeCount ?? recipe.likes?.length ?? 0})
+            <button
+              className={`button button--primary like-button ${user && recipe.likes?.map(String).includes(String(user.id || user._id)) ? "is-liked" : ""}`}
+              onClick={like}
+              type="button"
+            >
+              <Heart size={17} />
+              <span>{user && recipe.likes?.map(String).includes(String(user.id || user._id)) ? "Đã thích" : "Thích"}</span>
+              <span>({recipe.likeCount ?? recipe.likes?.length ?? 0})</span>
             </button>
             
             <button className="button button--secondary" onClick={shareRecipe} type="button">

@@ -140,12 +140,55 @@ export default function Community() {
   const toggleLike = async (post) => {
     if (!requireLogin()) return;
     const id = post.id || post._id;
-    const result = await apiPosts.toggleLike(id);
+    const currentUserId = String(user.id || user._id);
+    const originalPosts = [...posts];
+
+    // Optimistic UI update
     setPosts((current) =>
-      current.map((item) =>
-        (item.id || item._id) === id ? { ...item, likeCount: result.likeCount } : item,
-      ),
+      current.map((item) => {
+        if ((item.id || item._id) !== id) return item;
+        let nextLikes = [...(item.likes || [])].map(String);
+        const wasLiked = nextLikes.includes(currentUserId);
+        if (wasLiked) {
+          nextLikes = nextLikes.filter((uid) => uid !== currentUserId);
+        } else {
+          nextLikes.push(currentUserId);
+        }
+        const delta = wasLiked ? -1 : 1;
+        return {
+          ...item,
+          likeCount: Math.max(0, (item.likeCount ?? item.likes?.length ?? 0) + delta),
+          likes: nextLikes,
+        };
+      })
     );
+
+    try {
+      const result = await apiPosts.toggleLike(id);
+      setPosts((current) =>
+        current.map((item) => {
+          if ((item.id || item._id) !== id) return item;
+          let nextLikes = [...(item.likes || [])].map(String);
+          if (result.liked) {
+            if (!nextLikes.includes(currentUserId)) nextLikes.push(currentUserId);
+          } else {
+            nextLikes = nextLikes.filter((uid) => uid !== currentUserId);
+          }
+          return {
+            ...item,
+            likeCount: result.likeCount,
+            likes: nextLikes,
+          };
+        })
+      );
+    } catch (error) {
+      setPosts(originalPosts);
+      await alert({
+        title: "Lỗi tương tác",
+        message: error.message,
+        variant: "danger",
+      });
+    }
   };
 
   const addComment = async (post) => {
@@ -395,7 +438,15 @@ export default function Community() {
               )}
               <div className="tag-list">{post.tags?.map((tag) => <span key={tag}>#{tag}</span>)}</div>
               <div className="community-post__actions" data-tour="community-post-actions">
-                <button onClick={() => toggleLike(post)} type="button"><Heart size={16} /> Thích <strong>{post.likeCount ?? post.likes?.length ?? 0}</strong></button>
+                <button
+                  className={`like-button ${user && post.likes?.map(String).includes(String(user.id || user._id)) ? "is-liked" : ""}`}
+                  onClick={() => toggleLike(post)}
+                  type="button"
+                >
+                  <Heart size={16} />
+                  <span>{user && post.likes?.map(String).includes(String(user.id || user._id)) ? "Đã thích" : "Thích"}</span>
+                  <strong>{post.likeCount ?? post.likes?.length ?? 0}</strong>
+                </button>
                 <span><MessageCircle size={16} /> Bình luận <strong>{post.comments?.length || 0}</strong></span>
                 <ReportButton onSubmit={(reason) => apiReports.createForPost(id, reason)} />
               </div>

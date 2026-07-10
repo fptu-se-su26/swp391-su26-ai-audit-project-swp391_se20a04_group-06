@@ -2971,3 +2971,51 @@
   }
 }
 
+/* ── LIKE BUTTON STATES ── */
+.like-button {
+  transition:
+    background-color 0.22s ease,
+    color 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    transform 0.22s ease;
+}
+
+.like-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.like-button.is-liked {
+  background: linear-gradient(135deg, #11d4e8, #0898c8) !important;
+  border-color: rgba(34, 243, 255, 0.9) !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 26px rgba(34, 243, 255, 0.28) !important;
+}
+
+.like-button.is-liked svg {
+  fill: currentColor !important;
+  stroke: currentColor !important;
+  color: #ffffff !important;
+}
+
+.like-button:not(.is-liked):hover {
+  background: rgba(34, 243, 255, 0.12) !important;
+  border-color: rgba(34, 243, 255, 0.55) !important;
+  color: #60f7ff !important;
+}
+
+.community-post__actions > button.like-button.is-liked {
+  background: linear-gradient(135deg, #11d4e8, #0898c8) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 15px rgba(34, 243, 255, 0.28) !important;
+}
+
+.community-post__actions > button.like-button.is-liked strong {
+  color: #ffffff !important;
+}
+
+.community-post__actions > button.like-button.is-liked svg {
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+

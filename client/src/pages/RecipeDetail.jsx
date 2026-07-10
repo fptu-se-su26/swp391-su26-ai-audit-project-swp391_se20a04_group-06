@@ -1,4 +1,4 @@
-import { ArrowLeft, ChefHat, Clock3, Heart, Send, Trash2, Users, Pencil, Share2, Check } from "lucide-react";
+import { ArrowLeft, ChefHat, Clock3, Heart, Send, Trash2, Users, Pencil, Share2, Check, MessageSquare, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import ReportButton from "../components/ReportButton";
@@ -37,6 +37,7 @@ export default function RecipeDetail() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [hasImageError, setHasImageError] = useState(false);
+  const [showComments, setShowComments] = useState(false);
 
   useEffect(() => {
     apiRecipes.getById(id)
@@ -214,15 +215,16 @@ export default function RecipeDetail() {
           </Link>
         </header>
 
-        {/* 2x2 Grid */}
-        <div className="recipe-grid-2x2">
+        {/* 3 Columns Grid */}
+        <div className="recipe-detail-grid">
           
-          {/* Hàng 1 - Cột 1: Recipe Summary */}
+          {/* Cột 1: Thông tin món */}
           <div className="recipe-summary-card">
             <div className="recipe-summary-card__media">
               {recipe.imageUrl && !hasImageError ? (
                 <img
                   alt={recipe.title}
+                  className="recipe-summary-image"
                   onError={() => setHasImageError(true)}
                   src={recipe.imageUrl}
                 />
@@ -234,18 +236,18 @@ export default function RecipeDetail() {
               )}
             </div>
 
-            <div className="recipe-summary-card__content">
+            <div className="recipe-card-body">
               <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
                 <span className={`recipe-meta-pill ${difficultyClass}`} style={{ fontWeight: "700" }}>
                   {getDifficultyLabel(recipe.difficulty)}
                 </span>
               </div>
               
-              <h1>{recipe.title}</h1>
+              <h1 style={{ fontSize: "1.4rem", fontWeight: "800", color: "#fff", margin: "8px 0 10px 0", lineHeight: "1.3" }}>{recipe.title}</h1>
               
-              <p className="recipe-summary-card__desc">{recipe.description}</p>
+              <p style={{ fontSize: "0.85rem", color: "#cbd5e1", lineHeight: "1.5", margin: "0 0 14px 0" }}>{recipe.description}</p>
               
-              <div className="recipe-summary-card__meta">
+              <div className="recipe-summary-card__meta" style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
                 <div className="recipe-meta-pill">
                   <Clock3 size={14} style={{ color: "#22f3ff" }} />
                   <span>{recipe.cookingTime || 30} phút</span>
@@ -264,7 +266,7 @@ export default function RecipeDetail() {
                 )}
               </div>
 
-              <div className="recipe-summary-card__actions">
+              <div className="recipe-actions" style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "auto", paddingTop: "12px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
                 <button
                   className={`button button--primary like-button ${user && recipe.likes?.map(String).includes(String(user.id || user._id)) ? "is-liked" : ""}`}
                   onClick={like}
@@ -277,6 +279,10 @@ export default function RecipeDetail() {
                 
                 <button className="button button--secondary" onClick={shareRecipe} type="button">
                   <Share2 size={16} /> Chia sẻ
+                </button>
+
+                <button className="button button--secondary" onClick={() => setShowComments(true)} type="button">
+                  <MessageSquare size={16} /> Bình luận ({recipe.comments?.length || 0})
                 </button>
 
                 <ReportButton onSubmit={(reason) => apiReports.createForRecipe(id, reason)} />
@@ -295,7 +301,7 @@ export default function RecipeDetail() {
             </div>
           </div>
 
-          {/* Hàng 1 - Cột 2: Nguyên liệu */}
+          {/* Cột 2: Nguyên liệu */}
           <div className="recipe-ingredients-card">
             <h2>Nguyên liệu ({recipe.ingredients?.length || 0})</h2>
             <div className="recipe-card-scroll">
@@ -317,7 +323,7 @@ export default function RecipeDetail() {
             </div>
           </div>
 
-          {/* Hàng 2 - Cột 1: Cách thực hiện */}
+          {/* Cột 3: Cách thực hiện */}
           <div className="recipe-steps-card">
             <h2>Cách thực hiện ({recipe.instructions?.length || 0})</h2>
             <div className="recipe-card-scroll">
@@ -339,49 +345,57 @@ export default function RecipeDetail() {
             </div>
           </div>
 
-          {/* Hàng 2 - Cột 2: Bình luận */}
-          <div className="recipe-comments-card">
-            <h2>Bình luận ({recipe.comments?.length || 0})</h2>
-            
-            <div className="recipe-comments-list-scroll">
-              {recipe.comments && recipe.comments.length > 0 ? (
-                recipe.comments.map((item) => (
-                  <article className="comment-item" key={item._id || item.id} style={{ display: "flex", gap: "10px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)", padding: "10px 12px", borderRadius: "10px" }}>
-                    <div className="comment-item__avatar" style={{ width: "30px", height: "30px", background: "rgba(34, 243, 255, 0.1)", color: "#22f3ff", display: "grid", placeItems: "center", borderRadius: "50%", fontWeight: "700", fontSize: "0.75rem", flexShrink: 0 }}>
-                      {initials(item.userName)}
-                    </div>
-                    <div className="comment-item__body" style={{ flex: 1, minWidth: 0 }}>
-                      <header style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                        <strong style={{ color: "#fff", fontSize: "0.8rem" }}>{item.userName}</strong>
-                        <small style={{ color: "#64748b", fontSize: "0.7rem" }}>{formatCommentDate(item.createdAt)}</small>
-                      </header>
-                      <p style={{ margin: 0, color: "#cbd5e1", fontSize: "0.8rem", lineHeight: "1.4" }}>{item.text}</p>
-                    </div>
-                  </article>
-                ))
-              ) : (
-                <div className="comments-empty" style={{ textAlign: "center", padding: "12px 0", color: "#64748b", background: "rgba(255,255,255,0.01)", borderRadius: "10px", border: "1px dashed rgba(255,255,255,0.06)", height: "fit-content" }}>
-                  <p style={{ margin: 0, fontSize: "0.8rem" }}>Chưa có bình luận nào. Hãy chia sẻ kinh nghiệm nấu món này.</p>
-                </div>
-              )}
-            </div>
-
-            <form className="comment-composer" onSubmit={addComment} style={{ display: "flex", gap: "8px", marginTop: "auto" }}>
-              <input
-                onChange={(event) => setComment(event.target.value)}
-                placeholder="Viết câu hỏi hoặc trao đổi kinh nghiệm..."
-                required
-                value={comment}
-                style={{ flex: 1, height: "40px", fontSize: "0.85rem" }}
-              />
-              <button aria-label="Gửi bình luận" type="submit">
-                <Send size={15} />
-              </button>
-            </form>
-          </div>
-
         </div>
 
+      </div>
+
+      {/* Slide-out Comments Drawer */}
+      <div className={`recipe-comments-drawer-backdrop ${showComments ? "is-open" : ""}`} onClick={() => setShowComments(false)} />
+      <div className={`recipe-comments-drawer ${showComments ? "is-open" : ""}`}>
+        <div className="recipe-comments-drawer__header">
+          <h2>Bình luận ({recipe.comments?.length || 0})</h2>
+          <button onClick={() => setShowComments(false)} className="recipe-comments-drawer__close" aria-label="Đóng bình luận">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="recipe-comments-drawer__list">
+          {recipe.comments && recipe.comments.length > 0 ? (
+            recipe.comments.map((item) => (
+              <article className="comment-item" key={item._id || item.id} style={{ display: "flex", gap: "10px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)", padding: "10px 12px", borderRadius: "10px", marginBottom: "12px" }}>
+                <div className="comment-item__avatar" style={{ width: "30px", height: "30px", background: "rgba(34, 243, 255, 0.1)", color: "#22f3ff", display: "grid", placeItems: "center", borderRadius: "50%", fontWeight: "700", fontSize: "0.75rem", flexShrink: 0 }}>
+                  {initials(item.userName)}
+                </div>
+                <div className="comment-item__body" style={{ flex: 1, minWidth: 0 }}>
+                  <header style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                    <strong style={{ color: "#fff", fontSize: "0.8rem" }}>{item.userName}</strong>
+                    <small style={{ color: "#64748b", fontSize: "0.7rem" }}>{formatCommentDate(item.createdAt)}</small>
+                  </header>
+                  <p style={{ margin: 0, color: "#cbd5e1", fontSize: "0.8rem", lineHeight: "1.4" }}>{item.text}</p>
+                </div>
+              </article>
+            ))
+          ) : (
+            <div className="comments-empty" style={{ textAlign: "center", padding: "28px 0", color: "#64748b", background: "rgba(255,255,255,0.01)", borderRadius: "10px", border: "1px dashed rgba(255,255,255,0.06)" }}>
+              <p style={{ margin: 0, fontSize: "0.85rem" }}>Chưa có bình luận nào. Hãy chia sẻ kinh nghiệm nấu món này.</p>
+            </div>
+          )}
+        </div>
+
+        <div className="recipe-comments-drawer__footer">
+          <form className="comment-composer" onSubmit={addComment} style={{ display: "flex", gap: "8px", width: "100%", boxSizing: "border-box" }}>
+            <input
+              onChange={(event) => setComment(event.target.value)}
+              placeholder="Viết câu hỏi hoặc trao đổi kinh nghiệm..."
+              required
+              value={comment}
+              style={{ flex: 1, height: "40px", fontSize: "0.85rem" }}
+            />
+            <button aria-label="Gửi bình luận" type="submit">
+              <Send size={15} />
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

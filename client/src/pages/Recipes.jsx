@@ -2,7 +2,7 @@ import { ChefHat, Clock3, Heart, Pencil, Plus, Trash2, Users, X } from "lucide-r
 import ImageUploader from "../components/shared/ImageUploader";
 
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { apiRecipes } from "../services/api";
 import { getOptimizedImageUrl, getRecipeImageSrcSet } from "../utils/image";
@@ -118,6 +118,7 @@ export default function Recipes() {
   const { confirm, alert } = useConfirm();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [recipes, setRecipes] = useState([]);
 
   const [form, setForm] = useState(initialForm);
@@ -138,6 +139,18 @@ export default function Recipes() {
   useEffect(() => {
     loadRecipes();
   }, []);
+
+  useEffect(() => {
+    if (location.state?.editRecipeId && recipes.length > 0) {
+      const targetRecipe = recipes.find(
+        (r) => String(r.id || r._id) === String(location.state.editRecipeId)
+      );
+      if (targetRecipe && canManageOwnedContent(user, targetRecipe.authorId)) {
+        openEditForm(targetRecipe);
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+    }
+  }, [location.state, recipes, user, navigate]);
 
   useEffect(() => {
     if (!editingRecipe) return undefined;

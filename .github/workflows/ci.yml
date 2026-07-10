@@ -66,6 +66,14 @@ jobs:
           ref: gh-pages
           path: gh-pages-dir
 
+      - name: Ensure Allure directories exist
+        if: always()
+        run: |
+          mkdir -p backend/allure-results
+          mkdir -p allure-report
+          mkdir -p allure-history
+          touch allure-history/.nojekyll
+
       - name: Build Allure Report
         uses: simple-elf/allure-report-action@master
         if: always()
@@ -75,6 +83,12 @@ jobs:
           gh_pages: gh-pages-dir
           allure_report: allure-report
           allure_history: allure-history
+
+      - name: Post-process Allure Report
+        if: always()
+        run: |
+          mkdir -p allure-history
+          touch allure-history/.nojekyll
 
       - name: Deploy Allure Report to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4

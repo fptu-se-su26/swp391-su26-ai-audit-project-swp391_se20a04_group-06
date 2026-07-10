@@ -96,7 +96,11 @@ body {
   text-transform: uppercase;
 }
 
-.button {
+.button,
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
   display: inline-flex;
   min-height: 40px;
   align-items: center;
@@ -109,21 +113,53 @@ body {
   font-weight: 750;
   text-decoration: none;
   cursor: pointer;
-  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+  transition:
+    background-color 0.22s ease,
+    color 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    transform 0.22s ease;
 }
 
-.button:hover:not(:disabled) {
-  transform: translateY(-1px);
+.button:hover:not(:disabled),
+button:hover:not(:disabled) {
+  transform: translateY(-2px);
 }
 
-.button:disabled {
+.button:active:not(:disabled),
+button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.button:focus-visible,
+button:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(34, 243, 255, 0.35) !important;
+}
+
+.button:disabled,
+button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .button--primary {
   background: linear-gradient(135deg, var(--market-primary), #0284c7);
   color: #fff;
+  border-color: transparent;
+}
+
+.button--primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #20f0ff, #06a8d8);
+  border-color: rgba(34, 243, 255, 0.85);
+  box-shadow: 0 10px 26px rgba(34, 243, 255, 0.25);
+  color: #fff;
+}
+
+.button--primary:active:not(:disabled) {
+  box-shadow: 0 4px 10px rgba(34, 243, 255, 0.15);
 }
 
 .button--secondary {
@@ -132,10 +168,32 @@ body {
   color: #dbeafe;
 }
 
+.button--secondary:hover:not(:disabled) {
+  background: rgba(34, 243, 255, 0.10);
+  color: #60f7ff;
+  border-color: rgba(34, 243, 255, 0.55);
+  box-shadow: 0 10px 24px rgba(34, 243, 255, 0.12);
+}
+
+.button--secondary:active:not(:disabled) {
+  box-shadow: 0 4px 10px rgba(34, 243, 255, 0.08);
+}
+
 .button--ghost {
   border-color: var(--market-line);
   background: transparent;
   color: var(--market-muted);
+}
+
+.button--ghost:hover:not(:disabled) {
+  background: rgba(34, 243, 255, 0.06);
+  color: #60f7ff;
+  border-color: rgba(34, 243, 255, 0.35);
+  box-shadow: 0 8px 20px rgba(34, 243, 255, 0.08);
+}
+
+.button--ghost:active:not(:disabled) {
+  box-shadow: 0 4px 8px rgba(34, 243, 255, 0.04);
 }
 
 .button--icon {
@@ -146,9 +204,40 @@ body {
   color: var(--market-muted);
 }
 
+.button--icon:hover:not(:disabled) {
+  background: rgba(34, 243, 255, 0.08);
+  color: #60f7ff;
+  border-color: rgba(34, 243, 255, 0.45);
+  box-shadow: 0 8px 20px rgba(34, 243, 255, 0.10);
+}
+
 .button--icon.is-saved {
   border-color: rgba(251, 113, 133, 0.45);
   color: var(--market-danger);
+}
+
+.button--icon.is-saved:hover:not(:disabled) {
+  border-color: rgba(251, 113, 133, 0.75);
+  background: rgba(251, 113, 133, 0.12);
+  color: #fda4af;
+  box-shadow: 0 8px 20px rgba(251, 113, 133, 0.18);
+}
+
+/* ── Easy Mode overrides for button animations ── */
+body.easy-mode .button,
+body.easy-mode button,
+[data-easy-mode="true"] .button,
+[data-easy-mode="true"] button {
+  transition: none !important;
+  transform: none !important;
+}
+
+body.easy-mode .button:hover,
+body.easy-mode button:hover,
+[data-easy-mode="true"] .button:hover,
+[data-easy-mode="true"] button:hover {
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .app-navbar {

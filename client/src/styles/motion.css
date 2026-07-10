@@ -95,7 +95,7 @@
 .video-control:active,
 .chat-composer button:active,
 .seafood-assistant button:active {
-  transform: translateY(1px) scale(0.98);
+  transform: translateY(0) scale(0.98);
 }
 
 .save-button:hover,

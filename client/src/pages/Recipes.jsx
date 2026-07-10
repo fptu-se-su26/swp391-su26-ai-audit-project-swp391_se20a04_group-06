@@ -311,6 +311,9 @@ export default function Recipes() {
   const updateEdit = (field) => (event) =>
     setEditForm((current) => ({ ...current, [field]: event.target.value }));
 
+  const selectDifficulty = (value) => setForm((current) => ({ ...current, difficulty: value }));
+  const selectDifficultyEdit = (value) => setEditForm((current) => ({ ...current, difficulty: value }));
+
   return (
     <div className="page-container recipes-page">
       <header className="page-heading" data-tour="recipes-heading">
@@ -320,31 +323,72 @@ export default function Recipes() {
 
       {formOpen && (
         <div className="split-view-container" style={{ marginBottom: "28px" }}>
-          <form className="dashboard-panel feature-form split-view-container__form" onSubmit={createRecipe}>
-            <input onChange={update("title")} placeholder="Tên món ăn" required value={form.title} />
-            <textarea onChange={update("description")} placeholder="Mô tả món ăn" required rows="3" value={form.description} />
-            <div className="form-grid">
-              <textarea onChange={update("ingredients")} placeholder="Nguyên liệu, mỗi dòng một mục" required rows="5" value={form.ingredients} />
-              <textarea onChange={update("instructions")} placeholder="Các bước, mỗi dòng một bước" required rows="5" value={form.instructions} />
-              <div className="recipe-image-field">
-                <ImageUploader
-                  files={form.imageFile ? [form.imageFile] : []}
-                  maxFiles={1}
-                  onChange={(files) => setForm((f) => ({ ...f, imageFile: files[0] || null }))}
-                />
-                <small>Nên dùng ảnh ngang tối thiểu 800 × 500 px để hiển thị rõ nét.</small>
-              </div>
+          <form className="dashboard-panel feature-form split-view-container__form recipe-form-layout" onSubmit={createRecipe}>
+            <label className="form-field recipe-form-layout__full">
+              <span>Tên món ăn *</span>
+              <input onChange={update("title")} placeholder="Ví dụ: Lẩu hải sản chua cay" required value={form.title} />
+            </label>
+            <label className="form-field recipe-form-layout__full">
+              <span>Mô tả *</span>
+              <textarea onChange={update("description")} placeholder="Mô tả ngắn gọn về hương vị hoặc nguồn gốc món ăn..." required rows="3" value={form.description} />
+            </label>
 
-              <select onChange={update("difficulty")} value={form.difficulty}><option value="Easy">Dễ</option><option value="Medium">Trung bình</option><option value="Hard">Khó</option></select>
-              <input min="1" onChange={update("cookingTime")} type="number" value={form.cookingTime} />
-              <input min="1" onChange={update("servings")} type="number" value={form.servings} />
+            <label className="form-field recipe-form-layout__half">
+              <span>Nguyên liệu (mỗi dòng một mục) *</span>
+              <textarea onChange={update("ingredients")} placeholder="Ví dụ:&#10;500g tôm sú&#10;300g mực ống&#10;1 lít nước dùng xương" required rows="6" value={form.ingredients} />
+            </label>
+            <label className="form-field recipe-form-layout__half">
+              <span>Các bước thực hiện (mỗi dòng một bước) *</span>
+              <textarea onChange={update("instructions")} placeholder="Ví dụ:&#10;Sơ chế sạch các loại hải sản&#10;Đun sôi nước dùng và thêm gia vị lẩu&#10;Thả hải sản vào và dùng nóng" required rows="6" value={form.instructions} />
+            </label>
+
+            <div className="recipe-form-layout__half">
+              <label className="form-field">
+                <span>Ảnh công thức</span>
+                <div className="recipe-image-field" style={{ marginTop: 0 }}>
+                  <ImageUploader
+                    files={form.imageFile ? [form.imageFile] : []}
+                    maxFiles={1}
+                    onChange={(files) => setForm((f) => ({ ...f, imageFile: files[0] || null }))}
+                  />
+                  <small>Khuyến nghị ảnh ngang tối thiểu 800 × 500 px.</small>
+                </div>
+              </label>
             </div>
-            <input onChange={update("tags")} placeholder="Thẻ, phân cách bằng dấu phẩy" value={form.tags} />
-            <div className="form-actions"><button className="button button--primary" type="submit">Đăng công thức</button></div>
+
+            <div className="recipe-form-layout__half recipe-form-details-group">
+              <div className="form-field">
+                <span>Mức độ</span>
+                <div className="difficulty-toggle">
+                  <button type="button" className={`difficulty-option ${form.difficulty === "Easy" ? "active" : ""}`} onClick={() => selectDifficulty("Easy")}>Dễ</button>
+                  <button type="button" className={`difficulty-option ${form.difficulty === "Medium" ? "active" : ""}`} onClick={() => selectDifficulty("Medium")}>Trung bình</button>
+                  <button type="button" className={`difficulty-option ${form.difficulty === "Hard" ? "active" : ""}`} onClick={() => selectDifficulty("Hard")}>Khó</button>
+                </div>
+              </div>
+              <div className="recipe-form-sub-details">
+                <label className="form-field">
+                  <span>Thời gian (phút)</span>
+                  <input min="1" onChange={update("cookingTime")} required type="number" value={form.cookingTime} />
+                </label>
+                <label className="form-field">
+                  <span>Khẩu phần</span>
+                  <input min="1" onChange={update("servings")} required type="number" value={form.servings} />
+                </label>
+              </div>
+            </div>
+
+            <label className="form-field recipe-form-layout__full">
+              <span>Thẻ (tags, phân cách bằng dấu phẩy)</span>
+              <input onChange={update("tags")} placeholder="Ví dụ: cay, lẩu, tôm, mực" value={form.tags} />
+            </label>
+
+            <div className="form-actions recipe-form-layout__full" style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
+              <button className="button button--primary" type="submit">Đăng công thức</button>
+            </div>
           </form>
 
           <div className="split-view-container__preview-column">
-            <LivePreviewShell title="Xem trước công thức" subtext="Giao diện mô phỏng khi chia sẻ" badge="Recipe Preview">
+            <LivePreviewShell title="Xem trước công thức" subtext="Giao diện mô phỏng khi chia sẻ" badge="XEM TRƯỚC">
               <RecipeLivePreview form={form} />
             </LivePreviewShell>
           </div>
@@ -383,9 +427,9 @@ export default function Recipes() {
 
             <div className="recipe-edit-modal__body" ref={editModalBodyRef}>
               <div className="split-view-container">
-                <div className="split-view-container__form">
-                  <label className="form-field">
-                    <span>Tên món ăn</span>
+                <div className="split-view-container__form recipe-form-layout">
+                  <label className="form-field recipe-form-layout__full">
+                    <span>Tên món ăn *</span>
                     <input
                       ref={editTitleInputRef}
                       onChange={updateEdit("title")}
@@ -393,65 +437,73 @@ export default function Recipes() {
                       value={editForm.title}
                     />
                   </label>
-                  <label className="form-field">
-                    <span>Mô tả</span>
+                  <label className="form-field recipe-form-layout__full">
+                    <span>Mô tả *</span>
                     <textarea onChange={updateEdit("description")} required rows="3" value={editForm.description} />
                   </label>
-                  <div className="recipe-edit-form__columns">
+
+                  <label className="form-field recipe-form-layout__half">
+                    <span>Nguyên liệu (mỗi dòng một mục) *</span>
+                    <textarea onChange={updateEdit("ingredients")} required rows="6" value={editForm.ingredients} />
+                  </label>
+                  <label className="form-field recipe-form-layout__half">
+                    <span>Các bước thực hiện (mỗi dòng một bước) *</span>
+                    <textarea onChange={updateEdit("instructions")} required rows="6" value={editForm.instructions} />
+                  </label>
+
+                  <div className="recipe-form-layout__half">
                     <label className="form-field">
-                      <span>Nguyên liệu</span>
-                      <textarea onChange={updateEdit("ingredients")} required rows="6" value={editForm.ingredients} />
-                    </label>
-                    <label className="form-field">
-                      <span>Các bước thực hiện</span>
-                      <textarea onChange={updateEdit("instructions")} required rows="6" value={editForm.instructions} />
+                      <span>Ảnh công thức</span>
+                      <div className="recipe-edit-image" style={{ marginTop: 0 }}>
+                        {editForm.imageUrl && (
+                          <figure style={{ marginBottom: "12px" }}>
+                            <img alt={`Ảnh hiện tại của ${editForm.title}`} src={getOptimizedImageUrl(editForm.imageUrl, 320, 200)} />
+                            <figcaption>Ảnh hiện tại</figcaption>
+                          </figure>
+                        )}
+                        <div className="recipe-image-field">
+                          <ImageUploader
+                            files={editForm.imageFile ? [editForm.imageFile] : []}
+                            maxFiles={1}
+                            onChange={(files) =>
+                              setEditForm((current) => ({ ...current, imageFile: files[0] || null }))
+                            }
+                          />
+                          <small>Chọn ảnh mới nếu muốn thay ảnh hiện tại.</small>
+                        </div>
+                      </div>
                     </label>
                   </div>
-                  <div className="recipe-edit-form__details">
-                    <label className="form-field">
-                      <span>Độ khó</span>
-                      <select onChange={updateEdit("difficulty")} value={editForm.difficulty}>
-                        <option value="Easy">Dễ</option>
-                        <option value="Medium">Trung bình</option>
-                        <option value="Hard">Khó</option>
-                      </select>
-                    </label>
-                    <label className="form-field">
-                      <span>Thời gian (phút)</span>
-                      <input min="1" onChange={updateEdit("cookingTime")} required type="number" value={editForm.cookingTime} />
-                    </label>
-                    <label className="form-field">
-                      <span>Khẩu phần</span>
-                      <input min="1" onChange={updateEdit("servings")} required type="number" value={editForm.servings} />
-                    </label>
+
+                  <div className="recipe-form-layout__half recipe-form-details-group">
+                    <div className="form-field">
+                      <span>Mức độ</span>
+                      <div className="difficulty-toggle">
+                        <button type="button" className={`difficulty-option ${editForm.difficulty === "Easy" ? "active" : ""}`} onClick={() => selectDifficultyEdit("Easy")}>Dễ</button>
+                        <button type="button" className={`difficulty-option ${editForm.difficulty === "Medium" ? "active" : ""}`} onClick={() => selectDifficultyEdit("Medium")}>Trung bình</button>
+                        <button type="button" className={`difficulty-option ${editForm.difficulty === "Hard" ? "active" : ""}`} onClick={() => selectDifficultyEdit("Hard")}>Khó</button>
+                      </div>
+                    </div>
+                    <div className="recipe-form-sub-details">
+                      <label className="form-field">
+                        <span>Thời gian (phút)</span>
+                        <input min="1" onChange={updateEdit("cookingTime")} required type="number" value={editForm.cookingTime} />
+                      </label>
+                      <label className="form-field">
+                        <span>Khẩu phần</span>
+                        <input min="1" onChange={updateEdit("servings")} required type="number" value={editForm.servings} />
+                      </label>
+                    </div>
                   </div>
-                  <label className="form-field">
+
+                  <label className="form-field recipe-form-layout__full">
                     <span>Thẻ, phân cách bằng dấu phẩy</span>
                     <input onChange={updateEdit("tags")} value={editForm.tags} />
                   </label>
-
-                  <div className="recipe-edit-image">
-                    {editForm.imageUrl && (
-                      <figure>
-                        <img alt={`Ảnh hiện tại của ${editForm.title}`} src={getOptimizedImageUrl(editForm.imageUrl, 320, 200)} />
-                        <figcaption>Ảnh hiện tại</figcaption>
-                      </figure>
-                    )}
-                    <div className="recipe-image-field">
-                      <ImageUploader
-                        files={editForm.imageFile ? [editForm.imageFile] : []}
-                        maxFiles={1}
-                        onChange={(files) =>
-                          setEditForm((current) => ({ ...current, imageFile: files[0] || null }))
-                        }
-                      />
-                      <small>Chọn ảnh mới nếu muốn thay ảnh hiện tại. Khuyến nghị tối thiểu 800 × 500 px.</small>
-                    </div>
-                  </div>
                 </div>
 
                 <div className="split-view-container__preview-column">
-                  <LivePreviewShell title="Xem trước công thức" subtext="Giao diện mô phỏng khi chia sẻ" badge="Recipe Preview">
+                  <LivePreviewShell title="Xem trước công thức" subtext="Giao diện mô phỏng khi chia sẻ" badge="XEM TRƯỚC">
                     <RecipeLivePreview form={editForm} />
                   </LivePreviewShell>
                 </div>

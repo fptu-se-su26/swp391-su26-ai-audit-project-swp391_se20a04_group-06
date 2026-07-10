@@ -32,6 +32,12 @@ export default function RecipeLivePreview({ form }) {
     .map((item) => item.trim())
     .filter(Boolean);
 
+  const getDifficultyLabel = (diff) => {
+    if (diff === "Easy") return "Dễ";
+    if (diff === "Hard") return "Khó";
+    return "Trung bình";
+  };
+
   return (
     <div className="recipe-live-preview">
       {/* Media Image section */}
@@ -53,7 +59,7 @@ export default function RecipeLivePreview({ form }) {
       {/* Meta difficulty badge */}
       <div style={{ marginBottom: "8px" }}>
         <span className="eyebrow" style={{ fontSize: "0.7rem", padding: "3px 8px" }}>
-          {form.difficulty === "Easy" ? "Dễ" : form.difficulty === "Hard" ? "Khó" : "Trung bình"}
+          {getDifficultyLabel(form.difficulty)}
         </span>
       </div>
 
@@ -76,6 +82,28 @@ export default function RecipeLivePreview({ form }) {
         <div className="recipe-meta__item" style={{ fontSize: "0.8rem", gap: "6px" }}>
           <Users size={15} />
           <span>{form.servings || 2} khẩu phần</span>
+        </div>
+      </div>
+
+      {/* Tóm tắt Recipe */}
+      <div className="preview-summary">
+        <h4 className="preview-summary__title">Tóm tắt</h4>
+        <div className="preview-summary__grid">
+          <div className="preview-summary__item">
+            Độ khó: <strong>{getDifficultyLabel(form.difficulty)}</strong>
+          </div>
+          <div className="preview-summary__item">
+            Thời gian: <strong>{form.cookingTime || 30} phút</strong>
+          </div>
+          <div className="preview-summary__item">
+            Khẩu phần: <strong>{form.servings || 2} người</strong>
+          </div>
+          <div className="preview-summary__item">
+            Nguyên liệu: <strong>{ingredientsList.length} mục</strong>
+          </div>
+          <div className="preview-summary__item" style={{ gridColumn: "span 2" }}>
+            Các bước: <strong>{instructionsList.length} bước</strong>
+          </div>
         </div>
       </div>
 
@@ -114,7 +142,7 @@ export default function RecipeLivePreview({ form }) {
 
       {/* Tags section */}
       {tagsList.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "16px" }}>
           {tagsList.map((tag, idx) => (
             <span key={idx} style={{ background: "rgba(34, 243, 255, 0.08)", border: "1px solid rgba(34, 243, 255, 0.15)", borderRadius: "6px", padding: "2px 6px", fontSize: "0.7rem", color: "#67e8f9" }}>
               #{tag}
@@ -122,6 +150,16 @@ export default function RecipeLivePreview({ form }) {
           ))}
         </div>
       )}
+
+      {/* Mẹo hiển thị đẹp */}
+      <div className="preview-tips">
+        <h4 className="preview-tips__title">Mẹo hiển thị đẹp</h4>
+        <ul>
+          <li>Nên dùng ảnh ngang tối thiểu 800 × 500 px.</li>
+          <li>Mỗi nguyên liệu nên xuống một dòng.</li>
+          <li>Mỗi bước thực hiện nên xuống một dòng.</li>
+        </ul>
+      </div>
     </div>
   );
 }

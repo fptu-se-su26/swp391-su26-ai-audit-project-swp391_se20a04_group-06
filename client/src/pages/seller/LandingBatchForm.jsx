@@ -451,7 +451,7 @@ export default function LandingBatchForm() {
         </form>
 
         <div className="split-view-container__preview-column">
-          <LivePreviewShell title="Xem trước vựa cá" subtext="Giao diện mô phỏng khi đăng vựa" badge="Batch Preview">
+          <LivePreviewShell title="Xem trước vựa cá" subtext="Giao diện mô phỏng khi đăng vựa" badge="XEM TRƯỚC">
             <LandingBatchLivePreview batch={batch} products={products} />
           </LivePreviewShell>
         </div>

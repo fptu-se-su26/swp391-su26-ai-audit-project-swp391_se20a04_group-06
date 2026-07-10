@@ -199,6 +199,11 @@ export default function RecipeDetail() {
       ? "difficulty-hard"
       : "difficulty-medium";
 
+  const cleanStepText = (text) => {
+    if (!text) return "";
+    return text.replace(/^(?:bước\s+\d+|step\s+\d+|\d+)(?:\s*[:\.\)-]\s*|\s+)/i, "").trim();
+  };
+
   return (
     <div className="page-container recipe-detail-page">
       <div className="recipe-one-screen">
@@ -209,10 +214,10 @@ export default function RecipeDetail() {
           </Link>
         </header>
 
-        {/* Main 3 columns grid */}
-        <div className="recipe-main-grid">
+        {/* 2x2 Grid */}
+        <div className="recipe-grid-2x2">
           
-          {/* Cột 1: Recipe Summary */}
+          {/* Hàng 1 - Cột 1: Recipe Summary */}
           <div className="recipe-summary-card">
             <div className="recipe-summary-card__media">
               {recipe.imageUrl && !hasImageError ? (
@@ -290,12 +295,12 @@ export default function RecipeDetail() {
             </div>
           </div>
 
-          {/* Cột 2: Nguyên liệu */}
+          {/* Hàng 1 - Cột 2: Nguyên liệu */}
           <div className="recipe-ingredients-card">
             <h2>Nguyên liệu ({recipe.ingredients?.length || 0})</h2>
             <div className="recipe-card-scroll">
               {recipe.ingredients && recipe.ingredients.length > 0 ? (
-                <ul className="magazine-ingredients-list">
+                <ul className="magazine-ingredients-list" style={{ listStyle: "none", padding: 0 }}>
                   {recipe.ingredients.map((item, index) => (
                     <li key={`${item}-${index}`} className="magazine-ingredient-item">
                       <Check className="magazine-ingredient-check" size={16} />
@@ -312,16 +317,16 @@ export default function RecipeDetail() {
             </div>
           </div>
 
-          {/* Cột 3: Cách thực hiện */}
+          {/* Hàng 2 - Cột 1: Cách thực hiện */}
           <div className="recipe-steps-card">
             <h2>Cách thực hiện ({recipe.instructions?.length || 0})</h2>
             <div className="recipe-card-scroll">
               {recipe.instructions && recipe.instructions.length > 0 ? (
-                <ol className="magazine-steps-list">
+                <ol className="magazine-steps-list" style={{ listStyle: "none", padding: 0 }}>
                   {recipe.instructions.map((item, index) => (
                     <li key={`${item}-${index}`} className="magazine-step-item">
                       <span className="magazine-step-number">{index + 1}</span>
-                      <p className="magazine-step-text">{item}</p>
+                      <p className="magazine-step-text">{cleanStepText(item)}</p>
                     </li>
                   ))}
                 </ol>
@@ -334,14 +339,11 @@ export default function RecipeDetail() {
             </div>
           </div>
 
-        </div>
-
-        {/* Bottom: Comments Panel (Compact) */}
-        <div className="recipe-comments-compact">
-          <h2>Bình luận ({recipe.comments?.length || 0})</h2>
-          <div className="recipe-comments-compact__body">
+          {/* Hàng 2 - Cột 2: Bình luận */}
+          <div className="recipe-comments-card">
+            <h2>Bình luận ({recipe.comments?.length || 0})</h2>
             
-            <div className="recipe-comments-compact__list">
+            <div className="recipe-comments-list-scroll">
               {recipe.comments && recipe.comments.length > 0 ? (
                 recipe.comments.map((item) => (
                   <article className="comment-item" key={item._id || item.id} style={{ display: "flex", gap: "10px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)", padding: "10px 12px", borderRadius: "10px" }}>
@@ -364,7 +366,7 @@ export default function RecipeDetail() {
               )}
             </div>
 
-            <form className="recipe-comments-compact__composer" onSubmit={addComment} style={{ display: "flex", gap: "8px" }}>
+            <form className="comment-composer" onSubmit={addComment} style={{ display: "flex", gap: "8px", marginTop: "auto" }}>
               <input
                 onChange={(event) => setComment(event.target.value)}
                 placeholder="Viết câu hỏi hoặc trao đổi kinh nghiệm..."
@@ -372,12 +374,12 @@ export default function RecipeDetail() {
                 value={comment}
                 style={{ flex: 1, height: "40px", fontSize: "0.85rem" }}
               />
-              <button aria-label="Gửi bình luận" type="submit" className="button button--primary" style={{ width: "40px", height: "40px", padding: 0, display: "grid", placeItems: "center" }}>
+              <button aria-label="Gửi bình luận" type="submit">
                 <Send size={15} />
               </button>
             </form>
-
           </div>
+
         </div>
 
       </div>

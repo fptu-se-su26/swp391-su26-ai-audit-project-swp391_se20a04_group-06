@@ -187,167 +187,188 @@ export default function RecipeDetail() {
 
   const author = typeof recipe.authorId === "object" ? recipe.authorId : null;
 
+  const getDifficultyLabel = (diff) => {
+    if (diff === "Easy") return "Dễ";
+    if (diff === "Hard") return "Khó";
+    return "Trung bình";
+  };
+
+  const difficultyClass = recipe.difficulty === "Easy"
+    ? "difficulty-easy"
+    : recipe.difficulty === "Hard"
+      ? "difficulty-hard"
+      : "difficulty-medium";
+
   return (
-    <div className="page-container recipe-detail-page">
-      <Link className="back-link" to="/recipes">
+    <div className="recipe-detail-container">
+      <Link className="back-link" to="/recipes" style={{ display: "inline-flex", alignItems: "center", gap: "8px", color: "#67e8f9", textDecoration: "none", fontSize: "0.9rem", fontWeight: "600", marginBottom: "16px" }}>
         <ArrowLeft size={17} /> Cẩm nang công thức
       </Link>
       
-      <article className="recipe-detail">
-        {/* Cột trái: Ảnh món ăn */}
-        <div className="recipe-detail__media">
-          {recipe.imageUrl && !hasImageError ? (
-            <img
-              alt={recipe.title}
-              onError={() => setHasImageError(true)}
-              src={recipe.imageUrl}
-            />
-          ) : (
-            <div className="recipe-detail__placeholder">
-              <ChefHat size={80} />
-              <span>Chưa có ảnh món ăn</span>
-            </div>
-          )}
+      {/* Ảnh món ăn lớn dạng banner */}
+      <div className="recipe-hero-image">
+        {recipe.imageUrl && !hasImageError ? (
+          <img
+            alt={recipe.title}
+            onError={() => setHasImageError(true)}
+            src={recipe.imageUrl}
+          />
+        ) : (
+          <div className="recipe-hero-image__placeholder">
+            <ChefHat size={64} />
+            <span>Chưa có ảnh món ăn</span>
+          </div>
+        )}
+      </div>
+
+      {/* Thông tin món ăn */}
+      <div className="recipe-info-panel">
+        <div style={{ display: "flex", gap: "8px" }}>
+          <span className={`recipe-meta-pill ${difficultyClass}`} style={{ fontWeight: "700" }}>
+            {getDifficultyLabel(recipe.difficulty)}
+          </span>
         </div>
-
-        {/* Cột phải: Thông tin công thức */}
-        <div className="recipe-detail__content">
-          <div className="recipe-detail__badge-row">
-            <span className="eyebrow">{recipe.difficulty || "Medium"}</span>
+        
+        <h1>{recipe.title}</h1>
+        
+        <p className="recipe-info-panel__desc">{recipe.description}</p>
+        
+        {/* Metadata pills */}
+        <div className="recipe-meta-pills">
+          <div className="recipe-meta-pill">
+            <Clock3 size={15} style={{ color: "#22f3ff" }} />
+            <span>{recipe.cookingTime || 30} phút</span>
           </div>
-          <h1>{recipe.title}</h1>
-          <p className="recipe-detail__desc">{recipe.description}</p>
-          
-          <div className="recipe-meta">
-            <div className="recipe-meta__item">
-              <Clock3 size={18} />
-              <span>{recipe.cookingTime || 30} phút</span>
-            </div>
-            <div className="recipe-meta__item">
-              <Users size={18} />
-              <span>{recipe.servings || 2} khẩu phần</span>
-            </div>
+          <div className="recipe-meta-pill">
+            <Users size={15} style={{ color: "#22f3ff" }} />
+            <span>{recipe.servings || 2} khẩu phần</span>
           </div>
-
           {author && (
-            <div className="recipe-author">
-              <Link to={`/fisherman/${author._id || author.id}`}>
-                <span className="recipe-author__avatar">
-                  {initials(author.name)}
-                </span>
-                <span>Công thức từ Ngư dân: <strong>{author.name}</strong></span>
-              </Link>
-            </div>
+            <Link to={`/fisherman/${author._id || author.id}`} className="recipe-meta-pill" style={{ textDecoration: "none" }}>
+              <span className="recipe-author__avatar" style={{ width: "16px", height: "16px", fontSize: "0.6rem", background: "#22f3ff", color: "#0b1728", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", fontWeight: "700", marginRight: "4px" }}>
+                {initials(author.name)}
+              </span>
+              <span>Đăng bởi: <strong>{author.name}</strong></span>
+            </Link>
           )}
-
-          <div className="recipe-detail__actions">
-            <button
-              className={`button button--primary like-button ${user && recipe.likes?.map(String).includes(String(user.id || user._id)) ? "is-liked" : ""}`}
-              onClick={like}
-              type="button"
-            >
-              <Heart size={17} />
-              <span>{user && recipe.likes?.map(String).includes(String(user.id || user._id)) ? "Đã thích" : "Thích"}</span>
-              <span>({recipe.likeCount ?? recipe.likes?.length ?? 0})</span>
-            </button>
-            
-            <button className="button button--secondary" onClick={shareRecipe} type="button">
-              <Share2 size={17} /> Chia sẻ
-            </button>
-
-            <ReportButton onSubmit={(reason) => apiReports.createForRecipe(id, reason)} />
-
-            {canManageOwnedContent(user, recipe.authorId) && (
-              <>
-                <button className="button button--secondary owner-edit-button" onClick={editRecipe} type="button">
-                  <Pencil size={17} /> Sửa công thức
-                </button>
-                <button className="button owner-delete-button" disabled={deleting} onClick={deleteRecipe} type="button">
-                  <Trash2 size={17} /> {deleting ? "Đang xóa..." : "Xóa"}
-                </button>
-              </>
-            )}
+          <div className="recipe-meta-pill">
+            <span>Nguyên liệu: <strong>{recipe.ingredients?.length || 0} mục</strong></span>
+          </div>
+          <div className="recipe-meta-pill">
+            <span>Các bước: <strong>{recipe.instructions?.length || 0} bước</strong></span>
           </div>
         </div>
-      </article>
 
-      <div className="recipe-columns">
+        {/* Nút hành động */}
+        <div className="recipe-action-bar">
+          <button
+            className={`button button--primary like-button ${user && recipe.likes?.map(String).includes(String(user.id || user._id)) ? "is-liked" : ""}`}
+            onClick={like}
+            type="button"
+          >
+            <Heart size={17} />
+            <span>{user && recipe.likes?.map(String).includes(String(user.id || user._id)) ? "Đã thích" : "Thích"}</span>
+            <span>({recipe.likeCount ?? recipe.likes?.length ?? 0})</span>
+          </button>
+          
+          <button className="button button--secondary" onClick={shareRecipe} type="button">
+            <Share2 size={17} /> Chia sẻ
+          </button>
+
+          <ReportButton onSubmit={(reason) => apiReports.createForRecipe(id, reason)} />
+
+          {canManageOwnedContent(user, recipe.authorId) && (
+            <>
+              <button className="button button--secondary owner-edit-button" onClick={editRecipe} type="button">
+                <Pencil size={17} /> Sửa công thức
+              </button>
+              <button className="button owner-delete-button" disabled={deleting} onClick={deleteRecipe} type="button">
+                <Trash2 size={17} /> {deleting ? "Đang xóa..." : "Xóa"}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Grid 2 cột: Nguyên liệu & Cách thực hiện */}
+      <div className="recipe-content-grid">
         {/* Nguyên liệu */}
-        <section className="dashboard-panel recipe-ingredients-card">
+        <section className="recipe-ingredients-card">
           <h2>Nguyên liệu</h2>
           {recipe.ingredients && recipe.ingredients.length > 0 ? (
-            <ul className="ingredients-list">
+            <ul className="magazine-ingredients-list">
               {recipe.ingredients.map((item, index) => (
-                <li key={`${item}-${index}`}>
-                  <Check className="check-icon" size={16} />
+                <li key={`${item}-${index}`} className="magazine-ingredient-item">
+                  <Check className="magazine-ingredient-check" size={16} />
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="recipe-empty-box">
-              <ChefHat size={32} />
-              <p>Món ăn chưa cấu hình nguyên liệu cụ thể.</p>
+            <div className="recipe-empty-box" style={{ textAlign: "center", padding: "20px 0", color: "#475569" }}>
+              <ChefHat size={32} style={{ margin: "0 auto 8px" }} />
+              <p style={{ margin: 0, fontSize: "0.9rem" }}>Chưa có nguyên liệu.</p>
             </div>
           )}
         </section>
 
         {/* Cách thực hiện */}
-        <section className="dashboard-panel recipe-instructions-card">
+        <section className="recipe-steps-card">
           <h2>Cách thực hiện</h2>
           {recipe.instructions && recipe.instructions.length > 0 ? (
-            <ol className="instructions-list">
+            <ol className="magazine-steps-list">
               {recipe.instructions.map((item, index) => (
-                <li key={`${item}-${index}`}>
-                  <span className="step-badge">{index + 1}</span>
-                  <p>{item}</p>
+                <li key={`${item}-${index}`} className="magazine-step-item">
+                  <span className="magazine-step-number">{index + 1}</span>
+                  <p className="magazine-step-text">{item}</p>
                 </li>
               ))}
             </ol>
           ) : (
-            <div className="recipe-empty-box">
-              <ChefHat size={32} />
-              <p>Món ăn chưa có mô tả các bước thực hiện.</p>
+            <div className="recipe-empty-box" style={{ textAlign: "center", padding: "20px 0", color: "#475569" }}>
+              <ChefHat size={32} style={{ margin: "0 auto 8px" }} />
+              <p style={{ margin: 0, fontSize: "0.9rem" }}>Chưa có bước thực hiện.</p>
             </div>
           )}
         </section>
       </div>
 
       {/* Bình luận */}
-      <section className="dashboard-panel recipe-comments">
+      <section className="recipe-comments-card" style={{ marginTop: "28px" }}>
         <h2>Bình luận ({recipe.comments?.length || 0})</h2>
         
         {recipe.comments && recipe.comments.length > 0 ? (
-          <div className="comments-list">
+          <div className="comments-list" style={{ display: "grid", gap: "16px", marginBottom: "24px" }}>
             {recipe.comments.map((item) => (
-              <article className="comment-item" key={item._id || item.id}>
-                <div className="comment-item__avatar">
+              <article className="comment-item" key={item._id || item.id} style={{ display: "flex", gap: "12px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)", padding: "14px", borderRadius: "12px" }}>
+                <div className="comment-item__avatar" style={{ width: "36px", height: "36px", background: "rgba(34, 243, 255, 0.1)", color: "#22f3ff", display: "grid", placeItems: "center", borderRadius: "50%", fontWeight: "700", fontSize: "0.85rem", flexShrink: 0 }}>
                   {initials(item.userName)}
                 </div>
-                <div className="comment-item__body">
-                  <header>
-                    <strong>{item.userName}</strong>
-                    <small>{formatCommentDate(item.createdAt)}</small>
+                <div className="comment-item__body" style={{ flex: 1, minWidth: 0 }}>
+                  <header style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", flexWrap: "wrap", gap: "6px" }}>
+                    <strong style={{ color: "#fff", fontSize: "0.9rem" }}>{item.userName}</strong>
+                    <small style={{ color: "#64748b", fontSize: "0.75rem" }}>{formatCommentDate(item.createdAt)}</small>
                   </header>
-                  <p>{item.text}</p>
+                  <p style={{ margin: 0, color: "#cbd5e1", fontSize: "0.88rem", lineHeight: "1.5" }}>{item.text}</p>
                 </div>
               </article>
             ))}
           </div>
         ) : (
-          <div className="comments-empty">
-            <p>Chưa có bình luận nào. Hãy chia sẻ kinh nghiệm nấu món này.</p>
+          <div className="comments-empty" style={{ textAlign: "center", padding: "28px 0", color: "#64748b", background: "rgba(255,255,255,0.01)", borderRadius: "12px", border: "1px dashed rgba(255,255,255,0.06)", marginBottom: "24px" }}>
+            <p style={{ margin: 0, fontSize: "0.9rem" }}>Chưa có bình luận nào. Hãy chia sẻ kinh nghiệm nấu món này.</p>
           </div>
         )}
 
-        <form className="comment-composer" onSubmit={addComment}>
+        <form className="comment-composer" onSubmit={addComment} style={{ display: "flex", gap: "12px" }}>
           <input
             onChange={(event) => setComment(event.target.value)}
             placeholder="Trao đổi kinh nghiệm nấu hoặc đặt câu hỏi..."
             required
             value={comment}
+            style={{ flex: 1 }}
           />
-          <button aria-label="Gửi bình luận" type="submit">
+          <button aria-label="Gửi bình luận" type="submit" className="button button--primary" style={{ padding: "0 16px", height: "42px", display: "grid", placeItems: "center" }}>
             <Send size={16} />
           </button>
         </form>

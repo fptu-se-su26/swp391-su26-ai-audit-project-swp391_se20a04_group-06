@@ -8,6 +8,7 @@ import './styles/srs-features.css'
 import './styles/motion.css'
 import './styles/tour-guide.css'
 import './styles/floating-contact.css'
+import './styles/live-preview.css'
 import App from './App.jsx'
 
 createRoot(document.getElementById('root')).render(

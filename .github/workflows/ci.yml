@@ -90,6 +90,10 @@ jobs:
           mkdir -p allure-history
           touch allure-history/.nojekyll
 
+      - name: List Allure history files
+        if: always()
+        run: ls -la allure-history
+
       - name: Deploy Allure Report to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         if: always()
@@ -97,6 +101,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
           publish_dir: allure-history
+          force_orphan: true
 
   client-ci:
     name: Client CI (Build & Lint)

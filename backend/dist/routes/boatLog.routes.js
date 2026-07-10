@@ -10,6 +10,7 @@ const auth_1 = require("../middlewares/auth");
 const validate_1 = require("../middlewares/validate");
 // Import cấu trúc schema kiểm định dữ liệu tạo mới nhật ký đi biển từ boatLog.validation
 const boatLog_validation_1 = require("../validations/boatLog.validation");
+const landingBatch_controller_1 = require("../controllers/landingBatch.controller");
 // Khởi tạo một đối tượng router từ Express Router
 const router = (0, express_1.Router)();
 /**
@@ -58,7 +59,9 @@ router.get("/", BoatLogController_1.getBoatLogs);
  *         description: Chưa đăng nhập
  */
 // Định nghĩa tuyến đường POST / tạo mới một nhật ký đi biển (yêu cầu đăng nhập, kiểm định tính hợp lệ của dữ liệu, rồi gọi controller createBoatLog)
-router.post("/", auth_1.authenticate, (0, validate_1.validateSchema)(boatLog_validation_1.createBoatLogSchema), BoatLogController_1.createBoatLog);
+router.post("/", auth_1.authenticate, auth_1.sellerOnly, (0, validate_1.validateSchema)(boatLog_validation_1.createBoatLogSchema), BoatLogController_1.createBoatLog);
+router.put("/:id", auth_1.authenticate, auth_1.sellerOnly, (0, validate_1.validateSchema)(boatLog_validation_1.updateBoatLogSchema), BoatLogController_1.updateBoatLog);
+router.post("/:id/create-landing-batch", auth_1.authenticate, auth_1.sellerOnly, landingBatch_controller_1.createLandingBatchFromBoatLog);
 /**
  * @openapi
  * /api/boat-logs/{id}/like:
@@ -110,6 +113,6 @@ router.post("/:id/like", auth_1.authenticate, BoatLogController_1.toggleLikeBoat
  *         description: Không tìm thấy bài nhật ký cabin
  */
 // Định nghĩa tuyến đường DELETE /:id xóa bài nhật ký cabin theo ID (yêu cầu đăng nhập)
-router.delete("/:id", auth_1.authenticate, BoatLogController_1.deleteBoatLog);
+router.delete("/:id", auth_1.authenticate, auth_1.sellerOnly, BoatLogController_1.deleteBoatLog);
 // Xuất mặc định router boatLog để sử dụng ở file app.ts
 exports.default = router;

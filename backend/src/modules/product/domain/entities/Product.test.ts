@@ -110,5 +110,9 @@ describe("Product Catalog Module - Product Aggregate Root", () => {
 
     // Kỳ vọng giá mới của sản phẩm lúc này phải khớp với 120.000
     expect(product.price).toBe(120000);
+    expect(product.toProps().priceHistory?.map((entry) => entry.price)).toEqual([
+      100000,
+      120000,
+    ]);
   });
 });

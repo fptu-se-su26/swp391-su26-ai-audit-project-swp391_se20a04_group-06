@@ -5,14 +5,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.authenticate = authenticate;
 exports.adminOnly = adminOnly;
+exports.sellerOnly = sellerOnly;
 // Nạp cấu hình các biến môi trường từ file .env
 require("dotenv/config");
 // Import thư viện jsonwebtoken để giải mã và xác thực mã JWT
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const User_1 = require("../models/User");
 /**
  * MIDDLEWARE XÁC THỰC TÀI KHOẢN NGƯỜI DÙNG (AUTHENTICATE)
  */
-function authenticate(req, res, next) {
+async function authenticate(req, res, next) {
     // Chỉ chấp nhận và trích xuất token từ HttpOnly cookie để chống lại các cuộc tấn công XSS (Cross-Site Scripting) đánh cắp token
     const token = req.cookies?.token;
     // Nếu không tìm thấy token trong cookies, trả về mã lỗi 401 Unauthorized kèm thông báo chưa đăng nhập
@@ -28,6 +30,16 @@ function authenticate(req, res, next) {
             algorithms: ["HS256"],
         });
         // Gắn thông tin payload đã giải mã thành công (userId, role) vào đối tượng Request để sử dụng ở các controller tiếp theo
+        const activeUser = await User_1.User.exists({
+            _id: payload.userId,
+            isActive: true,
+        });
+        if (!activeUser) {
+            return res.status(403).json({
+                code: "ACCOUNT_DISABLED",
+                message: "Tài khoản đã bị khóa hoặc không còn tồn tại.",
+            });
+        }
         req.user = payload;
         // Chuyển tiếp yêu cầu sang middleware hoặc controller kế tiếp
         next();
@@ -59,5 +71,18 @@ function adminOnly(req, res, next) {
             .json({ code: "FORBIDDEN", message: "Chỉ Admin mới có quyền này" });
     }
     // Nếu là Admin, cho phép đi tiếp sang controller xử lý nghiệp vụ
+    next();
+}
+/**
+ * Bảo vệ các thao tác nghiệp vụ dành riêng cho người bán. Admin luôn được
+ * phép; tài khoản thường phải đăng nhập trong phiên "seller".
+ */
+function sellerOnly(req, res, next) {
+    if (req.user?.role !== "Admin" && req.user?.sessionRole !== "seller") {
+        return res.status(403).json({
+            code: "SELLER_ONLY",
+            message: "Chỉ phiên Ngư dân bán hàng mới có quyền thực hiện thao tác này",
+        });
+    }
     next();
 }

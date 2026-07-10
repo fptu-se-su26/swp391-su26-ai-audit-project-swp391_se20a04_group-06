@@ -61,7 +61,7 @@ router.get("/", ProductController_1.getProducts);
  *         description: Chưa đăng nhập
  */
 // Định nghĩa tuyến đường GET /my để lấy danh sách sản phẩm của chính người đăng nhập (yêu cầu đăng nhập)
-router.get("/my", auth_1.authenticate, ProductController_1.getMyProducts);
+router.get("/my", auth_1.authenticate, auth_1.sellerOnly, ProductController_1.getMyProducts);
 /**
  * @openapi
  * /api/products/today-count:
@@ -75,7 +75,7 @@ router.get("/my", auth_1.authenticate, ProductController_1.getMyProducts);
  *         description: Trả về số lượng sản phẩm đăng hôm nay
  */
 // Định nghĩa tuyến đường GET /today-count lấy số sản phẩm đã đăng trong ngày (yêu cầu đăng nhập)
-router.get("/today-count", auth_1.authenticate, ProductController_1.getTodayCount);
+router.get("/today-count", auth_1.authenticate, auth_1.sellerOnly, ProductController_1.getTodayCount);
 /**
  * @openapi
  * /api/products/{id}:
@@ -145,7 +145,7 @@ router.get("/:id", ProductController_1.getProductById);
  *         description: Chưa đăng nhập
  */
 // Định nghĩa tuyến đường POST / để tạo sản phẩm mới (yêu cầu đăng nhập, validate cấu trúc đầu vào, rồi gọi controller createProduct)
-router.post("/", auth_1.authenticate, (0, validate_1.validateSchema)(product_validation_1.productCreateSchema), ProductController_1.createProduct);
+router.post("/", auth_1.authenticate, auth_1.sellerOnly, (0, validate_1.validateSchema)(product_validation_1.productCreateSchema), ProductController_1.createProduct);
 /**
  * @openapi
  * /api/products/{id}:
@@ -171,7 +171,7 @@ router.post("/", auth_1.authenticate, (0, validate_1.validateSchema)(product_val
  *         description: Cập nhật sản phẩm thành công
  */
 // Định nghĩa tuyến đường PUT /:id cập nhật thông tin sản phẩm theo ID (yêu cầu đăng nhập, validate dữ liệu cập nhật, rồi gọi controller updateProduct)
-router.put("/:id", auth_1.authenticate, (0, validate_1.validateSchema)(product_validation_1.productUpdateSchema), ProductController_1.updateProduct);
+router.put("/:id", auth_1.authenticate, auth_1.sellerOnly, (0, validate_1.validateSchema)(product_validation_1.productUpdateSchema), ProductController_1.updateProduct);
 /**
  * @openapi
  * /api/products/{id}:
@@ -191,7 +191,7 @@ router.put("/:id", auth_1.authenticate, (0, validate_1.validateSchema)(product_v
  *         description: Xóa sản phẩm thành công
  */
 // Định nghĩa tuyến đường DELETE /:id để người bán tự xóa sản phẩm theo ID (yêu cầu đăng nhập)
-router.delete("/:id", auth_1.authenticate, ProductController_1.deleteProduct);
+router.delete("/:id", auth_1.authenticate, auth_1.sellerOnly, ProductController_1.deleteProduct);
 /**
  * @openapi
  * /api/products/{id}/bump:
@@ -213,6 +213,6 @@ router.delete("/:id", auth_1.authenticate, ProductController_1.deleteProduct);
  *         description: Chưa hết thời gian cooldown để tiếp tục đẩy bài
  */
 // Định nghĩa tuyến đường POST /:id/bump để đẩy bài đăng sản phẩm lên đầu trang tìm kiếm (yêu cầu đăng nhập)
-router.post("/:id/bump", auth_1.authenticate, ProductController_1.bumpProduct);
+router.post("/:id/bump", auth_1.authenticate, auth_1.sellerOnly, ProductController_1.bumpProduct);
 // Xuất mặc định router để cấu hình vào app chính app.ts
 exports.default = router;

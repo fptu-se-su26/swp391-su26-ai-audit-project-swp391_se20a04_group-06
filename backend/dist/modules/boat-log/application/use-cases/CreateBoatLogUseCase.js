@@ -41,6 +41,10 @@ class CreateBoatLogUseCase {
             images: dto.images || [],
             // Thiết lập danh sách lượt thích ban đầu là mảng rỗng
             likes: [],
+            boatName: dto.boatName?.trim() || undefined,
+            catchArea: dto.catchArea?.trim() || undefined,
+            landingTime: dto.landingTime ? new Date(dto.landingTime) : undefined,
+            origin: dto.origin?.trim() || undefined,
         });
         // 4. Lưu thực thể BoatLog vừa khởi tạo thành công xuống cơ sở dữ liệu qua Repository Adapter
         await this.boatLogRepository.save(boatLog);

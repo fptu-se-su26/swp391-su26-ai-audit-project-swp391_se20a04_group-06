@@ -18,8 +18,9 @@ export default function NotificationDropdown({ notifications = [], onClose }) {
       </header>
 
       {recentNotifications.length > 0 ? (
-        recentNotifications.map((notification, index) => (
-          <div className="notification-item" key={notification.id || `${notification.type}-${index}`}>
+        recentNotifications.map((notification, index) => {
+          const content = (
+            <>
             <span className="notification-item__icon" aria-hidden="true">
               {notification.type === "new_message" ? <MessageSquare size={16} /> : <Bell size={16} />}
             </span>
@@ -27,8 +28,28 @@ export default function NotificationDropdown({ notifications = [], onClose }) {
               <p>{notificationText(notification)}</p>
               <small>Vừa nhận</small>
             </div>
-          </div>
-        ))
+            </>
+          );
+          const target = notification.landingBatchId
+            ? `/landing-batches/${notification.landingBatchId}`
+            : notification.productId
+              ? `/product/${notification.productId}`
+              : "";
+          return target ? (
+            <Link
+              className="notification-item"
+              key={notification.id || `${notification.type}-${index}`}
+              onClick={onClose}
+              to={target}
+            >
+              {content}
+            </Link>
+          ) : (
+            <div className="notification-item" key={notification.id || `${notification.type}-${index}`}>
+              {content}
+            </div>
+          );
+        })
       ) : (
         <p className="nav-dropdown__empty">Chưa có thông báo mới.</p>
       )}

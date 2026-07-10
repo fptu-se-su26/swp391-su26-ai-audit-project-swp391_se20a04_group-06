@@ -1,4 +1,8 @@
-import { LocateFixed, X } from "lucide-react";
+import { X } from "lucide-react";
+import ImageUploader from "../shared/ImageUploader";
+import LocationPicker from "../shared/LocationPicker";
+import DateTimePicker from "../shared/DateTimePicker";
+
 
 const categories = [
   ["Fish", "Cá"],
@@ -11,16 +15,6 @@ const categories = [
 
 export default function ProductForm({ form, onCancel, onChange, onSubmit, saving }) {
   const update = (field) => (event) => onChange(field, event.target.value);
-
-  const useLocation = () => {
-    navigator.geolocation?.getCurrentPosition(
-      ({ coords }) => {
-        onChange("lat", String(coords.latitude));
-        onChange("lng", String(coords.longitude));
-      },
-      () => window.alert("Không thể lấy vị trí. Vui lòng nhập tọa độ thủ công."),
-    );
-  };
 
   return (
     <form className="product-form dashboard-panel" onSubmit={onSubmit}>
@@ -75,42 +69,45 @@ export default function ProductForm({ form, onCancel, onChange, onSubmit, saving
           <span>Nguồn gốc</span>
           <input onChange={update("origin")} required value={form.origin} />
         </label>
-        <label className="form-field">
-          <span>Ngày đánh bắt</span>
-          <input onChange={update("catchTime")} type="datetime-local" value={form.catchTime} />
-        </label>
+        <DateTimePicker
+          id="product-catchTime"
+          label="Ngày đánh bắt"
+          value={form.catchTime}
+          onChange={(value) => onChange("catchTime", value)}
+        />
+
         <label className="form-field">
           <span>Hạn sử dụng</span>
-          <input onChange={update("expiryDate")} type="date" value={form.expiryDate} />
+          <input
+            onChange={update("expiryDate")}
+            type="date"
+            value={form.expiryDate}
+            style={{ colorScheme: "dark" }}
+          />
         </label>
-        <label className="form-field form-field--wide">
-          <span>URL ảnh (mỗi dòng một ảnh)</span>
-          <textarea onChange={update("images")} rows="2" value={form.images} />
-        </label>
+
+
+        {/* ── Hình ảnh từ máy ── */}
+        <div className="form-field form-field--wide">
+          <span>Hình ảnh sản phẩm</span>
+          <ImageUploader
+            files={form.imageFiles || []}
+            maxFiles={6}
+            onChange={(files) => onChange("imageFiles", files)}
+          />
+        </div>
+
+        {/* ── Vị trí bản đồ Leaflet ── */}
         <div className="form-field form-field--wide">
           <span>Vị trí người bán {form.type === "Fresh" && "(bắt buộc)"}</span>
-          <div className="coordinate-fields">
-            <input
-              aria-label="Vĩ độ"
-              onChange={update("lat")}
-              placeholder="Vĩ độ"
-              required={form.type === "Fresh"}
-              type="number"
-              value={form.lat}
-            />
-            <input
-              aria-label="Kinh độ"
-              onChange={update("lng")}
-              placeholder="Kinh độ"
-              required={form.type === "Fresh"}
-              type="number"
-              value={form.lng}
-            />
-            <button className="button button--secondary" onClick={useLocation} type="button">
-              <LocateFixed size={16} /> Vị trí hiện tại
-            </button>
-          </div>
+          <LocationPicker
+            lat={form.lat}
+            lng={form.lng}
+            onChange={(lat, lng) => { onChange("lat", lat); onChange("lng", lng); }}
+            required={form.type === "Fresh"}
+          />
         </div>
+
         <label className="form-field form-field--wide">
           <span>Mô tả</span>
           <textarea onChange={update("description")} rows="4" value={form.description} />

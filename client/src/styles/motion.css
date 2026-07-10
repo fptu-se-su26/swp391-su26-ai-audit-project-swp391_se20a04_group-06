@@ -1,0 +1,752 @@
+/*
+ * HaiSan.vn interaction layer.
+ * Motion is intentionally limited to opacity and transform so existing
+ * layouts, routes and business flows remain unchanged.
+ */
+
+:root {
+  --motion-fast: 160ms;
+  --motion-base: 260ms;
+  --motion-slow: 520ms;
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.route-transition {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+.market-hero__dots {
+  position: absolute;
+  right: 22px;
+  bottom: 20px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 7px 9px;
+  background: rgba(2, 8, 23, 0.42);
+  backdrop-filter: blur(10px);
+}
+
+.market-hero__dots button {
+  width: 7px;
+  height: 7px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  background: rgba(226, 232, 240, 0.48);
+  cursor: pointer;
+  transition:
+    width var(--motion-base) var(--motion-ease),
+    background var(--motion-fast) ease,
+    transform var(--motion-fast) ease;
+}
+
+.market-hero__dots button:hover {
+  background: #ccfbf1;
+  transform: scale(1.16);
+}
+
+.market-hero__dots button.is-active {
+  width: 22px;
+  background: #2dd4bf;
+}
+
+.button,
+.save-button,
+.filter-pills button,
+.filter-reset,
+.role-selector button,
+.navbar-icon-button,
+.navbar-profile-button,
+.market-hero__arrow,
+.market-hero__featured,
+.community-post__actions button,
+.comment-composer button,
+.video-call-trigger,
+.video-control,
+.chat-composer button,
+.seafood-assistant button,
+.admin-row-actions button,
+.table-actions button {
+  transition:
+    transform var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    opacity var(--motion-fast) ease;
+}
+
+.button:active:not(:disabled),
+.save-button:active,
+.filter-pills button:active,
+.role-selector button:active,
+.market-hero__arrow:active,
+.market-hero__featured:active,
+.community-post__actions button:active,
+.comment-composer button:active,
+.video-control:active,
+.chat-composer button:active,
+.seafood-assistant button:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.save-button:hover,
+.market-hero__arrow:hover,
+.chat-composer button:hover:not(:disabled),
+.seafood-assistant__launcher:hover {
+  border-color: rgba(94, 234, 212, 0.5);
+  box-shadow: 0 10px 24px rgba(2, 8, 23, 0.24);
+  transform: translateY(-2px);
+}
+
+.cta-view-now {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-color: #22f3ff;
+  background: #08131d;
+  color: #22f3ff;
+  transition:
+    border-color 300ms ease,
+    color 300ms ease,
+    box-shadow 300ms ease,
+    transform 300ms var(--motion-ease);
+}
+
+.cta-view-now::before {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: #22f3ff;
+  content: "";
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform 300ms var(--motion-ease);
+  will-change: transform;
+}
+
+.cta-view-now::after {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  z-index: 2;
+  color: #22f3ff;
+  content: "→";
+  font-size: 1.05rem;
+  font-weight: 850;
+  line-height: 1;
+  transform: translate3d(0, -50%, 0);
+  transition:
+    color 300ms ease,
+    transform 300ms var(--motion-ease);
+  will-change: transform;
+}
+
+.cta-view-now > img,
+.cta-view-now > span {
+  position: relative;
+  z-index: 1;
+}
+
+.cta-view-now > span {
+  padding-right: 30px;
+}
+
+.cta-view-now img,
+.cta-view-now small,
+.cta-view-now strong,
+.cta-view-now em {
+  transition:
+    color 300ms ease,
+    transform 300ms var(--motion-ease);
+}
+
+.cta-view-now:focus-visible {
+  outline: 3px solid rgba(34, 243, 255, 0.5);
+  outline-offset: 3px;
+  box-shadow:
+    0 0 0 5px rgba(34, 243, 255, 0.12),
+    0 12px 30px rgba(34, 243, 255, 0.16);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cta-view-now:hover {
+    border-color: #22f3ff;
+    color: #06141c;
+    box-shadow:
+      0 0 0 1px rgba(34, 243, 255, 0.2),
+      0 12px 30px rgba(34, 243, 255, 0.22);
+    transform: translateY(-2px);
+  }
+
+  .cta-view-now:hover::before {
+    transform: scaleX(1);
+    transform-origin: left center;
+  }
+
+  .cta-view-now:hover::after {
+    color: #06141c;
+    transform: translate3d(8px, -50%, 0);
+  }
+
+  .cta-view-now:hover img {
+    transform: translate3d(4px, 0, 0) scale(1.03);
+  }
+
+  .cta-view-now:hover small,
+  .cta-view-now:hover strong,
+  .cta-view-now:hover em {
+    color: #06141c;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .cta-view-now,
+  .cta-view-now::before,
+  .cta-view-now::after,
+  .cta-view-now img,
+  .cta-view-now small,
+  .cta-view-now strong,
+  .cta-view-now em {
+    transition: none;
+  }
+
+  .cta-view-now::before {
+    display: none;
+  }
+}
+
+.app-nav-link,
+.workspace-sidebar a,
+.app-navbar__mobile a,
+.profile-dropdown > a,
+.profile-dropdown__guide,
+.profile-dropdown__logout,
+.notification-item,
+.conversation-row,
+.message-bubble footer button,
+.home-seller-card,
+.community-post,
+.recipe-card,
+.boat-log-card,
+.dashboard-metric,
+.responsive-table tbody tr {
+  transition:
+    transform var(--motion-base) var(--motion-ease),
+    border-color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    box-shadow var(--motion-base) ease,
+    opacity var(--motion-fast) ease;
+}
+
+.app-nav-link:hover,
+.workspace-sidebar a:hover {
+  transform: translateY(-1px);
+}
+
+.conversation-row:hover,
+.notification-item:hover,
+.responsive-table tbody tr:hover {
+  background-color: rgba(20, 184, 166, 0.06);
+}
+
+.home-seller-card:hover,
+.community-post:hover,
+.boat-log-card:hover,
+.dashboard-metric:hover {
+  border-color: rgba(45, 212, 191, 0.32);
+  box-shadow: 0 16px 36px rgba(2, 8, 23, 0.2);
+  transform: translateY(-2px);
+}
+
+.community-post__images img,
+.boat-log-card > img {
+  transition: transform var(--motion-slow) var(--motion-ease);
+}
+
+.community-post:hover .community-post__images img,
+.boat-log-card:hover > img {
+  transform: scale(1.025);
+}
+
+.marketplace-filters input,
+.marketplace-filters select,
+.form-field input,
+.form-field select,
+.form-field textarea,
+.feature-form input,
+.feature-form textarea,
+.feature-form select,
+.comment-composer input,
+.chat-composer > input[type="text"],
+.seafood-assistant__panel > form input {
+  transition:
+    border-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    background-color var(--motion-fast) ease,
+    transform var(--motion-fast) var(--motion-ease);
+}
+
+.marketplace-filters input:focus,
+.marketplace-filters select:focus,
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus,
+.feature-form input:focus,
+.feature-form textarea:focus,
+.feature-form select:focus,
+.comment-composer input:focus,
+.chat-composer > input[type="text"]:focus,
+.seafood-assistant__panel > form input:focus {
+  border-color: var(--market-primary);
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12);
+}
+
+.chat-composer:focus-within {
+  background: rgba(20, 184, 166, 0.035);
+}
+
+.navbar-icon-button__badge,
+.conversation-row__unread,
+.notification-unread-dot,
+.message-reaction {
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .route-transition {
+    animation: hs-page-enter 360ms var(--motion-ease) both;
+  }
+
+  .app-navbar {
+    animation: hs-navbar-enter 440ms var(--motion-ease) both;
+  }
+
+  .workspace-sidebar {
+    animation: hs-sidebar-enter 420ms var(--motion-ease) both;
+  }
+
+  .page-heading,
+  .section-heading {
+    animation: hs-fade-up 420ms var(--motion-ease) both;
+  }
+
+  .marketplace-filters,
+  .feature-form,
+  .product-form,
+  .boat-log-form,
+  .broadcast-form {
+    animation: hs-fade-up 460ms 70ms var(--motion-ease) both;
+  }
+
+  .market-hero {
+    animation: hs-hero-enter 620ms var(--motion-ease) both;
+  }
+
+  .market-hero__background {
+    animation: hs-hero-image 720ms var(--motion-ease) both;
+  }
+
+  .market-hero__featured {
+    animation: hs-featured-enter 500ms 80ms var(--motion-ease) both;
+  }
+
+  .market-hero__dots button.is-active {
+    animation: hs-dot-soft-pulse 2.4s ease-in-out infinite;
+  }
+
+  .home-section,
+  .recipe-detail,
+  .recipe-columns,
+  .recipe-comments,
+  .seller-public-hero,
+  .profile-editor,
+  .premium-grid,
+  .omakase-panel {
+    animation: hs-fade-up 480ms var(--motion-ease) both;
+  }
+
+  .home-section:nth-of-type(2) {
+    animation-delay: 80ms;
+  }
+
+  .home-section:nth-of-type(3) {
+    animation-delay: 140ms;
+  }
+
+  .market-product-grid > .market-product-card,
+  .home-seller-grid > .home-seller-card,
+  .community-feed > .community-post,
+  .recipe-grid > .recipe-card,
+  .boat-log-grid > .boat-log-card,
+  .dashboard-metrics > .dashboard-metric {
+    animation: hs-card-enter 420ms var(--motion-ease) both;
+  }
+
+  .market-product-grid > :nth-child(2),
+  .home-seller-grid > :nth-child(2),
+  .community-feed > :nth-child(2),
+  .recipe-grid > :nth-child(2),
+  .boat-log-grid > :nth-child(2),
+  .dashboard-metrics > :nth-child(2) {
+    animation-delay: 55ms;
+  }
+
+  .market-product-grid > :nth-child(3),
+  .home-seller-grid > :nth-child(3),
+  .community-feed > :nth-child(3),
+  .recipe-grid > :nth-child(3),
+  .boat-log-grid > :nth-child(3),
+  .dashboard-metrics > :nth-child(3) {
+    animation-delay: 100ms;
+  }
+
+  .market-product-grid > :nth-child(4),
+  .home-seller-grid > :nth-child(4),
+  .community-feed > :nth-child(4),
+  .recipe-grid > :nth-child(4),
+  .boat-log-grid > :nth-child(4),
+  .dashboard-metrics > :nth-child(4) {
+    animation-delay: 145ms;
+  }
+
+  .market-product-grid > :nth-child(n + 5),
+  .home-seller-grid > :nth-child(n + 5),
+  .community-feed > :nth-child(n + 5),
+  .recipe-grid > :nth-child(n + 5),
+  .boat-log-grid > :nth-child(n + 5),
+  .dashboard-metrics > :nth-child(n + 5) {
+    animation-delay: 180ms;
+  }
+
+  .auth-card {
+    animation: hs-auth-enter 500ms var(--motion-ease) both;
+  }
+
+  .auth-card__notice,
+  .auth-card__error,
+  .inline-notice {
+    animation: hs-notice-enter 260ms var(--motion-ease) both;
+  }
+
+  .nav-dropdown {
+    transform-origin: top right;
+    animation: hs-dropdown-enter 220ms var(--motion-ease) both;
+  }
+
+  .app-navbar__mobile {
+    animation: hs-mobile-menu-enter 280ms var(--motion-ease) both;
+  }
+
+  .empty-state,
+  .page-state,
+  .conversation-list__empty,
+  .chat-window__empty,
+  .table-empty {
+    animation: hs-soft-fade 380ms var(--motion-ease) both;
+  }
+
+  .message-bubble {
+    animation: hs-message-enter 240ms var(--motion-ease) both;
+  }
+
+  .message-bubble.is-mine {
+    animation-name: hs-message-enter-mine;
+  }
+
+  .chat-reply-preview,
+  .chat-image-preview,
+  .chat-emoji-picker {
+    animation: hs-composer-pop 220ms var(--motion-ease) both;
+  }
+
+  .video-call-overlay {
+    animation: hs-soft-fade 200ms ease both;
+  }
+
+  .video-call-panel {
+    animation: hs-dialog-enter 320ms var(--motion-ease) both;
+  }
+
+  .seafood-assistant__panel {
+    transform-origin: bottom right;
+    animation: hs-assistant-enter 300ms var(--motion-ease) both;
+  }
+
+  .seafood-assistant__messages p {
+    animation: hs-message-enter 220ms var(--motion-ease) both;
+  }
+
+  .seafood-assistant__messages p.is-user {
+    animation-name: hs-message-enter-mine;
+  }
+
+  .navbar-icon-button__badge,
+  .conversation-row__unread,
+  .notification-unread-dot,
+  .message-reaction {
+    animation: hs-badge-pop 300ms var(--motion-ease) both;
+  }
+
+  .responsive-table tbody tr {
+    animation: hs-row-enter 300ms var(--motion-ease) both;
+  }
+}
+
+@keyframes hs-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hs-navbar-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hs-sidebar-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes hs-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hs-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes hs-hero-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes hs-hero-image {
+  from {
+    opacity: 0;
+    transform: scale(1.025);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes hs-featured-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes hs-dot-soft-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(45, 212, 191, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.12);
+  }
+}
+
+@keyframes hs-auth-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes hs-notice-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hs-dropdown-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes hs-mobile-menu-enter {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes hs-soft-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes hs-message-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-7px) translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+  }
+}
+
+@keyframes hs-message-enter-mine {
+  from {
+    opacity: 0;
+    transform: translateX(7px) translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+  }
+}
+
+@keyframes hs-composer-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes hs-dialog-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes hs-assistant-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes hs-badge-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  70% {
+    transform: scale(1.12);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes hs-row-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 680px) {
+  .market-hero__dots {
+    right: 16px;
+    bottom: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

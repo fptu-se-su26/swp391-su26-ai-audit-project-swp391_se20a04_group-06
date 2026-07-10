@@ -28,6 +28,7 @@ import { updateUserBadges } from "./badge.service";
 import { extractPublicId } from "../utils/cloudinary";
 // Import mô hình Mongoose User phục vụ truy xuất thông tin tài khoản ngư dân hàng loạt
 import { User } from "../models/User";
+import { LandingBatch } from "../models/LandingBatch";
 // Import thư viện crypto để mã hóa sinh mã băm chuỗi query phục vụ key cache
 import crypto from "crypto";
 
@@ -208,10 +209,31 @@ export const productService = {
     );
     const sellers = await User.find({ _id: { $in: sellerIds } }).lean();
     const sellerMap = new Map(sellers.map((u) => [u._id.toString(), u]));
+    const batchIds = Array.from(
+      new Set(
+        rows
+          .map((product: any) => product.batchId?.toString())
+          .filter(Boolean),
+      ),
+    );
+    const batches = batchIds.length
+      ? await LandingBatch.find({
+          _id: { $in: batchIds },
+          status: { $ne: "Deleted" },
+        })
+          .select("title status")
+          .lean()
+      : [];
+    const batchMap = new Map(
+      batches.map((batch) => [batch._id.toString(), batch]),
+    );
 
     // Định dạng cấu trúc dữ liệu trả về cho danh sách sản phẩm
     const formattedRows = rows.map((p: any) => {
       const seller: any = sellerMap.get(p.sellerId.toString());
+      const batch: any = p.batchId
+        ? batchMap.get(p.batchId.toString())
+        : null;
       return {
         id: p._id,
         sellerId: seller?._id?.toString() || null,
@@ -219,6 +241,8 @@ export const productService = {
         sellerIsVerified: seller?.isVerified ? 1 : 0,
         sellerIsPremium: seller?.isPremium ? 1 : 0,
         sellerBadges: seller?.badges || [],
+        batchId: batch?._id?.toString() || null,
+        batchTitle: batch?.title || null,
         type: p.type,
         category: p.category,
         name: p.name,
@@ -307,6 +331,14 @@ export const productService = {
 
     // Lấy hồ sơ tài khoản người bán
     const seller = await userRepository.findById(p.sellerId.toString());
+    const batch = p.batchId
+      ? await LandingBatch.findOne({
+          _id: p.batchId,
+          status: { $ne: "Deleted" },
+        })
+          .select("title status")
+          .lean()
+      : null;
 
     // Chuẩn hóa cấu trúc chi tiết sản phẩm
     const finalDetail = {
@@ -316,11 +348,17 @@ export const productService = {
       sellerIsVerified: seller?.isVerified ? 1 : 0,
       sellerIsPremium: seller?.isPremium ? 1 : 0,
       sellerBadges: seller?.badges || [],
+      batchId: batch?._id?.toString() || null,
+      batchTitle: batch?.title || null,
       type: p.type,
       category: p.category,
       name: p.name,
       description: p.description,
       price: p.price,
+      priceHistory:
+        p.priceHistory?.length
+          ? p.priceHistory
+          : [{ price: p.price, changedAt: p.createdAt }],
       salesType: p.salesType,
       totalWeight: p.totalWeight,
       remainingWeight: p.remainingWeight,
@@ -362,8 +400,32 @@ export const productService = {
       offset,
       limit,
     );
+    const batchIds = Array.from(
+      new Set(data.map((product: any) => product.batchId).filter(Boolean)),
+    );
+    const batches = batchIds.length
+      ? await LandingBatch.find({
+          _id: { $in: batchIds },
+          status: { $ne: "Deleted" },
+        })
+          .select("title status")
+          .lean()
+      : [];
+    const batchMap = new Map(
+      batches.map((batch) => [batch._id.toString(), batch]),
+    );
+    const products = data.map((product: any) => {
+      const batch = product.batchId
+        ? batchMap.get(String(product.batchId))
+        : null;
+      return {
+        ...product,
+        batchId: batch?._id?.toString() || null,
+        batchTitle: batch?.title || null,
+      };
+    });
     // Trả về cấu trúc kết quả
-    return { products: data, total, page, limit };
+    return { products, total, page, limit };
   },
 
   // Lấy số lượng bài đăng sản phẩm trong ngày hôm nay của người dùng để kiểm soát giới hạn tối đa

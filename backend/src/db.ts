@@ -10,9 +10,15 @@ import bcrypt from "bcryptjs";
 
 const seedDatabase = async () => {
   try {
-    const userCount = await User.countDocuments();
-    if (userCount > 0) {
-      return;
+    const db = mongoose.connection.db;
+    if (!db) return;
+
+    // Không seed nếu bất kỳ collection nghiệp vụ nào đã có dữ liệu.
+    // Điều này bảo vệ dữ liệu thật kể cả khi collection users vô tình trống.
+    const collections = await db.listCollections({}, { nameOnly: true }).toArray();
+    for (const { name } of collections) {
+      if (name.startsWith("system.")) continue;
+      if ((await db.collection(name).estimatedDocumentCount()) > 0) return;
     }
 
     logger.info("🌱 Database is empty. Seeding fallback database data...");

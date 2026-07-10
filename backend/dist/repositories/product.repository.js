@@ -109,10 +109,12 @@ exports.productRepository = {
             id: p._id.toString(),
             // Loại hình sản phẩm (ví dụ: hải sản tươi sống, chế biến...)
             type: p.type,
+            batchId: p.batchId?.toString() || null,
             // Danh mục của sản phẩm
             category: p.category,
             // Tên sản phẩm
             name: p.name,
+            description: p.description || "",
             // Giá sản phẩm
             price: p.price,
             // Kiểu bán (ví dụ: theo kg, theo mẻ...)
@@ -126,11 +128,17 @@ exports.productRepository = {
             // Thời điểm đánh bắt/thu hoạch sản phẩm
             catchTime: p.catchTime,
             // Nguồn gốc xuất xứ của sản phẩm
-            origin: p.origin,
+            origin: p.origin || "",
+            images: p.images || [],
+            lat: p.location?.coordinates?.[1] ?? null,
+            lng: p.location?.coordinates?.[0] ?? null,
+            catchLat: p.catchLocation?.coordinates?.[1] ?? null,
+            catchLng: p.catchLocation?.coordinates?.[0] ?? null,
             // Hạn sử dụng sản phẩm
             expiryDate: p.expiryDate,
             // Thời điểm đăng tải sản phẩm lên hệ thống
             createdAt: p.createdAt,
+            updatedAt: p.updatedAt,
             // Số lượt xem sản phẩm
             viewCount: p.viewCount,
             // Thời điểm sản phẩm được đẩy bài viết để lên đầu trang

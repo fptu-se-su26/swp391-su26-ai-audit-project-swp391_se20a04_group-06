@@ -7,8 +7,16 @@ const mongoose_1 = require("mongoose");
 const reportSchema = new mongoose_1.Schema({
     // Cấu hình trường reporterId: liên kết với bộ sưu tập User, bắt buộc nhập
     reporterId: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
-    // Cấu hình trường productId: liên kết với bộ sưu tập Product, bắt buộc nhập
-    productId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Product", required: true },
+    // Cấu hình trường productId: liên kết với bộ sưu tập Product
+    productId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Product", required: false },
+    postId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Post", required: false },
+    recipeId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Recipe", required: false },
+    targetType: {
+        type: String,
+        enum: ["Product", "Post", "Recipe"],
+        default: "Product",
+        required: true
+    },
     // Cấu hình trường reason: kiểu chuỗi và bắt buộc nhập lý do báo cáo
     reason: { type: String, required: true },
     // Cấu hình trường status: kiểu chuỗi, chỉ nhận giá trị enum và mặc định là "Pending"
@@ -22,8 +30,10 @@ const reportSchema = new mongoose_1.Schema({
 }, 
 // Cấu hình timestamps: chỉ ghi nhận mốc thời gian tạo (createdAt: true), không cần trường tự tạo updatedAt
 { timestamps: { createdAt: true, updatedAt: false } });
-// Đánh chỉ mục index phức hợp theo reporterId và productId để hỗ trợ truy vấn và kiểm tra trùng lặp báo cáo của cùng một người trên một sản phẩm nhanh hơn
+// Đánh chỉ mục index phức hợp để hỗ trợ truy vấn và kiểm tra trùng lặp báo cáo của cùng một người nhanh hơn
 reportSchema.index({ reporterId: 1, productId: 1 });
+reportSchema.index({ reporterId: 1, postId: 1 });
+reportSchema.index({ reporterId: 1, recipeId: 1 });
 // Đánh chỉ mục index phức hợp theo status tăng dần và thời gian tạo giảm dần để tối ưu hóa việc Admin tải danh sách báo cáo theo trạng thái xử lý
 reportSchema.index({ status: 1, createdAt: -1 });
 // Tạo và xuất mô hình Report

@@ -13,6 +13,8 @@ export interface INotification extends Document {
   isRead: boolean;
   // Mã ID sản phẩm liên kết nếu thông báo liên quan đến sản phẩm (tùy chọn)
   productId?: Types.ObjectId;
+  // Mã vựa cá liên kết nếu thông báo phát sinh từ phiên cập bến
+  landingBatchId?: Types.ObjectId;
   // Mã ID đánh giá liên kết nếu thông báo liên quan đến đánh giá shop (tùy chọn)
   reviewId?: Types.ObjectId;
   // Mốc thời gian tự động tạo thông báo
@@ -32,6 +34,7 @@ const notificationSchema = new Schema<INotification>(
     isRead: { type: Boolean, default: false },
     // Cấu hình trường productId: kiểu ObjectId tham chiếu đến bảng Product (không bắt buộc)
     productId: { type: Schema.Types.ObjectId, ref: "Product" },
+    landingBatchId: { type: Schema.Types.ObjectId, ref: "LandingBatch" },
     // Cấu hình trường reviewId: kiểu ObjectId tham chiếu đến bảng Review (không bắt buộc)
     reviewId: { type: Schema.Types.ObjectId, ref: "Review" },
   },

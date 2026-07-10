@@ -30,6 +30,11 @@ class BoatLogMapper {
             images: mongooseDoc.images || [],
             // Gán danh sách ID những người thích bài viết
             likes,
+            batchId: mongooseDoc.batchId?.toString(),
+            boatName: mongooseDoc.boatName,
+            catchArea: mongooseDoc.catchArea,
+            landingTime: mongooseDoc.landingTime,
+            origin: mongooseDoc.origin,
         }, 
         // Gán mã định danh duy nhất của MongoDB Document thành mã ID thực thể dạng string
         mongooseDoc._id.toString());
@@ -52,6 +57,13 @@ class BoatLogMapper {
             images: props.images,
             // Ép kiểu tất cả ID người thích trong mảng likes từ chuỗi thành Mongoose ObjectId
             likes: props.likes.map((id) => new mongoose_1.default.Types.ObjectId(id)),
+            batchId: props.batchId
+                ? new mongoose_1.default.Types.ObjectId(props.batchId)
+                : undefined,
+            boatName: props.boatName,
+            catchArea: props.catchArea,
+            landingTime: props.landingTime,
+            origin: props.origin,
         };
     }
 }

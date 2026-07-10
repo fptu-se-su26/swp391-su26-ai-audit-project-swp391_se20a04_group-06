@@ -149,6 +149,48 @@ export async function notifyFollowersNewProduct(
   }
 }
 
+export async function notifyFollowersNewLandingBatch(params: {
+  sellerId: string;
+  sellerName: string;
+  landingBatchId: string;
+  productCount: number;
+}): Promise<void> {
+  const { sellerId, sellerName, landingBatchId, productCount } = params;
+  try {
+    const followers = await User.find({
+      following: new mongoose.Types.ObjectId(sellerId),
+    })
+      .select("_id")
+      .lean();
+    if (followers.length === 0) return;
+
+    const previewText = `${sellerName} vừa cập bến vựa cá mới gồm ${productCount} loại hải sản.`;
+    const docs = followers.map((follower) => ({
+      userId: follower._id,
+      type: "new_landing_batch",
+      content: previewText,
+      landingBatchId: new mongoose.Types.ObjectId(landingBatchId),
+    }));
+    const inserted = await notificationRepository.insertMany(docs);
+    const io = getIO();
+
+    followers.forEach((follower, index) => {
+      io.to(`user_${follower._id.toString()}`).emit("notification", {
+        id: inserted[index]._id.toString(),
+        type: "new_landing_batch",
+        landingBatchId,
+        sellerId,
+        preview: previewText,
+        createdAt: inserted[index].createdAt,
+      });
+    });
+  } catch (err: any) {
+    logger.error("Lỗi khi lưu/phát thông báo vựa cá mới:", {
+      message: err.message,
+    });
+  }
+}
+
 // Hàm nghiệp vụ tự động gửi thông báo đến người bán khi có một người mua gửi đánh giá (review) mới
 export async function notifySellerNewReview(params: {
   sellerId: string; // ID người bán nhận đánh giá

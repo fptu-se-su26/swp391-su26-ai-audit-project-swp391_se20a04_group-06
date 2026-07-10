@@ -91,8 +91,6 @@ export class GoogleAuthUseCase {
       if (isAdminEmail) {
         role = "Admin";
         isVerified = true;
-      } else if (selectedRole === "seller") {
-        isVerified = true;
       }
 
       // Tạo một thực thể User mới với các dữ liệu ban đầu
@@ -129,18 +127,6 @@ export class GoogleAuthUseCase {
         user = updatedUser;
         await this.userRepository.save(user);
         logger.info(`✨ Auto-promoted existing user to Admin: Email=${email}`);
-      }
-
-      // Tự động nâng cấp Người mua thành Ngư dân (isVerified=true) nếu đăng nhập với vai trò Seller
-      if (selectedRole === "seller" && !user.isVerified) {
-        const rawProps = user.toProps();
-        const updatedUser = new User({
-          ...rawProps,
-          isVerified: true,
-        }, user.id);
-        user = updatedUser;
-        await this.userRepository.save(user);
-        logger.info(`✨ Promoted existing Buyer user to Seller (isVerified=true) on re-login: Email=${email}`);
       }
 
       // Tiện ích môi trường Dev: Tự động nâng cấp tài khoản giả lập chứa từ khóa "admin" trong email lên làm Admin hệ thống

@@ -1,12 +1,15 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { workspaceNavigation } from "./config/navigation";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AuthProvider } from "./context/AuthContext";
 import { SocketProvider } from "./context/SocketContext";
+import { ConfirmProvider } from "./context/ConfirmContext";
+
 import Footer from "./components/Footer";
+import FloatingContact from "./components/FloatingContact";
 import Navbar from "./components/Navbar";
 import SeafoodAssistant from "./components/SeafoodAssistant";
-import Sidebar from "./components/Sidebar";
+import TourGuide from "./components/tour/TourGuide";
+import { RequireAuth, RequireRole } from "./components/RouteGuard";
 
 const Home = lazy(() => import("./pages/Home"));
 const Chat = lazy(() => import("./pages/Chat"));
@@ -25,49 +28,57 @@ const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const Broadcast = lazy(() => import("./pages/admin/Broadcast"));
 const BoatLog = lazy(() => import("./pages/seller/BoatLog"));
 const SellerDashboard = lazy(() => import("./pages/seller/SellerDashboard"));
+const Community = lazy(() => import("./pages/Community"));
+const Recipes = lazy(() => import("./pages/Recipes"));
+const RecipeDetail = lazy(() => import("./pages/RecipeDetail"));
+const Leaderboard = lazy(() => import("./pages/Leaderboard"));
+const LandingBatchDetail = lazy(() => import("./pages/LandingBatchDetail"));
 
 function AppContent() {
-  const { user } = useAuth();
   const location = useLocation();
   const isAuthPage = ["/login", "/register"].includes(location.pathname);
-  const isSellerArea = location.pathname.startsWith("/seller");
-  const isAdminArea = location.pathname.startsWith("/admin");
 
   return (
     <div className="app-shell">
       {!isAuthPage && <Navbar />}
+      <TourGuide />
 
       <div className="app-shell__body">
-        {isSellerArea && user && <Sidebar links={workspaceNavigation.seller} />}
-        {isAdminArea && user && <Sidebar links={workspaceNavigation.admin} />}
-
         <main className="app-main">
           <Suspense fallback={<div className="page-state">Đang tải trang...</div>}>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/marketplace" element={<Marketplace />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/product/:id" element={<ProductDetail />} />
-              <Route path="/fisherman/:id" element={<SellerProfile />} />
-              <Route path="/chat" element={<Chat />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/premium" element={<Premium />} />
+            <div className="route-transition" key={location.pathname}>
+              <Routes location={location}>
+                <Route path="/" element={<Home />} />
+                <Route path="/marketplace" element={<Marketplace />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/product/:id" element={<ProductDetail />} />
+                <Route path="/landing-batches/:id" element={<LandingBatchDetail />} />
+                <Route path="/fisherman/:id" element={<SellerProfile />} />
+                <Route path="/chat" element={<Chat />} />
+                <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
+                <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+                <Route path="/premium" element={<RequireAuth><Premium /></RequireAuth>} />
+                <Route path="/community" element={<Community />} />
+                <Route path="/recipes" element={<Recipes />} />
+                <Route path="/recipes/:id" element={<RecipeDetail />} />
+                <Route path="/leaderboard" element={<Leaderboard />} />
+                <Route path="/boat-log" element={<RequireRole roles={["buyer"]}><BoatLog readOnly /></RequireRole>} />
 
-              <Route path="/buyer" element={<Navigate to="/" replace />} />
-              <Route path="/buyer/favorites" element={<Favorites />} />
+                <Route path="/buyer" element={<Navigate to="/" replace />} />
+                <Route path="/buyer/favorites" element={<RequireAuth><Favorites /></RequireAuth>} />
 
-              <Route path="/seller/boat-log" element={<BoatLog />} />
-              <Route path="/seller/*" element={<SellerDashboard />} />
+                <Route path="/seller/boat-log" element={<RequireRole roles={["seller", "admin"]}><BoatLog /></RequireRole>} />
+                <Route path="/seller/*" element={<RequireRole roles={["seller", "admin"]}><SellerDashboard /></RequireRole>} />
 
-              <Route path="/admin/payments" element={<AdminPayments />} />
-              <Route path="/admin/broadcast" element={<Broadcast />} />
-              <Route path="/admin/settings" element={<AdminSettings />} />
-              <Route path="/admin/*" element={<AdminDashboard />} />
+                <Route path="/admin/payments" element={<RequireRole roles={["admin"]}><AdminPayments /></RequireRole>} />
+                <Route path="/admin/broadcast" element={<RequireRole roles={["admin"]}><Broadcast /></RequireRole>} />
+                <Route path="/admin/settings" element={<RequireRole roles={["admin"]}><AdminSettings /></RequireRole>} />
+                <Route path="/admin/*" element={<RequireRole roles={["admin"]}><AdminDashboard /></RequireRole>} />
 
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </div>
           </Suspense>
         </main>
       </div>
@@ -75,6 +86,7 @@ function AppContent() {
       {!isAuthPage && (
         <>
           <SeafoodAssistant />
+          <FloatingContact />
           <Footer />
         </>
       )}
@@ -86,10 +98,13 @@ export default function App() {
   return (
     <AuthProvider>
       <SocketProvider>
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
+        <ConfirmProvider>
+          <BrowserRouter>
+            <AppContent />
+          </BrowserRouter>
+        </ConfirmProvider>
       </SocketProvider>
     </AuthProvider>
   );
 }
+

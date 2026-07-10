@@ -12,6 +12,9 @@ const upload_1 = require("../middlewares/upload");
 const image_controller_2 = require("../controllers/image.controller");
 // Khởi tạo đối tượng router từ Express Router
 const router = (0, express_1.Router)();
+// Ảnh BoatLog/Post/Recipe được upload lên Cloudinary trước, sau đó URL được
+// ghi vào document MongoDB bởi API create/update tương ứng.
+router.post('/uploads/:scope', auth_1.authenticate, upload_1.upload.array('images', 5), image_controller_1.uploadContentImages);
 /**
  * @openapi
  * /api/products/{id}/images:

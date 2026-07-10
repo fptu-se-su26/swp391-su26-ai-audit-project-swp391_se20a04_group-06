@@ -25,6 +25,8 @@ declare global {
         userId: string;
         // Vai trò của người dùng trong hệ thống (chỉ chấp nhận "User" hoặc "Admin")
         role: "User" | "Admin";
+        // Chế độ phiên hiện tại do người dùng chọn khi đăng nhập.
+        sessionRole?: "buyer" | "seller";
       };
       // Thuộc tính csrfToken tùy chọn dùng để xác minh chống tấn công giả mạo yêu cầu CSRF
       csrfToken?: string;

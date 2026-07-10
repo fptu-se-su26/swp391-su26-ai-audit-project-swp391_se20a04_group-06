@@ -19,6 +19,7 @@ export interface ProductProps {
   description: string;
   // Giá bán của sản phẩm (đơn vị tiền tệ mặc định)
   price: number;
+  priceHistory?: Array<{ price: number; changedAt: Date }>;
   // Phương thức bán hàng, chỉ nhận "Retail" (bán lẻ) hoặc "Wholesale" (bán sỉ)
   salesType: "Retail" | "Wholesale";
   // Tổng khối lượng ban đầu của sản phẩm hoặc mẻ hàng (đơn vị kg)
@@ -55,6 +56,10 @@ export class Product extends AggregateRoot<ProductProps> {
     super({
       // Giải nén các thuộc tính ban đầu được truyền vào
       ...props,
+      priceHistory:
+        props.priceHistory?.length
+          ? props.priceHistory
+          : [{ price: props.price, changedAt: props.createdAt || new Date() }],
       // Thiết lập thời gian đẩy bài mặc định là thời gian hiện tại nếu chưa được cung cấp
       bumpedAt: props.bumpedAt || new Date(),
       // Thiết lập thời gian tạo mặc định là thời gian hiện tại nếu chưa được cung cấp
@@ -108,7 +113,13 @@ export class Product extends AggregateRoot<ProductProps> {
       throw new ValidationError("Giá bán không thể nhỏ hơn 0.");
     }
     // Cập nhật giá bán mới vào thuộc tính props
-    this.props.price = newPrice;
+    if (newPrice !== this.props.price) {
+      this.props.price = newPrice;
+      this.props.priceHistory = [
+        ...(this.props.priceHistory || []),
+        { price: newPrice, changedAt: new Date() },
+      ].slice(-50);
+    }
   }
 
   // Nghiệp vụ đẩy bài viết sản phẩm (Bump Product) lên đầu trang tìm kiếm
@@ -221,6 +232,7 @@ export class Product extends AggregateRoot<ProductProps> {
       description: this.props.description,
       // Giá bán sản phẩm
       price: this.props.price,
+      priceHistory: this.props.priceHistory,
       // Hình thức bán (sỉ/lẻ)
       salesType: this.props.salesType,
       // Tổng khối lượng mẻ hàng
@@ -289,4 +301,3 @@ export class Product extends AggregateRoot<ProductProps> {
   // Getter để truy xuất lượt xem sản phẩm
   get viewCount() { return this.props.viewCount; }
 }
-

@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getBoatLogs = getBoatLogs;
 exports.createBoatLog = createBoatLog;
+exports.updateBoatLog = updateBoatLog;
 exports.toggleLikeBoatLog = toggleLikeBoatLog;
 exports.deleteBoatLog = deleteBoatLog;
 // Import hàm parseId để chuẩn hóa ID từ chuỗi params nhận được
@@ -16,6 +17,7 @@ const CreateBoatLogUseCase_1 = require("../../application/use-cases/CreateBoatLo
 const DeleteBoatLogUseCase_1 = require("../../application/use-cases/DeleteBoatLogUseCase");
 // Import Use Case thích nhật ký cabin
 const ToggleLikeBoatLogUseCase_1 = require("../../application/use-cases/ToggleLikeBoatLogUseCase");
+const UpdateBoatLogUseCase_1 = require("../../application/use-cases/UpdateBoatLogUseCase");
 // Khởi tạo Repository Mongoose duy nhất quản lý DB lưu trữ nhật ký cabin
 const boatLogRepository = new MongooseBoatLogRepository_1.MongooseBoatLogRepository();
 // Khởi tạo Use Case tạo nhật ký và tiêm Repository vào thông qua constructor (DI)
@@ -24,6 +26,7 @@ const createBoatLogUseCase = new CreateBoatLogUseCase_1.CreateBoatLogUseCase(boa
 const deleteBoatLogUseCase = new DeleteBoatLogUseCase_1.DeleteBoatLogUseCase(boatLogRepository);
 // Khởi tạo Use Case thích nhật ký và tiêm Repository vào qua constructor (DI)
 const toggleLikeBoatLogUseCase = new ToggleLikeBoatLogUseCase_1.ToggleLikeBoatLogUseCase(boatLogRepository);
+const updateBoatLogUseCase = new UpdateBoatLogUseCase_1.UpdateBoatLogUseCase(boatLogRepository);
 // ── QUERIES (Read-Side CQRS) ──────────────────────────────────────────────
 // Tách biệt luồng Đọc: Truy vấn thô từ Service để lấy danh sách nhanh, bỏ qua mappings phức tạp
 // Hàm xử lý API lấy danh sách Nhật ký Cabin (có hỗ trợ phân trang và lọc)
@@ -62,6 +65,22 @@ async function createBoatLog(req, res, next) {
     }
 }
 // Hàm xử lý API Thích hoặc Hủy thích một Nhật ký Cabin
+async function updateBoatLog(req, res, next) {
+    const id = (0, response_helper_1.parseId)(req.params.id);
+    const { userId, role } = req.user;
+    if (!id)
+        return res.status(400).json({ message: "ID nhật ký không hợp lệ" });
+    try {
+        const log = await updateBoatLogUseCase.execute(id, userId, role, req.body);
+        return res.json({
+            message: "Cập nhật nhật ký cabin thành công",
+            boatLog: log.toProps(),
+        });
+    }
+    catch (err) {
+        next(err);
+    }
+}
 async function toggleLikeBoatLog(req, res, next) {
     // Chuẩn hóa và chuyển đổi mã ID nhật ký từ chuỗi tham số req.params.id nhận được
     const id = (0, response_helper_1.parseId)(req.params.id);

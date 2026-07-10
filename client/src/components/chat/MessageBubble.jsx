@@ -1,4 +1,12 @@
-import { CheckCheck, CornerUpLeft, MapPin } from "lucide-react";
+import { memo } from "react";
+import {
+  CheckCheck,
+  CornerUpLeft,
+  MapPin,
+  Pencil,
+  RotateCcw,
+  Smile,
+} from "lucide-react";
 
 function formatTime(value) {
   if (!value) return "";
@@ -7,7 +15,14 @@ function formatTime(value) {
   return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
 }
 
-export default function MessageBubble({ isMine, message, onReply }) {
+function MessageBubble({
+  isMine,
+  message,
+  onEdit,
+  onReact,
+  onRecall,
+  onReply,
+}) {
   return (
     <article className={`message-bubble ${isMine ? "is-mine" : ""}`}>
       <div className="message-bubble__content">
@@ -24,7 +39,7 @@ export default function MessageBubble({ isMine, message, onReply }) {
           <>
             {message.imageUrl && (
               <a href={message.imageUrl} rel="noreferrer" target="_blank">
-                <img src={message.imageUrl} alt="Ảnh trong cuộc trò chuyện" />
+                <img src={message.imageUrl} alt="Ảnh trong cuộc trò chuyện" loading="lazy" />
               </a>
             )}
             {message.content && <p>{message.content}</p>}
@@ -40,6 +55,7 @@ export default function MessageBubble({ isMine, message, onReply }) {
             )}
           </>
         )}
+        {message.reaction && <span className="message-reaction">{message.reaction}</span>}
       </div>
 
       <footer>
@@ -50,11 +66,28 @@ export default function MessageBubble({ isMine, message, onReply }) {
           </span>
         )}
         {!message.isRecalled && (
-          <button onClick={() => onReply(message)} type="button">
-            <CornerUpLeft size={13} /> Trả lời
-          </button>
+          <>
+            <button onClick={() => onReply(message)} type="button">
+              <CornerUpLeft size={13} /> Trả lời
+            </button>
+            <button onClick={() => onReact(message, message.reaction ? null : "❤️")} type="button">
+              <Smile size={13} /> Cảm xúc
+            </button>
+            {isMine && message.content && (
+              <button onClick={() => onEdit(message)} type="button">
+                <Pencil size={13} /> Sửa
+              </button>
+            )}
+            {isMine && (
+              <button onClick={() => onRecall(message)} type="button">
+                <RotateCcw size={13} /> Thu hồi
+              </button>
+            )}
+          </>
         )}
       </footer>
     </article>
   );
 }
+
+export default memo(MessageBubble);

@@ -7,34 +7,40 @@ import {
   Crown,
   MapPin,
   MessageSquare,
+  PackageOpen,
   Scale,
   ShieldCheck,
 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import SellerLocationMap from "../components/SellerLocationMap";
+import ReportButton from "../components/ReportButton";
+import ReviewSection from "../components/ReviewSection";
 import { useAuth } from "../context/AuthContext";
-import { apiFishermen, apiProducts } from "../services/api";
+import { useConfirm } from "../context/ConfirmContext";
+
+import { apiFavorites, apiFishermen, apiProducts, apiReports } from "../services/api";
 import {
   calculateDistanceKm,
   formatCurrency,
   formatDate,
   formatDistance,
   getFreshness,
+  getMarketplaceStatus,
   getProductId,
   getProductImage,
 } from "../utils/product";
 
 export default function ProductDetail() {
+  const { alert } = useConfirm();
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [product, setProduct] = useState(null);
+
   const [seller, setSeller] = useState(null);
   const [loading, setLoading] = useState(true);
   const [viewerLocation, setViewerLocation] = useState(null);
-  const [favorites, setFavorites] = useState(
-    () => new Set(JSON.parse(localStorage.getItem("haisan-favorites") || "[]")),
-  );
+  const [favorites, setFavorites] = useState(new Set());
 
   useEffect(() => {
     let active = true;
@@ -63,6 +69,17 @@ export default function ProductDetail() {
     };
   }, [id]);
 
+  useEffect(() => {
+    if (!user) {
+      setFavorites(new Set());
+      return;
+    }
+    apiFavorites
+      .getIds()
+      .then((ids) => setFavorites(new Set((ids || []).map(String))))
+      .catch(() => setFavorites(new Set()));
+  }, [user]);
+
   const requireLogin = () => {
     if (user) return true;
     navigate("/login", {
@@ -87,17 +104,26 @@ export default function ProductDetail() {
     });
   };
 
-  const toggleFavorite = () => {
+  const toggleFavorite = async () => {
     if (!requireLogin()) return;
     const productId = getProductId(product);
-    setFavorites((current) => {
-      const next = new Set(current);
-      if (next.has(productId)) next.delete(productId);
-      else next.add(productId);
-      localStorage.setItem("haisan-favorites", JSON.stringify([...next]));
-      return next;
-    });
+    try {
+      const result = await apiFavorites.toggle(productId);
+      setFavorites((current) => {
+        const next = new Set(current);
+        if (result.favorited) next.add(String(productId));
+        else next.delete(String(productId));
+        return next;
+      });
+    } catch (error) {
+      await alert({
+        title: "Lỗi yêu thích",
+        message: error.message,
+        variant: "danger"
+      });
+    }
   };
+
 
   const calculateDistance = () => {
     navigator.geolocation?.getCurrentPosition(({ coords }) => {
@@ -119,6 +145,8 @@ export default function ProductDetail() {
   const sellerVerified = Boolean(product.sellerIsVerified || seller?.isVerified);
   const sellerPremium = Boolean(product.sellerIsPremium || seller?.isPremium);
   const distanceKm = calculateDistanceKm(viewerLocation, product);
+  const marketplaceStatus = getMarketplaceStatus(product);
+  const canReserve = marketplaceStatus.key === "available";
 
   return (
     <div className="product-detail-page page-container">
@@ -131,8 +159,8 @@ export default function ProductDetail() {
           <img src={getProductImage(product)} alt={product.name} />
           <div className="product-detail-card__badges">
             <span>{product.type === "Fresh" ? "Hải sản tươi" : "Hải sản khô"}</span>
-            <span className={product.status === "Active" ? "is-active" : "is-inactive"}>
-              {product.status === "Active" ? "Đang bán" : "Ngừng bán"}
+            <span className={`status-chip status-chip--${marketplaceStatus.key}`}>
+              {marketplaceStatus.label}
             </span>
           </div>
         </div>
@@ -154,6 +182,14 @@ export default function ProductDetail() {
             <div><Scale /><dt>Còn lại</dt><dd>{Number(product.remainingWeight || 0)} kg</dd></div>
           </dl>
 
+          {product.batchId && product.batchTitle && (
+            <Link className="product-detail-batch-link" to={`/landing-batches/${product.batchId}`}>
+              <PackageOpen size={17} />
+              <span>Thuộc vựa cá <strong>{product.batchTitle}</strong></span>
+              <small>Xem cả vựa</small>
+            </Link>
+          )}
+
           <section className="seller-summary">
             <span className="seller-summary__avatar">
               {(product.sellerName || "ND").slice(0, 2).toUpperCase()}
@@ -172,7 +208,12 @@ export default function ProductDetail() {
             <button className="button button--primary" onClick={() => openChat(false)} type="button">
               <MessageSquare size={17} /> Nhắn người bán
             </button>
-            <button className="button button--secondary" onClick={() => openChat(true)} type="button">
+            <button
+              className="button button--secondary"
+              disabled={!canReserve}
+              onClick={() => openChat(true)}
+              type="button"
+            >
               Giữ chỗ
             </button>
             <button
@@ -183,6 +224,11 @@ export default function ProductDetail() {
             >
               <Bookmark size={18} />
             </button>
+            <ReportButton
+              onSubmit={(reason) =>
+                apiReports.createForProduct(getProductId(product), reason)
+              }
+            />
           </div>
         </div>
       </article>
@@ -200,6 +246,34 @@ export default function ProductDetail() {
         </div>
         <SellerLocationMap lat={product.lat} lng={product.lng} sellerName={product.sellerName} />
       </section>
+
+      <PriceHistory history={product.priceHistory} />
+
+      <ReviewSection
+        allowReview
+        productId={getProductId(product)}
+        sellerId={product.sellerId}
+      />
     </div>
+  );
+}
+
+function PriceHistory({ history = [] }) {
+  if (!history.length) return null;
+  const points = history.slice(-12);
+  const max = Math.max(...points.map((point) => Number(point.price || 0)), 1);
+  return (
+    <section className="dashboard-panel price-history-panel">
+      <header><div><span className="eyebrow">PRICE HISTORY</span><h2>Lịch sử thay đổi giá</h2></div></header>
+      <div className="price-history-chart">
+        {points.map((point, index) => (
+          <div className="price-history-point" key={`${point.changedAt}-${index}`}>
+            <span style={{ height: `${Math.max(12, Number(point.price || 0) / max * 100)}%` }} />
+            <strong>{formatCurrency(point.price)}</strong>
+            <small>{formatDate(point.changedAt)}</small>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }

@@ -107,6 +107,30 @@ export async function toggleLikeRecipe(req: Request, res: Response, next: NextFu
   }
 }
 
+export async function addRecipeComment(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const id = parseId(req.params.id);
+  if (!id) {
+    return res.status(400).json({ message: "ID công thức không hợp lệ" });
+  }
+  try {
+    const comments = await recipeService.addComment(
+      id,
+      req.user.userId,
+      req.body.text,
+    );
+    return res.status(201).json({
+      message: "Bình luận công thức thành công",
+      comments,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // API cập nhật thông tin công thức nấu ăn
 export async function updateRecipe(req: Request, res: Response, next: NextFunction) {
   // Trích xuất và định dạng ID công thức cần cập nhật từ tham số URL params

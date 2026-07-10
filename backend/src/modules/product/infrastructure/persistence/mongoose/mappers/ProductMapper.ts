@@ -52,6 +52,7 @@ export class ProductMapper {
         description: mongooseDoc.description || "",
         // Ánh xạ giá bán của sản phẩm
         price: mongooseDoc.price,
+        priceHistory: mongooseDoc.priceHistory || [],
         // Ánh xạ hình thức bán hàng (sỉ hay lẻ)
         salesType: mongooseDoc.salesType,
         // Ánh xạ tổng khối lượng mẻ sản phẩm
@@ -102,6 +103,7 @@ export class ProductMapper {
       description: props.description,
       // Thiết lập giá bán sản phẩm
       price: props.price,
+      priceHistory: props.priceHistory || [],
       // Thiết lập hình thức bán (sỉ/lẻ)
       salesType: props.salesType,
       // Thiết lập tổng khối lượng mẻ hàng
@@ -153,4 +155,3 @@ export class ProductMapper {
     return persistenceObj;
   }
 }
-

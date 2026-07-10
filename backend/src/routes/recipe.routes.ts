@@ -10,6 +10,7 @@ import {
   createRecipe,
   // Bật/tắt lượt thích công thức nấu ăn
   toggleLikeRecipe,
+  addRecipeComment,
   // Cập nhật thông tin công thức nấu ăn
   updateRecipe,
   // Xóa công thức nấu ăn
@@ -23,6 +24,7 @@ import { validateSchema } from "../middlewares/validate";
 import {
   createRecipeSchema,
   updateRecipeSchema,
+  recipeCommentSchema,
 } from "../validations/recipe.validation";
 
 // Khởi tạo đối tượng router từ Express Router
@@ -155,6 +157,12 @@ router.post(
  */
 // Định nghĩa tuyến đường POST /:id/like để bật hoặc tắt trạng thái thích công thức theo ID (yêu cầu đăng nhập)
 router.post("/:id/like", authenticate, toggleLikeRecipe);
+router.post(
+  "/:id/comments",
+  authenticate,
+  validateSchema(recipeCommentSchema),
+  addRecipeComment,
+);
 
 /**
  * @openapi
@@ -227,4 +235,3 @@ router.delete("/:id", authenticate, deleteRecipe);
 
 // Xuất mặc định router để cấu hình vào app chính app.ts
 export default router;
-

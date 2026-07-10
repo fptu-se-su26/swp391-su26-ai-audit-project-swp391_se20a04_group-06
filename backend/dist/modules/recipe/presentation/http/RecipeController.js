@@ -4,6 +4,7 @@ exports.getRecipes = getRecipes;
 exports.getRecipeById = getRecipeById;
 exports.createRecipe = createRecipe;
 exports.toggleLikeRecipe = toggleLikeRecipe;
+exports.addRecipeComment = addRecipeComment;
 exports.updateRecipe = updateRecipe;
 exports.deleteRecipe = deleteRecipe;
 // Import hàm parseId từ helper để định dạng và xác thực mã định danh truyền lên
@@ -105,6 +106,22 @@ async function toggleLikeRecipe(req, res, next) {
     }
     catch (err) {
         // Chuyển tiếp lỗi phát sinh sang middleware xử lý lỗi tiếp theo
+        next(err);
+    }
+}
+async function addRecipeComment(req, res, next) {
+    const id = (0, response_helper_1.parseId)(req.params.id);
+    if (!id) {
+        return res.status(400).json({ message: "ID công thức không hợp lệ" });
+    }
+    try {
+        const comments = await recipe_service_1.recipeService.addComment(id, req.user.userId, req.body.text);
+        return res.status(201).json({
+            message: "Bình luận công thức thành công",
+            comments,
+        });
+    }
+    catch (err) {
         next(err);
     }
 }

@@ -8,6 +8,7 @@ const admin_controller_1 = require("../controllers/admin.controller");
 const auth_1 = require("../middlewares/auth");
 // Import các hàm điều khiển phát tin nhắn thông báo hàng loạt từ notification.controller
 const notification_controller_1 = require("../controllers/notification.controller");
+const landingBatch_controller_1 = require("../controllers/landingBatch.controller");
 // Khởi tạo một đối tượng router từ Express Router để cấu hình các tuyến đường con
 const router = (0, express_1.Router)();
 // Áp dụng bộ lọc xác thực token và quyền Admin cho tất cả các route nằm bên dưới dòng này
@@ -120,6 +121,7 @@ router.patch("/users/:id/verify", admin_controller_1.verifyUser);
  */
 // Tuyến đường GET /listings lấy danh sách tất cả sản phẩm đang được rao bán
 router.get("/listings", admin_controller_1.listAllProducts);
+router.get("/landing-batches", landingBatch_controller_1.listAdminLandingBatches);
 /**
  * @openapi
  * /api/admin/listings/{id}:

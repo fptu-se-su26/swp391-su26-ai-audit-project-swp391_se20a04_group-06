@@ -11,67 +11,72 @@ const mongoose_1 = __importDefault(require("mongoose"));
 // Xuất ra đối tượng reportRepository chứa các phương thức tương tác cơ sở dữ liệu cho báo cáo sai phạm
 exports.reportRepository = {
     // Tìm báo cáo sai phạm dựa vào ID người báo cáo và ID sản phẩm
-    async findByReporterAndProduct(
-    // ID người báo cáo
-    reporterId, 
-    // ID sản phẩm bị báo cáo
-    productId) {
-        // Tìm một tài liệu Report khớp với điều kiện truyền vào (được ép kiểu sang ObjectId)
+    async findByReporterAndProduct(reporterId, productId) {
         return Report_1.Report.findOne({
             reporterId: new mongoose_1.default.Types.ObjectId(reporterId),
             productId: new mongoose_1.default.Types.ObjectId(productId),
         });
     },
+    // Tìm báo cáo sai phạm dựa vào ID người báo cáo và ID bài viết
+    async findByReporterAndPost(reporterId, postId) {
+        return Report_1.Report.findOne({
+            reporterId: new mongoose_1.default.Types.ObjectId(reporterId),
+            postId: new mongoose_1.default.Types.ObjectId(postId),
+        });
+    },
+    // Tìm báo cáo sai phạm dựa vào ID người báo cáo và ID công thức
+    async findByReporterAndRecipe(reporterId, recipeId) {
+        return Report_1.Report.findOne({
+            reporterId: new mongoose_1.default.Types.ObjectId(reporterId),
+            recipeId: new mongoose_1.default.Types.ObjectId(recipeId),
+        });
+    },
     // Đếm tổng số lượng báo cáo sai phạm dựa trên trạng thái của báo cáo
-    async countByStatus(
-    // Trạng thái của báo cáo (Chờ xử lý, Đã xử lý, Đã bác bỏ)
-    status) {
-        // Đếm số lượng tài liệu có trường status tương ứng trong cơ sở dữ liệu
+    async countByStatus(status) {
         return Report_1.Report.countDocuments({ status });
     },
     // Lấy danh sách báo cáo sai phạm theo trạng thái có phân trang
-    async findByStatusPaginated(
-    // Trạng thái của báo cáo cần lấy
-    status, 
-    // Số dòng bỏ qua để phân trang
-    offset, 
-    // Số dòng giới hạn tối đa trên một trang
-    limit) {
-        // Tìm kiếm các báo cáo có trạng thái tương ứng
+    async findByStatusPaginated(status, offset, limit) {
         return Report_1.Report.find({ status })
-            // Liên kết lấy thông tin tên của người báo cáo (reporterId)
             .populate("reporterId", "name")
-            // Liên kết lồng để lấy thông tin sản phẩm (productId) gồm tên và ID người bán
             .populate({
             path: "productId",
             select: "name sellerId",
-            // Trong sản phẩm lại liên kết lấy thông tin tên của người bán (sellerId)
             populate: {
                 path: "sellerId",
                 select: "name",
             },
         })
-            // Sắp xếp các báo cáo theo thời gian tạo giảm dần (mới nhất lên đầu)
+            .populate({
+            path: "postId",
+            select: "title userId userName authorName",
+        })
+            .populate({
+            path: "recipeId",
+            select: "title authorId",
+            populate: {
+                path: "authorId",
+                select: "name",
+            },
+        })
             .sort({ createdAt: -1 })
-            // Bỏ qua offset dòng
             .skip(offset)
-            // Giới hạn tối đa limit dòng trả về
             .limit(limit);
     },
     // Tìm kiếm báo cáo sai phạm theo ID
     async findById(reportId) {
-        // Tìm kiếm và trả về báo cáo theo ID truyền vào
         return Report_1.Report.findById(reportId);
     },
     // Tạo mới một báo cáo sai phạm
     async create(data) {
-        // Khởi tạo thực thể Report mới, chuyển các ID chuỗi sang ObjectId của MongoDB
         const report = new Report_1.Report({
             reporterId: new mongoose_1.default.Types.ObjectId(data.reporterId),
-            productId: new mongoose_1.default.Types.ObjectId(data.productId),
+            productId: data.productId ? new mongoose_1.default.Types.ObjectId(data.productId) : undefined,
+            postId: data.postId ? new mongoose_1.default.Types.ObjectId(data.postId) : undefined,
+            recipeId: data.recipeId ? new mongoose_1.default.Types.ObjectId(data.recipeId) : undefined,
+            targetType: data.targetType,
             reason: data.reason,
         });
-        // Lưu báo cáo vào cơ sở dữ liệu và trả về kết quả
         return report.save();
     },
     // Xóa các báo cáo sai phạm liên quan đến một sản phẩm cụ thể

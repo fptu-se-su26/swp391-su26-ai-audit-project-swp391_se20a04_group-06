@@ -26,6 +26,15 @@ const boatLogSchema = new mongoose_1.Schema({
     images: [{ type: String }],
     // Cấu hình trường likes: mảng các ObjectId tham chiếu đến User
     likes: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "User" }],
+    batchId: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "LandingBatch",
+        index: true,
+    },
+    boatName: { type: String, trim: true, maxlength: 120 },
+    catchArea: { type: String, trim: true, maxlength: 200 },
+    landingTime: { type: Date },
+    origin: { type: String, trim: true, maxlength: 200 },
 }, 
 // Cấu hình tự động ghi nhận mốc thời gian tạo (createdAt) và sửa đổi (updatedAt) tài liệu
 { timestamps: true });

@@ -15,6 +15,7 @@ const notificationSchema = new mongoose_1.Schema({
     isRead: { type: Boolean, default: false },
     // Cấu hình trường productId: kiểu ObjectId tham chiếu đến bảng Product (không bắt buộc)
     productId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Product" },
+    landingBatchId: { type: mongoose_1.Schema.Types.ObjectId, ref: "LandingBatch" },
     // Cấu hình trường reviewId: kiểu ObjectId tham chiếu đến bảng Review (không bắt buộc)
     reviewId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Review" },
 }, 

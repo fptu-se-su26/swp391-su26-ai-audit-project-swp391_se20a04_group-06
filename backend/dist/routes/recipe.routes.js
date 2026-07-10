@@ -131,6 +131,7 @@ router.post("/", auth_1.authenticate, (0, validate_1.validateSchema)(recipe_vali
  */
 // Định nghĩa tuyến đường POST /:id/like để bật hoặc tắt trạng thái thích công thức theo ID (yêu cầu đăng nhập)
 router.post("/:id/like", auth_1.authenticate, RecipeController_1.toggleLikeRecipe);
+router.post("/:id/comments", auth_1.authenticate, (0, validate_1.validateSchema)(recipe_validation_1.recipeCommentSchema), RecipeController_1.addRecipeComment);
 /**
  * @openapi
  * /api/recipes/{id}:

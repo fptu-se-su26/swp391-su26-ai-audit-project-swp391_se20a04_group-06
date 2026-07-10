@@ -9,5 +9,11 @@ export const createBoatLogSchema = z.object({
     content: z.string().min(1, "Nội dung nhật ký cabin không được để trống"),
     // Mảng chứa các đường dẫn hình ảnh là tùy chọn, nếu gửi lên phải là mảng các chuỗi ký tự
     images: z.array(z.string()).optional(),
+    boatName: z.string().trim().max(120).optional(),
+    catchArea: z.string().trim().max(200).optional(),
+    landingTime: z.string().datetime().optional().nullable(),
+    origin: z.string().trim().max(200).optional(),
   }),
 });
+
+export const updateBoatLogSchema = createBoatLogSchema;

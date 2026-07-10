@@ -1,0 +1,180 @@
+.floating-contact {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1200;
+  max-width: calc(100vw - 24px);
+}
+
+.floating-contact__stack {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.floating-contact__button,
+.floating-contact__trigger-icon {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  box-shadow:
+    0 10px 24px rgba(2, 8, 23, 0.3),
+    0 3px 8px rgba(2, 8, 23, 0.2);
+}
+
+.floating-contact__button {
+  cursor: pointer;
+  text-decoration: none;
+  animation: floating-contact-in 220ms ease both;
+  transition:
+    transform 200ms ease,
+    box-shadow 200ms ease,
+    filter 200ms ease;
+}
+
+.floating-contact__button:nth-child(2) {
+  animation-delay: 35ms;
+}
+
+.floating-contact__button:nth-child(3) {
+  animation-delay: 70ms;
+}
+
+.floating-contact__button:nth-child(4) {
+  animation-delay: 105ms;
+}
+
+.floating-contact__button svg {
+  width: 29px;
+  height: 29px;
+}
+
+.floating-contact__button:not(:disabled):hover {
+  filter: saturate(1.08) brightness(1.04);
+  box-shadow:
+    0 14px 30px rgba(2, 8, 23, 0.35),
+    0 0 0 4px rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px) scale(1.035);
+}
+
+.floating-contact__button:focus-visible,
+.floating-contact__trigger:focus-visible {
+  outline: 3px solid #a5f3fc;
+  outline-offset: 3px;
+}
+
+.floating-contact__button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.25);
+  opacity: 0.58;
+}
+
+.floating-contact__button--facebook {
+  background: linear-gradient(145deg, #2489ff, #0866ff);
+}
+
+.floating-contact__button--phone {
+  background: linear-gradient(145deg, #09d999, #00aa78);
+}
+
+.floating-contact__button--zalo {
+  background: linear-gradient(145deg, #28a8ff, #087fe0);
+}
+
+.floating-contact__button--close,
+.floating-contact__trigger-icon {
+  background: linear-gradient(145deg, #12cbc7, #05a9af);
+}
+
+.floating-contact__zalo-mark {
+  display: grid;
+  width: 31px;
+  height: 25px;
+  place-items: center;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.floating-contact__trigger {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #071120;
+  cursor: pointer;
+}
+
+.floating-contact__label {
+  position: relative;
+  border-radius: 7px;
+  padding: 10px 17px;
+  background: #fff;
+  box-shadow: 0 8px 26px rgba(2, 8, 23, 0.24);
+  color: #111827;
+  font-size: 0.92rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.floating-contact__label::before {
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  border: 8px solid transparent;
+  border-right-color: #fff;
+  content: "";
+  transform: translateY(-50%);
+}
+
+@keyframes floating-contact-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@media (max-width: 640px) {
+  .floating-contact {
+    bottom: 12px;
+    left: 12px;
+  }
+
+  .floating-contact__button,
+  .floating-contact__trigger-icon {
+    width: 50px;
+    height: 50px;
+  }
+
+  .floating-contact__button svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .floating-contact__label {
+    padding: 9px 13px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floating-contact__button {
+    animation: none;
+    transition: none;
+  }
+}

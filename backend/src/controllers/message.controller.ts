@@ -67,12 +67,23 @@ export async function reactMessage(req: Request, res: Response) {
   const { id } = req.params;
   // Lấy biểu tượng cảm xúc (reaction) gửi lên từ body request
   const { reaction } = req.body;
+  const { userId } = req.user;
 
   try {
     // Tìm kiếm tin nhắn theo ID
     const msg = await Message.findById(id);
     if (!msg)
       return res.status(404).json({ message: "Không tìm thấy tin nhắn" });
+
+    if (
+      msg.senderId.toString() !== userId &&
+      msg.receiverId.toString() !== userId
+    ) {
+      return res.status(403).json({ message: "Bạn không thuộc cuộc trò chuyện này" });
+    }
+    if (reaction && (typeof reaction !== "string" || reaction.length > 16)) {
+      return res.status(400).json({ message: "Cảm xúc không hợp lệ" });
+    }
 
     // Gán cảm xúc mới hoặc xóa cảm xúc (nếu không truyền gì) bằng cách gán null
     msg.reaction = reaction || null;
@@ -105,6 +116,10 @@ export async function editMessage(req: Request, res: Response) {
   // Lấy ID người dùng thực hiện chỉnh sửa từ token
   const { userId } = req.user;
 
+  if (typeof content !== "string" || !content.trim() || content.length > 1000) {
+    return res.status(400).json({ message: "Tin nhắn phải có từ 1 đến 1000 ký tự" });
+  }
+
   try {
     // Tìm kiếm tin nhắn theo ID
     const msg = await Message.findById(id);
@@ -119,12 +134,12 @@ export async function editMessage(req: Request, res: Response) {
     }
 
     // Cập nhật nội dung văn bản mới
-    msg.content = content;
+    msg.content = content.trim();
     // Lưu lại vào DB
     await msg.save();
 
     // Gửi sự kiện cập nhật nội dung tin nhắn realtime thông qua Socket.io
-    const eventData = { id, content };
+    const eventData = { id, content: msg.content };
     getIO()
       .to(`product_${msg.productId}_${msg.senderId}`)
       .emit("message_edited", eventData);
@@ -133,7 +148,7 @@ export async function editMessage(req: Request, res: Response) {
       .emit("message_edited", eventData);
 
     // Trả về kết quả cập nhật thành công cho Client
-    return res.json({ success: true, content });
+    return res.json({ success: true, content: msg.content });
   } catch (err) {
     return sendServerError(res, err);
   }

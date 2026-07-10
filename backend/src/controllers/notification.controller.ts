@@ -52,6 +52,7 @@ export async function getNotifications(req: Request, res: Response) {
       isRead: n.isRead ? 1 : 0,                 // Client biểu diễn trạng thái đọc là 1 (đã đọc) hoặc 0 (chưa đọc)
       createdAt: n.createdAt,
       productId: n.productId?.toString() || null,
+      landingBatchId: n.landingBatchId?.toString() || null,
       reviewId: n.reviewId?.toString() || null,
     }));
 

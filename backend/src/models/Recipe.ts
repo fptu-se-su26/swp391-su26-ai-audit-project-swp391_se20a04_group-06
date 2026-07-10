@@ -1,6 +1,15 @@
 // Import các đối tượng Schema, model, Document và Types từ thư viện mongoose để thiết kế lược đồ công thức nấu ăn
 import { Schema, model, Document, Types } from "mongoose";
 
+export interface IRecipeComment {
+  _id?: Types.ObjectId;
+  userId: Types.ObjectId;
+  userName: string;
+  userAvatar: string | null;
+  text: string;
+  createdAt: Date;
+}
+
 // Định nghĩa giao diện IRecipe mở rộng từ Document của Mongoose cho tài liệu công thức nấu ăn (Recipe Document)
 export interface IRecipe extends Document {
   // Tiêu đề của công thức nấu ăn
@@ -25,6 +34,7 @@ export interface IRecipe extends Document {
   tags: string[];
   // Mảng chứa ID những người dùng đã thích công thức này (liên kết bảng User)
   likes: Types.ObjectId[];
+  comments: IRecipeComment[];
   // Tổng số lượt xem chi tiết công thức
   viewCount: number;
   // Mốc thời gian tự động tạo tài liệu trong DB
@@ -67,6 +77,15 @@ const recipeSchema = new Schema<IRecipe>(
     tags: [{ type: String }],
     // Cấu hình trường likes: mảng chứa các ObjectId tham chiếu đến bảng User
     likes: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    comments: [
+      {
+        userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+        userName: { type: String, required: true },
+        userAvatar: { type: String, default: null },
+        text: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
     // Cấu hình trường viewCount: kiểu số lưu lượt xem, mặc định bằng 0
     viewCount: { type: Number, default: 0 },
   },

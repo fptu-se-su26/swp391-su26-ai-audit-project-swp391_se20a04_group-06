@@ -4,7 +4,7 @@ import { io } from "socket.io-client";
 import { useAuth } from "./AuthContext";
 
 const SocketContext = createContext(null);
-const socketUrl = import.meta.env.VITE_API_URL;
+const socketUrl = import.meta.env.VITE_API_URL || window.location.origin;
 
 export function SocketProvider({ children }) {
   const { user } = useAuth();
@@ -13,7 +13,7 @@ export function SocketProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
-    if (!user || user.isDemo || !socketUrl) {
+    if (!user || !socketUrl) {
       socketRef.current?.disconnect();
       socketRef.current = null;
       setSocket(null);

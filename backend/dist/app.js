@@ -55,6 +55,7 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 // Import hàm kết nối Redis và đối tượng redis để quản lý cache và các phiên làm việc
 const redis_1 = require("./config/redis");
+const cors_2 = require("./config/cors");
 // Import logger phục vụ ghi log hệ thống
 const logger_1 = require("./utils/logger");
 // Import hàm testConnection để kiểm tra kết nối tới MongoDB
@@ -69,6 +70,7 @@ const csrf_1 = require("./middlewares/csrf");
 const swagger_1 = require("./config/swagger");
 // Import middleware xử lý lỗi tập trung errorHandler
 const errorHandler_1 = require("./middlewares/errorHandler");
+const sanitize_1 = require("./middlewares/sanitize");
 // Import Event Handler xử lý sự kiện nâng cấp tài khoản Premium của DDD
 const OnUserPremiumUpgraded_1 = require("./modules/iam/application/event-handlers/OnUserPremiumUpgraded");
 // Import định tuyến xác thực tài khoản và người dùng
@@ -103,6 +105,8 @@ const recipe_routes_1 = __importDefault(require("./routes/recipe.routes"));
 const post_routes_1 = __importDefault(require("./routes/post.routes"));
 // Import định tuyến viết nhật ký đi biển cabin logs
 const boatLog_routes_1 = __importDefault(require("./routes/boatLog.routes"));
+const landingBatch_routes_1 = __importDefault(require("./routes/landingBatch.routes"));
+const omakase_routes_1 = __importDefault(require("./routes/omakase.routes"));
 // Khởi tạo đối tượng ứng dụng express
 const app = (0, express_1.default)();
 exports.app = app;
@@ -122,15 +126,23 @@ app.use((0, helmet_1.default)({
 }));
 // Áp dụng middleware CORS cho phép liên kết tài nguyên với trang web của khách hàng
 app.use((0, cors_1.default)({
-    // Nguồn gốc cho phép lấy từ biến môi trường CLIENT_URL hoặc mặc định localhost:3000
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
-    // Cho phép truyền kèm thông tin cookies/credentials trong các yêu cầu chéo nguồn gốc
+    origin: (origin, callback) => {
+        if ((0, cors_2.isAllowedClientOrigin)(origin)) {
+            callback(null, true);
+        }
+        else {
+            callback((0, cors_2.rejectDisallowedOrigin)(origin));
+        }
+    },
     credentials: true,
+    exposedHeaders: ["X-CSRF-Token"],
 }));
 // Áp dụng middleware giải tích dữ liệu JSON trong phần thân yêu cầu với giới hạn tối đa 2MB
 app.use(express_1.default.json({ limit: "2mb" }));
 // Áp dụng middleware giải tích dữ liệu urlencoded với giới hạn tối đa 2MB
 app.use(express_1.default.urlencoded({ extended: true, limit: "2mb" }));
+// Sanitize every JSON/urlencoded text field before validation and persistence.
+app.use(sanitize_1.sanitizeRequestBody);
 // Áp dụng middleware cookieParser để giải mã cookies đi kèm trong yêu cầu
 app.use((0, cookie_parser_1.default)());
 // Middleware tự định nghĩa để ghi nhận log mọi yêu cầu HTTP đến hệ thống kèm thời gian xử lý
@@ -245,6 +257,9 @@ app.use("/api", (req, res, next) => {
 });
 // Tuyến đường kiểm tra sức khỏe hệ thống, trả về thời điểm máy chủ hoạt động bình thường
 app.get("/api/health", (_req, res) => res.json({ status: "ok", time: new Date() }));
+// Bootstrap endpoint for the SPA. generateCsrfToken has already written the
+// matching cookie before this handler returns the token value.
+app.get("/api/csrf-token", (req, res) => res.json({ csrfToken: req.csrfToken }));
 // Khai báo định tuyến xác thực tài khoản đăng nhập/đăng ký
 app.use("/api/auth", auth_routes_1.default);
 // Khai báo định tuyến tương tác người dùng
@@ -279,6 +294,9 @@ app.use("/api/recipes", recipe_routes_1.default);
 app.use("/api/posts", post_routes_1.default);
 // Khai báo định tuyến viết nhật ký đi biển
 app.use("/api/boat-logs", boatLog_routes_1.default);
+// Khai báo định tuyến Vựa cá / Phiên cập bến
+app.use("/api/landing-batches", landingBatch_routes_1.default);
+app.use("/api/omakase", omakase_routes_1.default);
 // Bắt các yêu cầu truy cập sai địa chỉ API và trả về lỗi 404
 app.use((_req, res) => res.status(404).json({ message: "Không tìm thấy endpoint này" }));
 // Sử dụng middleware errorHandler xử lý ngoại lệ tập trung ở cuối cùng ứng dụng

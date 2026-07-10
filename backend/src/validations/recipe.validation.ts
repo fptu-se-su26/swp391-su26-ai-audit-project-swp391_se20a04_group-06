@@ -50,3 +50,12 @@ export const updateRecipeSchema = z.object({
     tags: z.array(z.string()).optional(),
   }),
 });
+
+export const recipeCommentSchema = z.object({
+  body: z.object({
+    text: z
+      .string()
+      .min(1, "Nội dung bình luận không được để trống")
+      .max(1000, "Bình luận tối đa 1000 ký tự"),
+  }),
+});

@@ -1,4 +1,4 @@
-import { CircleMarker, MapContainer, Popup, TileLayer } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 
 export default function SellerLocationMap({ lat, lng, sellerName }) {
   const latitude = Number(lat);
@@ -12,18 +12,12 @@ export default function SellerLocationMap({ lat, lng, sellerName }) {
     <div className="seller-location-map">
       <MapContainer center={[latitude, longitude]} scrollWheelZoom={false} zoom={12}>
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <CircleMarker
-          center={[latitude, longitude]}
-          fillColor="#0ea5e9"
-          fillOpacity={0.8}
-          pathOptions={{ color: "#ffffff", weight: 3 }}
-          radius={10}
-        >
+        <Marker position={[latitude, longitude]}>
           <Popup>Vị trí bán hàng của {sellerName || "ngư dân"}</Popup>
-        </CircleMarker>
+        </Marker>
       </MapContainer>
     </div>
   );

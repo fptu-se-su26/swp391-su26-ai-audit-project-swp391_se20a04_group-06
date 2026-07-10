@@ -36,6 +36,15 @@ const recipeSchema = new mongoose_1.Schema({
     tags: [{ type: String }],
     // Cấu hình trường likes: mảng chứa các ObjectId tham chiếu đến bảng User
     likes: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "User" }],
+    comments: [
+        {
+            userId: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
+            userName: { type: String, required: true },
+            userAvatar: { type: String, default: null },
+            text: { type: String, required: true },
+            createdAt: { type: Date, default: Date.now },
+        },
+    ],
     // Cấu hình trường viewCount: kiểu số lưu lượt xem, mặc định bằng 0
     viewCount: { type: Number, default: 0 },
 }, 

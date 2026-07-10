@@ -16,6 +16,10 @@ import mongoose from "mongoose";
 import rateLimit from "express-rate-limit";
 // Import hàm kết nối Redis và đối tượng redis để quản lý cache và các phiên làm việc
 import { connectRedis, redis } from "./config/redis";
+import {
+  isAllowedClientOrigin,
+  rejectDisallowedOrigin,
+} from "./config/cors";
 // Import logger phục vụ ghi log hệ thống
 import { logger } from "./utils/logger";
 
@@ -31,6 +35,7 @@ import { generateCsrfToken, validateCsrf } from "./middlewares/csrf";
 import { setupSwagger } from "./config/swagger";
 // Import middleware xử lý lỗi tập trung errorHandler
 import { errorHandler } from "./middlewares/errorHandler";
+import { sanitizeRequestBody } from "./middlewares/sanitize";
 // Import Event Handler xử lý sự kiện nâng cấp tài khoản Premium của DDD
 import { OnUserPremiumUpgraded } from "./modules/iam/application/event-handlers/OnUserPremiumUpgraded";
 
@@ -66,6 +71,8 @@ import recipeRoutes from "./routes/recipe.routes";
 import postRoutes from "./routes/post.routes";
 // Import định tuyến viết nhật ký đi biển cabin logs
 import boatLogRoutes from "./routes/boatLog.routes";
+import landingBatchRoutes from "./routes/landingBatch.routes";
+import omakaseRoutes from "./routes/omakase.routes";
 
 // Khởi tạo đối tượng ứng dụng express
 const app = express();
@@ -88,29 +95,25 @@ app.use(
 );
 
 // Áp dụng middleware CORS cho phép liên kết tài nguyên với trang web của khách hàng
-const allowedOrigins = [
-  process.env.CLIENT_URL || "http://localhost:5173",
-  "http://localhost:5173",   // Vite dev server (frontend)
-  "http://127.0.0.1:5173",
-  "http://localhost:3000",   // Giữ lại cho trường hợp test trực tiếp qua backend port
-  "http://127.0.0.1:3000"
-];
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (isAllowedClientOrigin(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        callback(rejectDisallowedOrigin(origin));
       }
     },
     credentials: true,
+    exposedHeaders: ["X-CSRF-Token"],
   }),
 );
 // Áp dụng middleware giải tích dữ liệu JSON trong phần thân yêu cầu với giới hạn tối đa 2MB
 app.use(express.json({ limit: "2mb" }));
 // Áp dụng middleware giải tích dữ liệu urlencoded với giới hạn tối đa 2MB
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
+// Sanitize every JSON/urlencoded text field before validation and persistence.
+app.use(sanitizeRequestBody);
 // Áp dụng middleware cookieParser để giải mã cookies đi kèm trong yêu cầu
 app.use(cookieParser());
 
@@ -245,6 +248,12 @@ app.get("/api/health", (_req, res) =>
   res.json({ status: "ok", time: new Date() }),
 );
 
+// Bootstrap endpoint for the SPA. generateCsrfToken has already written the
+// matching cookie before this handler returns the token value.
+app.get("/api/csrf-token", (req, res) =>
+  res.json({ csrfToken: req.csrfToken }),
+);
+
 // Khai báo định tuyến xác thực tài khoản đăng nhập/đăng ký
 app.use("/api/auth", authRoutes);
 // Khai báo định tuyến tương tác người dùng
@@ -279,6 +288,9 @@ app.use("/api/recipes", recipeRoutes);
 app.use("/api/posts", postRoutes);
 // Khai báo định tuyến viết nhật ký đi biển
 app.use("/api/boat-logs", boatLogRoutes);
+// Khai báo định tuyến Vựa cá / Phiên cập bến
+app.use("/api/landing-batches", landingBatchRoutes);
+app.use("/api/omakase", omakaseRoutes);
 
 // Bắt các yêu cầu truy cập sai địa chỉ API và trả về lỗi 404
 app.use((_req, res) =>

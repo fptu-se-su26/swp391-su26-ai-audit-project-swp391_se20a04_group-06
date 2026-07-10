@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createBoatLogSchema = void 0;
+exports.updateBoatLogSchema = exports.createBoatLogSchema = void 0;
 // Import thư viện Zod để xây dựng bộ định hình xác thực cấu trúc dữ liệu đầu vào
 const zod_1 = require("zod");
 // Xuất ra schema định nghĩa quy tắc kiểm thực yêu cầu tạo nhật ký đi biển
@@ -11,5 +11,10 @@ exports.createBoatLogSchema = zod_1.z.object({
         content: zod_1.z.string().min(1, "Nội dung nhật ký cabin không được để trống"),
         // Mảng chứa các đường dẫn hình ảnh là tùy chọn, nếu gửi lên phải là mảng các chuỗi ký tự
         images: zod_1.z.array(zod_1.z.string()).optional(),
+        boatName: zod_1.z.string().trim().max(120).optional(),
+        catchArea: zod_1.z.string().trim().max(200).optional(),
+        landingTime: zod_1.z.string().datetime().optional().nullable(),
+        origin: zod_1.z.string().trim().max(200).optional(),
     }),
 });
+exports.updateBoatLogSchema = exports.createBoatLogSchema;

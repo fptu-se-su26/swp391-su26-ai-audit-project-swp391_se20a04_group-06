@@ -47,8 +47,12 @@ const router = (0, express_1.Router)();
  *       401:
  *         description: Chưa đăng nhập
  */
-// Định nghĩa tuyến đường POST /:productId để gửi một báo cáo vi phạm liên quan đến sản phẩm (yêu cầu đăng nhập, validate cấu trúc báo cáo, rồi gọi controller createReport)
+// Định nghĩa tuyến đường POST /:productId để gửi một báo cáo vi phạm liên quan đến sản phẩm
 router.post("/:productId", auth_1.authenticate, (0, validate_1.validateSchema)(report_validation_1.createReportSchema), report_controller_1.createReport);
+// Tuyển đường POST /posts/:postId để báo cáo vi phạm bài viết
+router.post("/posts/:postId", auth_1.authenticate, (0, validate_1.validateSchema)(report_validation_1.createReportSchema), report_controller_1.createReport);
+// Tuyển đường POST /recipes/:recipeId để báo cáo vi phạm công thức
+router.post("/recipes/:recipeId", auth_1.authenticate, (0, validate_1.validateSchema)(report_validation_1.createReportSchema), report_controller_1.createReport);
 /**
  * @openapi
  * /api/reports:

@@ -16,6 +16,46 @@ import { DomainEvents } from "../shared/domain/events/DomainEvents";
 // Khởi tạo thực thể Repository theo chuẩn kiến trúc Domain-Driven Design (DDD)
 const dddUserRepository = new MongooseUserRepository();
 
+export async function getPremiumIntent(req: Request, res: Response) {
+  const user = await userRepository.findRawById(req.user.userId);
+  if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
+
+  const amount = Number(process.env.PREMIUM_PRICE || 99000);
+  const transferContent = `HAISAN PREMIUM ${req.user.userId}`;
+  const bankId = process.env.SEPAY_BANK_ID || "";
+  const accountNumber = process.env.SEPAY_BANK_ACCOUNT || "";
+  const accountName = process.env.SEPAY_ACCOUNT_NAME || "";
+  const configured = Boolean(bankId && accountNumber);
+  const qrUrl = configured
+    ? `https://img.vietqr.io/image/${encodeURIComponent(bankId)}-${encodeURIComponent(accountNumber)}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(accountName)}`
+    : null;
+
+  return res.json({
+    amount,
+    transferContent,
+    bankId,
+    accountNumber,
+    accountName,
+    qrUrl,
+    configured,
+    isPremium: Boolean(user.isPremium),
+  });
+}
+
+export async function getPremiumStatus(req: Request, res: Response) {
+  const user = await userRepository.findRawById(req.user.userId);
+  if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
+  const latestTransaction = await PaymentTransaction.findOne({
+    userId: req.user.userId,
+  })
+    .sort({ createdAt: -1 })
+    .lean();
+  return res.json({
+    isPremium: Boolean(user.isPremium),
+    latestTransaction,
+  });
+}
+
 /**
  * HÀM WEBHOOK XỬ LÝ THANH TOÁN TỰ ĐỘNG TỪ CỔNG THANH TOÁN SEPAY (BANK TRANSFER AUTOMATION)
  */
@@ -96,15 +136,21 @@ export async function sepayWebhook(req: Request, res: Response) {
         .json({ success: true, message: "Transaction already processed" });
     }
 
-    // Validate: kiểm tra số tiền thanh toán (tối thiểu là 2,000 VND)
+    // Chỉ nâng cấp khi số tiền đạt đúng mức giá Premium được cấu hình.
     const numericAmount = Number(finalAmount);
-    if (isNaN(numericAmount) || numericAmount < 2000) {
+    const premiumPrice = Number(process.env.PREMIUM_PRICE || 99000);
+    if (
+      isNaN(numericAmount) ||
+      !Number.isFinite(premiumPrice) ||
+      premiumPrice <= 0 ||
+      numericAmount < premiumPrice
+    ) {
       logger.warn(
-        `[Sepay Webhook] Invalid transfer amount: ${finalAmount}. Must be >= 2000 VND`,
+        `[Sepay Webhook] Invalid transfer amount: ${finalAmount}. Must be >= ${premiumPrice} VND`,
       );
       return res
         .status(400)
-        .json({ message: "Transfer amount must be at least 2000 VND" });
+        .json({ message: `Transfer amount must be at least ${premiumPrice} VND` });
     }
 
     // 4. TRÍCH XUẤT ID NGƯỜI DÙNG TỪ NỘI DUNG CHUYỂN KHOẢN

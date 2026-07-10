@@ -9,6 +9,8 @@ const user_repository_1 = require("../repositories/user.repository");
 const HttpError_1 = require("../errors/HttpError");
 // Import hàm trợ giúp parseId dùng để kiểm tra tính hợp lệ của định dạng ObjectId trong MongoDB
 const response_helper_1 = require("../helpers/response.helper");
+const Recipe_1 = require("../models/Recipe");
+const security_1 = require("../utils/security");
 // Xuất ra đối tượng recipeService chứa các logic nghiệp vụ liên quan đến công thức món ăn hải sản
 exports.recipeService = {
     // Nghiệp vụ lấy danh sách công thức món ăn có lọc theo từ khóa, độ khó, thẻ tag, tác giả và phân trang
@@ -144,6 +146,30 @@ exports.recipeService = {
         }
         // Trả về trạng thái thích hiện tại cùng tổng số lượng lượt thích mới nhất
         return { liked, likeCount: updatedRecipe?.likes.length || 0 };
+    },
+    async addComment(recipeId, userId, text) {
+        if (!(0, response_helper_1.parseId)(recipeId)) {
+            throw new HttpError_1.HttpError(400, "ID công thức không hợp lệ");
+        }
+        const user = await user_repository_1.userRepository.findRawById(userId);
+        if (!user)
+            throw new HttpError_1.HttpError(404, "Không tìm thấy người dùng");
+        const cleanText = (0, security_1.sanitizeText)(text, 1000);
+        if (!cleanText)
+            throw new HttpError_1.HttpError(400, "Bình luận không được để trống");
+        const recipe = await Recipe_1.Recipe.findByIdAndUpdate(recipeId, {
+            $push: {
+                comments: {
+                    userId: user._id,
+                    userName: user.name,
+                    userAvatar: user.avatar || null,
+                    text: cleanText,
+                },
+            },
+        }, { new: true });
+        if (!recipe)
+            throw new HttpError_1.HttpError(404, "Không tìm thấy công thức");
+        return recipe.comments;
     },
     // Nghiệp vụ cập nhật thông tin chi tiết một công thức nấu ăn
     async update(recipeId, userId, role, data) {

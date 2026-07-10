@@ -35,6 +35,10 @@ const postSchema = new mongoose_1.Schema({
             userAvatar: { type: String, default: null },
             // Nội dung bình luận: bắt buộc nhập
             text: { type: String, required: true },
+            // ID bình luận cha (nếu có, để hỗ trợ tính năng reply)
+            parentId: { type: mongoose_1.Schema.Types.ObjectId, default: null },
+            // Lượt thích bình luận
+            likes: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "User" }],
             // Mốc thời gian tạo bình luận: mặc định lấy thời gian hiện tại
             createdAt: { type: Date, default: Date.now },
         },

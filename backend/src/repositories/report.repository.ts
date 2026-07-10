@@ -67,7 +67,11 @@ export const reportRepository = {
       })
       .populate({
         path: "recipeId",
-        select: "title sellerId sellerName",
+        select: "title authorId",
+        populate: {
+          path: "authorId",
+          select: "name",
+        },
       })
       .sort({ createdAt: -1 })
       .skip(offset)

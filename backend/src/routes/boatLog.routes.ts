@@ -6,17 +6,19 @@ import {
   getBoatLogs,
   // Tạo nhật ký đi biển mới
   createBoatLog,
+  updateBoatLog,
   // Thích hoặc bỏ thích một nhật ký đi biển
   toggleLikeBoatLog,
   // Xóa nhật ký đi biển
   deleteBoatLog,
 } from "../modules/boat-log/presentation/http/BoatLogController";
 // Import middleware xác thực người dùng đã đăng nhập (authenticate)
-import { authenticate } from "../middlewares/auth";
+import { authenticate, sellerOnly } from "../middlewares/auth";
 // Import middleware kiểm chứng cấu trúc schema dữ liệu đầu vào (validateSchema)
 import { validateSchema } from "../middlewares/validate";
 // Import cấu trúc schema kiểm định dữ liệu tạo mới nhật ký đi biển từ boatLog.validation
-import { createBoatLogSchema } from "../validations/boatLog.validation";
+import { createBoatLogSchema, updateBoatLogSchema } from "../validations/boatLog.validation";
+import { createLandingBatchFromBoatLog } from "../controllers/landingBatch.controller";
 
 // Khởi tạo một đối tượng router từ Express Router
 const router = Router();
@@ -71,8 +73,24 @@ router.get("/", getBoatLogs);
 router.post(
   "/",
   authenticate,
+  sellerOnly,
   validateSchema(createBoatLogSchema),
   createBoatLog,
+);
+
+router.put(
+  "/:id",
+  authenticate,
+  sellerOnly,
+  validateSchema(updateBoatLogSchema),
+  updateBoatLog,
+);
+
+router.post(
+  "/:id/create-landing-batch",
+  authenticate,
+  sellerOnly,
+  createLandingBatchFromBoatLog,
 );
 
 /**
@@ -127,8 +145,7 @@ router.post("/:id/like", authenticate, toggleLikeBoatLog);
  *         description: Không tìm thấy bài nhật ký cabin
  */
 // Định nghĩa tuyến đường DELETE /:id xóa bài nhật ký cabin theo ID (yêu cầu đăng nhập)
-router.delete("/:id", authenticate, deleteBoatLog);
+router.delete("/:id", authenticate, sellerOnly, deleteBoatLog);
 
 // Xuất mặc định router boatLog để sử dụng ở file app.ts
 export default router;
-

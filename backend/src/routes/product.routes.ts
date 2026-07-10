@@ -24,7 +24,7 @@ import {
   getTodayCount,
 } from "../modules/product/presentation/http/ProductController";
 // Import middleware xác thực người dùng đã đăng nhập (authenticate)
-import { authenticate } from "../middlewares/auth";
+import { authenticate, sellerOnly } from "../middlewares/auth";
 // Import cấu trúc schema kiểm duyệt dữ liệu tạo mới và cập nhật sản phẩm từ product.validation
 import {
   productCreateSchema,
@@ -86,7 +86,7 @@ router.get("/", getProducts);
  *         description: Chưa đăng nhập
  */
 // Định nghĩa tuyến đường GET /my để lấy danh sách sản phẩm của chính người đăng nhập (yêu cầu đăng nhập)
-router.get("/my", authenticate, getMyProducts);
+router.get("/my", authenticate, sellerOnly, getMyProducts);
 
 /**
  * @openapi
@@ -101,7 +101,7 @@ router.get("/my", authenticate, getMyProducts);
  *         description: Trả về số lượng sản phẩm đăng hôm nay
  */
 // Định nghĩa tuyến đường GET /today-count lấy số sản phẩm đã đăng trong ngày (yêu cầu đăng nhập)
-router.get("/today-count", authenticate, getTodayCount);
+router.get("/today-count", authenticate, sellerOnly, getTodayCount);
 
 /**
  * @openapi
@@ -178,6 +178,7 @@ router.get("/:id", getProductById);
 router.post(
   "/",
   authenticate,
+  sellerOnly,
   validateSchema(productCreateSchema),
   createProduct,
 );
@@ -210,6 +211,7 @@ router.post(
 router.put(
   "/:id",
   authenticate,
+  sellerOnly,
   validateSchema(productUpdateSchema),
   updateProduct,
 );
@@ -233,7 +235,7 @@ router.put(
  *         description: Xóa sản phẩm thành công
  */
 // Định nghĩa tuyến đường DELETE /:id để người bán tự xóa sản phẩm theo ID (yêu cầu đăng nhập)
-router.delete("/:id", authenticate, deleteProduct);
+router.delete("/:id", authenticate, sellerOnly, deleteProduct);
 
 /**
  * @openapi
@@ -256,7 +258,7 @@ router.delete("/:id", authenticate, deleteProduct);
  *         description: Chưa hết thời gian cooldown để tiếp tục đẩy bài
  */
 // Định nghĩa tuyến đường POST /:id/bump để đẩy bài đăng sản phẩm lên đầu trang tìm kiếm (yêu cầu đăng nhập)
-router.post("/:id/bump", authenticate, bumpProduct);
+router.post("/:id/bump", authenticate, sellerOnly, bumpProduct);
 
 // Xuất mặc định router để cấu hình vào app chính app.ts
 export default router;

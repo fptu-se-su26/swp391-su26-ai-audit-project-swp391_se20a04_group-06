@@ -19,6 +19,45 @@ import { extractPublicId } from "../utils/cloudinary";
 // Quy định số lượng ảnh tối đa được phép tải lên cho mỗi sản phẩm là 5 ảnh
 const MAX_IMAGES = 5;
 
+const CONTENT_UPLOAD_FOLDERS: Record<string, string> = {
+  "boat-logs": "boat_logs",
+  "landing-batches": "landing_batches",
+  posts: "community_posts",
+  recipes: "recipes",
+};
+
+/**
+ * Upload ảnh nội dung trước khi tạo/cập nhật bản ghi.
+ * Chỉ trả về URL Cloudinary bền vững; frontend không được lưu blob/object URL.
+ */
+export async function uploadContentImages(req: Request, res: Response) {
+  const files = req.files as Express.Multer.File[];
+  const scope = req.params.scope;
+  const folder = CONTENT_UPLOAD_FOLDERS[scope];
+
+  if (!folder) {
+    return res.status(400).json({ message: "Loại nội dung upload không hợp lệ" });
+  }
+  if (!files?.length) {
+    return res.status(400).json({ message: "Chưa chọn ảnh nào" });
+  }
+
+  try {
+    const uploaded = await Promise.all(
+      files.map((file) => uploadToCloudinary(file.buffer, folder)),
+    );
+    return res.status(201).json({
+      urls: uploaded.map((item) => item.url),
+      images: uploaded.map((item) => ({
+        url: item.url,
+        publicId: item.publicId,
+      })),
+    });
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+}
+
 /**
  * HÀM TẢI LÊN NHIỀU HÌNH ẢNH CHO MỘT SẢN PHẨM
  */

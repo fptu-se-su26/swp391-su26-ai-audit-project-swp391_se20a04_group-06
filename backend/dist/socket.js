@@ -24,8 +24,10 @@ const product_repository_1 = require("./repositories/product.repository");
 const user_repository_1 = require("./repositories/user.repository");
 // Import đối tượng kết nối redis dùng làm bộ nhớ đệm và khóa giới hạn tần suất
 const redis_1 = require("./config/redis");
+const cors_1 = require("./config/cors");
 // Import logger phục vụ ghi log hệ thống
 const logger_1 = require("./utils/logger");
+const callAuthorization_1 = require("./utils/callAuthorization");
 // Khai báo thực thể IOServer của socket.io
 let ioInstance;
 // Khai báo kết nối Redis dùng để phát bản tin (Publish) của adapter
@@ -49,8 +51,15 @@ function initSocket(server) {
     // Khởi tạo máy chủ Socket.IO gắn vào HTTP server hiện hành kèm theo cấu hình CORS
     const io = new socket_io_1.Server(server, {
         cors: {
-            // Cho phép nguồn trang khách kết nối lấy từ CLIENT_URL hoặc mặc định localhost:3000
-            origin: process.env.CLIENT_URL || "http://localhost:3000",
+            // Chấp nhận kết nối từ Vite (5173) và backend truy cập trực tiếp (3000)
+            origin: (origin, callback) => {
+                if ((0, cors_1.isAllowedClientOrigin)(origin)) {
+                    callback(null, true);
+                }
+                else {
+                    callback((0, cors_1.rejectDisallowedOrigin)(origin));
+                }
+            },
             // Chỉ cho phép các phương thức GET và POST
             methods: ["GET", "POST"],
             // Cho phép truyền kèm cookie/credentials
@@ -310,8 +319,18 @@ function initSocket(server) {
         // Lắng nghe sự kiện bắt đầu cuộc gọi WebRTC thời gian thực "call_user"
         socket.on("call_user", async (data) => {
             // Trích xuất ID người nhận cuộc gọi, tín hiệu offer SDP, và tên người gọi
-            const { to, offer, callerName } = data;
+            const { to, offer, callerName, productId } = data;
             try {
+                const product = productId
+                    ? await product_repository_1.productRepository.findById(productId)
+                    : null;
+                const sellerId = product?.sellerId?.toString();
+                if (!product || !(0, callAuthorization_1.canSignalProductCall)(sellerId, userId, to)) {
+                    socket.emit("error", {
+                        message: "Cuộc gọi phải thuộc một cuộc trò chuyện sản phẩm hợp lệ.",
+                    });
+                    return;
+                }
                 // Truy vấn kiểm tra xem tài khoản người nhận cuộc gọi có đang hoạt động hay không
                 const recipient = await user_repository_1.userRepository.findRawById(to);
                 // Nếu tài khoản không khả dụng hoặc bị khóa
@@ -332,6 +351,7 @@ function initSocket(server) {
                     offer,
                     // Tên hiển thị người gọi
                     callerName: callerName || "Một người dùng",
+                    productId,
                 });
             }
             catch (err) {
@@ -342,34 +362,63 @@ function initSocket(server) {
             }
         });
         // Lắng nghe sự kiện trả lời đồng ý cuộc gọi "answer_call" từ người nhận
-        socket.on("answer_call", (data) => {
+        socket.on("answer_call", async (data) => {
             // Trích xuất ID người gọi nhận trả lời và tín hiệu SDP answer
-            const { to, answer } = data;
+            const { to, answer, productId } = data;
+            const product = productId
+                ? await product_repository_1.productRepository.findById(productId).catch(() => null)
+                : null;
+            if (!product || !(0, callAuthorization_1.canSignalProductCall)(product.sellerId?.toString(), userId, to)) {
+                socket.emit("error", { message: "Tín hiệu cuộc gọi không hợp lệ." });
+                return;
+            }
             // Ghi log chấp nhận cuộc gọi
             logger_1.logger.info(`[Socket Call] User ${userId} accepted call from User ${to}`);
             // Chuyển tiếp tín hiệu "call_accepted" về lại cho người gọi
             socket.to(`user_${to}`).emit("call_accepted", {
                 // Cấu hình SDP answer
                 answer,
+                productId,
             });
         });
+        socket.on("reject_call", async (data) => {
+            const { to, productId } = data;
+            const product = productId
+                ? await product_repository_1.productRepository.findById(productId).catch(() => null)
+                : null;
+            if (!product || !(0, callAuthorization_1.canSignalProductCall)(product.sellerId?.toString(), userId, to))
+                return;
+            logger_1.logger.info(`[Socket Call] User ${userId} rejected call from User ${to}`);
+            socket.to(`user_${to}`).emit("call_rejected", { productId });
+        });
         // Lắng nghe sự kiện trao đổi ứng viên kết nối mạng WebRTC "ice_candidate" giữa hai bên
-        socket.on("ice_candidate", (data) => {
+        socket.on("ice_candidate", async (data) => {
             // Trích xuất ID đối tác cần gửi và dữ liệu ứng viên candidate
-            const { to, candidate } = data;
+            const { to, candidate, productId } = data;
+            const product = productId
+                ? await product_repository_1.productRepository.findById(productId).catch(() => null)
+                : null;
+            if (!product || !(0, callAuthorization_1.canSignalProductCall)(product.sellerId?.toString(), userId, to))
+                return;
             // Chuyển tiếp ứng viên candidate tới phòng cá nhân của đối tác
             socket.to(`user_${to}`).emit("ice_candidate", {
                 candidate,
+                productId,
             });
         });
         // Lắng nghe sự kiện kết thúc cuộc gọi "end_call" từ một trong hai bên
-        socket.on("end_call", (data) => {
+        socket.on("end_call", async (data) => {
             // Trích xuất ID đối tác tham gia cuộc gọi
-            const { to } = data;
+            const { to, productId } = data;
+            const product = productId
+                ? await product_repository_1.productRepository.findById(productId).catch(() => null)
+                : null;
+            if (!product || !(0, callAuthorization_1.canSignalProductCall)(product.sellerId?.toString(), userId, to))
+                return;
             // Ghi log kết thúc cuộc gọi
             logger_1.logger.info(`[Socket Call] Call ended between User ${userId} and User ${to}`);
             // Gửi tín hiệu thông báo cuộc gọi đã ngắt "call_ended" tới đối tác
-            socket.to(`user_${to}`).emit("call_ended");
+            socket.to(`user_${to}`).emit("call_ended", { productId });
         });
         // Cho phép socket tự gia nhập vào phòng định danh cá nhân của chính mình để nhận các thông báo riêng tư từ hệ thống
         socket.join(`user_${userId}`);

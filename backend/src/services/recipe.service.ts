@@ -6,6 +6,8 @@ import { userRepository } from "../repositories/user.repository";
 import { HttpError } from "../errors/HttpError";
 // Import hàm trợ giúp parseId dùng để kiểm tra tính hợp lệ của định dạng ObjectId trong MongoDB
 import { parseId } from "../helpers/response.helper";
+import { Recipe as RecipeModel } from "../models/Recipe";
+import { sanitizeText } from "../utils/security";
 
 // Xuất ra đối tượng recipeService chứa các logic nghiệp vụ liên quan đến công thức món ăn hải sản
 export const recipeService = {
@@ -168,6 +170,34 @@ export const recipeService = {
 
     // Trả về trạng thái thích hiện tại cùng tổng số lượng lượt thích mới nhất
     return { liked, likeCount: updatedRecipe?.likes.length || 0 };
+  },
+
+  async addComment(recipeId: string, userId: string, text: string) {
+    if (!parseId(recipeId)) {
+      throw new HttpError(400, "ID công thức không hợp lệ");
+    }
+    const user = await userRepository.findRawById(userId);
+    if (!user) throw new HttpError(404, "Không tìm thấy người dùng");
+
+    const cleanText = sanitizeText(text, 1000);
+    if (!cleanText) throw new HttpError(400, "Bình luận không được để trống");
+
+    const recipe = await RecipeModel.findByIdAndUpdate(
+      recipeId,
+      {
+        $push: {
+          comments: {
+            userId: user._id,
+            userName: user.name,
+            userAvatar: user.avatar || null,
+            text: cleanText,
+          },
+        },
+      },
+      { new: true },
+    );
+    if (!recipe) throw new HttpError(404, "Không tìm thấy công thức");
+    return recipe.comments;
   },
 
   // Nghiệp vụ cập nhật thông tin chi tiết một công thức nấu ăn

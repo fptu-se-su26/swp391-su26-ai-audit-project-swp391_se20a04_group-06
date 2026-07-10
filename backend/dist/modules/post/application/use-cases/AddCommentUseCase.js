@@ -20,7 +20,7 @@ class AddCommentUseCase {
      * @param text Nội dung bình luận.
      * @returns Danh sách bình luận hiện tại sau khi đã thêm mới (kèm ID).
      */
-    async execute(postId, userId, text) {
+    async execute(postId, userId, text, parentId) {
         // 1. Tìm kiếm bài đăng cần bình luận từ Repository
         const post = await this.postRepository.findById(postId);
         // Nếu không tồn tại bài viết, ném lỗi NotFoundError
@@ -34,7 +34,7 @@ class AddCommentUseCase {
             throw new DomainException_1.NotFoundError("Không tìm thấy người dùng");
         }
         // 3. Thực thi nghiệp vụ qua domain entity bằng cách gọi phương thức addComment
-        post.addComment(userId, user.name, user.avatar || null, text);
+        post.addComment(userId, user.name, user.avatar || null, text, parentId);
         // 4. Lưu lại bài viết đã cập nhật danh sách bình luận mới vào cơ sở dữ liệu
         await this.postRepository.save(post);
         // Trả về danh sách tất cả các bình luận của bài viết sau khi đã cập nhật

@@ -3,6 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DeleteBoatLogUseCase = void 0;
 // Import các lỗi miền nghiệp vụ NotFoundError và UnauthorizedError để ném ra khi vi phạm
 const DomainException_1 = require("../../../../shared/domain/exceptions/DomainException");
+const upload_1 = require("../../../../middlewares/upload");
+const cloudinary_1 = require("../../../../utils/cloudinary");
+const logger_1 = require("../../../../utils/logger");
 // Định nghĩa lớp ca sử dụng (Use Case) phụ trách xóa Nhật ký Cabin khỏi hệ thống
 class DeleteBoatLogUseCase {
     // Hàm khởi tạo áp dụng cơ chế Dependency Injection để tiêm Repository thích hợp vào
@@ -25,6 +28,14 @@ class DeleteBoatLogUseCase {
         }
         // 3. Thực thi hành động xóa nhật ký cabin khỏi database thông qua Repository Adapter
         await this.boatLogRepository.delete(log);
+        await Promise.all(log.images.map(async (url) => {
+            const publicId = (0, cloudinary_1.extractPublicId)(url);
+            if (!publicId)
+                return;
+            await (0, upload_1.deleteFromCloudinary)(publicId).catch((error) => {
+                logger_1.logger.error(`Không thể xóa ảnh BoatLog ${publicId}: ${error.message}`);
+            });
+        }));
     }
 }
 exports.DeleteBoatLogUseCase = DeleteBoatLogUseCase;

@@ -6,11 +6,13 @@ import { reportRepository } from "../repositories/report.repository";
 import { productRepository } from "../repositories/product.repository";
 // Import thư viện mongoose phục vụ khởi tạo ngẫu nhiên các mã ObjectId hợp lệ cho kiểm thử
 import mongoose from "mongoose";
+import { notificationRepository } from "../repositories/notification.repository";
 
 // Thiết lập giả lập (mock) toàn bộ module reportRepository để tránh ghi vào cơ sở dữ liệu thật
 jest.mock("../repositories/report.repository");
 // Thiết lập giả lập (mock) toàn bộ module productRepository để tránh truy xuất cơ sở dữ liệu thật
 jest.mock("../repositories/product.repository");
+jest.mock("../repositories/notification.repository");
 // Thiết lập giả lập (mock) đối tượng productService để kiểm soát hành vi xóa sản phẩm trong ca kiểm thử
 jest.mock("./product.service", () => ({
   // Giả lập hàm delete rỗng của productService
@@ -67,6 +69,9 @@ describe("Unit Test: Report Service", () => {
     (reportRepository.create as jest.Mock).mockResolvedValue({
       // ID bản ghi báo cáo
       _id: "report_1",
+    });
+    (notificationRepository.create as jest.Mock).mockResolvedValue({
+      _id: "notification_1",
     });
 
     // Thực thi gọi nghiệp vụ tạo báo cáo vi phạm

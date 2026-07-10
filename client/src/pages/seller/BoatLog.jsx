@@ -1,133 +1,431 @@
 import { useEffect, useMemo, useState } from "react";
-import { Anchor, CalendarDays, Link2, MapPin, Plus, Ship, Trash2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import {
+  Anchor,
+  Archive,
+  ArchiveRestore,
+  CalendarDays,
+  Eye,
+  EyeOff,
+  Edit3,
+  Link2,
+  MapPin,
+  PackageOpen,
+  Plus,
+  Ship,
+  Trash2,
+} from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { apiBoatLogs, apiProducts } from "../../services/api";
 import { formatDate, getProductId } from "../../utils/product";
+import ImageUploader from "../../components/shared/ImageUploader";
+import DateTimePicker, { formatDateTimeForInput } from "../../components/shared/DateTimePicker";
+import { useConfirm } from "../../context/ConfirmContext";
 
-export default function BoatLog() {
+
+
+
+const archivedLogStorageKey = "haisan-archived-boat-logs";
+
+function getArchivedLogIds() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(archivedLogStorageKey) || "[]"));
+  } catch {
+    return new Set();
+  }
+}
+
+export default function BoatLog({ readOnly = false }) {
+  const { confirm, alert } = useConfirm();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [logs, setLogs] = useState([]);
+
   const [products, setProducts] = useState([]);
   const [content, setContent] = useState("");
-  const [imageUrls, setImageUrls] = useState("");
+  const [imageFiles, setImageFiles] = useState([]);   // File[]
+  const [existingImages, setExistingImages] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [boatName, setBoatName] = useState("");
+  const [catchArea, setCatchArea] = useState("");
+  const [landingTime, setLandingTime] = useState("");
+  const [origin, setOrigin] = useState("");
+  const [busyBatchId, setBusyBatchId] = useState("");
   const [formOpen, setFormOpen] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [archivedIds, setArchivedIds] = useState(getArchivedLogIds);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user && !readOnly) return;
     const userId = user.id || user._id;
+    const logRequest = readOnly
+      ? apiBoatLogs.getAll({ limit: 50 })
+      : apiBoatLogs.getAll({ userId });
+    const productRequest = readOnly
+      ? apiProducts.getAll({ limit: 100 })
+      : apiProducts.getMine();
     Promise.allSettled([
-      apiBoatLogs.getAll({ userId }),
-      apiProducts.getAll({ sellerId: userId }),
+      logRequest,
+      productRequest,
     ]).then(([logResult, productResult]) => {
       if (logResult.status === "fulfilled") {
         setLogs(logResult.value?.boatLogs || []);
       }
       if (productResult.status === "fulfilled") {
         const data = productResult.value;
-        setProducts(Array.isArray(data) ? data : data?.products || []);
+        setProducts(Array.isArray(data) ? data : data?.data || data?.products || []);
       }
     });
-  }, [user]);
+  }, [readOnly, user]);
+
+  const refreshLogs = async () => {
+    if (!user) return;
+    const response = await apiBoatLogs.getAll({ userId: user.id || user._id });
+    setLogs(response?.boatLogs || []);
+  };
+
+  const closeForm = () => {
+    setContent("");
+    setImageFiles([]);
+    setExistingImages([]);
+    setEditingId(null);
+    setBoatName("");
+    setCatchArea("");
+    setLandingTime("");
+    setOrigin("");
+    setFormOpen(false);
+  };
+
+  const startCreate = () => {
+    setContent("");
+    setImageFiles([]);
+    setExistingImages([]);
+    setEditingId(null);
+    setBoatName("");
+    setCatchArea("");
+    setLandingTime("");
+    setOrigin("");
+    setFormOpen(true);
+  };
+
+  const startEdit = (log) => {
+    setContent(log.content || "");
+    setImageFiles([]);
+    setExistingImages(log.images || []);
+    setEditingId(log.id || log._id);
+    setBoatName(log.boatName || "");
+    setCatchArea(log.catchArea || "");
+    setLandingTime(log.landingTime ? formatDateTimeForInput(log.landingTime) : "");
+
+    setOrigin(log.origin || "");
+    setFormOpen(true);
+  };
 
   const productsById = useMemo(
     () => new Map(products.map((product) => [String(getProductId(product)), product])),
     [products],
   );
+  const visibleLogs = useMemo(
+    () => {
+      if (readOnly) return logs;
+      return logs.filter((log) => {
+        const isArchived = archivedIds.has(String(log.id || log._id));
+        return showArchived ? isArchived : !isArchived;
+      });
+    },
+    [archivedIds, logs, readOnly, showArchived],
+  );
 
-  const createLog = async (event) => {
+  const saveLog = async (event) => {
     event.preventDefault();
     try {
-      const result = await apiBoatLogs.create({
+      let images = [...existingImages];
+      if (imageFiles.length > 0) {
+        const formData = new FormData();
+        imageFiles.forEach((file) => formData.append("images", file));
+        const uploadResult = await apiBoatLogs.uploadImages(formData);
+        images = [...images, ...(uploadResult?.urls || [])];
+      }
+
+      const payload = {
         content: content.trim(),
-        images: imageUrls.split("\n").map((value) => value.trim()).filter(Boolean),
-      });
-      const created = result.boatLog || result;
-      if (created) setLogs((current) => [created, ...current]);
-      setContent("");
-      setImageUrls("");
-      setFormOpen(false);
+        images,
+        boatName: boatName.trim() || undefined,
+        catchArea: catchArea.trim() || undefined,
+        landingTime: landingTime ? new Date(landingTime).toISOString() : null,
+        origin: origin.trim() || undefined,
+      };
+      if (editingId) await apiBoatLogs.update(editingId, payload);
+      else await apiBoatLogs.create(payload);
+
+      await refreshLogs();
+      closeForm();
     } catch (error) {
-      window.alert(`Không thể đăng Boat Log: ${error.message}`);
+      await alert({
+        title: "Lỗi đăng nhật ký",
+        message: error.message,
+        variant: "danger"
+      });
+    }
+  };
+
+  const createLandingBatch = async (log) => {
+    const logId = String(log.id || log._id);
+    setBusyBatchId(logId);
+    try {
+      const result = await apiBoatLogs.createLandingBatch(logId);
+      await refreshLogs();
+      navigate(`/seller/landing-batches/${result.id}/edit`);
+    } catch (error) {
+      await alert({
+        title: "Lỗi tạo vựa cá",
+        message: error.message,
+        variant: "danger"
+      });
+    } finally {
+      setBusyBatchId("");
     }
   };
 
   const deleteLog = async (log) => {
-    const id = log.id || log._id;
-    if (!window.confirm("Xóa nhật ký này?")) return;
+    const id = String(log.id || log._id);
+    const ok = await confirm({
+      title: "Xóa nhật ký cabin?",
+      message: "Bạn có chắc muốn xóa nhật ký cabin này? Thao tác này không thể hoàn tác.",
+      confirmText: "Xóa nhật ký",
+      variant: "danger"
+    });
+    if (!ok) return;
     try {
       await apiBoatLogs.delete(id);
-      setLogs((current) => current.filter((item) => (item.id || item._id) !== id));
+      setArchivedIds((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        localStorage.setItem(archivedLogStorageKey, JSON.stringify([...next]));
+        return next;
+      });
+      await refreshLogs();
     } catch (error) {
-      window.alert(`Không thể xóa Boat Log: ${error.message}`);
+      await alert({
+        title: "Lỗi xóa nhật ký",
+        message: error.message,
+        variant: "danger"
+      });
     }
   };
 
+
+
+  const toggleArchive = (log) => {
+    const id = String(log.id || log._id);
+    setArchivedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      localStorage.setItem(archivedLogStorageKey, JSON.stringify([...next]));
+      return next;
+    });
+  };
+
   return (
-    <div className="workspace-page boat-log-page">
-      <header className="page-heading page-heading--compact">
+    <div className={`workspace-page boat-log-page${readOnly ? " boat-log-page--readonly" : ""}`}>
+      <header className="page-heading page-heading--compact" data-tour="boat-log-heading">
         <div>
           <span className="eyebrow">TRACEABLE SEAFOOD</span>
           <h1>Boat Log</h1>
-          <p>Nhật ký chuyến biển và nguồn gốc của các mẻ hải sản.</p>
+          <p>
+            {readOnly
+              ? "Theo dõi nhật ký chuyến biển và nguồn gốc hải sản từ cộng đồng ngư dân."
+              : "Nhật ký chuyến biển và nguồn gốc của các mẻ hải sản."}
+          </p>
         </div>
-        <button className="button button--primary" onClick={() => setFormOpen((open) => !open)} type="button">
-          <Plus size={17} /> Thêm nhật ký
-        </button>
+        {!readOnly && (
+          <div className="page-heading__actions">
+            <button className="button button--secondary" onClick={() => setShowArchived((current) => !current)} type="button">
+              {showArchived ? <Eye size={17} /> : <EyeOff size={17} />}
+              {showArchived ? "Nhật ký đang hiển thị" : `Đã lưu trữ (${archivedIds.size})`}
+            </button>
+            <button className="button button--primary" data-tour="boat-log-create" onClick={formOpen ? closeForm : startCreate} type="button">
+              <Plus size={17} /> Thêm nhật ký
+            </button>
+          </div>
+        )}
       </header>
 
-      <p className="inline-notice inline-notice--warning">
-        API Boat Log hiện chỉ lưu nội dung và hình ảnh. Các trường liên kết sản phẩm, tàu,
-        khu vực đánh bắt và giờ cập bến sẽ hiển thị khi backend cung cấp dữ liệu tương ứng.
-      </p>
+      {!readOnly && formOpen && (
+        <form className="boat-log-form" onSubmit={saveLog}>
 
-      {formOpen && (
-        <form className="dashboard-panel boat-log-form" onSubmit={createLog}>
-          <label className="form-field">
-            <span>Nội dung nhật ký</span>
-            <textarea onChange={(event) => setContent(event.target.value)} required rows="4" value={content} />
-          </label>
-          <label className="form-field">
-            <span>URL ảnh (mỗi dòng một ảnh)</span>
-            <textarea onChange={(event) => setImageUrls(event.target.value)} rows="2" value={imageUrls} />
-          </label>
-          <div className="form-actions">
-            <button className="button button--ghost" onClick={() => setFormOpen(false)} type="button">Hủy</button>
-            <button className="button button--primary" type="submit">Đăng nhật ký</button>
+          {/* ── CỘT TRÁI: Nội dung + Ảnh ── */}
+          <div className="bl-form__left">
+            <label className="form-field bl-form__content-field">
+              <span>Nội dung nhật ký <span className="bl-form__required">*</span></span>
+              <textarea
+                onChange={(event) => setContent(event.target.value)}
+                placeholder="Hôm nay tàu cập bến lúc..., đánh bắt tại..., hải sản gồm..."
+                required
+                rows="8"
+                value={content}
+              />
+            </label>
+
+            <div className="form-field bl-form__images-field">
+              <span>Hình ảnh chuyến biển</span>
+              {existingImages.length > 0 && (
+                <div className="boat-log-existing-images">
+                  {existingImages.map((url) => (
+                    <figure key={url}>
+                      <img alt="" src={url} />
+                      <button
+                        aria-label="Bỏ ảnh khỏi nhật ký"
+                        onClick={() => setExistingImages((current) => current.filter((item) => item !== url))}
+                        type="button"
+                      >
+                        ×
+                      </button>
+                    </figure>
+                  ))}
+                </div>
+              )}
+              <ImageUploader files={imageFiles} maxFiles={4} onChange={setImageFiles} />
+            </div>
           </div>
+
+          {/* ── CỘT PHẢI: Thông tin chuyến đi + Nút ── */}
+          <div className="bl-form__right">
+            <div className="bl-form__trip-card">
+              <h3 className="bl-form__trip-title">
+                <Anchor size={16} /> Thông tin chuyến đi
+              </h3>
+
+              <label className="form-field">
+                <span>Tên tàu</span>
+                <input
+                  onChange={(event) => setBoatName(event.target.value)}
+                  placeholder="VD: Tàu Hải Long 01"
+                  value={boatName}
+                />
+              </label>
+
+              <label className="form-field">
+                <span>Khu vực đánh bắt</span>
+                <input
+                  onChange={(event) => setCatchArea(event.target.value)}
+                  placeholder="VD: Vịnh Bắc Bộ, Trường Sa..."
+                  value={catchArea}
+                />
+              </label>
+
+              <DateTimePicker
+                id="boatlog-landingTime"
+                label="Thời gian cập bến"
+                value={landingTime}
+                onChange={setLandingTime}
+              />
+
+              <label className="form-field">
+                <span>Nguồn gốc / Cảng cá</span>
+                <input
+                  onChange={(event) => setOrigin(event.target.value)}
+                  placeholder="VD: Cảng cá Thọ Quang, Đà Nẵng"
+                  value={origin}
+                />
+              </label>
+
+              <p className="bl-form__hint">
+                Thông tin chuyến đi giúp người mua truy xuất nguồn gốc hải sản dễ dàng hơn.
+              </p>
+            </div>
+
+            {/* Nút hành động */}
+            <div className="bl-form__actions">
+              <button
+                className="button button--ghost"
+                onClick={closeForm}
+                type="button"
+              >
+                Hủy
+              </button>
+              <button
+                className="button button--primary bl-form__submit"
+                type="submit"
+              >
+                {editingId ? "Cập nhật nhật ký" : "Đăng nhật ký"}
+              </button>
+            </div>
+          </div>
+
         </form>
       )}
 
-      <div className="boat-log-grid">
-        {logs.map((log) => {
+
+
+
+      <div className="boat-log-grid" data-tour="boat-log-grid">
+        {visibleLogs.map((log) => {
           const product = productsById.get(String(log.productId || ""));
+          const isArchived = archivedIds.has(String(log.id || log._id));
           return (
-            <article className="boat-log-card" key={log.id || log._id}>
-              {log.images?.[0] && <img src={log.images[0]} alt="" />}
+            <article className={`boat-log-card ${isArchived ? "is-archived" : ""}`} data-tour="boat-log-card" key={log.id || log._id}>
+              {log.images?.[0] && <img src={log.images[0]} alt="" loading="lazy" />}
               <div className="boat-log-card__body">
                 <header>
                   <span className="boat-log-card__avatar">{(log.userName || "ND").slice(0, 2).toUpperCase()}</span>
-                  <div><strong>{log.userName || user?.name}</strong><small>{formatDate(log.createdAt)}</small></div>
-                  <button aria-label="Xóa nhật ký" onClick={() => deleteLog(log)} type="button"><Trash2 size={16} /></button>
+                  <div><strong>{log.userName || (readOnly ? "Ngư dân" : user?.name)}</strong><small>{formatDate(log.createdAt)}</small></div>
+                  {!readOnly && (
+                    <>
+                      <button aria-label="Chỉnh sửa nhật ký" onClick={() => startEdit(log)} title="Chỉnh sửa" type="button">
+                        <Edit3 size={16} />
+                      </button>
+                      <button aria-label="Xóa nhật ký" onClick={() => deleteLog(log)} title="Xóa" type="button">
+                        <Trash2 size={16} />
+                      </button>
+                      <button
+                        aria-label={isArchived ? "Khôi phục nhật ký" : "Lưu trữ nhật ký"}
+                        onClick={() => toggleArchive(log)}
+                        title={isArchived ? "Khôi phục" : "Lưu trữ"}
+                        type="button"
+                      >
+                        {isArchived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+                      </button>
+                    </>
+                  )}
                 </header>
                 <p>{log.content}</p>
-                <dl>
+                <dl data-tour="boat-log-traceability">
                   <div><CalendarDays /><dt>Ngày đánh bắt</dt><dd>{formatDate(log.catchTime || product?.catchTime)}</dd></div>
-                  <div><MapPin /><dt>Khu vực đánh bắt</dt><dd>{log.catchArea || product?.origin || "Chưa cập nhật"}</dd></div>
-                  <div><Ship /><dt>Tên tàu</dt><dd>{log.boatName || user?.boatName || "Chưa cập nhật"}</dd></div>
+                  <div><MapPin /><dt>Khu vực đánh bắt</dt><dd>{log.catchArea || "Chưa cập nhật"}</dd></div>
+                  <div><Ship /><dt>Tên tàu</dt><dd>{log.boatName || (!readOnly && user?.boatName) || "Chưa cập nhật"}</dd></div>
                   <div><Anchor /><dt>Thời gian cập bến</dt><dd>{log.landingTime ? formatDate(log.landingTime) : "Chưa cập nhật"}</dd></div>
-                  <div><Link2 /><dt>Nguồn gốc</dt><dd>{log.origin || product?.origin || "Chưa cập nhật"}</dd></div>
+                  <div><Link2 /><dt>Nguồn gốc</dt><dd>{log.origin || "Chưa cập nhật"}</dd></div>
                 </dl>
-                {product ? (
-                  <Link to={`/product/${getProductId(product)}`}>Xem sản phẩm liên kết: {product.name}</Link>
-                ) : (
-                  <span className="boat-log-card__unlinked">Chưa có sản phẩm liên kết</span>
-                )}
+                <div className="boat-log-card__links" data-tour="boat-log-links">
+                  {product && (
+                    <Link to={`/product/${getProductId(product)}`}>Xem sản phẩm liên kết: {product.name}</Link>
+                  )}
+                  {log.batchId ? (
+                    <Link to={`/landing-batches/${log.batchId}`}>Xem vựa cá liên quan</Link>
+                  ) : !readOnly ? (
+                    <button
+                      className="button button--secondary"
+                      disabled={busyBatchId === String(log.id || log._id)}
+                      onClick={() => createLandingBatch(log)}
+                      type="button"
+                    >
+                      <PackageOpen size={15} /> Tạo vựa cá từ nhật ký
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </article>
           );
         })}
-        {logs.length === 0 && <div className="empty-state">Chưa có nhật ký chuyến biển.</div>}
+        {visibleLogs.length === 0 && (
+          <div className="empty-state" data-tour="boat-log-empty">
+            {!readOnly && showArchived
+              ? "Chưa có nhật ký được lưu trữ."
+              : "Chưa có nhật ký chuyến biển."}
+          </div>
+        )}
       </div>
     </div>
   );

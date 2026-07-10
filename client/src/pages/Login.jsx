@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle, ArrowLeft, Fish, Loader2 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import InteractiveUnderwaterBackground from "../components/effects/InteractiveUnderwaterBackground";
 import { useAuth } from "../context/AuthContext";
 import { apiAuth } from "../services/api";
 
@@ -9,7 +10,7 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, setApiOnline } = useAuth();
+  const { login } = useAuth();
   const [selectedRole, setSelectedRole] = useState("buyer");
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,7 +21,7 @@ export default function Login() {
   }, [selectedRole]);
 
   const handleGoogleResponse = useCallback(
-    async (googleResponse) => {
+    async (googleResponse, roleOverride) => {
       const idToken = googleResponse?.credential;
       if (!idToken) {
         setErrorMessage("Không nhận được ID Token từ Google.");
@@ -32,14 +33,13 @@ export default function Login() {
       try {
         const result = await apiAuth.googleLogin({
           idToken,
-          selectedRole: selectedRoleRef.current,
+          selectedRole: roleOverride || selectedRoleRef.current,
         });
         if (!result?.user) throw new Error("Phản hồi đăng nhập không hợp lệ.");
 
         login(result.user);
-        setApiOnline(true);
         const role = result.user.sessionRole || result.user.role;
-        if (["Admin", "admin"].includes(role)) navigate("/admin");
+        if (["Admin", "admin"].includes(result.user.role)) navigate("/admin");
         else if (["Seller", "seller"].includes(role)) navigate("/seller");
         else navigate("/");
       } catch (error) {
@@ -48,7 +48,7 @@ export default function Login() {
         setLoading(false);
       }
     },
-    [login, navigate, setApiOnline],
+    [login, navigate],
   );
 
   useEffect(() => {
@@ -69,10 +69,13 @@ export default function Login() {
         const container = document.getElementById("google-signin-btn");
         if (container) {
           container.replaceChildren();
+          const availableWidth = Math.floor(
+            container.parentElement?.getBoundingClientRect().width || 320,
+          );
           google.accounts.id.renderButton(container, {
             theme: "filled_blue",
             size: "large",
-            width: 320,
+            width: Math.max(200, Math.min(320, availableWidth)),
             text: "signin_with",
             shape: "rectangular",
           });
@@ -89,7 +92,8 @@ export default function Login() {
   }, [handleGoogleResponse]);
 
   return (
-    <main className="auth-page">
+    <main className="auth-page auth-page--underwater">
+      <InteractiveUnderwaterBackground />
       <section className="auth-card">
         <Link className="back-link" to="/"><ArrowLeft size={16} /> Quay về trang chủ</Link>
         <div className="auth-card__heading">

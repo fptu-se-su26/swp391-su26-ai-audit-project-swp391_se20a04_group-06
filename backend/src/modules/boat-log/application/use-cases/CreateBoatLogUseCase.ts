@@ -13,6 +13,10 @@ export interface CreateBoatLogRequestDTO {
   content: string;
   // Mảng chứa các đường dẫn hình ảnh đính kèm (tùy chọn)
   images?: string[];
+  boatName?: string;
+  catchArea?: string;
+  landingTime?: string | null;
+  origin?: string;
 }
 
 // Định nghĩa lớp ca sử dụng (Use Case) để thực thi nghiệp vụ đăng tải Nhật ký Cabin mới
@@ -52,6 +56,10 @@ export class CreateBoatLogUseCase {
       images: dto.images || [],
       // Thiết lập danh sách lượt thích ban đầu là mảng rỗng
       likes: [],
+      boatName: dto.boatName?.trim() || undefined,
+      catchArea: dto.catchArea?.trim() || undefined,
+      landingTime: dto.landingTime ? new Date(dto.landingTime) : undefined,
+      origin: dto.origin?.trim() || undefined,
     });
 
     // 4. Lưu thực thể BoatLog vừa khởi tạo thành công xuống cơ sở dữ liệu qua Repository Adapter

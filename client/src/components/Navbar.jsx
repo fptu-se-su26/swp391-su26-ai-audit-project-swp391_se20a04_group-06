@@ -7,6 +7,15 @@ import { useSocket } from "../context/SocketContext";
 import NotificationDropdown from "./navigation/NotificationDropdown";
 import ProfileDropdown from "./navigation/ProfileDropdown";
 
+const navigationTourTargets = {
+  "/marketplace": "nav-marketplace",
+  "/community": "nav-community",
+  "/recipes": "nav-recipes",
+  "/boat-log": "nav-boat-log",
+  "/seller": "nav-seller-dashboard",
+  "/seller/boat-log": "nav-boat-log",
+};
+
 function initials(name) {
   if (!name) return "?";
   return name
@@ -58,10 +67,17 @@ export default function Navbar() {
     navigate("/login");
   };
 
+  const handleStartTour = () => {
+    setProfileOpen(false);
+    window.setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("haisan:start-tour"));
+    }, 0);
+  };
+
   return (
     <>
       <header className="app-navbar">
-        <Link className="app-brand" to="/">
+        <Link className="app-brand" data-tour="navbar-brand" to="/">
           <span className="app-brand__mark">HS</span>
           <span>
             <strong>HaiSan.vn</strong>
@@ -75,6 +91,7 @@ export default function Navbar() {
             return (
               <Link
                 className={`app-nav-link ${isActive(item) ? "is-active" : ""} ${item.highlight ? "is-highlight" : ""}`}
+                data-tour={navigationTourTargets[item.path]}
                 key={item.path}
                 to={item.path}
               >
@@ -100,6 +117,7 @@ export default function Navbar() {
                   aria-expanded={notificationOpen}
                   aria-label="Thông báo"
                   className="navbar-icon-button"
+                  data-tour="navbar-notifications"
                   onClick={() => {
                     setNotificationOpen((open) => !open);
                     setProfileOpen(false);
@@ -125,6 +143,7 @@ export default function Navbar() {
                 <button
                   aria-expanded={profileOpen}
                   className="navbar-profile-button"
+                  data-tour="navbar-profile"
                   onClick={() => {
                     setProfileOpen((open) => !open);
                     setNotificationOpen(false);
@@ -143,6 +162,7 @@ export default function Navbar() {
                   <ProfileDropdown
                     onClose={() => setProfileOpen(false)}
                     onLogout={handleLogout}
+                    onStartTour={handleStartTour}
                     role={role}
                     roleLabel={meta.label}
                     user={user}
@@ -153,7 +173,7 @@ export default function Navbar() {
           ) : (
             <div className="navbar-auth-actions">
               <Link className="button button--ghost" to="/register">Đăng ký</Link>
-              <Link className="button button--primary" to="/login">
+              <Link className="button button--primary" data-tour="navbar-login" to="/login">
                 <LogIn size={16} /> Đăng nhập
               </Link>
             </div>

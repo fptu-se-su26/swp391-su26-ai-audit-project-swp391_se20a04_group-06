@@ -1,7 +1,7 @@
 // Import đối tượng Router từ thư viện express để định nghĩa các tuyến đường HTTP
 import { Router } from 'express';
 // Import các hàm xử lý tải lên ảnh, xóa ảnh, và tạo chữ ký bảo mật từ image.controller
-import { uploadImages, deleteImage } from '../controllers/image.controller';
+import { uploadImages, uploadContentImages, deleteImage } from '../controllers/image.controller';
 // Import middleware xác thực người dùng đã đăng nhập (authenticate)
 import { authenticate } from '../middlewares/auth';
 // Import middleware cấu hình lưu trữ file tải lên (upload)
@@ -11,6 +11,15 @@ import { getUploadSignature } from '../controllers/image.controller';
 
 // Khởi tạo đối tượng router từ Express Router
 const router = Router();
+
+// Ảnh BoatLog/Post/Recipe được upload lên Cloudinary trước, sau đó URL được
+// ghi vào document MongoDB bởi API create/update tương ứng.
+router.post(
+  '/uploads/:scope',
+  authenticate,
+  upload.array('images', 5),
+  uploadContentImages,
+);
 
 /**
  * @openapi
@@ -97,4 +106,3 @@ router.delete('/images/:id', authenticate, deleteImage);
 
 // Xuất mặc định router để cấu hình vào app chính app.ts
 export default router;
-

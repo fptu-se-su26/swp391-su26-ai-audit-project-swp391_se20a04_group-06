@@ -4,27 +4,23 @@ import { Link, useLocation } from "react-router-dom";
 import ChatComposer from "../components/chat/ChatComposer";
 import ConversationList from "../components/chat/ConversationList";
 import MessageBubble from "../components/chat/MessageBubble";
+import VideoCall from "../components/chat/VideoCall";
 import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../context/SocketContext";
 import { apiMessages } from "../services/api";
+import { useConfirm } from "../context/ConfirmContext";
 
-function normalizeConversation(conversation) {
-  const partnerId = conversation.otherUserId || conversation.partnerId;
-  const productId = conversation.productId;
-  return {
-    ...conversation,
-    id: conversation.id || `${productId}:${partnerId}`,
-    partnerId,
-    partnerName: conversation.otherUserName || conversation.partnerName || "Người dùng",
-    productId,
-    messages: conversation.messages || [],
-  };
-}
+import {
+  mergeConversations,
+  normalizeConversation,
+} from "../utils/chat";
 
 export default function Chat() {
+  const { confirm, alert } = useConfirm();
   const { user } = useAuth();
   const location = useLocation();
   const { socket, joinConversation, leaveConversation, sendChatMessage } = useSocket() || {};
+
   const [threads, setThreads] = useState([]);
   const [activeThreadId, setActiveThreadId] = useState("");
   const [loading, setLoading] = useState(true);
@@ -56,7 +52,7 @@ export default function Chat() {
         const nextThreads = (Array.isArray(data) ? data : data?.conversations || []).map(
           normalizeConversation,
         );
-        setThreads(nextThreads);
+        setThreads((current) => mergeConversations(current, nextThreads));
         setActiveThreadId((current) => current || nextThreads[0]?.id || "");
       })
       .catch((error) => console.error("Failed to load conversations:", error))
@@ -120,6 +116,18 @@ export default function Chat() {
 
   useEffect(() => {
     if (!socket) return undefined;
+    const updateMessage = (id, patch) => {
+      setThreads((current) =>
+        current.map((thread) => ({
+          ...thread,
+          messages: thread.messages.map((message) =>
+            String(message.id || message._id) === String(id)
+              ? { ...message, ...patch }
+              : message,
+          ),
+        })),
+      );
+    };
     const handleMessage = (message) => {
       setThreads((current) =>
         current.map((thread) =>
@@ -130,8 +138,19 @@ export default function Chat() {
         ),
       );
     };
+    const handleRecall = ({ id }) => updateMessage(id, { isRecalled: true, content: null });
+    const handleEdit = ({ id, content }) => updateMessage(id, { content });
+    const handleReaction = ({ id, reaction }) => updateMessage(id, { reaction });
     socket.on("new_message", handleMessage);
-    return () => socket.off("new_message", handleMessage);
+    socket.on("message_recalled", handleRecall);
+    socket.on("message_edited", handleEdit);
+    socket.on("message_reacted", handleReaction);
+    return () => {
+      socket.off("new_message", handleMessage);
+      socket.off("message_recalled", handleRecall);
+      socket.off("message_edited", handleEdit);
+      socket.off("message_reacted", handleReaction);
+    };
   }, [socket]);
 
   useEffect(() => {
@@ -187,7 +206,11 @@ export default function Chat() {
       setInitialText("");
       return true;
     } catch (error) {
-      window.alert(`Không thể gửi tin nhắn: ${error.message}`);
+      await alert({
+        title: "Lỗi gửi tin nhắn",
+        message: error.message,
+        variant: "danger"
+      });
       return false;
     } finally {
       setSending(false);
@@ -205,9 +228,84 @@ export default function Chat() {
           null,
           { latitude: coords.latitude, longitude: coords.longitude },
         ),
-      () => window.alert("Không thể lấy vị trí. Vui lòng kiểm tra quyền định vị."),
+      async () => {
+        await alert({
+          title: "Lỗi vị trí",
+          message: "Không thể lấy vị trí. Vui lòng kiểm tra quyền định vị.",
+          variant: "warning"
+        });
+      },
     );
   };
+
+  const patchMessage = (id, patch) => {
+    setThreads((current) =>
+      current.map((thread) =>
+        thread.id === activeThreadId
+          ? {
+              ...thread,
+              messages: thread.messages.map((message) =>
+                String(message.id || message._id) === String(id)
+                  ? { ...message, ...patch }
+                  : message,
+              ),
+            }
+          : thread,
+      ),
+    );
+  };
+
+  const recallMessage = async (message) => {
+    const ok = await confirm({
+      title: "Thu hồi tin nhắn?",
+      message: "Bạn có chắc chắn muốn thu hồi tin nhắn này?",
+      confirmText: "Thu hồi",
+      variant: "warning"
+    });
+    if (!ok) return;
+    const id = message.id || message._id;
+    try {
+      await apiMessages.recall(id);
+      patchMessage(id, { isRecalled: true, content: null });
+    } catch (error) {
+      await alert({
+        title: "Lỗi thu hồi",
+        message: error.message,
+        variant: "danger"
+      });
+    }
+  };
+
+  const editMessage = async (message) => {
+    const content = window.prompt("Chỉnh sửa tin nhắn:", message.content || "");
+    if (!content?.trim() || content.trim() === message.content) return;
+    const id = message.id || message._id;
+    try {
+      await apiMessages.edit(id, content.trim());
+      patchMessage(id, { content: content.trim() });
+    } catch (error) {
+      await alert({
+        title: "Lỗi chỉnh sửa",
+        message: error.message,
+        variant: "danger"
+      });
+    }
+  };
+
+  const reactMessage = async (message, reaction) => {
+    const id = message.id || message._id;
+    try {
+      await apiMessages.react(id, reaction);
+      patchMessage(id, { reaction });
+    } catch (error) {
+      await alert({
+        title: "Lỗi cảm xúc",
+        message: error.message,
+        variant: "danger"
+      });
+    }
+  };
+
 
   if (!user) {
     return (
@@ -217,7 +315,9 @@ export default function Chat() {
       </div>
     );
   }
-  if (loading) return <div className="page-state">Đang tải tin nhắn...</div>;
+  if (loading && !activeThread) {
+    return <div className="page-state">Đang tải tin nhắn...</div>;
+  }
 
   return (
     <div className="chat-page">
@@ -235,11 +335,19 @@ export default function Chat() {
             <div>
               <strong>{activeThread.partnerName}</strong>
               <span><PackageOpen size={14} /> {activeThread.productName}</span>
-              {activeThread.isTyping && <small>Đang nhập...</small>}
             </div>
-            {!socket && (
-              <span className="socket-status"><AlertCircle size={14} /> Mất kết nối realtime</span>
-            )}
+            <div className="chat-window__actions">
+              <VideoCall
+                currentUser={user}
+                partnerId={activeThread.partnerId}
+                partnerName={activeThread.partnerName}
+                productId={activeThread.productId}
+                socket={socket}
+              />
+              {!socket && (
+                <span className="socket-status"><AlertCircle size={14} /> Mất kết nối realtime</span>
+              )}
+            </div>
           </header>
 
           <div className="chat-window__messages">
@@ -248,6 +356,9 @@ export default function Chat() {
                 isMine={String(message.senderId) === String(user.id || user._id)}
                 key={message.id || message._id || index}
                 message={message}
+                onEdit={editMessage}
+                onReact={reactMessage}
+                onRecall={recallMessage}
                 onReply={setReplyTo}
               />
             ))}

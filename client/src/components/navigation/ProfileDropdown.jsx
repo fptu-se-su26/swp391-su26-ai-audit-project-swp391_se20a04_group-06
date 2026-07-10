@@ -1,7 +1,14 @@
-import { Crown, LayoutDashboard, LogOut, User } from "lucide-react";
+import { Compass, Crown, LayoutDashboard, LogOut, User } from "lucide-react";
 import { Link } from "react-router-dom";
 
-export default function ProfileDropdown({ user, role, roleLabel, onClose, onLogout }) {
+export default function ProfileDropdown({
+  user,
+  role,
+  roleLabel,
+  onClose,
+  onLogout,
+  onStartTour,
+}) {
   const workspacePath = role === "seller" ? "/seller" : role === "admin" ? "/admin" : null;
 
   return (
@@ -23,7 +30,20 @@ export default function ProfileDropdown({ user, role, roleLabel, onClose, onLogo
       <Link to="/premium" onClick={onClose}>
         <Crown size={16} /> Premium
       </Link>
-      <button type="button" className="profile-dropdown__logout" onClick={onLogout}>
+      <button
+        className="profile-dropdown__guide"
+        data-tour="navbar-quick-guide"
+        onClick={onStartTour}
+        type="button"
+      >
+        <Compass size={16} /> Hướng dẫn nhanh
+      </button>
+      <button
+        className="profile-dropdown__logout"
+        data-tour="navbar-logout"
+        onClick={onLogout}
+        type="button"
+      >
         <LogOut size={16} /> Đăng xuất
       </button>
     </section>

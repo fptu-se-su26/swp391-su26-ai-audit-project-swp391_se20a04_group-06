@@ -4,6 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.safeCompare = safeCompare;
+exports.sanitizeText = sanitizeText;
+exports.sanitizeDeep = sanitizeDeep;
 // Import thư viện mã hóa crypto có sẵn của Node.js để tính toán giá trị băm (hash)
 const crypto_1 = __importDefault(require("crypto"));
 /**
@@ -18,4 +20,27 @@ function safeCompare(a, b) {
     const hashB = crypto_1.default.createHash("sha256").update(b).digest();
     // Sử dụng hàm timingSafeEqual để so sánh hai Buffer hashA và hashB với thời gian xử lý đồng đều
     return crypto_1.default.timingSafeEqual(hashA, hashB);
+}
+function sanitizeText(value, maxLength = 5000) {
+    return value
+        .replace(/\u0000/g, "")
+        .replace(/<[^>]*>/g, "")
+        .trim()
+        .slice(0, maxLength);
+}
+function sanitizeDeep(value) {
+    if (typeof value === "string") {
+        return sanitizeText(value);
+    }
+    if (Array.isArray(value)) {
+        return value.map((item) => sanitizeDeep(item));
+    }
+    if (value && typeof value === "object" && !Buffer.isBuffer(value)) {
+        const sanitized = Object.fromEntries(Object.entries(value).map(([key, item]) => [
+            key,
+            sanitizeDeep(item),
+        ]));
+        return sanitized;
+    }
+    return value;
 }

@@ -1,6 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getPremiumIntent = getPremiumIntent;
+exports.getPremiumStatus = getPremiumStatus;
 exports.sepayWebhook = sepayWebhook;
+// Import userRepository (Mongoose) truy cập dữ liệu người dùng
+const user_repository_1 = require("../repositories/user.repository");
 // Import model Mongoose PaymentTransaction để lưu thông tin lịch sử giao dịch thanh toán
 const PaymentTransaction_1 = require("../models/PaymentTransaction");
 // Import logger để ghi nhận lại nhật ký xử lý giao dịch hoặc lỗi bảo mật
@@ -13,6 +17,44 @@ const MongooseUserRepository_1 = require("../modules/iam/infrastructure/persiste
 const DomainEvents_1 = require("../shared/domain/events/DomainEvents");
 // Khởi tạo thực thể Repository theo chuẩn kiến trúc Domain-Driven Design (DDD)
 const dddUserRepository = new MongooseUserRepository_1.MongooseUserRepository();
+async function getPremiumIntent(req, res) {
+    const user = await user_repository_1.userRepository.findRawById(req.user.userId);
+    if (!user)
+        return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    const amount = Number(process.env.PREMIUM_PRICE || 99000);
+    const transferContent = `HAISAN PREMIUM ${req.user.userId}`;
+    const bankId = process.env.SEPAY_BANK_ID || "";
+    const accountNumber = process.env.SEPAY_BANK_ACCOUNT || "";
+    const accountName = process.env.SEPAY_ACCOUNT_NAME || "";
+    const configured = Boolean(bankId && accountNumber);
+    const qrUrl = configured
+        ? `https://img.vietqr.io/image/${encodeURIComponent(bankId)}-${encodeURIComponent(accountNumber)}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(accountName)}`
+        : null;
+    return res.json({
+        amount,
+        transferContent,
+        bankId,
+        accountNumber,
+        accountName,
+        qrUrl,
+        configured,
+        isPremium: Boolean(user.isPremium),
+    });
+}
+async function getPremiumStatus(req, res) {
+    const user = await user_repository_1.userRepository.findRawById(req.user.userId);
+    if (!user)
+        return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    const latestTransaction = await PaymentTransaction_1.PaymentTransaction.findOne({
+        userId: req.user.userId,
+    })
+        .sort({ createdAt: -1 })
+        .lean();
+    return res.json({
+        isPremium: Boolean(user.isPremium),
+        latestTransaction,
+    });
+}
 /**
  * HÀM WEBHOOK XỬ LÝ THANH TOÁN TỰ ĐỘNG TỪ CỔNG THANH TOÁN SEPAY (BANK TRANSFER AUTOMATION)
  */
@@ -75,13 +117,17 @@ async function sepayWebhook(req, res) {
                 .status(200)
                 .json({ success: true, message: "Transaction already processed" });
         }
-        // Validate: kiểm tra số tiền thanh toán (tối thiểu là 2,000 VND)
+        // Chỉ nâng cấp khi số tiền đạt đúng mức giá Premium được cấu hình.
         const numericAmount = Number(finalAmount);
-        if (isNaN(numericAmount) || numericAmount < 2000) {
-            logger_1.logger.warn(`[Sepay Webhook] Invalid transfer amount: ${finalAmount}. Must be >= 2000 VND`);
+        const premiumPrice = Number(process.env.PREMIUM_PRICE || 99000);
+        if (isNaN(numericAmount) ||
+            !Number.isFinite(premiumPrice) ||
+            premiumPrice <= 0 ||
+            numericAmount < premiumPrice) {
+            logger_1.logger.warn(`[Sepay Webhook] Invalid transfer amount: ${finalAmount}. Must be >= ${premiumPrice} VND`);
             return res
                 .status(400)
-                .json({ message: "Transfer amount must be at least 2000 VND" });
+                .json({ message: `Transfer amount must be at least ${premiumPrice} VND` });
         }
         // 4. TRÍCH XUẤT ID NGƯỜI DÙNG TỪ NỘI DUNG CHUYỂN KHOẢN
         // Dùng biểu thức chính quy (Regex) tìm chuỗi hex dài đúng 24 ký tự (chuẩn ObjectId của MongoDB) trong nội dung chuyển khoản

@@ -4,11 +4,12 @@ import "dotenv/config";
 import { Request, Response, NextFunction } from "express";
 // Import thư viện jsonwebtoken để giải mã và xác thực mã JWT
 import jwt from "jsonwebtoken";
+import { User } from "../models/User";
 
 /**
  * MIDDLEWARE XÁC THỰC TÀI KHOẢN NGƯỜI DÙNG (AUTHENTICATE)
  */
-export function authenticate(req: Request, res: Response, next: NextFunction) {
+export async function authenticate(req: Request, res: Response, next: NextFunction) {
   // Chỉ chấp nhận và trích xuất token từ HttpOnly cookie để chống lại các cuộc tấn công XSS (Cross-Site Scripting) đánh cắp token
   const token = req.cookies?.token;
 
@@ -27,9 +28,20 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
     }) as {
       userId: string;
       role: "User" | "Admin";
+      sessionRole?: "buyer" | "seller";
     };
     
     // Gắn thông tin payload đã giải mã thành công (userId, role) vào đối tượng Request để sử dụng ở các controller tiếp theo
+    const activeUser = await User.exists({
+      _id: payload.userId,
+      isActive: true,
+    });
+    if (!activeUser) {
+      return res.status(403).json({
+        code: "ACCOUNT_DISABLED",
+        message: "Tài khoản đã bị khóa hoặc không còn tồn tại.",
+      });
+    }
     req.user = payload;
     // Chuyển tiếp yêu cầu sang middleware hoặc controller kế tiếp
     next();
@@ -61,6 +73,20 @@ export function adminOnly(req: Request, res: Response, next: NextFunction) {
       .json({ code: "FORBIDDEN", message: "Chỉ Admin mới có quyền này" });
   }
   // Nếu là Admin, cho phép đi tiếp sang controller xử lý nghiệp vụ
+  next();
+}
+
+/**
+ * Bảo vệ các thao tác nghiệp vụ dành riêng cho người bán. Admin luôn được
+ * phép; tài khoản thường phải đăng nhập trong phiên "seller".
+ */
+export function sellerOnly(req: Request, res: Response, next: NextFunction) {
+  if (req.user?.role !== "Admin" && req.user?.sessionRole !== "seller") {
+    return res.status(403).json({
+      code: "SELLER_ONLY",
+      message: "Chỉ phiên Ngư dân bán hàng mới có quyền thực hiện thao tác này",
+    });
+  }
   next();
 }
 

@@ -1,83 +1,79 @@
-# Báo cáo review và tái cấu trúc Frontend
+# Báo cáo review và tối ưu Frontend
 
 Ngày hoàn thành: 28/06/2026  
 Phạm vi: `client/` (React + Vite)  
-Backend, API contract, database, business logic, authentication và Socket event không bị chỉnh sửa.
+Backend, REST API, authentication, database schema, business logic và Socket event không bị chỉnh sửa.
 
-## 1. Những gì đã chỉnh
+## 1. Những gì đã sửa
 
-- Chuẩn hóa routing và menu theo ba vai trò Buyer, Seller, Admin.
-- Buyer: Trang chủ, Chợ hải sản, Đã lưu, Tin nhắn, Thông báo, Premium, Hồ sơ.
-- Seller: Dashboard, Quản lý sản phẩm, Boat Log, Tin nhắn, Premium, Thống kê, Thông báo, Hồ sơ.
-- Admin: Dashboard, Quản lý User, Duyệt sản phẩm, Report, Premium, Broadcast Notification, Settings.
-- Chuyển cấu hình menu dùng chung sang `src/config/navigation.js`.
-- Tách Navbar, notification dropdown và profile dropdown thành component riêng.
-- Thiết kế lại Product Card để hiển thị ảnh, tên, giá, khoảng cách, người bán, xác minh, Premium, trạng thái, độ tươi, ngày đánh bắt, nguồn gốc và các nút Nhắn người bán, Giữ chỗ, Lưu.
-- Thiết kế lại trang chi tiết sản phẩm, thêm bản đồ React Leaflet + OpenStreetMap và tính khoảng cách từ vị trí người xem.
-- Sửa form Seller Product để dùng đúng enum category của API và gửi tọa độ bắt buộc cho sản phẩm tươi.
-- Seller Dashboard chỉ hiển thị sản phẩm đang bán, lượt xem sản phẩm, tin nhắn mới, người theo dõi, lượt xem hồ sơ và sản phẩm nổi bật.
-- Tạo màn hình Boat Log đọc dữ liệu thật từ API và hiển thị các trường truy xuất nguồn gốc khi backend trả về.
-- Sửa Chat theo đúng response shape hiện tại của API conversation/history.
-- Chat có emoji, trạng thái đã gửi/đã xem, reply, preview/gửi ảnh, ghim hội thoại, thời gian gửi và tự cuộn tới tin mới.
-- Đổi tên và giới hạn giao diện trợ lý thành Seafood AI Assistant.
-- Google Client ID chuyển sang `VITE_GOOGLE_CLIENT_ID`.
-- Socket kết nối bằng `VITE_API_URL`, không còn dùng `window.location.origin`.
-- Chuẩn hóa toàn bộ HTTP call qua một Axios instance, request/response interceptor và `ApiError`.
-- Thêm `.env.example` và `.env.development`.
-- Chuyển toàn bộ React inline style sang CSS thuần.
-- Thêm responsive breakpoint cho desktop, tablet và mobile.
-- Route-level lazy loading giúp tách riêng các bundle Home, Marketplace, Chat, Seller, Admin và Leaflet.
+- Chuẩn hóa cấu trúc route, menu và workspace theo ba vai trò Buyer, Seller và Admin.
+- Tập trung luồng Buyer vào xem sản phẩm, lưu, giữ chỗ và trao đổi trực tiếp qua Chat; không có Cart, Checkout hay Order.
+- Hoàn thiện Product Card với ảnh, tên, giá/kg, khoảng cách, độ tươi `Fresh Today`, nguồn gốc, Premium, Verified, trạng thái, nhắn người bán, giữ chỗ và lưu.
+- Chuẩn bị UI cho bốn trạng thái `Available`, `Reserved`, `Sold Out`, `Expired` mà không đổi enum hoặc schema backend.
+- Vô hiệu hóa nút giữ chỗ khi sản phẩm không còn ở trạng thái `Available`.
+- Thay danh sách emoji hardcode bằng `emoji-picker-react`, có tìm kiếm và tải emoji theo nhu cầu.
+- Xóa hoàn toàn nhãn `Đang nhập...` giả vì backend chưa có typing Socket event.
+- Sửa Socket ở môi trường development kết nối qua origin của Vite để sử dụng proxy `/socket.io`; production vẫn đọc `VITE_API_URL`.
+- Chuyển Boat Log từ hành động xóa sang lưu trữ/khôi phục. Frontend không còn gọi API xóa Boat Log.
+- Thu gọn Seller Dashboard còn đúng sáu nhóm dữ liệu: lượt xem, tin nhắn, bài đăng, Boat Log, follower và thông báo.
+- Chuẩn hóa trạng thái sản phẩm dùng chung giữa Product Card, Product Detail, Seller Products và Seller Dashboard.
+- Giữ Google OAuth Client ID trong `VITE_GOOGLE_CLIENT_ID`; HTTP development đi qua Vite proxy `/api`.
+- Bổ sung responsive cho cụm hành động Boat Log, emoji picker, dashboard, bảng và lưới sản phẩm.
 
 ## 2. Những gì đã xóa
 
-- Route, menu và page Cart.
-- Route, menu và page Buyer Orders.
-- Route, menu và page Seller Orders.
-- Route, menu và page Seller Revenue.
-- Route, menu và page Admin Orders.
-- Menu Seller Boost/Bếp biển không thuộc cấu trúc Seller yêu cầu.
-- Buyer Reviews khỏi khu vực Buyer.
-- Component Chat Heads không được sử dụng.
-- CSS legacy hơn 3.000 dòng, inline style và asset scaffold React/Vite không dùng.
-- Hardcode Google OAuth Client ID.
-- API call tới endpoint `toggle-status` không tồn tại; thay bằng API update product hiện hữu.
+- `apiRecipes` và toàn bộ phần Recipe trên trang Home.
+- `apiReviews` chưa được sử dụng.
+- Các method service không được gọi: auth login/register/update profile cũ, follow toggle cũ, Boat Log like/delete.
+- Typing indicator không có dữ liệu Socket thật.
+- Emoji array hardcode.
+- CSS của Recipe đã bị loại khỏi giao diện.
+- Thư mục source legacy gồm `legacy_src/app.js`, `legacy_src/index.html`, `legacy_src/styles.css`.
+- Asset SVG sprite `public/icons.svg` không được tham chiếu.
+- Comment giải thích response shape cũ và dead code liên quan.
 
 ## 3. Những gì đã tối ưu
 
-- Không còn file JavaScript/JSX nào vượt 300 dòng.
-- Không còn inline style trong `src/`.
-- Không còn tham chiếu Cart, Checkout, Order hoặc Revenue trong source đang chạy.
-- Không gọi Axios trực tiếp ngoài `services/api.js`.
-- Sửa lỗi conversation ID/partner field khiến Chat không đọc đúng dữ liệu backend.
-- Sửa vòng lặp effect và dependency trong Chat/Socket.
-- Dùng REST fallback khi Socket tạm mất kết nối.
-- Chuẩn hóa helper ảnh, tiền tệ, ngày, độ tươi và khoảng cách để tránh duplicate.
-- Thay ảnh fallback 2,6 MB bằng SVG nhỏ; asset lớn không còn đi vào production bundle.
-- Production build không còn cảnh báo chunk vượt 500 kB.
+- Route-level lazy loading và code splitting cho toàn bộ page chính.
+- `ProductCard` và `MessageBubble` dùng memo để giảm render lại khi danh sách lớn.
+- Nâng `lucide-react` lên bản hỗ trợ React 19 để `npm install` không còn xung đột peer dependency.
+- Ảnh Product Card, Boat Log và ảnh Chat dùng lazy loading khi phù hợp.
+- Helper dùng chung xử lý ID, ảnh, tiền tệ, ngày, độ tươi, khoảng cách và marketplace status.
+- Không có inline CSS trong `src/`.
+- Không có file JavaScript/JSX vượt 300 dòng.
+- Không có HTTP call trực tiếp ngoài `services/api.js`.
+- Chat và Leaflet tiếp tục nằm trong chunk riêng, không chặn bundle trang Home.
+- CSS thuần được giữ nguyên; không thêm Tailwind hay Bootstrap component.
 
 ## 4. Vấn đề còn tồn tại
 
-- Schema/API Boat Log hiện chỉ lưu `content` và `images`; chưa có `productId`, ngày/khu vực đánh bắt, tên tàu, thời gian cập bến và nguồn gốc. Frontend không thể lưu liên kết Product bền vững nếu không đổi backend.
-- Backend Socket hiện không có typing event. Frontend không phát minh event mới để tuân thủ yêu cầu giữ nguyên Socket event, nên “Đang nhập...” chỉ sẵn sàng hiển thị khi nguồn dữ liệu hiện hữu cung cấp trạng thái này.
-- Read status có trong history API nhưng chưa có event realtime đánh dấu đã đọc.
-- Admin Settings, Broadcast và danh sách giao dịch Premium chưa có API dữ liệu/command tương ứng được frontend hiện tại sử dụng; màn hình không giả lập ghi dữ liệu.
-- Backend system prompt của chatbot vẫn cho phép một số chủ đề hướng dẫn website. Frontend đã chặn câu hỏi ngoài nhóm hải sản, nhưng không thể thay system prompt do giới hạn không sửa backend.
-- Kiểm thử trình duyệt desktop đạt; phiên đổi viewport tự động của công cụ kiểm thử bị ngắt. Responsive mobile/tablet đã được kiểm tra qua CSS breakpoint và production build nhưng vẫn nên regression test thêm trên thiết bị thật.
+- Archive Boat Log đang lưu trong `localStorage`. Đây là cơ chế hide/restore an toàn phía UI nhưng chưa đồng bộ giữa thiết bị vì backend không có trường soft-delete/archive.
+- `Reserved` và `Sold Out` được suy ra từ dữ liệu frontend (`isReserved`, `reserved`, `remainingWeight` hoặc status nếu có). Backend hiện chưa lưu hai trạng thái này.
+- Backend chưa có typing event nên frontend chủ động không hiển thị typing indicator.
+- Notification history chưa có API; dashboard chỉ đếm thông báo nhận được trong phiên Socket hiện tại.
+- Khi QA, backend/API không hoạt động nên chưa thể chạy end-to-end Google Login, dữ liệu sản phẩm và Chat đã xác thực. Frontend dev server và các route vẫn khởi động bình thường.
+- Hai ảnh PNG cũ trong `src/assets/` không còn được import và không đi vào production bundle; có thể xóa khỏi repository khi xác nhận không cần lưu làm tư liệu.
 
-## 5. Đề xuất cải thiện, chưa tự ý thực hiện
+## 5. Đề xuất cải thiện trong tương lai
 
-- Mở rộng Boat Log schema/API bằng quan hệ `productId` và các trường truy xuất nguồn gốc.
-- Bổ sung Socket event typing/read receipt ở backend rồi kết nối frontend.
-- Cung cấp API Admin Settings, Broadcast và Premium transaction.
-- Cung cấp API notification history để trang Thông báo không chỉ phụ thuộc vào sự kiện trong phiên hiện tại.
-- Bổ sung React Error Boundary và test tự động cho routing, Product Card, Chat normalization và responsive navigation.
-- Chuyển các ảnh PNG cũ còn nằm trong source nhưng không được sử dụng sang kho lưu trữ hoặc xóa khỏi repository.
+- Thêm trường archive/soft-delete và API restore cho Boat Log nếu muốn đồng bộ nhiều thiết bị.
+- Mở rộng product status ở backend khi nghiệp vụ `Reserved`/`Sold Out` được chốt.
+- Bổ sung Socket event typing và read receipt, sau đó mới bật UI tương ứng.
+- Cung cấp notification history API.
+- Thêm Error Boundary và test tự động cho status mapping, Chat, routing và responsive navigation.
+- Khắc phục môi trường backend (MongoDB/Redis/API) rồi chạy lại kiểm thử OAuth và Chat end-to-end.
 
 ## Kết quả xác minh
 
-- `npm run lint`: đạt, không warning.
-- `npm run build`: đạt.
+- `npm run lint`: đạt, không lỗi.
+- `npm run build`: đạt, 235 module được build.
+- `npm install --package-lock-only`: đạt, lockfile hợp lệ và 0 lỗ hổng được báo cáo.
+- `npm run dev`: HTTP 200 tại `http://127.0.0.1:5173/`.
+- Browser desktop: không có console error và không tràn ngang.
+- Browser tablet 768 px: lưới Seller 2 cột, không tràn ngang.
+- Browser mobile 390 px: menu mobile hoạt động theo breakpoint, không tràn ngang.
+- Boat Log: có nút lưu trữ, không có nút xóa.
+- Seller Dashboard: đúng 6 metric yêu cầu, không có doanh thu/order/kho.
 - Inline style: 0.
 - File JS/JSX trên 300 dòng: 0.
-- Tham chiếu commerce Cart/Checkout/Order/Revenue trong source chạy: 0.
 - Backend file bị chỉnh sửa: 0.

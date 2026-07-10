@@ -34,6 +34,7 @@ const badge_service_1 = require("./badge.service");
 const cloudinary_2 = require("../utils/cloudinary");
 // Import mô hình Mongoose User phục vụ truy xuất thông tin tài khoản ngư dân hàng loạt
 const User_1 = require("../models/User");
+const LandingBatch_1 = require("../models/LandingBatch");
 // Import thư viện crypto để mã hóa sinh mã băm chuỗi query phục vụ key cache
 const crypto_1 = __importDefault(require("crypto"));
 // Thời gian chờ tối đa cho các lệnh gọi Redis (1.5 giây) để tránh tắc nghẽn ứng dụng khi Redis gặp sự cố
@@ -186,9 +187,24 @@ exports.productService = {
         const sellerIds = Array.from(new Set(rows.map((p) => p.sellerId.toString())));
         const sellers = await User_1.User.find({ _id: { $in: sellerIds } }).lean();
         const sellerMap = new Map(sellers.map((u) => [u._id.toString(), u]));
+        const batchIds = Array.from(new Set(rows
+            .map((product) => product.batchId?.toString())
+            .filter(Boolean)));
+        const batches = batchIds.length
+            ? await LandingBatch_1.LandingBatch.find({
+                _id: { $in: batchIds },
+                status: { $ne: "Deleted" },
+            })
+                .select("title status")
+                .lean()
+            : [];
+        const batchMap = new Map(batches.map((batch) => [batch._id.toString(), batch]));
         // Định dạng cấu trúc dữ liệu trả về cho danh sách sản phẩm
         const formattedRows = rows.map((p) => {
             const seller = sellerMap.get(p.sellerId.toString());
+            const batch = p.batchId
+                ? batchMap.get(p.batchId.toString())
+                : null;
             return {
                 id: p._id,
                 sellerId: seller?._id?.toString() || null,
@@ -196,6 +212,8 @@ exports.productService = {
                 sellerIsVerified: seller?.isVerified ? 1 : 0,
                 sellerIsPremium: seller?.isPremium ? 1 : 0,
                 sellerBadges: seller?.badges || [],
+                batchId: batch?._id?.toString() || null,
+                batchTitle: batch?.title || null,
                 type: p.type,
                 category: p.category,
                 name: p.name,
@@ -263,6 +281,14 @@ exports.productService = {
         }
         // Lấy hồ sơ tài khoản người bán
         const seller = await user_repository_1.userRepository.findById(p.sellerId.toString());
+        const batch = p.batchId
+            ? await LandingBatch_1.LandingBatch.findOne({
+                _id: p.batchId,
+                status: { $ne: "Deleted" },
+            })
+                .select("title status")
+                .lean()
+            : null;
         // Chuẩn hóa cấu trúc chi tiết sản phẩm
         const finalDetail = {
             id: p._id,
@@ -271,11 +297,16 @@ exports.productService = {
             sellerIsVerified: seller?.isVerified ? 1 : 0,
             sellerIsPremium: seller?.isPremium ? 1 : 0,
             sellerBadges: seller?.badges || [],
+            batchId: batch?._id?.toString() || null,
+            batchTitle: batch?.title || null,
             type: p.type,
             category: p.category,
             name: p.name,
             description: p.description,
             price: p.price,
+            priceHistory: p.priceHistory?.length
+                ? p.priceHistory
+                : [{ price: p.price, changedAt: p.createdAt }],
             salesType: p.salesType,
             totalWeight: p.totalWeight,
             remainingWeight: p.remainingWeight,
@@ -308,8 +339,28 @@ exports.productService = {
         const { page, limit, offset } = (0, pagination_1.parsePagination)(pageStr, limitStr, 50);
         // Gọi repository lấy danh sách và tổng số bản ghi
         const { data, total } = await product_repository_1.productRepository.findByOwner(sellerId, offset, limit);
+        const batchIds = Array.from(new Set(data.map((product) => product.batchId).filter(Boolean)));
+        const batches = batchIds.length
+            ? await LandingBatch_1.LandingBatch.find({
+                _id: { $in: batchIds },
+                status: { $ne: "Deleted" },
+            })
+                .select("title status")
+                .lean()
+            : [];
+        const batchMap = new Map(batches.map((batch) => [batch._id.toString(), batch]));
+        const products = data.map((product) => {
+            const batch = product.batchId
+                ? batchMap.get(String(product.batchId))
+                : null;
+            return {
+                ...product,
+                batchId: batch?._id?.toString() || null,
+                batchTitle: batch?.title || null,
+            };
+        });
         // Trả về cấu trúc kết quả
-        return { products: data, total, page, limit };
+        return { products, total, page, limit };
     },
     // Lấy số lượng bài đăng sản phẩm trong ngày hôm nay của người dùng để kiểm soát giới hạn tối đa
     async getTodayCount(userId) {

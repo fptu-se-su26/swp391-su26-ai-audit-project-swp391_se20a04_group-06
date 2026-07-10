@@ -1,0 +1,174 @@
+.auth-page--underwater {
+  position: relative;
+  isolation: isolate;
+}
+
+.auth-page--underwater .auth-card {
+  position: relative;
+  z-index: 2;
+}
+
+.interactive-underwater-background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.38;
+  contain: strict;
+  background:
+    radial-gradient(circle at 14% 88%, rgba(20, 184, 166, 0.2), transparent 25rem),
+    radial-gradient(circle at 86% 18%, rgba(56, 189, 248, 0.15), transparent 30rem),
+    linear-gradient(145deg, rgba(3, 105, 161, 0.12), rgba(15, 23, 42, 0.04) 46%, rgba(13, 148, 136, 0.13));
+  background-size: 145% 145%;
+  animation: interactive-underwater-gradient 26s ease-in-out infinite alternate;
+}
+
+.interactive-underwater__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  max-width: 100%;
+  pointer-events: none;
+  will-change: contents;
+}
+
+.interactive-underwater__light-rays {
+  position: absolute;
+  inset: -14% 0 auto;
+  height: 80%;
+  overflow: hidden;
+  transform-origin: 50% 0;
+  will-change: transform;
+}
+
+.interactive-underwater__light-rays span {
+  position: absolute;
+  top: -18%;
+  width: clamp(105px, 13vw, 220px);
+  height: 128%;
+  transform: rotate(10deg);
+  transform-origin: 50% 0;
+  background: linear-gradient(180deg, rgba(186, 230, 253, 0.28), rgba(94, 234, 212, 0.05) 60%, transparent);
+  filter: blur(13px);
+  will-change: transform, opacity;
+  animation: interactive-underwater-ray 13s ease-in-out infinite alternate;
+}
+
+.interactive-underwater__light-rays span:nth-child(1) {
+  left: 8%;
+}
+
+.interactive-underwater__light-rays span:nth-child(2) {
+  left: 44%;
+  width: clamp(140px, 17vw, 270px);
+  opacity: 0.66;
+  animation-delay: -5s;
+}
+
+.interactive-underwater__light-rays span:nth-child(3) {
+  right: 5%;
+  opacity: 0.5;
+  animation-delay: -9s;
+}
+
+.interactive-underwater__seaweed {
+  position: absolute;
+  bottom: -16px;
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 150px;
+  transform-origin: bottom;
+}
+
+.interactive-underwater__seaweed--left {
+  left: clamp(10px, 3vw, 58px);
+}
+
+.interactive-underwater__seaweed--right {
+  right: clamp(10px, 3vw, 58px);
+  transform: scaleX(-1);
+}
+
+.interactive-underwater__seaweed span {
+  width: clamp(8px, 0.8vw, 14px);
+  height: var(--blade-height);
+  border-radius: 80% 20% 58% 24%;
+  transform: rotate(var(--blade-lean));
+  transform-origin: 50% 100%;
+  background: linear-gradient(90deg, rgba(13, 148, 136, 0.28), rgba(45, 212, 191, 0.82));
+  will-change: transform;
+  animation: interactive-underwater-seaweed 5.8s ease-in-out var(--blade-delay) infinite alternate;
+}
+
+@keyframes interactive-underwater-gradient {
+  from {
+    background-position: 0% 18%;
+  }
+  to {
+    background-position: 100% 78%;
+  }
+}
+
+@keyframes interactive-underwater-ray {
+  from {
+    opacity: 0.3;
+    transform: rotate(7deg) translate3d(-8px, 0, 0);
+  }
+  to {
+    opacity: 0.58;
+    transform: rotate(14deg) translate3d(12px, 8px, 0);
+  }
+}
+
+@keyframes interactive-underwater-seaweed {
+  from {
+    transform: rotate(calc(var(--blade-lean) - 4deg)) skewX(-2deg);
+  }
+  to {
+    transform: rotate(calc(var(--blade-lean) + 5deg)) skewX(2deg);
+  }
+}
+
+@media (max-width: 720px) {
+  .interactive-underwater-background {
+    opacity: 0.31;
+  }
+
+  .interactive-underwater__light-rays span:nth-child(2) {
+    display: none;
+  }
+
+  .interactive-underwater__seaweed {
+    scale: 0.78;
+  }
+
+  .interactive-underwater__seaweed--right {
+    transform: scaleX(-1);
+  }
+}
+
+@media (max-width: 420px) {
+  .interactive-underwater__seaweed--right {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .interactive-underwater-background,
+  .interactive-underwater__light-rays span,
+  .interactive-underwater__seaweed span {
+    animation: none;
+  }
+
+  .interactive-underwater-background {
+    background-position: 50% 50%;
+  }
+
+  .interactive-underwater__light-rays span {
+    opacity: 0.25;
+  }
+}

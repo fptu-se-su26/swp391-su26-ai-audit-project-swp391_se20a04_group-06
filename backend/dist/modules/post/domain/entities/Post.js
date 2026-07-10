@@ -51,7 +51,7 @@ class Post extends AggregateRoot_1.AggregateRoot {
         }
     }
     // Nghiệp vụ thêm bình luận mới vào bài viết
-    addComment(userId, userName, userAvatar, text) {
+    addComment(userId, userName, userAvatar, text, parentId) {
         // Kiểm tra xem nội dung bình luận có bị bỏ trống hay không
         if (!text || text.trim() === "") {
             // Ném lỗi nếu nội dung bình luận trống
@@ -69,9 +69,32 @@ class Post extends AggregateRoot_1.AggregateRoot {
             userAvatar,
             // Gán nội dung bình luận đã được làm sạch khoảng trắng
             text: text.trim(),
+            // Gán ID bình luận cha nếu có
+            parentId,
+            // Khởi tạo mảng thích bình luận rỗng
+            likes: [],
             // Gán thời điểm tạo bình luận là thời gian hiện tại
             createdAt: new Date(),
         });
+    }
+    // Nghiệp vụ thích/bỏ thích bình luận của người dùng
+    toggleCommentLike(commentId, userId) {
+        const comment = this.props.comments.find((c) => c.id === commentId);
+        if (!comment) {
+            throw new DomainException_1.ValidationError("Không tìm thấy bình luận.");
+        }
+        if (!comment.likes) {
+            comment.likes = [];
+        }
+        const index = comment.likes.indexOf(userId);
+        if (index === -1) {
+            comment.likes.push(userId);
+            return true;
+        }
+        else {
+            comment.likes.splice(index, 1);
+            return false;
+        }
     }
     // Nghiệp vụ xóa bình luận khỏi bài viết
     removeComment(commentId, userId, role) {

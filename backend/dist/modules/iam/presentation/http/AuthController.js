@@ -20,6 +20,8 @@ const logger_1 = require("../../../../utils/logger");
 const cookie_1 = require("../../../../config/cookie");
 // Import middleware sinh và làm mới CSRF token để phòng chống lỗ hổng bảo mật CSRF
 const csrf_1 = require("../../../../middlewares/csrf");
+const User_1 = require("../../../../models/User");
+const Product_1 = require("../../../../models/Product");
 // DDD Components - Import các Repository, Service và Use Cases nghiệp vụ
 const MongooseUserRepository_1 = require("../../infrastructure/persistence/mongoose/MongooseUserRepository");
 const CloudinaryImageUploader_1 = require("../../infrastructure/external-services/CloudinaryImageUploader");
@@ -38,13 +40,58 @@ const REFRESH_COOKIE_OPTS = {
 };
 // Đọc kết nối redis đã được cấu hình từ trước trong hệ thống
 const redis = require("../../../../config/redis").redis;
+const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 3600;
+const refreshSessionKey = (refreshToken) => `auth:refresh-session:${refreshToken}`;
+async function storeRefreshSession(refreshToken, session) {
+    await redis
+        .multi()
+        .set(`auth:refresh:${session.userId}:${refreshToken}`, "1", "EX", REFRESH_TOKEN_TTL_SECONDS)
+        .set(refreshSessionKey(refreshToken), JSON.stringify(session), "EX", REFRESH_TOKEN_TTL_SECONDS)
+        .exec();
+}
+async function findRefreshSession(refreshToken) {
+    const cachedSession = await redis.get(refreshSessionKey(refreshToken));
+    if (cachedSession) {
+        try {
+            return JSON.parse(cachedSession);
+        }
+        catch {
+            await redis.del(refreshSessionKey(refreshToken));
+        }
+    }
+    // Tương thích với phiên đã tạo trước khi có reverse lookup: tìm đúng key
+    // refresh hiện tại, sau đó cấp metadata mới để các lần sau tra cứu O(1).
+    let cursor = "0";
+    const matchingKeys = [];
+    do {
+        const reply = await redis.scan(cursor, "MATCH", `auth:refresh:*:${refreshToken}`, "COUNT", 100);
+        cursor = reply[0];
+        matchingKeys.push(...reply[1]);
+    } while (cursor !== "0");
+    const forwardKey = matchingKeys[0];
+    if (!forwardKey)
+        return null;
+    const prefix = "auth:refresh:";
+    const suffix = `:${refreshToken}`;
+    const userId = forwardKey.slice(prefix.length, -suffix.length);
+    const user = await userRepository.findRawById(userId);
+    if (!user || !user.isActive)
+        return null;
+    const session = {
+        userId,
+        role: user.role,
+        sessionRole: user.isVerified ? "seller" : "buyer",
+    };
+    await redis.set(refreshSessionKey(refreshToken), JSON.stringify(session), "EX", REFRESH_TOKEN_TTL_SECONDS);
+    return session;
+}
 // Hàm tiện ích để ký (tạo mới) Access Token mã hóa chứa ID người dùng và Quyền (Role)
-function signToken(userId, role) {
+function signToken(userId, role, sessionRole) {
     const secret = process.env.JWT_SECRET; // Đọc khóa bí mật JWT_SECRET từ biến môi trường .env
     if (!secret)
         throw new Error("JWT_SECRET chưa được cấu hình");
     const options = { expiresIn: "15m" }; // Cấu hình thời gian hết hạn của token là 15 phút
-    return jsonwebtoken_1.default.sign({ userId, role }, secret, options); // Trả về chuỗi JWT đã ký
+    return jsonwebtoken_1.default.sign({ userId, role, sessionRole }, secret, options); // Trả về chuỗi JWT đã ký
 }
 // Khởi tạo các Adapter hạ tầng (Infrastructure) duy nhất một lần
 const userRepository = new MongooseUserRepository_1.MongooseUserRepository(); // Khởi tạo Repository quản lý DB người dùng
@@ -70,12 +117,17 @@ async function logout(req, res, next) {
             }
             catch (err) { }
         }
+        else {
+            const session = await findRefreshSession(oldRefreshToken);
+            userId = session?.userId || null;
+        }
         try {
             if (userId) {
                 // Xóa key lưu trữ token tương ứng trong Redis DB
                 await redis.del(`auth:refresh:${userId}:${oldRefreshToken}`);
                 logger_1.logger.info(`Tokens revoked in Redis on logout for UserID=${userId}`);
             }
+            await redis.del(refreshSessionKey(oldRefreshToken));
         }
         catch (err) {
             logger_1.logger.error(`Token revocation error in Redis on logout: ${err.message}`);
@@ -142,6 +194,17 @@ async function me(req, res, next) {
         const userDoc = await userRepository.findRawById(payload.userId);
         if (!userDoc)
             return res.json(null);
+        let stats = null;
+        if (userDoc.isVerified) {
+            const postCount = await Product_1.Product.countDocuments({ sellerId: userDoc._id, status: { $ne: "Deleted" } });
+            const viewsRes = await Product_1.Product.aggregate([
+                { $match: { sellerId: userDoc._id, status: { $ne: "Deleted" } } },
+                { $group: { _id: null, total: { $sum: "$viewCount" } } }
+            ]);
+            const totalViews = viewsRes.length > 0 ? viewsRes[0].total : 0;
+            const followers = await User_1.User.countDocuments({ following: userDoc._id });
+            stats = { postCount, totalViews, followers };
+        }
         return res.json({
             id: userDoc._id.toString(),
             name: userDoc.name,
@@ -154,38 +217,65 @@ async function me(req, res, next) {
             badges: userDoc.badges,
             createdAt: userDoc.createdAt,
             hasPassword: userDoc.passwordHash !== "google_oauth_no_password_hash_placeholder",
+            stats,
+            sessionRole: payload.sessionRole || (userDoc.isVerified ? "seller" : "buyer"),
         });
     }
     catch (err) {
         logger_1.logger.warn(`Invalid access token provided: ${err.message}`);
-        return res.status(401).json({ message: "Access Token hết hạn" }); // Trả về lỗi hết hạn token
+        if (err instanceof jsonwebtoken_1.default.TokenExpiredError) {
+            return res.status(401).json({
+                code: "TOKEN_EXPIRED",
+                message: "Access Token hết hạn",
+            });
+        }
+        return res.status(401).json({
+            code: "TOKEN_INVALID",
+            message: "Access Token không hợp lệ",
+        });
     }
 }
 // HÀM XỬ LÝ LÀM MỚI ACCESS TOKEN TỰ ĐỘNG (SILENT REFRESH TOKEN)
 async function refreshToken(req, res, next) {
     const oldRefreshToken = req.cookies?.refreshToken; // Lấy Refresh Token hiện tại từ Cookie dài hạn
     const token = req.cookies?.token; // Lấy Access Token đã hết hạn từ Cookie ngắn hạn
-    // Đảm bảo phải có đủ cả 2 token thì mới được quyền làm mới phiên
-    if (!oldRefreshToken || !token) {
-        return res.status(401).json({ message: "Phiên làm việc hết hạn" });
+    // Refresh token là thông tin bắt buộc. Access token có thể đã hết hạn và bị
+    // trình duyệt xóa khỏi cookie, nên không được dùng nó làm điều kiện bắt buộc.
+    if (!oldRefreshToken) {
+        return res.status(401).json({
+            code: "REFRESH_TOKEN_MISSING",
+            message: "Phiên làm việc hết hạn",
+        });
     }
     try {
-        let decoded;
-        try {
-            // Giải mã Access Token nhưng bỏ qua việc kiểm tra hết hạn (vì chắc chắn nó đã hết hạn thì mới cần gọi làm mới)
-            decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET, {
-                ignoreExpiration: true,
-            });
+        let decoded = null;
+        if (token) {
+            try {
+                // Access token hết hạn vẫn cung cấp metadata phiên nếu chữ ký hợp lệ.
+                decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET, {
+                    ignoreExpiration: true,
+                });
+            }
+            catch (verifyErr) {
+                logger_1.logger.warn(`refreshToken: invalid signature — ${verifyErr.message}`);
+                res.clearCookie("token", cookie_1.CLEAR_COOKIE_OPTIONS);
+                res.clearCookie("refreshToken", cookie_1.CLEAR_COOKIE_OPTIONS);
+                await redis.del(refreshSessionKey(oldRefreshToken));
+                return res.status(401).json({
+                    code: "REFRESH_TOKEN_INVALID",
+                    message: "Token không hợp lệ",
+                });
+            }
         }
-        catch (verifyErr) {
-            logger_1.logger.warn(`refreshToken: invalid signature — ${verifyErr.message}`);
-            // Nếu chữ ký Access Token bị lỗi (giả mạo token), lập tức xóa sạch cookie để bắt người dùng đăng nhập lại
-            res.clearCookie("token", cookie_1.CLEAR_COOKIE_OPTIONS);
-            res.clearCookie("refreshToken", cookie_1.CLEAR_COOKIE_OPTIONS);
-            return res.status(401).json({ message: "Token không hợp lệ" });
+        else {
+            decoded = await findRefreshSession(oldRefreshToken);
         }
         if (!decoded?.userId) {
-            return res.status(401).json({ message: "Token không hợp lệ" });
+            res.clearCookie("refreshToken", cookie_1.CLEAR_COOKIE_OPTIONS);
+            return res.status(401).json({
+                code: "REFRESH_TOKEN_INVALID",
+                message: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn",
+            });
         }
         // Định nghĩa khóa Redis tương ứng để kiểm tra sự tồn tại của Refresh Token này
         const redisKey = `auth:refresh:${decoded.userId}:${oldRefreshToken}`;
@@ -204,7 +294,11 @@ async function refreshToken(req, res, next) {
             } while (cursor !== "0"); // Dừng quét khi con trỏ quét quay về "0"
             // Để đảm bảo an toàn tối đa cho chủ sở hữu tài khoản, lập tức hủy bỏ (xóa) toàn bộ phiên đăng nhập đang hoạt động của User này
             if (keys.length > 0) {
-                await redis.del(...keys);
+                const reverseKeys = keys.map((key) => {
+                    const storedToken = key.slice(key.lastIndexOf(":") + 1);
+                    return refreshSessionKey(storedToken);
+                });
+                await redis.del(...keys, ...reverseKeys);
             }
             // Xóa cookies phía client
             res.clearCookie("token", cookie_1.CLEAR_COOKIE_OPTIONS);
@@ -215,18 +309,19 @@ async function refreshToken(req, res, next) {
             });
         }
         // Xóa khóa Refresh Token cũ khỏi Redis sau khi xác minh (Single-use token rotation)
-        await redis.del(redisKey);
+        await redis.del(redisKey, refreshSessionKey(oldRefreshToken));
         // Ký Access Token mới chứa thông tin ID người dùng và quyền hạn
-        const newAccessToken = signToken(decoded.userId, decoded.role);
+        const newAccessToken = signToken(decoded.userId, decoded.role, decoded.sessionRole);
         // Sinh Refresh Token mới ngẫu nhiên dài 40 bytes dưới dạng chuỗi hexa
         const newRefreshToken = crypto_1.default.randomBytes(40).toString("hex");
         // Lưu trữ Refresh Token mới vào Redis với thời gian hết hạn là 7 ngày (7 * 24 * 3600 giây)
-        await redis.set(`auth:refresh:${decoded.userId}:${newRefreshToken}`, "1", "EX", 7 * 24 * 3600);
+        await storeRefreshSession(newRefreshToken, decoded);
         // Gửi cặp token mới trả về phía trình duyệt dưới dạng cookies HttpOnly bảo mật
         res.cookie("token", newAccessToken, ACCESS_COOKIE_OPTS);
         res.cookie("refreshToken", newRefreshToken, REFRESH_COOKIE_OPTS);
         // Làm mới mã CSRF token mới để tăng cường bảo mật cho phiên tiếp theo
-        (0, csrf_1.rotateCsrfToken)(res);
+        const csrfToken = (0, csrf_1.rotateCsrfToken)(res);
+        res.setHeader("X-CSRF-Token", csrfToken);
         return res.json({ status: "refreshed" }); // Trả về phản hồi đã làm mới token thành công
     }
     catch (err) {
@@ -243,18 +338,26 @@ async function googleAuth(req, res, next) {
             .json({ message: "Thiếu ID Token bảo mật từ Google" }); // Trả về lỗi 400 nếu trống token
     }
     try {
+        const { selectedRole } = req.body;
         // Gọi UseCase xử lý đăng nhập Google ở tầng nghiệp vụ và lấy thông tin người dùng sạch
-        const authResult = await googleAuthUseCase.execute(idToken);
+        const authResult = await googleAuthUseCase.execute(idToken, selectedRole);
+        const sessionRole = authResult.role === "Admin"
+            ? undefined
+            : selectedRole || (authResult.isVerified ? "seller" : "buyer");
         // Ký Access Token mới từ thông tin đăng nhập thành công
-        const accessToken = signToken(authResult.userId, authResult.role);
+        const accessToken = signToken(authResult.userId, authResult.role, sessionRole);
         // Sinh Refresh Token dài hạn ngẫu nhiên
         const refreshToken = crypto_1.default.randomBytes(40).toString("hex");
         // Lưu trữ thông tin Refresh Token vào Redis DB
-        await redis.set(`auth:refresh:${authResult.userId}:${refreshToken}`, "1", "EX", 7 * 24 * 3600);
+        await storeRefreshSession(refreshToken, {
+            userId: authResult.userId,
+            role: authResult.role,
+            sessionRole,
+        });
         // Thiết lập cookies chứa token gửi ngược lại trình duyệt
         res.cookie("token", accessToken, ACCESS_COOKIE_OPTS);
         res.cookie("refreshToken", refreshToken, REFRESH_COOKIE_OPTS);
-        return res.json({ user: authResult }); // Trả về thông tin người dùng dạng JSON
+        return res.json({ user: { ...authResult, sessionRole } }); // Trả về thông tin người dùng dạng JSON
     }
     catch (err) {
         next(err); // Đẩy lỗi sang Global Error Handler để đóng gói JSON trả về Client

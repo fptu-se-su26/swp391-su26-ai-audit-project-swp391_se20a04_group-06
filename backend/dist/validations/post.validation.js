@@ -26,6 +26,8 @@ exports.commentSchema = zod_1.z.object({
             .string()
             .min(1, "Nội dung bình luận không được để trống")
             .max(1000, "Bình luận tối đa 1000 ký tự"),
+        // ID bình luận cha (nếu có, để hỗ trợ tính năng reply)
+        parentId: zod_1.z.string().optional(),
     }),
 });
 // Xuất ra schema định nghĩa quy tắc kiểm thực yêu cầu cập nhật bài đăng

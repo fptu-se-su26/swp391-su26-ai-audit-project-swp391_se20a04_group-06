@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import EmojiPicker from "emoji-picker-react";
 import { ImagePlus, MapPin, Send, Smile, X } from "lucide-react";
-
-const emojis = ["😀", "👍", "🦐", "🐟", "🦀", "❤️", "🔥", "⛵"];
 
 export default function ChatComposer({
   initialText = "",
@@ -62,18 +61,18 @@ export default function ChatComposer({
 
       {emojiOpen && (
         <div className="chat-emoji-picker">
-          {emojis.map((emoji) => (
-            <button
-              key={emoji}
-              onClick={() => {
-                setText((current) => `${current}${emoji}`);
-                setEmojiOpen(false);
-              }}
-              type="button"
-            >
-              {emoji}
-            </button>
-          ))}
+          <EmojiPicker
+            height={360}
+            lazyLoadEmojis
+            onEmojiClick={({ emoji }) => {
+              setText((current) => `${current}${emoji}`);
+              setEmojiOpen(false);
+            }}
+            previewConfig={{ showPreview: false }}
+            searchPlaceHolder="Tìm emoji..."
+            theme="dark"
+            width="100%"
+          />
         </div>
       )}
 

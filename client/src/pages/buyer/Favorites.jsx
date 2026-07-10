@@ -1,33 +1,47 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Bookmark } from "lucide-react";
 import ProductGrid from "../../components/ProductGrid";
-import { apiProducts } from "../../services/api";
+import { apiFavorites } from "../../services/api";
+import { useConfirm } from "../../context/ConfirmContext";
+
 
 export default function Favorites() {
+  const { alert } = useConfirm();
   const [products, setProducts] = useState([]);
-  const [favoriteIds, setFavoriteIds] = useState(
-    () => new Set(JSON.parse(localStorage.getItem("haisan-favorites") || "[]")),
-  );
+  const [favoriteIds, setFavoriteIds] = useState(new Set());
 
-  useEffect(() => {
-    apiProducts
-      .getAll()
-      .then((data) => {
-        const list = Array.isArray(data) ? data : data?.products || [];
-        setProducts(list.filter((product) => favoriteIds.has(product.id || product._id)));
-      })
-      .catch((error) => console.error("Failed to load saved products:", error));
-  }, [favoriteIds]);
 
-  const toggleFavorite = (productId) => {
-    setFavoriteIds((current) => {
-      const next = new Set(current);
-      if (next.has(productId)) next.delete(productId);
-      else next.add(productId);
-      localStorage.setItem("haisan-favorites", JSON.stringify([...next]));
-      return next;
-    });
+  const load = useCallback(async () => {
+    try {
+      const rows = await apiFavorites.getAll();
+      setProducts(Array.isArray(rows) ? rows : []);
+      setFavoriteIds(new Set((rows || []).map((product) => String(product.id || product._id))));
+    } catch {
+      setProducts([]);
+      setFavoriteIds(new Set());
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const toggleFavorite = async (productId) => {
+    try {
+      await apiFavorites.toggle(productId);
+      setProducts((current) => current.filter((product) => String(product.id || product._id) !== String(productId)));
+      setFavoriteIds((current) => {
+        const next = new Set(current);
+        next.delete(String(productId));
+        return next;
+      });
+    } catch (error) {
+      await alert({
+        title: "Lỗi",
+        message: error.message,
+        variant: "danger"
+      });
+    }
   };
+
 
   return (
     <div className="page-container saved-products-page">

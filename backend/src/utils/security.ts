@@ -14,3 +14,30 @@ export function safeCompare(a: string, b: string): boolean {
   // Sử dụng hàm timingSafeEqual để so sánh hai Buffer hashA và hashB với thời gian xử lý đồng đều
   return crypto.timingSafeEqual(hashA, hashB);
 }
+
+export function sanitizeText(value: string, maxLength = 5000): string {
+  return value
+    .replace(/\u0000/g, "")
+    .replace(/<[^>]*>/g, "")
+    .trim()
+    .slice(0, maxLength);
+}
+
+export function sanitizeDeep<T>(value: T): T {
+  if (typeof value === "string") {
+    return sanitizeText(value) as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeDeep(item)) as T;
+  }
+  if (value && typeof value === "object" && !Buffer.isBuffer(value)) {
+    const sanitized = Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+        key,
+        sanitizeDeep(item),
+      ]),
+    );
+    return sanitized as T;
+  }
+  return value;
+}

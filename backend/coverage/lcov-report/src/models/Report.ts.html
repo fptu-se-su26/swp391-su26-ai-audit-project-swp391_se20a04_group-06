@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>5/5</span>
+                <span class='fraction'>7/7</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>5/5</span>
+                <span class='fraction'>7/7</span>
             </div>
         
             
@@ -111,7 +111,20 @@
 <a name='L46'></a><a href='#L46'>46</a>
 <a name='L47'></a><a href='#L47'>47</a>
 <a name='L48'></a><a href='#L48'>48</a>
-<a name='L49'></a><a href='#L49'>49</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -131,6 +144,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -153,6 +169,16 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
@@ -167,8 +193,11 @@ export interface IReport extends Document {
   // Mã ID của người dùng gửi báo cáo (kiểu ObjectId liên kết bảng User)
   reporterId: Types.ObjectId;
   // Mã ID của sản phẩm bị báo cáo vi phạm (kiểu ObjectId liên kết bảng Product)
-  productId: Types.ObjectId;
-  // Lý do báo cáo vi phạm sản phẩm
+  productId?: Types.ObjectId;
+  postId?: Types.ObjectId;
+  recipeId?: Types.ObjectId;
+  targetType: "Product" | "Post" | "Recipe";
+  // Lý do báo cáo vi phạm sản phẩm/bài viết/công thức
   reason: string;
   // Trạng thái xử lý báo cáo: Đang chờ (Pending), Đã giải quyết (Resolved), hoặc Bị bác bỏ (Dismissed)
   status: "Pending" | "Resolved" | "Dismissed";
@@ -183,8 +212,16 @@ const reportSchema = new Schema&lt;IReport&gt;(
   {
     // Cấu hình trường reporterId: liên kết với bộ sưu tập User, bắt buộc nhập
     reporterId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    // Cấu hình trường productId: liên kết với bộ sưu tập Product, bắt buộc nhập
-    productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+    // Cấu hình trường productId: liên kết với bộ sưu tập Product
+    productId: { type: Schema.Types.ObjectId, ref: "Product", required: false },
+    postId: { type: Schema.Types.ObjectId, ref: "Post", required: false },
+    recipeId: { type: Schema.Types.ObjectId, ref: "Recipe", required: false },
+    targetType: {
+      type: String,
+      enum: ["Product", "Post", "Recipe"],
+      default: "Product",
+      required: true
+    },
     // Cấu hình trường reason: kiểu chuỗi và bắt buộc nhập lý do báo cáo
     reason: { type: String, required: true },
     // Cấu hình trường status: kiểu chuỗi, chỉ nhận giá trị enum và mặc định là "Pending"
@@ -200,8 +237,10 @@ const reportSchema = new Schema&lt;IReport&gt;(
   { timestamps: { createdAt: true, updatedAt: false } },
 );
 &nbsp;
-// Đánh chỉ mục index phức hợp theo reporterId và productId để hỗ trợ truy vấn và kiểm tra trùng lặp báo cáo của cùng một người trên một sản phẩm nhanh hơn
+// Đánh chỉ mục index phức hợp để hỗ trợ truy vấn và kiểm tra trùng lặp báo cáo của cùng một người nhanh hơn
 reportSchema.index({ reporterId: 1, productId: 1 });
+reportSchema.index({ reporterId: 1, postId: 1 });
+reportSchema.index({ reporterId: 1, recipeId: 1 });
 // Đánh chỉ mục index phức hợp theo status tăng dần và thời gian tạo giảm dần để tối ưu hóa việc Admin tải danh sách báo cáo theo trạng thái xử lý
 reportSchema.index({ status: 1, createdAt: -1 });
 &nbsp;
@@ -214,7 +253,7 @@ export const Report = model&lt;IReport&gt;("Report", reportSchema);
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-06-14T08:04:08.311Z
+                at 2026-06-30T12:23:15.868Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

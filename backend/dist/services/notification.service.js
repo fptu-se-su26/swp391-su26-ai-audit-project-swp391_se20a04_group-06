@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.broadcastToUsers = broadcastToUsers;
 exports.notifyFollowersNewProduct = notifyFollowersNewProduct;
+exports.notifyFollowersNewLandingBatch = notifyFollowersNewLandingBatch;
 exports.notifySellerNewReview = notifySellerNewReview;
 // Import hàm getIO để gửi thông báo thời gian thực qua socket
 const socket_1 = require("../socket");
@@ -122,6 +123,42 @@ productName) {
     catch (err) {
         // Ghi log lỗi nếu quá trình lưu hoặc phát thông báo gặp sự cố
         logger_1.logger.error("Lỗi khi lưu/phát thông báo sản phẩm mới:", {
+            message: err.message,
+        });
+    }
+}
+async function notifyFollowersNewLandingBatch(params) {
+    const { sellerId, sellerName, landingBatchId, productCount } = params;
+    try {
+        const followers = await User_1.User.find({
+            following: new mongoose_1.default.Types.ObjectId(sellerId),
+        })
+            .select("_id")
+            .lean();
+        if (followers.length === 0)
+            return;
+        const previewText = `${sellerName} vừa cập bến vựa cá mới gồm ${productCount} loại hải sản.`;
+        const docs = followers.map((follower) => ({
+            userId: follower._id,
+            type: "new_landing_batch",
+            content: previewText,
+            landingBatchId: new mongoose_1.default.Types.ObjectId(landingBatchId),
+        }));
+        const inserted = await notification_repository_1.notificationRepository.insertMany(docs);
+        const io = (0, socket_1.getIO)();
+        followers.forEach((follower, index) => {
+            io.to(`user_${follower._id.toString()}`).emit("notification", {
+                id: inserted[index]._id.toString(),
+                type: "new_landing_batch",
+                landingBatchId,
+                sellerId,
+                preview: previewText,
+                createdAt: inserted[index].createdAt,
+            });
+        });
+    }
+    catch (err) {
+        logger_1.logger.error("Lỗi khi lưu/phát thông báo vựa cá mới:", {
             message: err.message,
         });
     }

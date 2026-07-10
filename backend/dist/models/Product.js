@@ -12,6 +12,11 @@ const productSchema = new mongoose_1.Schema({
         required: true,
         index: true,
     },
+    batchId: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "LandingBatch",
+        index: true,
+    },
     // Cấu hình trường type: kiểu chuỗi, bắt buộc nhập và nhận giá trị trong mảng enum
     type: { type: String, enum: ["Fresh", "Dried"], required: true },
     // Cấu hình trường category: kiểu chuỗi, bắt buộc nhập và nhận giá trị trong mảng enum danh mục hải sản
@@ -26,6 +31,13 @@ const productSchema = new mongoose_1.Schema({
     description: { type: String, default: null },
     // Cấu hình trường price: kiểu số và bắt buộc nhập
     price: { type: Number, required: true },
+    priceHistory: [
+        {
+            price: { type: Number, required: true },
+            changedAt: { type: Date, default: Date.now },
+            _id: false,
+        },
+    ],
     // Cấu hình trường salesType: kiểu chuỗi, bắt buộc nhận giá trị enum và mặc định là "Retail"
     salesType: {
         type: String,
@@ -79,6 +91,7 @@ productSchema.index({ location: "2dsphere" });
 productSchema.index({ status: 1, type: 1, bumpedAt: -1, createdAt: -1 });
 // Thiết lập chỉ mục index phức hợp tối ưu hóa tìm kiếm sản phẩm của một shop sắp xếp theo mốc đẩy bài
 productSchema.index({ sellerId: 1, bumpedAt: -1, createdAt: -1 });
+productSchema.index({ batchId: 1, status: 1, createdAt: -1 });
 // Thiết lập chỉ mục tìm kiếm văn bản toàn diện (Full-Text Search) trên hai trường name và description để hỗ trợ tìm kiếm bằng từ khóa tiếng Việt
 productSchema.index({ name: "text", description: "text" });
 // Tạo và xuất ra mô hình Product

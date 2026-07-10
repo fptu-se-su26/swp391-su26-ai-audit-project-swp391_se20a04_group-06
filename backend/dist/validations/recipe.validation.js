@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateRecipeSchema = exports.createRecipeSchema = void 0;
+exports.recipeCommentSchema = exports.updateRecipeSchema = exports.createRecipeSchema = void 0;
 // Import thư viện Zod để xây dựng bộ định hình schemas xác thực dữ liệu đầu vào công thức nấu ăn
 const zod_1 = require("zod");
 // Xuất ra schema định nghĩa quy tắc kiểm thực yêu cầu tạo mới công thức nấu ăn
@@ -49,5 +49,13 @@ exports.updateRecipeSchema = zod_1.z.object({
         servings: zod_1.z.number().positive().optional(),
         // Mảng thẻ nhãn tùy chọn cập nhật
         tags: zod_1.z.array(zod_1.z.string()).optional(),
+    }),
+});
+exports.recipeCommentSchema = zod_1.z.object({
+    body: zod_1.z.object({
+        text: zod_1.z
+            .string()
+            .min(1, "Nội dung bình luận không được để trống")
+            .max(1000, "Bình luận tối đa 1000 ký tự"),
     }),
 });

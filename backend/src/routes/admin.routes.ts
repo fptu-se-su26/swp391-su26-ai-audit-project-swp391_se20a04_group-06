@@ -24,6 +24,7 @@ import {
   // Hàm lấy lịch sử phát sóng thông báo từ trước đến nay
   getBroadcastHistory,
 } from "../controllers/notification.controller";
+import { listAdminLandingBatches } from "../controllers/landingBatch.controller";
 
 // Khởi tạo một đối tượng router từ Express Router để cấu hình các tuyến đường con
 const router = Router();
@@ -143,6 +144,7 @@ router.patch("/users/:id/verify", verifyUser);
  */
 // Tuyến đường GET /listings lấy danh sách tất cả sản phẩm đang được rao bán
 router.get("/listings", listAllProducts);
+router.get("/landing-batches", listAdminLandingBatches);
 
 /**
  * @openapi
@@ -232,4 +234,3 @@ router.get("/notifications/broadcasts", getBroadcastHistory);
 
 // Xuất đối tượng router để sử dụng tại file cấu hình ứng dụng chính app.ts
 export default router;
-

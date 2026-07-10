@@ -1,73 +1,144 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, MapPin, MessageSquare, ShieldCheck } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, MessageSquare, ShieldCheck, Ship, Anchor } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import heroSeafoodMarket from "../assets/hero-seafood-market.png";
 import ProductGrid from "../components/ProductGrid";
-import { apiFishermen, apiProducts, apiRecipes } from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import { apiFavorites, apiFishermen, apiProducts } from "../services/api";
+import { useConfirm } from "../context/ConfirmContext";
+
+import { getOptimizedImageUrl } from "../utils/image";
 import { formatCurrency, getProductId, getProductImage } from "../utils/product";
 
 export default function Home() {
+  const { alert } = useConfirm();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [products, setProducts] = useState([]);
+
   const [fishermen, setFishermen] = useState([]);
-  const [recipes, setRecipes] = useState([]);
   const [slideIndex, setSlideIndex] = useState(0);
-  const [favorites, setFavorites] = useState(
-    () => new Set(JSON.parse(localStorage.getItem("haisan-favorites") || "[]")),
-  );
+  const [favorites, setFavorites] = useState(new Set());
+  const [heroBackgroundReady, setHeroBackgroundReady] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const image = new window.Image();
+
+    image.onload = () => {
+      if (mounted) setHeroBackgroundReady(true);
+    };
+    image.onerror = () => {
+      if (mounted) setHeroBackgroundReady(false);
+    };
+    image.src = heroSeafoodMarket;
+
+    return () => {
+      mounted = false;
+      image.onload = null;
+      image.onerror = null;
+    };
+  }, []);
 
   useEffect(() => {
     Promise.allSettled([
       apiProducts.getAll(),
       apiFishermen.getAll(),
-      apiRecipes.getAll(),
-    ]).then(([productResult, fishermanResult, recipeResult]) => {
+    ]).then(([productResult, fishermanResult]) => {
       if (productResult.status === "fulfilled") {
         const data = productResult.value;
-        setProducts(Array.isArray(data) ? data : data?.products || []);
+        setProducts(Array.isArray(data) ? data : data?.data || data?.products || []);
       }
       if (fishermanResult.status === "fulfilled") {
         const data = fishermanResult.value;
-        setFishermen(Array.isArray(data) ? data : data?.fishermen || []);
-      }
-      if (recipeResult.status === "fulfilled") {
-        const data = recipeResult.value;
-        setRecipes(Array.isArray(data) ? data : data?.recipes || []);
+        setFishermen(Array.isArray(data) ? data : data?.data || data?.fishermen || []);
       }
     });
   }, []);
 
+  useEffect(() => {
+    if (!user) {
+      setFavorites(new Set());
+      return;
+    }
+    apiFavorites.getIds()
+      .then((ids) => setFavorites(new Set((ids || []).map(String))))
+      .catch(() => setFavorites(new Set()));
+  }, [user]);
+
   const activeProducts = useMemo(
     () =>
       products
-        .filter((product) => (product.status || "Active") === "Active")
-        .sort((left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0)),
+        .filter((product) => (product.status || "Active").toLowerCase() === "active")
+        .sort((left, right) => {
+          const featuredDifference =
+            Number(Boolean(right.featured || right.isFeatured || right.isNew || right.latest)) -
+            Number(Boolean(left.featured || left.isFeatured || left.isNew || left.latest));
+          if (featuredDifference) return featuredDifference;
+
+          const rightTime = new Date(right.bumpedAt || right.createdAt || 0).getTime();
+          const leftTime = new Date(left.bumpedAt || left.createdAt || 0).getTime();
+          if (rightTime !== leftTime) return rightTime - leftTime;
+
+          return Number(right.viewCount || 0) - Number(left.viewCount || 0);
+        }),
     [products],
   );
-  const featuredProduct = activeProducts[slideIndex % Math.max(activeProducts.length, 1)];
+  const bannerProducts = useMemo(() => activeProducts.slice(0, 6), [activeProducts]);
+  const featuredProduct = bannerProducts[slideIndex % Math.max(bannerProducts.length, 1)];
+
+  useEffect(() => {
+    setSlideIndex((current) =>
+      bannerProducts.length ? current % bannerProducts.length : 0,
+    );
+  }, [bannerProducts.length]);
+
+  useEffect(() => {
+    if (bannerProducts.length < 2) return undefined;
+
+    const autoplayTimer = window.setTimeout(() => {
+      setSlideIndex((current) => (current + 1) % bannerProducts.length);
+    }, 4_800);
+
+    return () => window.clearTimeout(autoplayTimer);
+  }, [bannerProducts.length, slideIndex]);
 
   const changeSlide = (direction) => {
-    if (activeProducts.length < 2) return;
-    setSlideIndex((current) => (current + direction + activeProducts.length) % activeProducts.length);
+    if (bannerProducts.length < 2) return;
+    setSlideIndex(
+      (current) =>
+        (current + direction + bannerProducts.length) % bannerProducts.length,
+    );
   };
 
-  const toggleFavorite = (productId) => {
-    setFavorites((current) => {
-      const next = new Set(current);
-      if (next.has(productId)) next.delete(productId);
-      else next.add(productId);
-      localStorage.setItem("haisan-favorites", JSON.stringify([...next]));
-      return next;
-    });
+  const toggleFavorite = async (productId) => {
+    try {
+      const result = await apiFavorites.toggle(productId);
+      setFavorites((current) => {
+        const next = new Set(current);
+        if (result.favorited) next.add(String(productId));
+        else next.delete(String(productId));
+        return next;
+      });
+    } catch (error) {
+      await alert({
+        title: "Lỗi yêu thích",
+        message: error.message,
+        variant: "danger"
+      });
+    }
+
   };
 
   return (
-    <div className="home-page page-container">
-      <section className="market-hero">
-        {featuredProduct && (
-          <img className="market-hero__background" src={getProductImage(featuredProduct)} alt="" />
-        )}
+    <div className="home-page ocean-background page-container">
+      <section
+        className={`market-hero${heroBackgroundReady ? " has-background" : " is-fallback"}`}
+        data-tour="home-hero"
+        style={heroBackgroundReady ? { backgroundImage: `url(${heroSeafoodMarket})` } : undefined}
+      >
         <div className="market-hero__overlay" />
-        {activeProducts.length > 1 && (
+        {bannerProducts.length > 1 && (
           <>
             <button aria-label="Mẻ hàng trước" className="market-hero__arrow is-left" onClick={() => changeSlide(-1)} type="button">
               <ChevronLeft />
@@ -85,16 +156,22 @@ export default function Home() {
             Mọi trao đổi mua bán diễn ra trực tiếp giữa hai bên qua tin nhắn.
           </p>
           <div className="market-hero__actions">
-            <Link className="button button--primary" to="/marketplace">Khám phá chợ hải sản</Link>
+            <Link className="button button--primary" data-tour="home-explore-button" to="/marketplace">Khám phá chợ hải sản</Link>
             <Link className="button button--secondary" to="/chat"><MessageSquare size={17} /> Tin nhắn</Link>
           </div>
           {featuredProduct && (
             <button
-              className="market-hero__featured"
+              className="market-hero__featured cta-view-now"
+              data-tour="home-featured-product"
+              key={`featured-${getProductId(featuredProduct)}`}
               onClick={() => navigate(`/product/${getProductId(featuredProduct)}`)}
               type="button"
             >
-              <img src={getProductImage(featuredProduct)} alt="" />
+              <img
+                alt=""
+                decoding="async"
+                src={getOptimizedImageUrl(getProductImage(featuredProduct), 160, 160)}
+              />
               <span>
                 <small>MỚI CẬP BẾN</small>
                 <strong>{featuredProduct.name}</strong>
@@ -103,53 +180,78 @@ export default function Home() {
             </button>
           )}
         </div>
+        {bannerProducts.length > 1 && (
+          <div className="market-hero__dots" aria-label="Chọn mẻ hàng nổi bật">
+            {bannerProducts.map((product, index) => (
+              <button
+                aria-current={
+                  slideIndex % bannerProducts.length === index ? "true" : undefined
+                }
+                aria-label={`Xem mẻ hàng ${index + 1}: ${product.name}`}
+                className={
+                  slideIndex % bannerProducts.length === index ? "is-active" : ""
+                }
+                key={getProductId(product)}
+                onClick={() => setSlideIndex(index)}
+                type="button"
+              />
+            ))}
+          </div>
+        )}
       </section>
 
-      <section className="home-section">
+      <section className="home-section section-shell" data-tour="home-new-products">
         <header className="section-heading">
           <div><span className="eyebrow">FRESH LISTINGS</span><h2>Mẻ hàng mới</h2></div>
           <Link to="/marketplace">Xem tất cả</Link>
         </header>
-        <ProductGrid
-          favorites={favorites}
-          onToggleFavorite={toggleFavorite}
-          products={activeProducts.slice(0, 4)}
-        />
+
+        {activeProducts.length === 0 ? (
+          <div className="empty-state-card">
+            <div className="empty-state-icon"><Ship size={32} /></div>
+            <h3>Chưa có mẻ hàng phù hợp</h3>
+            <p>Thử thay đổi bộ lọc hoặc xem toàn bộ chợ hải sản.</p>
+            <Link className="button button--primary" to="/marketplace">Xem tất cả</Link>
+          </div>
+        ) : (
+          <ProductGrid
+            favorites={favorites}
+            onToggleFavorite={toggleFavorite}
+            products={activeProducts.slice(0, 4)}
+          />
+        )}
       </section>
 
-      <section className="home-section">
+      <div className="section-divider" />
+
+      <section className="home-section section-shell" data-tour="home-featured-sellers">
         <header className="section-heading">
           <div><span className="eyebrow">SELLER NETWORK</span><h2>Ngư dân nổi bật</h2></div>
         </header>
-        <div className="home-seller-grid">
-          {fishermen.slice(0, 6).map((seller) => (
-            <Link className="home-seller-card" key={seller.id || seller._id} to={`/fisherman/${seller.id || seller._id}`}>
-              <span>{(seller.name || "ND").slice(0, 2).toUpperCase()}</span>
-              <div>
-                <h3>{seller.name} {seller.isVerified && <ShieldCheck size={15} />}</h3>
-                <p><MapPin size={13} /> {seller.locationName || "Việt Nam"}</p>
-                <small>{seller.followersCount || 0} người theo dõi · {Number(seller.ratingAvg || 0).toFixed(1)} ★</small>
-              </div>
-            </Link>
-          ))}
-          {fishermen.length === 0 && <div className="empty-state">Chưa có hồ sơ ngư dân.</div>}
-        </div>
-      </section>
 
-      <section className="home-section">
-        <header className="section-heading">
-          <div><span className="eyebrow">SEAFOOD KITCHEN</span><h2>Gợi ý chế biến</h2></div>
-        </header>
-        <div className="home-recipe-grid">
-          {recipes.slice(0, 3).map((recipe) => (
-            <article className="home-recipe-card" key={recipe.id || recipe._id}>
-              {recipe.imageUrl && <img src={recipe.imageUrl} alt={recipe.title} />}
-              <div><small>{recipe.difficulty || "Dễ"} · {recipe.cookingTime || 30} phút</small><h3>{recipe.title}</h3><p>{recipe.description}</p></div>
-            </article>
-          ))}
-          {recipes.length === 0 && <div className="empty-state">Chưa có công thức được chia sẻ.</div>}
-        </div>
+        {fishermen.length === 0 ? (
+          <div className="empty-state-card">
+            <div className="empty-state-icon"><Anchor size={32} /></div>
+            <h3>Chưa có hồ sơ ngư dân</h3>
+            <p>Theo dõi ngư dân uy tín để nhận thông báo khi có mẻ mới.</p>
+            <Link className="button button--primary" to="/marketplace">Khám phá chợ hải sản</Link>
+          </div>
+        ) : (
+          <div className="home-seller-grid">
+            {fishermen.slice(0, 6).map((seller) => (
+              <Link className="home-seller-card" key={seller.id || seller._id} to={`/fisherman/${seller.id || seller._id}`}>
+                <span>{(seller.name || "ND").slice(0, 2).toUpperCase()}</span>
+                <div>
+                  <h3>{seller.name} {seller.isVerified && <ShieldCheck size={15} />}</h3>
+                  <p><MapPin size={13} /> {seller.locationName || "Việt Nam"}</p>
+                  <small>{seller.followersCount || 0} người theo dõi · {Number(seller.ratingAvg || 0).toFixed(1)} ★</small>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
 }
+

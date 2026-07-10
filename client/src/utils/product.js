@@ -32,10 +32,36 @@ export function getFreshness(product) {
   if (!product?.catchTime) return "Chưa cập nhật";
 
   const ageHours = (Date.now() - new Date(product.catchTime).getTime()) / 3_600_000;
-  if (ageHours <= 24) return "Vừa đánh bắt";
+  if (ageHours <= 24) return "Fresh Today";
   if (ageHours <= 72) return "Rất tươi";
   if (ageHours <= 168) return "Tươi";
   return "Đã bảo quản";
+}
+
+const marketplaceStatuses = {
+  available: { key: "available", label: "Còn hàng" },
+  reserved: { key: "reserved", label: "Reserved" },
+  "sold out": { key: "sold-out", label: "Sold Out" },
+  soldout: { key: "sold-out", label: "Sold Out" },
+  expired: { key: "expired", label: "Hết hạn" },
+};
+
+export function getMarketplaceStatus(product) {
+  const explicitStatus = String(
+    product?.marketplaceStatus || product?.uiStatus || product?.status || "",
+  ).toLowerCase();
+  const expiryTime = product?.expiryDate ? new Date(product.expiryDate).getTime() : null;
+  const hasKnownStock =
+    product?.remainingWeight !== undefined && product?.remainingWeight !== null;
+
+  if (marketplaceStatuses[explicitStatus]) return marketplaceStatuses[explicitStatus];
+  if (expiryTime && expiryTime < Date.now()) return marketplaceStatuses.expired;
+  if (product?.isReserved || product?.reserved) return marketplaceStatuses.reserved;
+  if (hasKnownStock && Number(product.remainingWeight) <= 0) {
+    return marketplaceStatuses["sold out"];
+  }
+  if (explicitStatus && explicitStatus !== "active") return marketplaceStatuses.expired;
+  return marketplaceStatuses.available;
 }
 
 function toRadians(value) {

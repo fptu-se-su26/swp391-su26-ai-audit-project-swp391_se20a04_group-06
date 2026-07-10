@@ -11,14 +11,31 @@
 }
 
 html {
+  width: 100%;
   min-width: 320px;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
 }
 
 body {
+  width: 100%;
   min-width: 320px;
+  max-width: 100%;
   min-height: 100vh;
   margin: 0;
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+#root {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 button,

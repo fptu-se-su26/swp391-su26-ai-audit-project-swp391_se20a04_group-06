@@ -58,11 +58,34 @@ class BoatLog extends AggregateRoot_1.AggregateRoot {
             images: this.props.images,
             // Danh sách ID người dùng thích bài đăng
             likes: this.props.likes,
+            batchId: this.props.batchId,
+            boatName: this.props.boatName,
+            catchArea: this.props.catchArea,
+            landingTime: this.props.landingTime,
+            origin: this.props.origin,
         };
+    }
+    update(content, images, details = {}) {
+        if (!content || content.trim() === "") {
+            throw new DomainException_1.ValidationError("Nội dung nhật ký cabin không được trống.");
+        }
+        this.props.content = content;
+        this.props.images = images;
+        this.props.boatName = details.boatName;
+        this.props.catchArea = details.catchArea;
+        this.props.landingTime = details.landingTime;
+        this.props.origin = details.origin;
     }
     // Getter để truy xuất nhanh mã người dùng tạo nhật ký cabin
     get userId() { return this.props.userId; }
+    get content() { return this.props.content; }
+    get images() { return this.props.images; }
     // Getter để truy xuất nhanh danh sách ID những người thích nhật ký cabin
     get likes() { return this.props.likes; }
+    get batchId() { return this.props.batchId; }
+    get boatName() { return this.props.boatName; }
+    get catchArea() { return this.props.catchArea; }
+    get landingTime() { return this.props.landingTime; }
+    get origin() { return this.props.origin; }
 }
 exports.BoatLog = BoatLog;

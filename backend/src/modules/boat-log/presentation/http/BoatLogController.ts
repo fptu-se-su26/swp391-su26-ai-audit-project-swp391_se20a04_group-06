@@ -13,6 +13,7 @@ import { CreateBoatLogUseCase } from "../../application/use-cases/CreateBoatLogU
 import { DeleteBoatLogUseCase } from "../../application/use-cases/DeleteBoatLogUseCase";
 // Import Use Case thích nhật ký cabin
 import { ToggleLikeBoatLogUseCase } from "../../application/use-cases/ToggleLikeBoatLogUseCase";
+import { UpdateBoatLogUseCase } from "../../application/use-cases/UpdateBoatLogUseCase";
 
 // Khởi tạo Repository Mongoose duy nhất quản lý DB lưu trữ nhật ký cabin
 const boatLogRepository = new MongooseBoatLogRepository();
@@ -22,6 +23,7 @@ const createBoatLogUseCase = new CreateBoatLogUseCase(boatLogRepository);
 const deleteBoatLogUseCase = new DeleteBoatLogUseCase(boatLogRepository);
 // Khởi tạo Use Case thích nhật ký và tiêm Repository vào qua constructor (DI)
 const toggleLikeBoatLogUseCase = new ToggleLikeBoatLogUseCase(boatLogRepository);
+const updateBoatLogUseCase = new UpdateBoatLogUseCase(boatLogRepository);
 
 // ── QUERIES (Read-Side CQRS) ──────────────────────────────────────────────
 // Tách biệt luồng Đọc: Truy vấn thô từ Service để lấy danh sách nhanh, bỏ qua mappings phức tạp
@@ -63,6 +65,22 @@ export async function createBoatLog(req: Request, res: Response, next: NextFunct
 }
 
 // Hàm xử lý API Thích hoặc Hủy thích một Nhật ký Cabin
+export async function updateBoatLog(req: Request, res: Response, next: NextFunction) {
+  const id = parseId(req.params.id);
+  const { userId, role } = req.user;
+  if (!id) return res.status(400).json({ message: "ID nhật ký không hợp lệ" });
+
+  try {
+    const log = await updateBoatLogUseCase.execute(id, userId, role, req.body);
+    return res.json({
+      message: "Cập nhật nhật ký cabin thành công",
+      boatLog: log.toProps(),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function toggleLikeBoatLog(req: Request, res: Response, next: NextFunction) {
   // Chuẩn hóa và chuyển đổi mã ID nhật ký từ chuỗi tham số req.params.id nhận được
   const id = parseId(req.params.id);

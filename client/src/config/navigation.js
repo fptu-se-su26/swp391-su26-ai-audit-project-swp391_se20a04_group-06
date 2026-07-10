@@ -1,62 +1,65 @@
 import {
   AlertTriangle,
-  BarChart3,
-  Bell,
   BookOpenText,
   Crown,
   Fish,
+  PackageOpen,
   Heart,
   Home,
   LayoutDashboard,
-  MessageSquare,
   Radio,
   Settings,
   ShieldCheck,
   Store,
-  User,
   Users,
+  UsersRound,
+  ChefHat,
+  Trophy,
 } from "lucide-react";
 
 const buyerNavigation = [
   { label: "Trang chủ", path: "/", icon: Home },
   { label: "Chợ hải sản", path: "/marketplace", icon: Store },
+  { label: "Cộng đồng", path: "/community", icon: UsersRound },
+  { label: "Công thức", path: "/recipes", icon: ChefHat },
+  { label: "Boat Log", path: "/boat-log", icon: BookOpenText },
+  { label: "Xếp hạng", path: "/leaderboard", icon: Trophy },
   { label: "Đã lưu", path: "/buyer/favorites", icon: Heart },
-  { label: "Tin nhắn", path: "/chat", icon: MessageSquare },
-  { label: "Thông báo", path: "/notifications", icon: Bell },
-  { label: "Premium", path: "/premium", icon: Crown, highlight: true },
-  { label: "Hồ sơ", path: "/profile", icon: User },
 ];
 
 const sellerNavigation = [
   { label: "Dashboard", path: "/seller", icon: LayoutDashboard, exact: true },
   { label: "Quản lý sản phẩm", path: "/seller/products", icon: Fish },
+  { label: "Vựa cá", path: "/seller/landing-batches", icon: PackageOpen },
+  { label: "Cộng đồng", path: "/community", icon: UsersRound },
+  { label: "Công thức", path: "/recipes", icon: ChefHat },
   { label: "Boat Log", path: "/seller/boat-log", icon: BookOpenText },
-  { label: "Tin nhắn", path: "/chat", icon: MessageSquare },
-  { label: "Premium", path: "/premium", icon: Crown, highlight: true },
-  { label: "Thống kê", path: "/seller/statistics", icon: BarChart3 },
-  { label: "Thông báo", path: "/notifications", icon: Bell },
-  { label: "Hồ sơ", path: "/profile", icon: User },
 ];
 
 const adminNavigation = [
   { label: "Dashboard", path: "/admin", icon: LayoutDashboard, exact: true },
   { label: "Quản lý User", path: "/admin/users", icon: Users },
   { label: "Duyệt sản phẩm", path: "/admin/listings", icon: ShieldCheck },
+  { label: "Vựa cá", path: "/admin/landing-batches", icon: PackageOpen },
   { label: "Report", path: "/admin/reports", icon: AlertTriangle },
   { label: "Premium", path: "/admin/payments", icon: Crown },
   { label: "Broadcast", path: "/admin/broadcast", icon: Radio },
   { label: "Settings", path: "/admin/settings", icon: Settings },
 ];
 
+
 const guestNavigation = [
   { label: "Trang chủ", path: "/", icon: Home },
   { label: "Chợ hải sản", path: "/marketplace", icon: Store },
+  { label: "Cộng đồng", path: "/community", icon: UsersRound },
+  { label: "Công thức", path: "/recipes", icon: ChefHat },
+  { label: "Xếp hạng", path: "/leaderboard", icon: Trophy },
 ];
 
 export function getUserRole(user) {
+  if (user?.role === "Admin" || user?.role === "admin") return "admin";
   const role = user?.sessionRole || user?.role || "guest";
   if (role === "Seller" || role === "seller") return "seller";
-  if (role === "Admin" || role === "admin") return "admin";
   if (role === "User" || role === "Buyer" || role === "buyer") return "buyer";
   return "guest";
 }

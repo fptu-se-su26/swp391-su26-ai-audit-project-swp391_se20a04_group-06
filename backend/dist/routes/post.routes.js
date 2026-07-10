@@ -217,5 +217,7 @@ router.delete("/:id", auth_1.authenticate, PostController_1.deletePost);
  */
 // Định nghĩa tuyến đường DELETE /:postId/comments/:commentId để xóa một bình luận cụ thể theo ID bài viết và ID bình luận (yêu cầu đăng nhập)
 router.delete("/:postId/comments/:commentId", auth_1.authenticate, PostController_1.deleteComment);
+// Định nghĩa tuyến đường POST /:id/comments/:commentId/like để thích hoặc bỏ thích một bình luận cụ thể (yêu cầu đăng nhập)
+router.post("/:id/comments/:commentId/like", auth_1.authenticate, PostController_1.toggleLikeComment);
 // Xuất mặc định router để cấu hình vào app chính app.ts
 exports.default = router;

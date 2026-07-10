@@ -15,6 +15,11 @@ export interface IBoatLog extends Document {
   images: string[];
   // Mảng chứa các ID người dùng đã thích bài viết này (liên kết bảng User)
   likes: Types.ObjectId[];
+  batchId?: Types.ObjectId;
+  boatName?: string;
+  catchArea?: string;
+  landingTime?: Date;
+  origin?: string;
   // Mốc thời gian tự động tạo tài liệu trong DB
   createdAt: Date;
   // Mốc thời gian tự động cập nhật tài liệu trong DB
@@ -45,6 +50,15 @@ const boatLogSchema = new Schema<IBoatLog>(
     images: [{ type: String }],
     // Cấu hình trường likes: mảng các ObjectId tham chiếu đến User
     likes: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    batchId: {
+      type: Schema.Types.ObjectId,
+      ref: "LandingBatch",
+      index: true,
+    },
+    boatName: { type: String, trim: true, maxlength: 120 },
+    catchArea: { type: String, trim: true, maxlength: 200 },
+    landingTime: { type: Date },
+    origin: { type: String, trim: true, maxlength: 200 },
   },
   // Cấu hình tự động ghi nhận mốc thời gian tạo (createdAt) và sửa đổi (updatedAt) tài liệu
   { timestamps: true }

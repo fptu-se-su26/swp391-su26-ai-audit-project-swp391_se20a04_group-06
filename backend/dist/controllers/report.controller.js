@@ -15,13 +15,20 @@ const pagination_1 = require("../utils/pagination");
 async function createReport(req, res) {
     // Lấy ID người dùng thực hiện báo cáo từ token xác thực
     const { userId } = req.user;
-    // Lấy ID sản phẩm bị báo cáo từ tham số URL (:productId)
-    const { productId } = req.params;
+    // Lấy ID sản phẩm, bài viết hoặc công thức bị báo cáo từ tham số URL
+    const { productId, postId, recipeId } = req.params;
     // Lấy lý do báo cáo (reason) từ body request
     const { reason } = req.body;
     try {
-        // Gọi service xử lý tạo bản ghi báo cáo vi phạm mới trong database
-        await report_service_1.reportService.createReport(userId, productId, reason);
+        if (postId) {
+            await report_service_1.reportService.createReport(userId, postId, reason, "Post");
+        }
+        else if (recipeId) {
+            await report_service_1.reportService.createReport(userId, recipeId, reason, "Recipe");
+        }
+        else {
+            await report_service_1.reportService.createReport(userId, productId, reason, "Product");
+        }
         // Trả về thông báo thành công cho Client
         return res.json({ message: "Báo cáo đã gửi thành công" });
     }

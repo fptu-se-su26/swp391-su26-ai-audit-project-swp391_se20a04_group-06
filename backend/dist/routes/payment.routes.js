@@ -4,6 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 // Import hàm xử lý webhook thanh toán Sepay từ payment.controller
 const payment_controller_1 = require("../controllers/payment.controller");
+const auth_1 = require("../middlewares/auth");
 // Khởi tạo đối tượng router từ Express Router
 const router = (0, express_1.Router)();
 /**
@@ -45,5 +46,7 @@ const router = (0, express_1.Router)();
  */
 // Endpoint webhook nhận dữ liệu thông báo giao dịch từ Sepay chuyển đến (tuyến này bypass bảo vệ CSRF trong app.ts)
 router.post("/webhook", payment_controller_1.sepayWebhook);
+router.get("/premium-intent", auth_1.authenticate, payment_controller_1.getPremiumIntent);
+router.get("/status", auth_1.authenticate, payment_controller_1.getPremiumStatus);
 // Xuất mặc định router để cấu hình vào app chính app.ts
 exports.default = router;

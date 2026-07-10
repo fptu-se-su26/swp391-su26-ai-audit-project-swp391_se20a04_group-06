@@ -26,6 +26,8 @@ const Notification_1 = require("../../../../models/Notification");
 const Post_1 = require("../../../../models/Post");
 const Recipe_1 = require("../../../../models/Recipe");
 const BoatLog_1 = require("../../../../models/BoatLog");
+const OmakaseSubscription_1 = require("../../../../models/OmakaseSubscription");
+const PaymentTransaction_1 = require("../../../../models/PaymentTransaction");
 /**
  * USE CASE: XÓA TÀI KHOẢN NGƯỜI DÙNG (GDPR COMPLIANCE / ACCOUNT DELETION)
  * Đảm bảo xóa sạch toàn bộ thông tin cá nhân và dữ liệu liên quan để tuân thủ quyền riêng tư người dùng
@@ -114,6 +116,9 @@ class DeleteAccountUseCase {
             await Recipe_1.Recipe.deleteMany({ authorId: userId }, dbOptions);
             // Xóa nhật ký đi biển của người này
             await BoatLog_1.BoatLog.deleteMany({ userId: userId }, dbOptions);
+            // Xóa đăng ký Omakase và lịch sử thanh toán Premium gắn với tài khoản.
+            await OmakaseSubscription_1.OmakaseSubscription.deleteMany({ userId: userId }, dbOptions);
+            await PaymentTransaction_1.PaymentTransaction.deleteMany({ userId: userId }, dbOptions);
             // Loại bỏ lượt thích (Likes) của người này khỏi tất cả các bài viết và công thức khác
             await Post_1.Post.updateMany({}, { $pull: { likes: userId } }, dbOptions);
             await Recipe_1.Recipe.updateMany({}, { $pull: { likes: userId } }, dbOptions);

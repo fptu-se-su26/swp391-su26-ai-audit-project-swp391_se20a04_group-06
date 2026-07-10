@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.uploadContentImages = uploadContentImages;
 exports.uploadImages = uploadImages;
 exports.getUploadSignature = getUploadSignature;
 exports.deleteImage = deleteImage;
@@ -17,6 +18,40 @@ const logger_1 = require("../utils/logger");
 const cloudinary_2 = require("../utils/cloudinary");
 // Quy định số lượng ảnh tối đa được phép tải lên cho mỗi sản phẩm là 5 ảnh
 const MAX_IMAGES = 5;
+const CONTENT_UPLOAD_FOLDERS = {
+    "boat-logs": "boat_logs",
+    "landing-batches": "landing_batches",
+    posts: "community_posts",
+    recipes: "recipes",
+};
+/**
+ * Upload ảnh nội dung trước khi tạo/cập nhật bản ghi.
+ * Chỉ trả về URL Cloudinary bền vững; frontend không được lưu blob/object URL.
+ */
+async function uploadContentImages(req, res) {
+    const files = req.files;
+    const scope = req.params.scope;
+    const folder = CONTENT_UPLOAD_FOLDERS[scope];
+    if (!folder) {
+        return res.status(400).json({ message: "Loại nội dung upload không hợp lệ" });
+    }
+    if (!files?.length) {
+        return res.status(400).json({ message: "Chưa chọn ảnh nào" });
+    }
+    try {
+        const uploaded = await Promise.all(files.map((file) => (0, upload_1.uploadToCloudinary)(file.buffer, folder)));
+        return res.status(201).json({
+            urls: uploaded.map((item) => item.url),
+            images: uploaded.map((item) => ({
+                url: item.url,
+                publicId: item.publicId,
+            })),
+        });
+    }
+    catch (err) {
+        return (0, response_helper_1.sendServerError)(res, err);
+    }
+}
 /**
  * HÀM TẢI LÊN NHIỀU HÌNH ẢNH CHO MỘT SẢN PHẨM
  */

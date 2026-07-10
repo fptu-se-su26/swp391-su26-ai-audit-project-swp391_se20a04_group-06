@@ -7,16 +7,21 @@ async function main() {
     await mongoose.connect(MONGO_URI);
     console.log("Connected to MongoDB for seeding");
 
-    // Clear existing data
-    await mongoose.connection.db.collection("users").deleteMany({});
-    await mongoose.connection.db.collection("products").deleteMany({});
-    await mongoose.connection.db.collection("messages").deleteMany({});
-
-    await mongoose.connection.db.collection("recipes").deleteMany({});
-    await mongoose.connection.db.collection("posts").deleteMany({});
-    console.log(
-      "Cleared existing users, products, messages, recipes, and posts",
-    );
+    const collections = await mongoose.connection.db
+      .listCollections({}, { nameOnly: true })
+      .toArray();
+    for (const { name } of collections) {
+      if (name.startsWith("system.")) continue;
+      const count = await mongoose.connection.db
+        .collection(name)
+        .estimatedDocumentCount();
+      if (count > 0) {
+        console.log(
+          `Seed skipped: collection "${name}" already contains data. No records were deleted.`,
+        );
+        return;
+      }
+    }
 
     const passwordHash =
       "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhy/"; // password123
@@ -457,10 +462,12 @@ async function main() {
       .insertMany(postsData);
     console.log(`Inserted ${postsResult.insertedCount} posts`);
 
-    await mongoose.disconnect();
     console.log("Seeding completed successfully!");
   } catch (err) {
     console.error("Seeding error:", err);
+    process.exitCode = 1;
+  } finally {
+    await mongoose.disconnect();
   }
 }
 

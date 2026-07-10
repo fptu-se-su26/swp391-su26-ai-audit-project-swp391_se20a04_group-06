@@ -78,7 +78,7 @@ export const reportService = {
       if (!recipe) {
         throw new HttpError(404, "Công thức không tồn tại hoặc đã bị ẩn");
       }
-      const authorIdStr = (recipe as any).sellerId ? (recipe as any).sellerId.toString() : "";
+      const authorIdStr = (recipe as any).authorId ? (recipe as any).authorId.toString() : "";
       if (authorIdStr === userId) {
         throw new HttpError(400, "Bạn không thể báo cáo công thức của chính mình!");
       }
@@ -128,7 +128,7 @@ export const reportService = {
       const Recipe = mongoose.model("Recipe");
       const recipe = await Recipe.findOne({ _id: recipeId });
       if (recipe) {
-        ownerId = (recipe as any).sellerId?.toString();
+        ownerId = (recipe as any).authorId?.toString();
         targetName = (recipe as any).title;
         itemLabel = "công thức";
       }
@@ -178,8 +178,8 @@ export const reportService = {
       // Product fields
       productName: r.productId?.name || (r.targetType === "Product" ? "Sản phẩm đã bị xoá" : null),
       productId: r.productId?._id?.toString() || null,
-      sellerId: r.productId?.sellerId?._id?.toString() || r.recipeId?.sellerId?._id?.toString() || null,
-      sellerName: r.productId?.sellerId?.name || r.recipeId?.sellerName || (r.targetType === "Product" ? "Một ngư dân" : null),
+      sellerId: r.productId?.sellerId?._id?.toString() || r.recipeId?.authorId?._id?.toString() || null,
+      sellerName: r.productId?.sellerId?.name || r.recipeId?.authorId?.name || (r.targetType === "Product" ? "Một ngư dân" : null),
 
       // Post fields
       postName: r.postId?.title || (r.targetType === "Post" ? "Bài viết đã bị xoá" : null),

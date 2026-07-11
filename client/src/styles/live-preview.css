@@ -306,23 +306,23 @@
   line-height: 1.3;
 }
 
-/* One-Screen Layout for Recipe Detail (Desktop) */
+/* Magazine Layout for Recipe Detail (Desktop) */
 @media (min-width: 992px) {
   .recipe-detail-page {
-    height: calc(100vh - 84px) !important;
-    overflow: hidden !important;
-    padding: 16px 24px !important;
+    height: auto !important;
+    min-height: calc(100vh - 84px) !important;
+    overflow-y: visible !important;
+    padding: 20px 32px 80px !important;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
   }
 
   .recipe-one-screen {
-    height: 100%;
+    height: auto;
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    min-height: 0;
+    gap: 20px;
   }
 
   .recipe-one-screen__header {
@@ -330,12 +330,10 @@
   }
 
   .recipe-detail-grid {
-    flex: 1 1 auto;
-    min-height: 0;
     display: grid;
-    grid-template-columns: 0.95fr 0.85fr 1.2fr;
+    grid-template-columns: 0.9fr 0.85fr 1.15fr;
     gap: 20px;
-    height: 100%;
+    align-items: start;
   }
 
   .recipe-summary-card,
@@ -348,14 +346,15 @@
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
     display: flex;
     flex-direction: column;
-    min-height: 0;
-    height: 100%;
+    height: auto;
+    min-height: unset;
+    overflow: hidden;
     box-sizing: border-box;
   }
 
   .recipe-summary-card__media {
     width: 100%;
-    height: 190px;
+    height: 220px;
     border-radius: 14px;
     overflow: hidden;
     margin-bottom: 12px;
@@ -372,7 +371,7 @@
 
   .recipe-card-body {
     flex: 1 1 auto;
-    min-height: 0;
+    max-height: 360px;
     overflow-y: auto;
     padding-right: 4px;
   }
@@ -390,9 +389,23 @@
 
   .recipe-card-scroll {
     flex: 1 1 auto;
-    min-height: 0;
+    max-height: 360px;
     overflow-y: auto;
     padding-right: 6px;
+  }
+
+  .recipe-action-bar {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    padding: 18px 22px;
+    background: rgba(11, 23, 40, 0.95);
+    border: 1px solid rgba(34, 243, 255, 0.25);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
   }
 
   /* Comments Drawer */
@@ -507,7 +520,7 @@
   .recipe-detail-page {
     height: auto !important;
     overflow: visible !important;
-    padding: 16px !important;
+    padding: 16px 16px 60px !important;
   }
 
   .recipe-one-screen {
@@ -567,12 +580,14 @@
     margin-bottom: 16px;
   }
 
-  .recipe-summary-card__actions {
+  .recipe-action-bar {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    padding-top: 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 18px;
+    background: #0b1728;
+    border: 1px solid rgba(34, 243, 255, 0.15);
+    border-radius: 20px;
   }
 
   .recipe-ingredients-card h2,

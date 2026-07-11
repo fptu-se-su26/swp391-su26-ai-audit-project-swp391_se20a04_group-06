@@ -247,7 +247,7 @@ export default function RecipeDetail() {
               
               <p style={{ fontSize: "0.85rem", color: "#cbd5e1", lineHeight: "1.5", margin: "0 0 14px 0" }}>{recipe.description}</p>
               
-              <div className="recipe-summary-card__meta" style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
+              <div className="recipe-summary-card__meta" style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 <div className="recipe-meta-pill">
                   <Clock3 size={14} style={{ color: "#22f3ff" }} />
                   <span>{recipe.cookingTime || 30} phút</span>
@@ -263,39 +263,6 @@ export default function RecipeDetail() {
                     </span>
                     <span>Đăng bởi: <strong>{author.name}</strong></span>
                   </Link>
-                )}
-              </div>
-
-              <div className="recipe-actions" style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "auto", paddingTop: "12px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                <button
-                  className={`button button--primary like-button ${user && recipe.likes?.map(String).includes(String(user.id || user._id)) ? "is-liked" : ""}`}
-                  onClick={like}
-                  type="button"
-                >
-                  <Heart size={16} />
-                  <span>{user && recipe.likes?.map(String).includes(String(user.id || user._id)) ? "Đã thích" : "Thích"}</span>
-                  <span>({recipe.likeCount ?? recipe.likes?.length ?? 0})</span>
-                </button>
-                
-                <button className="button button--secondary" onClick={shareRecipe} type="button">
-                  <Share2 size={16} /> Chia sẻ
-                </button>
-
-                <button className="button button--secondary" onClick={() => setShowComments(true)} type="button">
-                  <MessageSquare size={16} /> Bình luận ({recipe.comments?.length || 0})
-                </button>
-
-                <ReportButton onSubmit={(reason) => apiReports.createForRecipe(id, reason)} />
-
-                {canManageOwnedContent(user, recipe.authorId) && (
-                  <>
-                    <button className="button button--secondary owner-edit-button" onClick={editRecipe} type="button">
-                      <Pencil size={16} /> Sửa
-                    </button>
-                    <button className="button owner-delete-button" disabled={deleting} onClick={deleteRecipe} type="button">
-                      <Trash2 size={16} /> Xóa
-                    </button>
-                  </>
                 )}
               </div>
             </div>
@@ -343,6 +310,40 @@ export default function RecipeDetail() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Hàng 2: Thanh nút hành động nằm ngang bên dưới */}
+          <div className="recipe-action-bar">
+            <button
+              className={`button button--primary like-button ${user && recipe.likes?.map(String).includes(String(user.id || user._id)) ? "is-liked" : ""}`}
+              onClick={like}
+              type="button"
+            >
+              <Heart size={16} />
+              <span>{user && recipe.likes?.map(String).includes(String(user.id || user._id)) ? "Đã thích" : "Thích"}</span>
+              <span>({recipe.likeCount ?? recipe.likes?.length ?? 0})</span>
+            </button>
+            
+            <button className="button button--secondary" onClick={shareRecipe} type="button">
+              <Share2 size={16} /> Chia sẻ
+            </button>
+
+            <button className="button button--secondary" onClick={() => setShowComments(true)} type="button">
+              <MessageSquare size={16} /> Bình luận ({recipe.comments?.length || 0})
+            </button>
+
+            <ReportButton onSubmit={(reason) => apiReports.createForRecipe(id, reason)} />
+
+            {canManageOwnedContent(user, recipe.authorId) && (
+              <>
+                <button className="button button--secondary owner-edit-button" onClick={editRecipe} type="button">
+                  <Pencil size={16} /> Sửa
+                </button>
+                <button className="button owner-delete-button" disabled={deleting} onClick={deleteRecipe} type="button">
+                  <Trash2 size={16} /> Xóa
+                </button>
+              </>
+            )}
           </div>
 
         </div>

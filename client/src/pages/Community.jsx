@@ -1,9 +1,9 @@
-import { Heart, Image, MessageCircle, Pencil, Plus, Send, Trash2, X } from "lucide-react";
+import { Heart, Image, MessageCircle, Pencil, Plus, Send, Trash2, X, Flag } from "lucide-react";
 import ImageUploader from "../components/shared/ImageUploader";
 
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import ReportButton from "../components/ReportButton";
+import ReportDialog from "../components/ReportDialog";
 import { useAuth } from "../context/AuthContext";
 import { apiPosts, apiReports } from "../services/api";
 import { getOptimizedImageUrl } from "../utils/image";
@@ -76,6 +76,7 @@ export default function Community() {
   const [editingPost, setEditingPost] = useState(null);
   const [editForm, setEditForm] = useState(initialEditForm);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [reportTarget, setReportTarget] = useState(null);
 
   const load = () =>
     apiPosts
@@ -443,7 +444,13 @@ export default function Community() {
                   <strong>{post.likeCount ?? post.likes?.length ?? 0}</strong>
                 </button>
                 <span><MessageCircle size={16} /> Bình luận <strong>{post.comments?.length || 0}</strong></span>
-                <ReportButton onSubmit={(reason) => apiReports.createForPost(id, reason)} />
+                <button
+                  className="button button--ghost"
+                  onClick={() => setReportTarget({ id, title: post.title })}
+                  type="button"
+                >
+                  <Flag size={15} /> Báo cáo
+                </button>
               </div>
               <div className="comment-list">
                 {post.comments?.map((comment) => (
@@ -459,6 +466,11 @@ export default function Community() {
         })}
         {!loading && posts.length === 0 && <div className="empty-state"><Image size={28} /><p>Chưa có bài viết cộng đồng.</p></div>}
       </div>
+      <ReportDialog
+        open={Boolean(reportTarget)}
+        onClose={() => setReportTarget(null)}
+        onSubmit={(reason) => apiReports.createForPost(reportTarget.id, reason)}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { ChefHat, Clock3, Heart, Pencil, Plus, Trash2, Users, X } from "lucide-react";
+import { Calendar, ChefHat, Clock3, Heart, Pencil, Plus, Trash2, Users, X } from "lucide-react";
 import ImageUploader from "../components/shared/ImageUploader";
 
 import { useEffect, useState, useRef } from "react";
@@ -11,6 +11,7 @@ import { canManageOwnedContent } from "../utils/ownership";
 import { useConfirm } from "../context/ConfirmContext";
 import LivePreviewShell from "../components/preview/LivePreviewShell";
 import RecipeLivePreview from "../components/preview/RecipeLivePreview";
+import { formatRelativeDate } from "../utils/date";
 
 
 const initialForm = {
@@ -30,6 +31,12 @@ const difficultyClassNames = {
   Easy: "is-easy",
   Medium: "is-medium",
   Hard: "is-hard",
+};
+
+const difficultyLabels = {
+  Easy: "Dễ",
+  Medium: "Trung bình",
+  Hard: "Khó",
 };
 
 const toMultilineText = (value) =>
@@ -535,8 +542,20 @@ export default function Recipes() {
                 <div className="recipe-card__media">
                   <RecipeCardImage imageUrl={recipe.imageUrl} title={recipe.title} />
                 </div>
-                <div className="recipe-card__body"><span className={`recipe-card__difficulty ${difficultyClass}`}>{recipe.difficulty}</span><h2>{recipe.title}</h2><p>{recipe.description}</p>
-                  <footer><small><Clock3 size={14} /> {recipe.cookingTime} phút</small><small><Users size={14} /> {recipe.servings}</small><small><Heart size={14} /> {recipe.likes?.length || 0}</small></footer>
+                <div className="recipe-card__body">
+                  <span className={`recipe-card__difficulty ${difficultyClass}`}>
+                    {difficultyLabels[recipe.difficulty] || recipe.difficulty}
+                  </span>
+                  <h2>{recipe.title}</h2>
+                  <p>{recipe.description}</p>
+                  <footer>
+                    <small><Clock3 size={14} /> {recipe.cookingTime} phút</small>
+                    <small><Users size={14} /> {recipe.servings}</small>
+                    <small><Heart size={14} /> {recipe.likes?.length || 0}</small>
+                    {recipe.createdAt && (
+                      <small><Calendar size={14} /> {formatRelativeDate(recipe.createdAt)}</small>
+                    )}
+                  </footer>
                 </div>
               </Link>
               {canManage && (

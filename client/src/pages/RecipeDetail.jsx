@@ -1,4 +1,4 @@
-import { ArrowLeft, ChefHat, Clock3, Heart, Send, Trash2, Users, Pencil, Share2, Check, MessageSquare, X } from "lucide-react";
+import { ArrowLeft, Calendar, ChefHat, Clock3, Heart, Send, Trash2, Users, Pencil, Share2, Check, MessageSquare, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import ReportButton from "../components/ReportButton";
@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { apiRecipes, apiReports } from "../services/api";
 import { canManageOwnedContent } from "../utils/ownership";
 import { useConfirm } from "../context/ConfirmContext";
+import { formatRelativeDate } from "../utils/date";
 
 function initials(name) {
   if (!name) return "?";
@@ -256,6 +257,12 @@ export default function RecipeDetail() {
                   <Users size={14} style={{ color: "#22f3ff" }} />
                   <span>{recipe.servings || 2} khẩu phần</span>
                 </div>
+                {recipe.createdAt && (
+                  <div className="recipe-meta-pill">
+                    <Calendar size={14} style={{ color: "#22f3ff" }} />
+                    <span>{formatRelativeDate(recipe.createdAt)}</span>
+                  </div>
+                )}
                 {author && (
                   <Link to={`/fisherman/${author._id || author.id}`} className="recipe-meta-pill" style={{ textDecoration: "none" }}>
                     <span className="recipe-author__avatar" style={{ width: "16px", height: "16px", fontSize: "0.6rem", background: "#22f3ff", color: "#0b1728", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", fontWeight: "700", marginRight: "4px" }}>

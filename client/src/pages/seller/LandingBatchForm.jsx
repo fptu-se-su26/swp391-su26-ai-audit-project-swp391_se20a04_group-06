@@ -236,7 +236,7 @@ export default function LandingBatchForm() {
           <p>Gom nhiều loại hải sản thật trong cùng một phiên cập bến.</p>
         </div>
         <button
-          className="button button--ghost"
+          className="back-button"
           onClick={() => navigate("/seller/landing-batches")}
           type="button"
         >

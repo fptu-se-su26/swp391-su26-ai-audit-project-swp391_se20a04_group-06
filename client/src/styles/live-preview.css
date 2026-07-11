@@ -745,3 +745,58 @@
   font-weight: 500;
 }
 
+
+/* Standard Back Buttons & Links across the application */
+.back-link,
+.back-button,
+.recipe-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: #9fb0c5 !important;
+  background: transparent;
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition:
+    background-color 0.22s ease,
+    color 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    transform 0.22s ease;
+  box-sizing: border-box;
+}
+
+.back-link:hover,
+.back-button:hover,
+.recipe-back-link:hover {
+  color: #5ff7ff !important;
+  background: rgba(34, 243, 255, 0.08) !important;
+  border-color: rgba(34, 243, 255, 0.4) !important;
+  box-shadow: 0 8px 22px rgba(34, 243, 255, 0.12) !important;
+  transform: translateY(-1px);
+}
+
+.back-link:hover svg,
+.back-button:hover svg,
+.recipe-back-link:hover svg {
+  stroke: currentColor;
+}
+
+.back-link:active,
+.back-button:active,
+.recipe-back-link:active {
+  transform: translateY(0);
+}
+
+.back-link:focus-visible,
+.back-button:focus-visible,
+.recipe-back-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(34, 243, 255, 0.25) !important;
+}

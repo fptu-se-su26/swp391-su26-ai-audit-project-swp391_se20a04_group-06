@@ -209,8 +209,8 @@ export default function RecipeDetail() {
     <div className="page-container recipe-detail-page">
       <div className="recipe-one-screen">
         {/* Header */}
-        <header className="recipe-one-screen__header">
-          <Link className="back-link" to="/recipes" style={{ display: "inline-flex", alignItems: "center", gap: "8px", color: "#67e8f9", textDecoration: "none", fontSize: "0.9rem", fontWeight: "600" }}>
+        <header className="recipe-one-screen__header" style={{ marginBottom: "12px" }}>
+          <Link className="back-link recipe-back-link" to="/recipes">
             <ArrowLeft size={17} /> Cẩm nang công thức
           </Link>
         </header>

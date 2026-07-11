@@ -144,7 +144,7 @@ export default function RecipeLivePreview({ form }) {
       {tagsList.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "16px" }}>
           {tagsList.map((tag, idx) => (
-            <span key={idx} style={{ background: "rgba(34, 243, 255, 0.08)", border: "1px solid rgba(34, 243, 255, 0.15)", borderRadius: "6px", padding: "2px 6px", fontSize: "0.7rem", color: "#67e8f9" }}>
+            <span key={idx} className="recipe-tag" style={{ background: "rgba(34, 243, 255, 0.08)", border: "1px solid rgba(34, 243, 255, 0.15)", borderRadius: "6px", padding: "2px 6px", fontSize: "0.7rem", color: "#67e8f9" }}>
               #{tag}
             </span>
           ))}

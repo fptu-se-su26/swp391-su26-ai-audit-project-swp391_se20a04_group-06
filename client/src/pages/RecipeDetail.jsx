@@ -244,28 +244,28 @@ export default function RecipeDetail() {
                 </span>
               </div>
               
-              <h1 style={{ fontSize: "1.4rem", fontWeight: "800", color: "#fff", margin: "8px 0 10px 0", lineHeight: "1.3" }}>{recipe.title}</h1>
+              <h1 style={{ fontSize: "1.4rem", fontWeight: "800", color: "var(--market-text)", margin: "8px 0 10px 0", lineHeight: "1.3" }}>{recipe.title}</h1>
               
-              <p style={{ fontSize: "0.85rem", color: "#cbd5e1", lineHeight: "1.5", margin: "0 0 14px 0" }}>{recipe.description}</p>
+              <p style={{ fontSize: "0.85rem", color: "var(--market-muted)", lineHeight: "1.5", margin: "0 0 14px 0" }}>{recipe.description}</p>
               
               <div className="recipe-summary-card__meta" style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 <div className="recipe-meta-pill">
-                  <Clock3 size={14} style={{ color: "#22f3ff" }} />
+                  <Clock3 size={14} style={{ color: "var(--market-primary)" }} />
                   <span>{recipe.cookingTime || 30} phút</span>
                 </div>
                 <div className="recipe-meta-pill">
-                  <Users size={14} style={{ color: "#22f3ff" }} />
+                  <Users size={14} style={{ color: "var(--market-primary)" }} />
                   <span>{recipe.servings || 2} khẩu phần</span>
                 </div>
                 {recipe.createdAt && (
                   <div className="recipe-meta-pill">
-                    <Calendar size={14} style={{ color: "#22f3ff" }} />
+                    <Calendar size={14} style={{ color: "var(--market-primary)" }} />
                     <span>{formatRelativeDate(recipe.createdAt)}</span>
                   </div>
                 )}
                 {author && (
                   <Link to={`/fisherman/${author._id || author.id}`} className="recipe-meta-pill" style={{ textDecoration: "none" }}>
-                    <span className="recipe-author__avatar" style={{ width: "16px", height: "16px", fontSize: "0.6rem", background: "#22f3ff", color: "#0b1728", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", fontWeight: "700", marginRight: "4px" }}>
+                    <span className="recipe-author__avatar" style={{ width: "16px", height: "16px", fontSize: "0.6rem", background: "var(--market-primary)", color: "var(--market-bg)", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", fontWeight: "700", marginRight: "4px" }}>
                       {initials(author.name)}
                     </span>
                     <span>Đăng bởi: <strong>{author.name}</strong></span>
@@ -274,7 +274,7 @@ export default function RecipeDetail() {
               </div>
             </div>
           </aside>
-
+ 
           {/* Cột phải: Panel chứa Nguyên liệu, Cách làm & Nút hành động */}
           <section className="recipe-right-panel">
             <div className="recipe-content-grid">
@@ -292,7 +292,7 @@ export default function RecipeDetail() {
                       ))}
                     </ul>
                   ) : (
-                    <div className="recipe-empty-box" style={{ textAlign: "center", padding: "20px 0", color: "#475569" }}>
+                    <div className="recipe-empty-box" style={{ textAlign: "center", padding: "20px 0", color: "var(--market-subtle)" }}>
                       <ChefHat size={32} style={{ margin: "0 auto 8px" }} />
                       <p style={{ margin: 0, fontSize: "0.9rem" }}>Chưa có nguyên liệu.</p>
                     </div>
@@ -314,7 +314,7 @@ export default function RecipeDetail() {
                       ))}
                     </ol>
                   ) : (
-                    <div className="recipe-empty-box" style={{ textAlign: "center", padding: "20px 0", color: "#475569" }}>
+                    <div className="recipe-empty-box" style={{ textAlign: "center", padding: "20px 0", color: "var(--market-subtle)" }}>
                       <ChefHat size={32} style={{ margin: "0 auto 8px" }} />
                       <p style={{ margin: 0, fontSize: "0.9rem" }}>Chưa có bước thực hiện.</p>
                     </div>
@@ -375,21 +375,21 @@ export default function RecipeDetail() {
         <div className="recipe-comments-drawer__list">
           {recipe.comments && recipe.comments.length > 0 ? (
             recipe.comments.map((item) => (
-              <article className="comment-item" key={item._id || item.id} style={{ display: "flex", gap: "10px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)", padding: "10px 12px", borderRadius: "10px", marginBottom: "12px" }}>
-                <div className="comment-item__avatar" style={{ width: "30px", height: "30px", background: "rgba(34, 243, 255, 0.1)", color: "#22f3ff", display: "grid", placeItems: "center", borderRadius: "50%", fontWeight: "700", fontSize: "0.75rem", flexShrink: 0 }}>
+              <article className="comment-item" key={item._id || item.id} style={{ display: "flex", gap: "10px", background: "var(--market-surface-raised)", border: "1px solid var(--market-line)", padding: "10px 12px", borderRadius: "10px", marginBottom: "12px" }}>
+                <div className="comment-item__avatar" style={{ width: "30px", height: "30px", background: "rgba(8, 145, 178, 0.1)", color: "var(--market-primary)", display: "grid", placeItems: "center", borderRadius: "50%", fontWeight: "700", fontSize: "0.75rem", flexShrink: 0 }}>
                   {initials(item.userName)}
                 </div>
                 <div className="comment-item__body" style={{ flex: 1, minWidth: 0 }}>
                   <header style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                    <strong style={{ color: "#fff", fontSize: "0.8rem" }}>{item.userName}</strong>
-                    <small style={{ color: "#64748b", fontSize: "0.7rem" }}>{formatCommentDate(item.createdAt)}</small>
+                    <strong style={{ color: "var(--market-text)", fontSize: "0.8rem" }}>{item.userName}</strong>
+                    <small style={{ color: "var(--market-subtle)", fontSize: "0.7rem" }}>{formatCommentDate(item.createdAt)}</small>
                   </header>
-                  <p style={{ margin: 0, color: "#cbd5e1", fontSize: "0.8rem", lineHeight: "1.4" }}>{item.text}</p>
+                  <p style={{ margin: 0, color: "var(--market-muted)", fontSize: "0.8rem", lineHeight: "1.4" }}>{item.text}</p>
                 </div>
               </article>
             ))
           ) : (
-            <div className="comments-empty" style={{ textAlign: "center", padding: "28px 0", color: "#64748b", background: "rgba(255,255,255,0.01)", borderRadius: "10px", border: "1px dashed rgba(255,255,255,0.06)" }}>
+            <div className="comments-empty" style={{ textAlign: "center", padding: "28px 0", color: "var(--market-subtle)", background: "var(--market-surface-raised)", borderRadius: "10px", border: "1px dashed var(--market-line)" }}>
               <p style={{ margin: 0, fontSize: "0.85rem" }}>Chưa có bình luận nào. Hãy chia sẻ kinh nghiệm nấu món này.</p>
             </div>
           )}

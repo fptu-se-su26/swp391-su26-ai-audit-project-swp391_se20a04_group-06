@@ -36,6 +36,23 @@ export default function Navbar() {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const actionsRef = useRef(null);
 
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("haisan_theme") === "light" ? "light" : "dark";
+  });
+
+  const toggleTheme = (newTheme) => {
+    setTheme(newTheme);
+    if (newTheme === "light") {
+      document.documentElement.classList.add("theme-light");
+      document.documentElement.classList.remove("theme-dark");
+      localStorage.setItem("haisan_theme", "light");
+    } else {
+      document.documentElement.classList.add("theme-dark");
+      document.documentElement.classList.remove("theme-light");
+      localStorage.setItem("haisan_theme", "dark");
+    }
+  };
+
   const role = getUserRole(user);
   const meta = roleMeta[role];
   const navigation = getNavigation(user);
@@ -166,6 +183,8 @@ export default function Navbar() {
                     role={role}
                     roleLabel={meta.label}
                     user={user}
+                    theme={theme}
+                    onThemeChange={toggleTheme}
                   />
                 )}
               </div>

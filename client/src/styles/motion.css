@@ -88,7 +88,6 @@
 .save-button:active,
 .filter-pills button:active,
 .role-selector button:active,
-.market-hero__arrow:active,
 .market-hero__featured:active,
 .community-post__actions button:active,
 .comment-composer button:active,
@@ -99,12 +98,21 @@
 }
 
 .save-button:hover,
-.market-hero__arrow:hover,
 .chat-composer button:hover:not(:disabled),
 .seafood-assistant__launcher:hover {
   border-color: rgba(94, 234, 212, 0.5);
   box-shadow: 0 10px 24px rgba(2, 8, 23, 0.24);
   transform: translateY(-2px);
+}
+
+.market-hero__arrow:hover {
+  border-color: rgba(94, 234, 212, 0.5);
+  box-shadow: 0 10px 24px rgba(2, 8, 23, 0.24);
+  transform: translateY(-50%) scale(1.06);
+}
+
+.market-hero__arrow:active {
+  transform: translateY(-50%) scale(0.96);
 }
 
 .cta-view-now {

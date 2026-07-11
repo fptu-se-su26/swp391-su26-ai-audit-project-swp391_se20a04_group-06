@@ -89,6 +89,9 @@ export default function SellerProducts({ onUpdateProducts, products }) {
     event.preventDefault();
     setSaving(true);
 
+    let productId = form.id;
+    let savedSuccessfully = false;
+
     try {
       // catchTime: giá trị từ datetime-local input → ISO string
       const catchTime = parseDateTimeForSubmit(form.catchTime);
@@ -115,23 +118,46 @@ export default function SellerProducts({ onUpdateProducts, products }) {
 
       if (form.id) {
         await apiProducts.update(form.id, payload);
-        await uploadProductImages(form.id, form.imageFiles);
       } else {
         const created = await apiProducts.create(payload);
-        const productId = created?.productId || created?.product?.id || created?.product?._id;
+        productId = created?.productId || created?.product?.id || created?.product?._id;
         if (!productId) throw new Error("Máy chủ không trả về mã sản phẩm vừa tạo.");
-        await uploadProductImages(productId, form.imageFiles);
       }
-      await refreshProducts();
-      setForm(null);
+      savedSuccessfully = true;
     } catch (error) {
+      setSaving(false);
       await alert({
         title: "Không thể lưu sản phẩm",
         message: error.message,
         variant: "danger"
       });
-    } finally {
-      setSaving(false);
+      return;
+    }
+
+    if (savedSuccessfully && productId) {
+      try {
+        if (form.imageFiles && form.imageFiles.length > 0) {
+          await uploadProductImages(productId, form.imageFiles);
+        }
+        await refreshProducts();
+        setForm(null);
+      } catch (uploadError) {
+        await refreshProducts();
+        await alert({
+          title: "Ảnh tải lên thất bại",
+          message: "Sản phẩm đã lưu nhưng ảnh tải lên thất bại. Vui lòng thử tải ảnh lại.",
+          variant: "danger"
+        });
+        if (!form.id) {
+          setForm((current) => ({
+            ...current,
+            id: productId,
+            imageFiles: form.imageFiles,
+          }));
+        }
+      } finally {
+        setSaving(false);
+      }
     }
   };
 

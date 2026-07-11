@@ -15,6 +15,7 @@ import { cloudinary } from "../config/cloudinary";
 import { logger } from "../utils/logger";
 // Import hàm trích xuất Public ID từ URL Cloudinary
 import { extractPublicId } from "../utils/cloudinary";
+import { redis } from "../config/redis";
 
 // Quy định số lượng ảnh tối đa được phép tải lên cho mỗi sản phẩm là 5 ảnh
 const MAX_IMAGES = 5;
@@ -109,21 +110,23 @@ export async function uploadImages(req: Request, res: Response) {
 
     // Lấy ra danh sách các URL ảnh mới tải lên thành công
     const newUrls = uploadedResults.map((item) => item.url);
-    // Cập nhật cơ sở dữ liệu: đẩy các URL ảnh mới vào mảng images của sản phẩm
-    await productRepository.findByIdAndUpdate(productId, {
+    // Cập nhật cơ sở dữ liệu: đẩy các URL ảnh mới vào mảng images của sản phẩm và lấy bản ghi đã cập nhật
+    const updatedProduct = await productRepository.findByIdAndUpdate(productId, {
       $push: { images: { $each: newUrls } },
     });
 
-    // Định dạng lại danh sách ảnh vừa upload để phản hồi về cho Client hiển thị
-    const uploaded = uploadedResults.map((item, index) => ({
-      id: currentCount + index,
-      url: item.url,
-    }));
+    // Xóa cache chi tiết sản phẩm và cập nhật version danh sách trên Redis cho cả Fresh và Dried (an toàn)
+    await redis.del(`product:detail:${productId}`).catch(() => {});
+    await redis.incr("product:list:version:Fresh").catch(() => {});
+    await redis.incr("product:list:version:Dried").catch(() => {});
 
-    // Trả về mã thành công 201 kèm số lượng ảnh đã upload và danh sách ảnh mới
-    return res
-      .status(201)
-      .json({ message: `Đã tải lên ${uploaded.length} ảnh`, images: uploaded });
+    // Trả về mã thành công 201 kèm số lượng ảnh đã upload, danh sách url mới, toàn bộ ảnh, và coverImg
+    return res.status(201).json({
+      message: `Đã tải lên ${newUrls.length} ảnh`,
+      urls: newUrls,
+      images: updatedProduct?.images || [],
+      coverImg: updatedProduct?.images?.[0] || null,
+    });
   } catch (err) {
     // Trả về lỗi server nếu có ngoại lệ xảy ra
     return sendServerError(res, err);
@@ -217,6 +220,14 @@ export async function deleteImage(req: Request, res: Response) {
       prod.images = prod.images.filter((img) => img !== imageUrl);
       // Lưu lại thay đổi vào MongoDB
       await prod.save();
+
+      // Xóa cache chi tiết sản phẩm và cập nhật version danh sách trên Redis
+      const prodId = prod._id;
+      if (prodId) {
+        await redis.del(`product:detail:${prodId.toString()}`).catch(() => {});
+        await redis.incr("product:list:version:Fresh").catch(() => {});
+        await redis.incr("product:list:version:Dried").catch(() => {});
+      }
     }
 
     // Phản hồi kết quả xóa ảnh thành công về cho Client

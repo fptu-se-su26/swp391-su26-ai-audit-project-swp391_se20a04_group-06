@@ -2,12 +2,18 @@ export function getProductId(product) {
   return product?.id || product?._id || "";
 }
 
+export function normalizeImageUrl(image) {
+  if (!image) return "";
+  if (typeof image === "string") return image;
+  return image.url || image.secure_url || image.src || "";
+}
+
 export function getProductImage(product) {
-  const firstImage = product?.images?.[0];
+  const firstImage = normalizeImageUrl(product?.images?.[0]);
   return (
-    product?.coverImg ||
-    (typeof firstImage === "string" ? firstImage : firstImage?.url) ||
-    product?.imageUrl ||
+    normalizeImageUrl(product?.coverImg) ||
+    firstImage ||
+    normalizeImageUrl(product?.imageUrl) ||
     "/favicon.svg"
   );
 }

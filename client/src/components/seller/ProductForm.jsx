@@ -87,13 +87,18 @@ export default function ProductForm({ form, onCancel, onChange, onSubmit, saving
         </label>
 
 
-        {/* ── Hình ảnh từ máy ── */}
+        {/* ── Hình ảnh sản phẩm (cả cũ và mới) ── */}
         <div className="form-field form-field--wide">
           <span>Hình ảnh sản phẩm</span>
           <ImageUploader
-            files={form.imageFiles || []}
-            maxFiles={6}
-            onChange={(files) => onChange("imageFiles", files)}
+            files={[...(form.images || []), ...(form.imageFiles || [])]}
+            maxFiles={5}
+            onChange={(nextFiles) => {
+              const existingImages = nextFiles.filter((item) => typeof item === "string");
+              const newFiles = nextFiles.filter((item) => item instanceof File);
+              onChange("images", existingImages);
+              onChange("imageFiles", newFiles);
+            }}
           />
         </div>
 

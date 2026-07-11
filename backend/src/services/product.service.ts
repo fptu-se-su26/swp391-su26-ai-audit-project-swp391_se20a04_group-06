@@ -262,6 +262,7 @@ export const productService = {
         createdAt: p.createdAt,
         viewCount: p.viewCount,
         bumpedAt: p.bumpedAt,
+        images: p.images || [],
         coverImg: p.images?.[0] || null, // Ảnh đầu tiên làm ảnh bìa
         imgCount: p.images?.length || 0, // Tổng số lượng ảnh đính kèm
       };

@@ -133,7 +133,7 @@ export default function Home() {
   return (
     <div className="home-page ocean-background page-container">
       <section
-        className={`market-hero${heroBackgroundReady ? " has-background" : " is-fallback"}`}
+        className={`market-hero hero-on-image ${heroBackgroundReady ? "has-background" : "is-fallback"}`}
         data-tour="home-hero"
         style={heroBackgroundReady ? { backgroundImage: `url(${heroSeafoodMarket})` } : undefined}
       >

@@ -1,787 +1,776 @@
+/* ==================================================
+   PHẦN 1: LÀM LẠI THEME THEO DESIGN TOKENS
+   ================================================== */
+
 :root,
 .theme-dark {
-  --market-bg: #0b1220;
-  --market-surface: #111c2e;
-  --market-surface-raised: #17243a;
-  --market-line: #293a54;
-  --market-text: #f8fafc;
-  --market-muted: #94a3b8;
-  --market-primary: #14b8a6;
-  --market-primary-strong: #0d9488;
+  --color-page: #06111f;
+  --color-surface: #0d1a2b;
+  --color-surface-raised: #12223a;
+  --color-surface-soft: #17243a;
+
+  --color-text: #f8fafc;
+  --color-heading: #ffffff;
+  --color-muted: #94a3b8;
+  --color-subtle: #64748b;
+
+  --color-border: rgba(34, 243, 255, 0.22);
+  --color-border-strong: rgba(34, 243, 255, 0.45);
+
+  --color-primary: #14b8d4;
+  --color-primary-strong: #0891b2;
+  --color-danger: #fb7185;
+  --color-danger-strong: #e11d48;
+
+  --shadow-card: 0 18px 50px rgba(2, 8, 23, 0.28);
+
+  /* Map old variables to new tokens to support existing codebase */
+  --market-bg: var(--color-page);
+  --market-surface: var(--color-surface);
+  --market-surface-raised: var(--color-surface-raised);
+  --market-line: var(--color-border);
+  --market-text: var(--color-text);
+  --market-muted: var(--color-muted);
+  --market-primary: var(--color-primary);
+  --market-primary-strong: var(--color-primary-strong);
   --market-blue: #38bdf8;
-  --market-danger: #fb7185;
-  --market-shadow: 0 18px 50px rgba(2, 8, 23, 0.28);
+  --market-danger: var(--color-danger);
+  --market-shadow: var(--shadow-card);
 }
 
 .theme-light {
-  --market-bg: #f4fbff;
-  --market-surface: #ffffff;
-  --market-surface-raised: #f8fdff;
-  --market-line: rgba(8, 145, 178, 0.26);
-  --market-text: #0f172a;
-  --market-heading: #0b1220;
-  --market-body: #1e293b;
-  --market-muted: #52657a;
-  --market-subtle: #64748b;
-  --market-primary: #0891b2;
-  --market-primary-strong: #0e7490;
+  --color-page: #eef8fc;
+  --color-surface: #ffffff;
+  --color-surface-raised: #f8fdff;
+  --color-surface-soft: #eaf6fb;
+
+  --color-text: #0f172a;
+  --color-heading: #0b1220;
+  --color-muted: #475569;
+  --color-subtle: #64748b;
+
+  --color-border: rgba(8, 145, 178, 0.22);
+  --color-border-strong: rgba(8, 145, 178, 0.42);
+
+  --color-primary: #0891b2;
+  --color-primary-strong: #0e7490;
+  --color-danger: #e11d48;
+  --color-danger-strong: #be123c;
+
+  --shadow-card: 0 16px 40px rgba(15, 23, 42, 0.08);
+
+  /* Map old variables to new tokens to support existing codebase */
+  --market-bg: var(--color-page);
+  --market-surface: var(--color-surface);
+  --market-surface-raised: var(--color-surface-raised);
+  --market-line: var(--color-border);
+  --market-text: var(--color-text);
+  --market-muted: var(--color-muted);
+  --market-primary: var(--color-primary);
+  --market-primary-strong: var(--color-primary-strong);
   --market-blue: #0284c7;
-  --market-danger: #e11d48;
-  --market-danger-soft: rgba(225, 29, 72, 0.10);
-  --market-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  --market-danger: var(--color-danger);
+  --market-shadow: var(--shadow-card);
 }
 
 /* ==================================================
-   GLOBAL LIGHT THEME OVERRIDES
+   PHẦN 2: TẠO TOKEN CHO VÙNG NỀN TỐI ĐẶC BIỆT
+   ================================================== */
+
+.on-dark,
+.hero-on-image,
+.dark-panel {
+  --local-text: #f8fafc !important;
+  --local-heading: #ffffff !important;
+  --local-muted: #cbd5e1 !important;
+}
+
+/* Force layout consistency inside dark panel regions in both themes */
+.hero-on-image h1,
+.hero-on-image h2,
+.hero-on-image h3,
+.hero-on-image h4,
+.dark-panel h1,
+.dark-panel h2,
+.dark-panel h3,
+.dark-panel h4,
+.on-dark h1,
+.on-dark h2,
+.on-dark h3,
+.on-dark h4,
+.hero-on-image .eyebrow,
+.dark-panel .eyebrow,
+.on-dark .eyebrow {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+.hero-on-image p,
+.hero-on-image span,
+.dark-panel p,
+.dark-panel span,
+.on-dark p,
+.on-dark span {
+  color: #cbd5e1 !important;
+  opacity: 1 !important;
+}
+
+.hero-on-image .button--secondary,
+.dark-panel .button--secondary,
+.on-dark .button--secondary {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+}
+
+.hero-on-image .button--secondary:hover,
+.dark-panel .button--secondary:hover,
+.on-dark .button--secondary:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* ==================================================
+   PHẦN 3: ĐỒNG BỘ HOÀN HẢO BASE THEME LIGHT (KHÔNG RỘNG)
    ================================================== */
 
 .theme-light body {
-  background: var(--market-bg) !important;
-  color: var(--market-text) !important;
+  background-color: var(--color-page) !important;
+  color: var(--color-text) !important;
 }
 
-/* Standard Typography and Color Overrides */
+/* Cụ thể hóa text trong Page Containers */
+.theme-light .page-container h1,
+.theme-light .page-container h2,
+.theme-light .page-container h3,
+.theme-light .page-container h4,
+.theme-light .page-container h5,
+.theme-light .page-container h6,
+.theme-light .seller-dashboard h1,
+.theme-light .seller-dashboard h2,
+.theme-light .seller-dashboard h3,
+.theme-light .seller-dashboard h4 {
+  color: var(--color-heading) !important;
+}
+
 .theme-light .page-container p,
-.theme-light .card p,
-.theme-light .recipe-detail-page p,
-.theme-light .community-feed p,
-.theme-light .dashboard-panel p,
-.theme-light .product-card p,
-.theme-light .landing-batch-card p {
-  color: var(--market-body);
+.theme-light .page-container li,
+.theme-light .seller-dashboard p,
+.theme-light .seller-dashboard li {
+  color: var(--color-text) !important;
 }
 
-.theme-light h1,
-.theme-light h2,
-.theme-light h3,
-.theme-light h4,
-.theme-light h5,
-.theme-light h6 {
-  color: var(--market-text) !important;
-}
-
-.theme-light small,
 .theme-light .text-muted,
-.theme-light .recipe-meta-pill span,
-.theme-light .recipe-summary-card__meta span,
-.theme-light figcaption,
+.theme-light small,
+.theme-light .page-state,
 .theme-light .empty-state,
-.theme-light .page-state {
-  color: var(--market-muted) !important;
+.theme-light figcaption {
+  color: var(--color-muted) !important;
 }
 
 /* ==================================================
-   NAVBAR LIGHT THEME OVERRIDES
+   PHẦN 5: SỬA HOME LIGHT THEME
+   ================================================== */
+
+.theme-light .ocean-background {
+  background-color: var(--color-page) !important;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(8, 145, 178, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(8, 145, 178, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.4) 0%, var(--color-page) 100%),
+    linear-gradient(rgba(8, 145, 178, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(8, 145, 178, 0.02) 1px, transparent 1px) !important;
+}
+
+/* Section Shells Sáng */
+.theme-light .section-shell {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+.theme-light .section-heading h2 {
+  color: var(--color-heading) !important;
+}
+
+.theme-light .section-heading .eyebrow {
+  color: var(--color-primary-strong) !important;
+}
+
+.theme-light .section-divider {
+  background: linear-gradient(90deg, transparent, var(--color-border) 50%, transparent) !important;
+}
+
+/* Seller Card trong Home */
+.theme-light .home-seller-card {
+  background: var(--color-surface-soft) !important;
+  border-color: var(--color-border) !important;
+}
+
+.theme-light .home-seller-card h3 {
+  color: var(--color-text) !important;
+}
+
+.theme-light .home-seller-card h3 svg {
+  color: var(--color-primary-strong) !important;
+}
+
+.theme-light .home-seller-card p {
+  color: var(--color-muted) !important;
+}
+
+.theme-light .home-seller-card small {
+  color: var(--color-subtle) !important;
+}
+
+/* ==================================================
+   PHẦN 6: SỬA MARKETPLACE LIGHT THEME (SÁNG ĐỒNG BỘ)
+   ================================================== */
+
+.theme-light .marketplace-page {
+  background-color: var(--color-page) !important;
+  background-image: 
+    radial-gradient(circle at 5% 5%, rgba(8, 145, 178, 0.04) 0%, transparent 35%),
+    radial-gradient(circle at 95% 95%, rgba(8, 145, 178, 0.04) 0%, transparent 35%),
+    linear-gradient(180deg, var(--color-page) 0%, var(--color-surface-soft) 100%),
+    linear-gradient(rgba(8, 145, 178, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(8, 145, 178, 0.015) 1px, transparent 1px) !important;
+  box-shadow: none !important;
+}
+
+.theme-light .marketplace-page::before {
+  opacity: 0.12 !important;
+  background-image: 
+    radial-gradient(rgba(8, 145, 178, 0.08) 1.5px, transparent 1.5px),
+    radial-gradient(rgba(8, 145, 178, 0.1) 2px, transparent 2px) !important;
+}
+
+/* Panels sáng */
+.theme-light .marketplace-filters {
+  background: var(--color-surface) !important;
+  border: 1.5px solid var(--color-border) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+.theme-light .marketplace-filters label {
+  color: var(--color-text) !important;
+}
+
+.theme-light .marketplace-shell {
+  background: var(--color-surface-raised) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: none !important;
+}
+
+/* Empty State */
+.theme-light .marketplace-empty-state {
+  background: var(--color-surface) !important;
+  border: 1.5px dashed var(--color-border-strong) !important;
+}
+
+.theme-light .marketplace-empty-state h3 {
+  color: var(--color-heading) !important;
+}
+
+.theme-light .marketplace-empty-state p {
+  color: var(--color-muted) !important;
+}
+
+/* Tabs */
+.theme-light .marketplace-view-tabs {
+  background: var(--color-surface-soft) !important;
+  border-color: var(--color-border) !important;
+}
+
+.theme-light .marketplace-view-tabs button {
+  color: var(--color-muted) !important;
+}
+
+.theme-light .marketplace-view-tabs button.is-active {
+  border-color: var(--color-border-strong) !important;
+  background: var(--color-surface) !important;
+  color: var(--color-primary-strong) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+/* Reset và filter pills */
+.theme-light .filter-pills button,
+.theme-light .filter-reset {
+  background: var(--color-surface-soft) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-muted) !important;
+}
+
+.theme-light .filter-pills button:hover,
+.theme-light .filter-reset:hover {
+  background: rgba(8, 145, 178, 0.08) !important;
+  color: var(--color-primary-strong) !important;
+}
+
+.theme-light .filter-pills button.is-active {
+  border-color: var(--color-primary) !important;
+  background: rgba(8, 145, 178, 0.14) !important;
+  color: var(--color-primary-strong) !important;
+}
+
+/* ==================================================
+   PHẦN 7: SỬA NAVBAR LIGHT THEME
    ================================================== */
 
 .theme-light .app-navbar {
   background: rgba(244, 251, 255, 0.96) !important;
-  border-bottom: 1px solid var(--market-line) !important;
+  border-bottom: 1px solid var(--color-border) !important;
   box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04) !important;
 }
 
 .theme-light .app-navbar__mobile {
   background: rgba(244, 251, 255, 0.98) !important;
-  border-top: 1px solid var(--market-line) !important;
-}
-
-.theme-light .navbar-profile-button {
-  background: #e2e8f0 !important;
-  color: #0f172a !important;
-  border-color: rgba(8, 145, 178, 0.25) !important;
-}
-
-.theme-light .navbar-profile-button:hover {
-  background: #cbd5e1 !important;
-}
-
-.theme-light .navbar-icon-button {
-  background: #e2e8f0 !important;
-  color: #0f172a !important;
-  border-color: rgba(8, 145, 178, 0.25) !important;
-}
-
-.theme-light .navbar-icon-button:hover {
-  background: #cbd5e1 !important;
+  border-top: 1px solid var(--color-border) !important;
 }
 
 .theme-light .app-nav-link {
-  color: #52657a !important;
+  color: var(--color-muted) !important;
 }
 
 .theme-light .app-nav-link:hover {
-  color: #0e7490 !important;
+  color: var(--color-primary-strong) !important;
   background: rgba(8, 145, 178, 0.08) !important;
   border-color: rgba(8, 145, 178, 0.25) !important;
 }
 
 .theme-light .app-nav-link.is-active {
-  color: #0e7490 !important;
+  color: var(--color-primary-strong) !important;
   background: rgba(8, 145, 178, 0.12) !important;
   border-color: rgba(8, 145, 178, 0.35) !important;
   box-shadow: 0 8px 24px rgba(8, 145, 178, 0.08) !important;
+  font-weight: 800 !important;
 }
 
 .theme-light .app-nav-link.is-active svg {
-  color: #0e7490 !important;
+  color: var(--color-primary-strong) !important;
   stroke: currentColor;
 }
 
-/* Mobile Link overrides */
-.theme-light .app-navbar__mobile a {
-  color: #52657a !important;
+.theme-light .navbar-profile-button,
+.theme-light .navbar-icon-button {
+  background: var(--color-surface-soft) !important;
+  color: var(--color-text) !important;
+  border: 1px solid var(--color-border) !important;
 }
 
-.theme-light .app-navbar__mobile a:hover {
-  color: #0e7490 !important;
-  background: rgba(8, 145, 178, 0.08) !important;
-  border-color: rgba(8, 145, 178, 0.25) !important;
-}
-
-.theme-light .app-navbar__mobile a.is-active {
-  color: #0e7490 !important;
-  background: rgba(8, 145, 178, 0.12) !important;
-  border-color: rgba(8, 145, 178, 0.35) !important;
-}
-
-.theme-light .app-navbar__mobile a.is-active svg {
-  color: #0e7490 !important;
-}
-
-/* Back Link overrides */
-.theme-light .back-link,
-.theme-light .back-button,
-.theme-light .recipe-back-link {
-  color: #52657a !important;
-}
-
-.theme-light .back-link:hover,
-.theme-light .back-button:hover,
-.theme-light .recipe-back-link:hover {
-  color: #0e7490 !important;
-  background: rgba(8, 145, 178, 0.08) !important;
-  border-color: rgba(8, 145, 178, 0.35) !important;
-  box-shadow: 0 8px 22px rgba(8, 145, 178, 0.1) !important;
+.theme-light .navbar-profile-button:hover,
+.theme-light .navbar-icon-button:hover {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border-strong) !important;
 }
 
 /* ==================================================
-   PROFILE DROPDOWN
+   PHẦN 8: SỬA BUTTON / INPUT TOÀN CỤC
    ================================================== */
 
-.profile-menu {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  z-index: 1010;
-  width: 290px;
-  background: var(--market-surface);
-  border: 1px solid var(--market-line);
-  border-radius: 18px;
-  box-shadow: var(--market-shadow);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  box-sizing: border-box;
+/* Primary Button */
+.theme-light .button--primary,
+.theme-light .bl-form__submit {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong)) !important;
+  color: #ffffff !important;
+  border: none !important;
 }
 
-.profile-menu__header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--market-line);
+.theme-light .button--primary:hover:not(:disabled),
+.theme-light .bl-form__submit:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--color-primary-strong), var(--color-primary-strong)) !important;
+  box-shadow: 0 10px 26px rgba(8, 145, 178, 0.18) !important;
+  color: #ffffff !important;
 }
 
-.profile-menu__avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--market-primary);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 1.2rem;
-  flex-shrink: 0;
-}
-
-.profile-menu__avatar-img {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-  border: 1px solid var(--market-line);
-}
-
-.profile-menu__meta {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  text-align: left;
-}
-
-.profile-menu__name {
-  font-size: 0.95rem;
-  color: var(--market-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: block;
-}
-
-.profile-menu__email {
-  font-size: 0.75rem;
-  color: var(--market-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-top: 1px;
-  display: block;
-}
-
-.role-badge {
-  display: inline-block;
-  align-self: flex-start;
-  font-size: 0.68rem;
-  font-weight: 700;
-  background: rgba(34, 243, 255, 0.1);
-  color: #22f3ff;
-  padding: 2px 6px;
-  border-radius: 6px;
-  margin-top: 4px;
-}
-
-.theme-light .role-badge {
-  background: rgba(8, 145, 178, 0.1);
-  color: #0891b2;
-}
-
-.profile-menu__section {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--market-line);
-}
-
-.profile-menu__section:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.profile-menu__item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  color: var(--market-muted);
-  text-decoration: none;
-  font-size: 0.85rem;
-  font-weight: 600;
-  border: none;
-  background: transparent;
-  border-radius: 10px;
-  cursor: pointer;
-  width: 100%;
-  text-align: left;
-  transition: all 0.2s ease;
-  box-sizing: border-box;
-}
-
-.profile-menu__item:hover {
-  color: var(--market-primary);
-  background: rgba(20, 184, 166, 0.08);
-}
-
-.profile-menu__item svg {
-  color: var(--market-muted);
-  transition: color 0.2s ease;
-}
-
-.profile-menu__item:hover svg {
-  color: var(--market-primary);
-}
-
-.profile-menu__button {
-  background: transparent;
-  font-family: inherit;
-}
-
-.profile-menu__item.logout {
-  color: var(--market-danger);
-}
-.profile-menu__item.logout:hover {
-  background: rgba(244, 63, 94, 0.08);
-}
-.profile-menu__item.logout svg {
-  color: var(--market-danger);
-}
-
-/* Segmented Theme Switcher */
-.theme-switcher {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  box-sizing: border-box;
-}
-
-.theme-switcher__label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--market-muted);
-}
-
-.theme-switcher__options {
-  display: flex;
-  background: rgba(11, 23, 40, 0.4);
-  border: 1px solid var(--market-line);
-  border-radius: 10px;
-  padding: 2px;
-}
-
-.theme-light .theme-switcher__options {
-  background: #e2e8f0;
-}
-
-.theme-option {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background: transparent;
-  border: none;
-  color: var(--market-muted);
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.theme-option.active {
-  background: var(--market-surface-raised);
-  color: var(--market-text);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.theme-light .theme-option.active {
-  background: #ffffff;
-  color: #0f172a;
-}
-
-/* ==================================================
-   BUTTON LIGHT THEME OVERRIDES
-   ================================================== */
-
-.theme-light .button--primary {
-  background: linear-gradient(135deg, var(--market-primary), var(--market-blue)) !important;
-  color: #fff !important;
-}
-
-.theme-light .button--primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--market-primary-strong), var(--market-blue)) !important;
-  border-color: var(--market-primary-strong) !important;
-  box-shadow: 0 10px 26px rgba(8, 145, 178, 0.15) !important;
-  color: #fff !important;
-}
-
+/* Secondary Button */
 .theme-light .button--secondary {
-  border-color: var(--market-line) !important;
-  background: var(--market-surface-raised) !important;
-  color: #334155 !important;
+  border: 1px solid var(--color-border-strong) !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text) !important;
 }
 
 .theme-light .button--secondary:hover:not(:disabled) {
-  background: rgba(8, 145, 178, 0.08) !important;
-  color: var(--market-primary-strong) !important;
-  border-color: rgba(8, 145, 178, 0.55) !important;
-  box-shadow: 0 10px 24px rgba(8, 145, 178, 0.1) !important;
+  background: var(--color-surface-soft) !important;
+  border-color: var(--color-primary-strong) !important;
+  color: var(--color-primary-strong) !important;
+  box-shadow: 0 10px 24px rgba(8, 145, 178, 0.08) !important;
 }
 
+/* Ghost Button */
 .theme-light .button--ghost {
-  border-color: var(--market-line) !important;
+  border: 1px solid var(--color-border) !important;
   background: transparent !important;
-  color: var(--market-muted) !important;
+  color: var(--color-muted) !important;
 }
 
 .theme-light .button--ghost:hover:not(:disabled) {
   background: rgba(8, 145, 178, 0.06) !important;
-  color: var(--market-primary-strong) !important;
-  border-color: rgba(8, 145, 178, 0.35) !important;
-  box-shadow: 0 8px 20px rgba(8, 145, 178, 0.08) !important;
+  color: var(--color-primary-strong) !important;
+  border-color: var(--color-border-strong) !important;
 }
 
+/* Danger Button */
 .theme-light .button-danger,
 .theme-light .button--danger,
 .theme-light .is-danger {
-  color: var(--market-danger) !important;
-  border-color: rgba(225, 29, 72, 0.26) !important;
+  color: var(--color-danger) !important;
+  border: 1px solid rgba(225, 29, 72, 0.25) !important;
   background: transparent !important;
 }
 
 .theme-light .button-danger:hover,
 .theme-light .button--danger:hover,
 .theme-light .is-danger:hover {
-  background: var(--market-danger-soft) !important;
-  color: var(--market-danger) !important;
-  border-color: var(--market-danger) !important;
+  background: rgba(225, 29, 72, 0.08) !important;
+  color: var(--color-danger-strong) !important;
+  border-color: var(--color-danger-strong) !important;
 }
 
-/* ==================================================
-   CARDS & PANELS LIGHT THEME OVERRIDES
-   ================================================== */
-
-.theme-light .recipe-card,
-.theme-light .product-card,
-.theme-light .landing-batch-card,
-.theme-light .dashboard-panel,
-.theme-light .recipe-form-card,
-.theme-light .profile-menu,
-.theme-light .recipe-ingredients-card,
-.theme-light .recipe-steps-card,
-.theme-light .recipe-summary-card,
-.theme-light .recipe-action-bar,
-.theme-light .recipe-comments-drawer,
-.theme-light .marketplace-filter-card,
-.theme-light .seller-dashboard-card,
-.theme-light .empty-state-card {
-  background: var(--market-surface) !important;
-  border: 1px solid var(--market-line) !important;
-  box-shadow: var(--market-shadow) !important;
-}
-
-.theme-light .recipe-card__body,
-.theme-light .product-card__body,
-.theme-light .landing-batch-card__body {
-  background: transparent !important;
-}
-
-.theme-light .recipe-card h2,
-.theme-light .product-card h3,
-.theme-light .landing-batch-card h3 {
-  color: var(--market-text) !important;
-}
-
-.theme-light .recipe-card p,
-.theme-light .product-card p,
-.theme-light .landing-batch-card p {
-  color: var(--market-muted) !important;
-}
-
-.theme-light .recipe-card footer small,
-.theme-light .product-card footer small {
-  color: var(--market-muted) !important;
-}
-
-.theme-light .recipe-card footer svg,
-.theme-light .product-card footer svg {
-  color: var(--market-primary) !important;
-}
-
-/* Community Post Cards */
-.theme-light .community-post {
-  background: var(--market-surface) !important;
-  border-color: var(--market-line) !important;
-  box-shadow: var(--market-shadow) !important;
-}
-
-.theme-light .community-post__author strong {
-  color: var(--market-primary) !important;
-}
-
-.theme-light .community-post__author small,
-.theme-light .community-post__header-meta time {
-  color: var(--market-muted) !important;
-}
-
-.theme-light .community-post h2 {
-  color: var(--market-text) !important;
-}
-
-.theme-light .community-post > p {
-  color: var(--market-text) !important;
-}
-
-.theme-light .community-post__actions > button,
-.theme-light .community-post__actions > span {
-  color: var(--market-muted) !important;
-}
-
-.theme-light .community-post__actions > button:hover,
-.theme-light .community-post__actions > span:hover {
-  color: var(--market-primary) !important;
-}
-
-.theme-light .comment-composer {
-  background: var(--market-surface-raised) !important;
-  border-color: var(--market-line) !important;
-}
-
-.theme-light .comment-composer input {
-  color: var(--market-text) !important;
-}
-
-/* ==================================================
-   FORM INPUTS, TEXTAREAS, SELECTS
-   ================================================== */
-
+/* Inputs, Textareas, Selects */
 .theme-light input,
 .theme-light textarea,
 .theme-light select {
-  background: var(--market-surface) !important;
-  color: var(--market-text) !important;
-  border: 1px solid var(--market-line) !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text) !important;
+  border: 1px solid var(--color-border) !important;
 }
 
 .theme-light input:focus,
 .theme-light textarea:focus,
 .theme-light select:focus {
-  border-color: var(--market-primary) !important;
+  border-color: var(--color-primary-strong) !important;
   box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.15) !important;
 }
 
 .theme-light ::placeholder {
-  color: var(--market-muted) !important;
+  color: var(--color-subtle) !important;
 }
 
 /* ==================================================
-   MODALS & DIALOGS
+   PHẦN 9: SỬA RECIPE / COMMUNITY / CARD LIGHT THEME
    ================================================== */
 
+.theme-light .recipe-card,
+.theme-light .product-card,
+.theme-light .landing-batch-card,
+.theme-light .boat-log-card,
+.theme-light .dashboard-panel {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+.theme-light .recipe-card h2,
+.theme-light .product-card h3,
+.theme-light .landing-batch-card h3,
+.theme-light .boat-log-card h3 {
+  color: var(--color-heading) !important;
+}
+
+.theme-light .recipe-card p,
+.theme-light .product-card p,
+.theme-light .landing-batch-card p,
+.theme-light .boat-log-card p {
+  color: var(--color-muted) !important;
+}
+
+/* Details Page (RecipeDetail, ProductDetail, LandingBatchDetail) */
+.theme-light .recipe-ingredients-card,
+.theme-light .recipe-steps-card,
+.theme-light .recipe-summary-card,
+.theme-light .recipe-action-bar,
+.theme-light .recipe-comments-drawer,
+.theme-light .product-detail-card,
+.theme-light .location-panel,
+.theme-light .price-history-panel,
+.theme-light .bl-form__trip-card {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+/* Product Detail specifics */
+.theme-light .product-detail-card__media {
+  background: var(--color-surface-soft) !important;
+}
+
+.theme-light .product-detail-card__price {
+  color: var(--color-primary-strong) !important;
+}
+
+.theme-light .product-detail-card__description {
+  color: var(--color-muted) !important;
+}
+
+.theme-light .product-detail-card__badges span {
+  background: rgba(255, 255, 255, 0.8) !important;
+  color: var(--color-text) !important;
+  border: 1px solid var(--color-border) !important;
+}
+
+.theme-light .product-detail-facts > div,
+.theme-light .seller-summary {
+  background: var(--color-surface-soft) !important;
+  border-color: var(--color-border) !important;
+}
+
+.theme-light .seller-summary a {
+  color: var(--color-primary-strong) !important;
+}
+
+.theme-light .seller-summary p span {
+  color: var(--color-muted) !important;
+}
+
+.theme-light .price-history-point {
+  color: var(--color-text) !important;
+}
+
+.theme-light .price-history-point small {
+  color: var(--color-muted) !important;
+}
+
+/* Community feed */
+.theme-light .community-post {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+.theme-light .community-post__author strong {
+  color: var(--color-primary-strong) !important;
+}
+
+.theme-light .community-post__author small,
+.theme-light .community-post__header-meta time {
+  color: var(--color-muted) !important;
+}
+
+.theme-light .community-post h2 {
+  color: var(--color-heading) !important;
+}
+
+.theme-light .community-post > p {
+  color: var(--color-text) !important;
+}
+
+.theme-light .community-post__actions > button,
+.theme-light .community-post__actions > span {
+  color: var(--color-muted) !important;
+}
+
+.theme-light .community-post__actions > button:hover,
+.theme-light .community-post__actions > span:hover {
+  color: var(--color-primary-strong) !important;
+}
+
+.theme-light .comment-composer {
+  background: var(--color-surface-soft) !important;
+  border-color: var(--color-border) !important;
+}
+
+.theme-light .comment-composer input {
+  color: var(--color-text) !important;
+}
+
+/* Back links */
+.theme-light .back-link,
+.theme-light .back-button,
+.theme-light .recipe-back-link {
+  color: var(--color-muted) !important;
+}
+
+.theme-light .back-link:hover,
+.theme-light .back-button:hover,
+.theme-light .recipe-back-link:hover {
+  color: var(--color-primary-strong) !important;
+  background: rgba(8, 145, 178, 0.08) !important;
+  border-color: rgba(8, 145, 178, 0.35) !important;
+}
+
+/* ==================================================
+   PHẦN 10: PROFILE DROPDOWN / MODAL / AI ASSISTANT
+   ================================================== */
+
+/* Profile dropdown */
+.theme-light .profile-menu {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+.theme-light .profile-menu__name {
+  color: var(--color-heading) !important;
+}
+
+.theme-light .profile-menu__email {
+  color: var(--color-muted) !important;
+}
+
+.theme-light .profile-menu__item {
+  color: var(--color-muted) !important;
+}
+
+.theme-light .profile-menu__item:hover {
+  color: var(--color-primary-strong) !important;
+  background: rgba(8, 145, 178, 0.08) !important;
+}
+
+.theme-light .profile-menu__item svg {
+  color: var(--color-muted) !important;
+}
+
+.theme-light .profile-menu__item:hover svg {
+  color: var(--color-primary-strong) !important;
+}
+
+.theme-light .profile-menu__item.logout {
+  color: var(--color-danger) !important;
+}
+
+.theme-light .profile-menu__item.logout:hover {
+  background: rgba(225, 29, 72, 0.08) !important;
+}
+
+.theme-light .profile-menu__item.logout svg {
+  color: var(--color-danger) !important;
+}
+
+/* Modals */
 .theme-light .confirm-dialog-content,
 .theme-light .recipe-edit-modal,
 .theme-light .community-edit-modal,
 .theme-light .report-dialog {
-  background: var(--market-surface) !important;
-  border-color: var(--market-line) !important;
-  box-shadow: var(--market-shadow) !important;
+  background: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  box-shadow: var(--shadow-card) !important;
 }
 
 .theme-light .confirm-dialog-header h2,
 .theme-light .recipe-edit-modal__header h2,
 .theme-light .report-dialog__header h3 {
-  color: var(--market-text) !important;
+  color: var(--color-heading) !important;
 }
 
 .theme-light .confirm-dialog-body p,
 .theme-light .report-dialog__description {
-  color: var(--market-muted) !important;
+  color: var(--color-muted) !important;
 }
 
 .theme-light .recipe-edit-modal__header {
-  background: var(--market-surface) !important;
-  border-bottom-color: var(--market-line) !important;
+  background: var(--color-surface) !important;
+  border-bottom-color: var(--color-border) !important;
 }
 
-/* ==================================================
-   RECIPE LIVE PREVIEW
-   ================================================== */
-
-.theme-light .live-preview-shell {
-  background: var(--market-surface) !important;
-  border-color: var(--market-line) !important;
-  box-shadow: var(--market-shadow) !important;
-}
-
-.theme-light .live-preview-shell__header {
-  border-bottom-color: var(--market-line) !important;
-}
-
-.theme-light .live-preview-shell__title-group h3 {
-  color: var(--market-text) !important;
-}
-
-.theme-light .live-preview-shell__title-group p {
-  color: var(--market-muted) !important;
-}
-
-.theme-light .live-preview-shell__badge {
-  background: rgba(8, 145, 178, 0.1) !important;
-  color: var(--market-primary) !important;
-  border-color: rgba(8, 145, 178, 0.25) !important;
-}
-
-.theme-light .recipe-live-preview h3 {
-  color: var(--market-text) !important;
-}
-
-.theme-light .recipe-live-preview p,
-.theme-light .recipe-live-preview li,
-.theme-light .recipe-live-preview span {
-  color: var(--market-text) !important;
-}
-
-.theme-light .recipe-live-preview h4 {
-  color: var(--market-primary) !important;
-}
-
-.theme-light .recipe-live-preview svg {
-  color: var(--market-primary) !important;
-}
-
-.theme-light .recipe-live-preview .preview-summary {
-  background: var(--market-surface-raised) !important;
-  border: 1px solid var(--market-line) !important;
-  color: var(--market-text) !important;
-}
-
-.theme-light .recipe-live-preview .preview-summary strong {
-  color: var(--market-primary-strong) !important;
-}
-
-.theme-light .recipe-live-preview .preview-tips {
-  background: rgba(8, 145, 178, 0.05) !important;
-  border: 1px solid rgba(8, 145, 178, 0.15) !important;
-  color: var(--market-muted) !important;
-}
-
-.theme-light .recipe-live-preview .preview-tips__title {
-  color: var(--market-primary-strong) !important;
-}
-
-.theme-light .recipe-live-preview .recipe-meta {
-  border-bottom-color: var(--market-line) !important;
-}
-
-.theme-light .recipe-live-preview .recipe-meta span {
-  color: var(--market-muted) !important;
-}
-
-.theme-light .recipe-live-preview .recipe-meta svg {
-  color: var(--market-primary) !important;
-}
-
-.theme-light .recipe-live-preview .recipe-tag {
-  background: rgba(8, 145, 178, 0.08) !important;
-  border-color: rgba(8, 145, 178, 0.15) !important;
-  color: var(--market-primary) !important;
-}
-
-.theme-light .recipe-summary-card__media {
-  background: var(--market-surface-raised) !important;
-}
-
-/* ==================================================
-   AI ASSISTANT LIGHT THEME OVERRIDES
-   ================================================== */
-
+/* AI Assistant */
 .theme-light .seafood-assistant__panel {
-  background: var(--market-surface) !important;
-  border: 1px solid var(--market-line) !important;
-  box-shadow: var(--market-shadow) !important;
-}
-
-.theme-light .seafood-assistant__launcher {
-  background: var(--market-primary) !important;
-  color: #ffffff !important;
-  box-shadow: 0 8px 30px rgba(8, 145, 178, 0.3) !important;
-}
-
-.theme-light .seafood-assistant__launcher:hover {
-  background: var(--market-primary-strong) !important;
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-card) !important;
 }
 
 .theme-light .seafood-assistant__messages p {
-  color: var(--market-text) !important;
-  background: var(--market-surface-raised) !important;
-  border: 1px solid var(--market-line) !important;
+  color: var(--color-text) !important;
+  background: var(--color-surface-soft) !important;
+  border: 1px solid var(--color-border) !important;
 }
 
 .theme-light .seafood-assistant__messages p.is-user {
   background: rgba(8, 145, 178, 0.1) !important;
-  color: var(--market-primary-strong) !important;
+  color: var(--color-primary-strong) !important;
   border-color: rgba(8, 145, 178, 0.25) !important;
 }
 
 .theme-light .seafood-assistant__suggestion-chip {
-  background: var(--market-surface-raised) !important;
-  border-color: var(--market-line) !important;
-  color: var(--market-primary) !important;
+  background: var(--color-surface-soft) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-primary-strong) !important;
 }
 
 .theme-light .seafood-assistant__suggestion-chip:hover {
   background: rgba(8, 145, 178, 0.08) !important;
-  color: var(--market-primary-strong) !important;
+  color: var(--color-primary-strong) !important;
   border-color: rgba(8, 145, 178, 0.35) !important;
 }
 
-/* ==================================================
-   LIVE PREVIEW INNER COLOR OVERRIDES
-   ================================================== */
+/* Live Preview Shell Override */
+.theme-light .live-preview-shell {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+.theme-light .live-preview-shell__header {
+  border-bottom-color: var(--color-border) !important;
+}
 
 .theme-light .live-preview-shell h3,
 .theme-light .live-preview-shell h4,
 .theme-light .live-preview-shell h5,
 .theme-light .live-preview-shell h6 {
-  color: var(--market-text) !important;
+  color: var(--color-heading) !important;
 }
 
 .theme-light .live-preview-shell p,
 .theme-light .live-preview-shell span,
 .theme-light .live-preview-shell li,
 .theme-light .live-preview-shell strong {
-  color: var(--market-text) !important;
+  color: var(--color-text) !important;
 }
 
 .theme-light .live-preview-shell small,
 .theme-light .live-preview-shell .text-muted,
 .theme-light .live-preview-shell span[style*="color: '#94a3b8'"],
 .theme-light .live-preview-shell p[style*="color: '#94a3b8'"] {
-  color: var(--market-muted) !important;
+  color: var(--color-muted) !important;
 }
 
 .theme-light .live-preview-shell svg {
-  color: var(--market-primary) !important;
+  color: var(--color-primary-strong) !important;
 }
 
-/* Specific component containers inside preview shell */
 .theme-light .product-live-preview {
-  background: var(--market-surface-raised) !important;
-  border: 1px dashed var(--market-line) !important;
+  background: var(--color-surface-soft) !important;
+  border: 1px dashed var(--color-border) !important;
 }
 
 .theme-light .product-live-preview div[style*="background: '#0b131f'"] {
-  background: var(--market-surface) !important;
-  border-color: var(--market-line) !important;
+  background: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
 }
 
 .theme-light .product-live-preview span[style*="color: '#67e8f9'"] {
   background: rgba(8, 145, 178, 0.08) !important;
-  color: var(--market-primary) !important;
+  color: var(--color-primary-strong) !important;
 }
 
 .theme-light .live-preview-shell div[style*="background: 'rgba(34, 243, 255, 0.04)'"] {
-  background: var(--market-surface-raised) !important;
-  border-color: var(--market-line) !important;
-  color: var(--market-text) !important;
+  background: var(--color-surface-soft) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
 }
 
 .theme-light .live-preview-shell div[style*="borderBottom: '1px solid rgba(255,255,255,0.08)'"] {
-  border-bottom-color: var(--market-line) !important;
+  border-bottom-color: var(--color-border) !important;
 }
 
 .theme-light .live-preview-shell p[style*="borderTop: '1px solid rgba(255,255,255,0.05)'"] {
-  border-top-color: var(--market-line) !important;
+  border-top-color: var(--color-border) !important;
 }
 
-/* ==================================================
-   FOOTER LIGHT THEME OVERRIDES
-   ================================================== */
+/* Footer */
 .theme-light .app-footer {
-  background: var(--market-surface) !important;
-  border-top: 1px solid var(--market-line) !important;
+  background: var(--color-surface) !important;
+  border-top: 1px solid var(--color-border) !important;
 }
 
 .theme-light .app-footer p,
 .theme-light .app-footer span,
 .theme-light .app-footer a {
-  color: var(--market-muted) !important;
+  color: var(--color-muted) !important;
 }
 
 .theme-light .app-footer a:hover {
-  color: var(--market-primary) !important;
+  color: var(--color-primary-strong) !important;
 }

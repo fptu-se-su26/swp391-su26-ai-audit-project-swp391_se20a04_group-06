@@ -301,22 +301,48 @@ body.easy-mode button:hover,
   display: inline-flex;
   min-height: 38px;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   border: 1px solid transparent;
-  border-radius: 9px;
-  padding: 7px 10px;
-  color: var(--market-muted);
-  font-size: 0.78rem;
-  font-weight: 650;
+  border-radius: 12px;
+  padding: 8px 12px;
+  color: #9fb0c5;
+  font-size: 0.8rem;
+  font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
+  transition:
+    background-color 0.22s ease,
+    color 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    transform 0.22s ease;
 }
 
-.app-nav-link:hover,
+.app-nav-link:hover {
+  color: #67f8ff;
+  background: rgba(34, 243, 255, 0.08);
+  border-color: rgba(34, 243, 255, 0.25);
+  transform: translateY(-1px);
+}
+
 .app-nav-link.is-active {
-  border-color: rgba(45, 212, 191, 0.2);
-  background: rgba(20, 184, 166, 0.1);
-  color: #f0fdfa;
+  color: #ffffff !important;
+  font-weight: 800;
+  background: rgba(34, 243, 255, 0.12) !important;
+  border-color: rgba(34, 243, 255, 0.55) !important;
+  box-shadow:
+    0 0 0 1px rgba(34, 243, 255, 0.12),
+    0 8px 24px rgba(34, 243, 255, 0.12) !important;
+}
+
+.app-nav-link.is-active svg {
+  color: #ffffff !important;
+  stroke: currentColor;
+}
+
+.app-nav-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(34, 243, 255, 0.28) !important;
 }
 
 .app-nav-link.is-highlight {
@@ -543,15 +569,41 @@ body.easy-mode button:hover,
   display: flex;
   align-items: center;
   gap: 12px;
-  border-radius: 10px;
-  padding: 13px 15px;
-  color: #cbd5e1;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 12px 15px;
+  color: #9fb0c5;
   text-decoration: none;
+  font-weight: 600;
+  transition:
+    background-color 0.22s ease,
+    color 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.app-navbar__mobile a:hover {
+  color: #67f8ff;
+  background: rgba(34, 243, 255, 0.08);
+  border-color: rgba(34, 243, 255, 0.25);
 }
 
 .app-navbar__mobile a.is-active {
-  background: rgba(20, 184, 166, 0.12);
-  color: #5eead4;
+  color: #ffffff !important;
+  font-weight: 800;
+  background: rgba(34, 243, 255, 0.12) !important;
+  border-color: rgba(34, 243, 255, 0.55) !important;
+  box-shadow: 0 0 0 1px rgba(34, 243, 255, 0.12), 0 8px 24px rgba(34, 243, 255, 0.12) !important;
+}
+
+.app-navbar__mobile a.is-active svg {
+  color: #ffffff !important;
+  stroke: currentColor;
+}
+
+.app-navbar__mobile a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(34, 243, 255, 0.28) !important;
 }
 
 .workspace-sidebar {

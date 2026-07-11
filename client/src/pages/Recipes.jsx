@@ -9,6 +9,7 @@ import { apiRecipes } from "../services/api";
 import { getOptimizedImageUrl, getRecipeImageSrcSet } from "../utils/image";
 import { canManageOwnedContent } from "../utils/ownership";
 import { useConfirm } from "../context/ConfirmContext";
+import IconActionButton from "../components/common/IconActionButton";
 import LivePreviewShell from "../components/preview/LivePreviewShell";
 import RecipeLivePreview from "../components/preview/RecipeLivePreview";
 import { formatRelativeDate } from "../utils/date";
@@ -571,26 +572,20 @@ export default function Recipes() {
                 </div>
               </Link>
               {canManage && (
-                <div className="recipe-card__actions">
-                  <button
-                    aria-label={`Sửa công thức ${recipe.title}`}
-                    className="recipe-card__action recipe-card__edit"
+                <div className="recipe-card__actions action-button-group card-action-buttons">
+                  <IconActionButton
+                    icon={<Pencil />}
+                    label="Chỉnh sửa"
+                    variant="primary"
                     onClick={() => openEditForm(recipe)}
-                    title="Sửa công thức"
-                    type="button"
-                  >
-                    <Pencil size={16} />
-                  </button>
-                  <button
-                    aria-label={`Xóa công thức ${recipe.title}`}
-                    className="recipe-card__action recipe-card__delete"
+                  />
+                  <IconActionButton
+                    icon={<Trash2 />}
+                    label="Xóa"
+                    variant="danger"
                     disabled={deletingId === id}
                     onClick={() => deleteRecipe(recipe)}
-                    title="Xóa công thức"
-                    type="button"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  />
                 </div>
               )}
             </article>

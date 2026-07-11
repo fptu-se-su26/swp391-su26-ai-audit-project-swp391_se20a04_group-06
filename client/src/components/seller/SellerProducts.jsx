@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Edit3, Plus, Power, Trash2 } from "lucide-react";
 import { apiProducts } from "../../services/api";
 import { formatCurrency, getMarketplaceStatus, getProductId } from "../../utils/product";
+import IconActionButton from "../common/IconActionButton";
 import ProductForm from "./ProductForm";
 import { formatDateTimeForInput, parseDateTimeForSubmit } from "../shared/DateTimePicker";
 import { useConfirm } from "../../context/ConfirmContext";
@@ -244,10 +245,25 @@ export default function SellerProducts({ onUpdateProducts, products }) {
                       </span>
                     </td>
                     <td>
-                      <div className="table-actions">
-                        <button aria-label="Đổi trạng thái" onClick={() => toggleStatus(product)} type="button"><Power size={16} /></button>
-                        <button aria-label="Chỉnh sửa" onClick={() => setForm(productToForm(product))} type="button"><Edit3 size={16} /></button>
-                        <button aria-label="Xóa" className="is-danger" onClick={() => remove(product)} type="button"><Trash2 size={16} /></button>
+                      <div className="table-actions action-button-group">
+                        <IconActionButton
+                          icon={<Power />}
+                          label="Đổi trạng thái"
+                          variant="warning"
+                          onClick={() => toggleStatus(product)}
+                        />
+                        <IconActionButton
+                          icon={<Edit3 />}
+                          label="Chỉnh sửa"
+                          variant="primary"
+                          onClick={() => setForm(productToForm(product))}
+                        />
+                        <IconActionButton
+                          icon={<Trash2 />}
+                          label="Xóa"
+                          variant="danger"
+                          onClick={() => remove(product)}
+                        />
                       </div>
                     </td>
                   </tr>

@@ -9,6 +9,7 @@ import { apiPosts, apiReports } from "../services/api";
 import { getOptimizedImageUrl } from "../utils/image";
 import { canManageOwnedContent, getIdentityId } from "../utils/ownership";
 import { useConfirm } from "../context/ConfirmContext";
+import IconActionButton from "../components/common/IconActionButton";
 
 
 const initialEditForm = { title: "", content: "", tags: "" };
@@ -405,25 +406,20 @@ export default function Community() {
                 <div className="community-post__header-meta">
                   <time dateTime={post.createdAt}>{formatPostDateTime(post.createdAt)}</time>
                   {canManage && (
-                    <div className="community-post__owner-actions">
-                      <button
-                        aria-label={`Sửa bài viết ${post.title}`}
+                    <div className="community-post__owner-actions action-button-group">
+                      <IconActionButton
+                        icon={<Pencil />}
+                        label="Chỉnh sửa"
+                        variant="primary"
                         onClick={() => openEditPost(post)}
-                        title="Sửa bài viết"
-                        type="button"
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button
-                        aria-label={`Xóa bài viết ${post.title}`}
-                        className="is-danger"
+                      />
+                      <IconActionButton
+                        icon={<Trash2 />}
+                        label="Xóa"
+                        variant="danger"
                         disabled={deletingId === id}
                         onClick={() => deletePost(post)}
-                        title="Xóa bài viết"
-                        type="button"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      />
                     </div>
                   )}
                 </div>

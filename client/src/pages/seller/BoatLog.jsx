@@ -21,6 +21,7 @@ import { formatDate, getProductId } from "../../utils/product";
 import ImageUploader from "../../components/shared/ImageUploader";
 import DateTimePicker, { formatDateTimeForInput } from "../../components/shared/DateTimePicker";
 import { useConfirm } from "../../context/ConfirmContext";
+import IconActionButton from "../../components/common/IconActionButton";
 
 
 
@@ -372,22 +373,26 @@ export default function BoatLog({ readOnly = false }) {
                   <span className="boat-log-card__avatar">{(log.userName || "ND").slice(0, 2).toUpperCase()}</span>
                   <div><strong>{log.userName || (readOnly ? "Ngư dân" : user?.name)}</strong><small>{formatDate(log.createdAt)}</small></div>
                   {!readOnly && (
-                    <>
-                      <button aria-label="Chỉnh sửa nhật ký" onClick={() => startEdit(log)} title="Chỉnh sửa" type="button">
-                        <Edit3 size={16} />
-                      </button>
-                      <button aria-label="Xóa nhật ký" onClick={() => deleteLog(log)} title="Xóa" type="button">
-                        <Trash2 size={16} />
-                      </button>
-                      <button
-                        aria-label={isArchived ? "Khôi phục nhật ký" : "Lưu trữ nhật ký"}
+                    <div className="action-button-group">
+                      <IconActionButton
+                        icon={<Edit3 />}
+                        label="Chỉnh sửa"
+                        variant="primary"
+                        onClick={() => startEdit(log)}
+                      />
+                      <IconActionButton
+                        icon={<Trash2 />}
+                        label="Xóa"
+                        variant="danger"
+                        onClick={() => deleteLog(log)}
+                      />
+                      <IconActionButton
+                        icon={isArchived ? <ArchiveRestore /> : <Archive />}
+                        label={isArchived ? "Khôi phục" : "Lưu trữ"}
+                        variant="warning"
                         onClick={() => toggleArchive(log)}
-                        title={isArchived ? "Khôi phục" : "Lưu trữ"}
-                        type="button"
-                      >
-                        {isArchived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
-                      </button>
-                    </>
+                      />
+                    </div>
                   )}
                 </header>
                 <p>{log.content}</p>

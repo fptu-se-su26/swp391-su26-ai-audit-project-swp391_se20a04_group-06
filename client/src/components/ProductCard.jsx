@@ -113,6 +113,7 @@ function ProductCard({
           aria-label={isFavorite ? "Bỏ lưu sản phẩm" : "Lưu sản phẩm"}
           className={`save-button ${isFavorite ? "is-saved" : ""}`}
           data-tour="product-favorite-button"
+          data-tooltip={isFavorite ? "Bỏ lưu" : "Lưu sản phẩm"}
           onClick={toggleFavorite}
           type="button"
         >

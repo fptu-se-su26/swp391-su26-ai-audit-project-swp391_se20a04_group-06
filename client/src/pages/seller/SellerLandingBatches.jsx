@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { apiLandingBatches } from "../../services/api";
 import { useConfirm } from "../../context/ConfirmContext";
+import IconActionButton from "../../components/common/IconActionButton";
 import {
   formatLandingDateTime,
 
@@ -141,13 +142,39 @@ export default function SellerLandingBatches() {
                       <td>{formatLandingDateTime(batch.landingTime || batch.createdAt)}</td>
                       <td><span className={`batch-status batch-status--${status.key}`}>{status.label}</span></td>
                       <td>
-                        <div className="table-actions">
-                          <Link aria-label="Xem chi tiết" to={`/landing-batches/${id}`}><Eye size={16} /></Link>
-                          <Link aria-label="Sửa vựa cá" to={`/seller/landing-batches/${id}/edit`}><Edit3 size={16} /></Link>
+                        <div className="table-actions action-button-group">
+                          <Link
+                            aria-label="Xem chi tiết"
+                            className="icon-action-btn"
+                            data-tooltip="Xem chi tiết"
+                            to={`/landing-batches/${id}`}
+                          >
+                            <Eye aria-hidden="true" />
+                          </Link>
+                          <Link
+                            aria-label="Sửa vựa cá"
+                            className="icon-action-btn icon-action-btn--primary"
+                            data-tooltip="Chỉnh sửa"
+                            to={`/seller/landing-batches/${id}/edit`}
+                          >
+                            <Edit3 aria-hidden="true" />
+                          </Link>
                           {batch.status === "Active" && (
-                            <button aria-label="Đóng vựa" disabled={busyId === id} onClick={() => closeBatch(batch)} type="button"><Lock size={16} /></button>
+                            <IconActionButton
+                              icon={<Lock />}
+                              label="Đóng vựa"
+                              variant="warning"
+                              disabled={busyId === id}
+                              onClick={() => closeBatch(batch)}
+                            />
                           )}
-                          <button aria-label="Ẩn vựa cá" className="is-danger" disabled={busyId === id} onClick={() => removeBatch(batch)} type="button"><Trash2 size={16} /></button>
+                          <IconActionButton
+                            icon={<Trash2 />}
+                            label="Xóa"
+                            variant="danger"
+                            disabled={busyId === id}
+                            onClick={() => removeBatch(batch)}
+                          />
                         </div>
                       </td>
                     </tr>

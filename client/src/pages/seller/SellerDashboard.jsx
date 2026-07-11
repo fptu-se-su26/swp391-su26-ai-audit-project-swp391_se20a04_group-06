@@ -50,7 +50,7 @@ export default function SellerDashboard() {
   }, [user]);
 
   return (
-    <div className="workspace-page">
+    <div className="workspace-page seller-dashboard">
       <Routes>
         <Route index element={<SellerOverview boatLogs={boatLogs} conversations={conversations} landingBatches={landingBatches} notifications={notifications} products={products} user={user} />} />
         <Route path="products" element={<SellerProducts onUpdateProducts={setProducts} products={products} />} />

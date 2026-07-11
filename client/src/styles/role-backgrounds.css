@@ -1,0 +1,306 @@
+/*
+ * ===========================================================
+ *  HAISAN.VN — ROLE-BASED BACKGROUND THEMES
+ *  Áp dụng qua class trên .app-shell:
+ *    .shell-buyer   → Người mua  (ocean / marketplace)
+ *    .shell-seller  → Ngư dân    (biển đêm / radar)
+ *    .shell-admin   → Admin      (system / analytics)
+ *
+ *  Hỗ trợ:  Dark Theme (default)  &  Light Theme (.theme-light)
+ *  Không dùng ảnh nặng — chỉ gradient + SVG data-uri
+ *  z-index: 0 trên pseudo-element, content z-index: 1+
+ * ===========================================================
+ */
+
+/* ──────────────────────────────────────────────────────────
+   SHARED BASE — tất cả shell đều có position relative
+   ────────────────────────────────────────────────────────── */
+
+.shell-buyer,
+.shell-seller,
+.shell-admin {
+  position: relative;
+  min-height: 100vh;
+  isolation: isolate;
+}
+
+/* Pseudo layer dùng chung — chặn pointer, luôn dưới content */
+.shell-buyer::before,
+.shell-seller::before,
+.shell-admin::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Đảm bảo mọi direct child vượt lên trên background layer */
+.shell-buyer > *,
+.shell-seller > *,
+.shell-admin > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ══════════════════════════════════════════════════════════
+   1. BUYER — Biển sáng / Chợ hải sản thân thiện
+   ══════════════════════════════════════════════════════════ */
+
+/* --- DARK THEME (default) --------------------------------- */
+.shell-buyer {
+  background:
+    radial-gradient(ellipse at 8% 12%, rgba(8, 145, 178, 0.13) 0%, transparent 32%),
+    radial-gradient(ellipse at 92% 8%,  rgba(20, 184, 166, 0.08) 0%, transparent 28%),
+    radial-gradient(ellipse at 50% 95%, rgba(6, 182, 212, 0.06)  0%, transparent 38%),
+    linear-gradient(180deg,
+      #060f1c 0%,
+      #081828 40%,
+      #071421 80%,
+      #050e1a 100%
+    );
+}
+
+/* Wave SVG decoration — rất mờ */
+.shell-buyer::before {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1440' height='320' viewBox='0 0 1440 320'%3E%3Cpath fill='%2314b8d4' fill-opacity='0.04' d='M0,160L48,176C96,192,192,224,288,213.3C384,203,480,149,576,138.7C672,128,768,160,864,181.3C960,203,1056,213,1152,202.7C1248,192,1344,160,1392,144L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3Cpath fill='%230891b2' fill-opacity='0.025' d='M0,224L48,213.3C96,203,192,181,288,186.7C384,192,480,224,576,229.3C672,235,768,213,864,197.3C960,181,1056,181,1152,192C1248,203,1344,224,1392,234.7L1440,245L1440,320L0,320Z'%3E%3C/path%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 20% 60%, rgba(6, 182, 212, 0.05) 0%, transparent 40%),
+    radial-gradient(ellipse at 80% 40%, rgba(14, 116, 144, 0.04) 0%, transparent 35%);
+  background-size: 1440px 320px, 100% 100%, 100% 100%;
+  background-position: center bottom, center, center;
+  background-repeat: repeat-x, no-repeat, no-repeat;
+  opacity: 1;
+}
+
+/* --- LIGHT THEME ------------------------------------------ */
+.theme-light .shell-buyer {
+  background:
+    radial-gradient(ellipse at 8% 10%,  rgba(8, 145, 178, 0.09) 0%, transparent 30%),
+    radial-gradient(ellipse at 92% 6%,  rgba(20, 184, 166, 0.06) 0%, transparent 26%),
+    radial-gradient(ellipse at 50% 95%, rgba(6, 182, 212, 0.05)  0%, transparent 35%),
+    linear-gradient(180deg,
+      #eaf6fb 0%,
+      #f0fafd 45%,
+      #edf8fb 100%
+    ) !important;
+}
+
+.theme-light .shell-buyer::before {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1440' height='320' viewBox='0 0 1440 320'%3E%3Cpath fill='%230891b2' fill-opacity='0.05' d='M0,160L48,176C96,192,192,224,288,213.3C384,203,480,149,576,138.7C672,128,768,160,864,181.3C960,203,1056,213,1152,202.7C1248,192,1344,160,1392,144L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3Cpath fill='%2314b8d4' fill-opacity='0.03' d='M0,224L48,213.3C96,203,192,181,288,186.7C384,192,480,224,576,229.3C672,235,768,213,864,197.3C960,181,1056,181,1152,192C1248,203,1344,224,1392,234.7L1440,245L1440,320L0,320Z'%3E%3C/path%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 20% 60%, rgba(6, 182, 212, 0.04) 0%, transparent 40%),
+    radial-gradient(ellipse at 80% 40%, rgba(14, 116, 144, 0.03) 0%, transparent 35%);
+  background-size: 1440px 320px, 100% 100%, 100% 100%;
+  background-position: center bottom, center, center;
+  background-repeat: repeat-x, no-repeat, no-repeat;
+}
+
+/* ══════════════════════════════════════════════════════════
+   2. SELLER — Biển đêm / Radar / Tàu cá / Ngư dân
+   ══════════════════════════════════════════════════════════ */
+
+/* --- DARK THEME (default) --------------------------------- */
+.shell-seller {
+  background:
+    radial-gradient(ellipse at 10% 6%,  rgba(34, 243, 255, 0.10) 0%, transparent 30%),
+    radial-gradient(ellipse at 88% 15%, rgba(0, 140, 255, 0.08)  0%, transparent 32%),
+    radial-gradient(ellipse at 50% 88%, rgba(20, 184, 166, 0.06) 0%, transparent 35%),
+    linear-gradient(180deg,
+      #04101e 0%,
+      #061320 35%,
+      #071624 70%,
+      #050f1b 100%
+    );
+}
+
+/* Grid/Radar pattern + wave cho seller — biển đêm */
+.shell-seller::before {
+  /* Dot grid mờ + wave nghiêng */
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='1' cy='1' r='1' fill='%2322f3ff' fill-opacity='0.04'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1440' height='280' viewBox='0 0 1440 280'%3E%3Cpolyline points='0,140 120,110 240,150 360,100 480,140 600,90 720,130 840,95 960,135 1080,105 1200,145 1320,115 1440,130' fill='none' stroke='%2222f3ff' stroke-width='1.2' stroke-opacity='0.055'/%3E%3Cpolyline points='0,180 120,200 240,175 360,210 480,180 600,205 720,175 840,200 960,178 1080,202 1200,178 1320,200 1440,180' fill='none' stroke='%2214b8d4' stroke-width='0.8' stroke-opacity='0.035'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 15% 50%, rgba(34, 243, 255, 0.04) 0%, transparent 45%),
+    radial-gradient(ellipse at 85% 30%, rgba(0, 140, 255, 0.04)  0%, transparent 40%);
+  background-size: 80px 80px, 1440px 280px, 100% 100%, 100% 100%;
+  background-position: 0 0, center center, center, center;
+  background-repeat: repeat, repeat-x, no-repeat, no-repeat;
+}
+
+/* --- LIGHT THEME ------------------------------------------ */
+.theme-light .shell-seller {
+  background:
+    radial-gradient(ellipse at 10% 6%,  rgba(8, 145, 178, 0.07) 0%, transparent 28%),
+    radial-gradient(ellipse at 88% 15%, rgba(6, 182, 212, 0.05)  0%, transparent 30%),
+    radial-gradient(ellipse at 50% 90%, rgba(20, 184, 166, 0.04) 0%, transparent 32%),
+    linear-gradient(180deg,
+      #e8f5fa 0%,
+      #eefafc 50%,
+      #e5f4f9 100%
+    ) !important;
+}
+
+.theme-light .shell-seller::before {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='1' cy='1' r='1' fill='%230891b2' fill-opacity='0.05'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1440' height='280' viewBox='0 0 1440 280'%3E%3Cpolyline points='0,140 120,110 240,150 360,100 480,140 600,90 720,130 840,95 960,135 1080,105 1200,145 1320,115 1440,130' fill='none' stroke='%230891b2' stroke-width='1.2' stroke-opacity='0.06'/%3E%3Cpolyline points='0,180 120,200 240,175 360,210 480,180 600,205 720,175 840,200 960,178 1080,202 1200,178 1320,200 1440,180' fill='none' stroke='%2314b8d4' stroke-width='0.8' stroke-opacity='0.04'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 15% 50%, rgba(8, 145, 178, 0.04) 0%, transparent 42%),
+    radial-gradient(ellipse at 85% 30%, rgba(6, 182, 212, 0.03) 0%, transparent 38%);
+  background-size: 80px 80px, 1440px 280px, 100% 100%, 100% 100%;
+  background-position: 0 0, center center, center, center;
+  background-repeat: repeat, repeat-x, no-repeat, no-repeat;
+}
+
+/* ══════════════════════════════════════════════════════════
+   3. ADMIN — System / Analytics / Dashboard dữ liệu
+   ══════════════════════════════════════════════════════════ */
+
+/* --- DARK THEME (default) --------------------------------- */
+.shell-admin {
+  background:
+    radial-gradient(ellipse at 88% 8%,  rgba(99, 102, 241, 0.11) 0%, transparent 30%),
+    radial-gradient(ellipse at 12% 18%, rgba(139, 92, 246, 0.07)  0%, transparent 28%),
+    radial-gradient(ellipse at 50% 90%, rgba(79, 70, 229, 0.05)  0%, transparent 35%),
+    linear-gradient(180deg,
+      #050b18 0%,
+      #070d1e 40%,
+      #060c1c 80%,
+      #04091a 100%
+    );
+}
+
+/* Analytics dot-grid + diagonal system lines */
+.shell-admin::before {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='1' cy='1' r='0.8' fill='%236366f1' fill-opacity='0.06'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1440' height='200' viewBox='0 0 1440 200'%3E%3Cline x1='0' y1='200' x2='200' y2='0' stroke='%236366f1' stroke-width='0.6' stroke-opacity='0.04'/%3E%3Cline x1='240' y1='200' x2='440' y2='0' stroke='%236366f1' stroke-width='0.6' stroke-opacity='0.04'/%3E%3Cline x1='480' y1='200' x2='680' y2='0' stroke='%236366f1' stroke-width='0.6' stroke-opacity='0.04'/%3E%3Cline x1='720' y1='200' x2='920' y2='0' stroke='%236366f1' stroke-width='0.6' stroke-opacity='0.04'/%3E%3Cline x1='960' y1='200' x2='1160' y2='0' stroke='%236366f1' stroke-width='0.6' stroke-opacity='0.04'/%3E%3Cline x1='1200' y1='200' x2='1440' y2='0' stroke='%236366f1' stroke-width='0.6' stroke-opacity='0.04'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 85% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 40%),
+    radial-gradient(ellipse at 15% 70%, rgba(139, 92, 246, 0.04) 0%, transparent 38%);
+  background-size: 40px 40px, 1440px 200px, 100% 100%, 100% 100%;
+  background-position: 0 0, 0 0, center, center;
+  background-repeat: repeat, repeat-x, no-repeat, no-repeat;
+}
+
+/* --- LIGHT THEME ------------------------------------------ */
+.theme-light .shell-admin {
+  background:
+    radial-gradient(ellipse at 88% 8%,  rgba(99, 102, 241, 0.08) 0%, transparent 28%),
+    radial-gradient(ellipse at 12% 18%, rgba(139, 92, 246, 0.05)  0%, transparent 26%),
+    linear-gradient(180deg,
+      #f0f1fe 0%,
+      #f6f7ff 50%,
+      #eff0fd 100%
+    ) !important;
+}
+
+.theme-light .shell-admin::before {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='1' cy='1' r='0.8' fill='%236366f1' fill-opacity='0.07'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1440' height='200' viewBox='0 0 1440 200'%3E%3Cline x1='0' y1='200' x2='200' y2='0' stroke='%236366f1' stroke-width='0.6' stroke-opacity='0.055'/%3E%3Cline x1='240' y1='200' x2='440' y2='0' stroke='%236366f1' stroke-width='0.6' stroke-opacity='0.055'/%3E%3Cline x1='480' y1='200' x2='680' y2='0' stroke='%236366f1' stroke-width='0.6' stroke-opacity='0.055'/%3E%3Cline x1='720' y1='200' x2='920' y2='0' stroke='%236366f1' stroke-width='0.6' stroke-opacity='0.055'/%3E%3Cline x1='960' y1='200' x2='1160' y2='0' stroke='%236366f1' stroke-width='0.6' stroke-opacity='0.055'/%3E%3Cline x1='1200' y1='200' x2='1440' y2='0' stroke='%236366f1' stroke-width='0.6' stroke-opacity='0.055'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 85% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 38%),
+    radial-gradient(ellipse at 15% 70%, rgba(139, 92, 246, 0.04) 0%, transparent 35%);
+  background-size: 40px 40px, 1440px 200px, 100% 100%, 100% 100%;
+  background-position: 0 0, 0 0, center, center;
+  background-repeat: repeat, repeat-x, no-repeat, no-repeat;
+}
+
+/* ══════════════════════════════════════════════════════════
+   4. SELLER DASHBOARD SPECIFIC — workspace-page.seller-dashboard
+   Thêm accent viền + header style phân biệt vs Admin
+   ══════════════════════════════════════════════════════════ */
+
+.shell-seller .workspace-page.seller-dashboard {
+  position: relative;
+}
+
+/* Glow accent bar ở top của seller workspace */
+.shell-seller .workspace-page.seller-dashboard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(34, 243, 255, 0.5) 30%,
+    rgba(20, 184, 166, 0.6) 60%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ══════════════════════════════════════════════════════════
+   5. ADMIN DASHBOARD SPECIFIC — workspace-page.admin-dashboard
+   ══════════════════════════════════════════════════════════ */
+
+.shell-admin .workspace-page.admin-dashboard {
+  position: relative;
+}
+
+/* Indigo accent bar ở top của admin workspace */
+.shell-admin .workspace-page.admin-dashboard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(99, 102, 241, 0.55) 30%,
+    rgba(139, 92, 246, 0.65) 60%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ══════════════════════════════════════════════════════════
+   6. ADMIN LIGHT THEME — Text + Card adjustments
+   Admin light có tông indigo, cần chắc chắn text đủ đậm
+   ══════════════════════════════════════════════════════════ */
+
+.theme-light .shell-admin .workspace-page,
+.theme-light .shell-admin .page-container {
+  --color-page: #f0f1fe;
+}
+
+/* Admin sidebar accent màu indigo khi light */
+.theme-light .shell-admin .workspace-sidebar a:hover,
+.theme-light .shell-admin .workspace-sidebar a.is-active {
+  background: rgba(99, 102, 241, 0.1) !important;
+  color: #4f46e5 !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   7. BOAT LOG PAGE — dùng khi buyer hoặc seller xem boat log
+   Shell được xác định bởi role nên tự động đúng
+   ══════════════════════════════════════════════════════════ */
+
+/* Không cần style riêng — shell-seller đã cover */
+
+/* ══════════════════════════════════════════════════════════
+   8. SAFETY — Đảm bảo không che Navbar, Modal, AI, FloatingBtn
+   ══════════════════════════════════════════════════════════ */
+
+/* Navbar luôn trên background */
+.app-navbar {
+  z-index: 900;
+  position: relative;
+}
+
+/* AI assistant, floating contact, modal overlay — luôn trên cùng */
+.seafood-assistant,
+.floating-contact,
+.confirm-overlay,
+.report-dialog-overlay,
+.modal-overlay {
+  z-index: 9000 !important;
+}
+
+/* Tour guide luôn top */
+.tour-guide-tooltip {
+  z-index: 9500 !important;
+}

@@ -10,6 +10,7 @@ import Navbar from "./components/Navbar";
 import SeafoodAssistant from "./components/SeafoodAssistant";
 import TourGuide from "./components/tour/TourGuide";
 import { RequireAuth, RequireRole } from "./components/RouteGuard";
+import { useAuth } from "./context/AuthContext";
 
 const Home = lazy(() => import("./pages/Home"));
 const Chat = lazy(() => import("./pages/Chat"));
@@ -34,12 +35,24 @@ const RecipeDetail = lazy(() => import("./pages/RecipeDetail"));
 const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 const LandingBatchDetail = lazy(() => import("./pages/LandingBatchDetail"));
 
+import { getUserRole } from "./config/navigation";
+
+/** Resolve which shell background class to apply based on user role */
+function resolveShellClass(user) {
+  const role = getUserRole(user); // handles Admin/Seller/User/Buyer/guest variants
+  if (role === "admin") return "shell-admin";
+  if (role === "seller") return "shell-seller";
+  return "shell-buyer"; // buyer + guest both get the ocean buyer look
+}
+
 function AppContent() {
   const location = useLocation();
+  const { user } = useAuth();
   const isAuthPage = ["/login", "/register"].includes(location.pathname);
+  const shellClass = resolveShellClass(user);
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${shellClass}`}>
       {!isAuthPage && <Navbar />}
       <TourGuide />
 

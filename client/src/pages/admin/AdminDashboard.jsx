@@ -377,7 +377,7 @@ export default function AdminDashboard() {
   useEffect(() => { loadDashboard(); }, [loadDashboard]);
 
   return (
-    <div className="workspace-page">
+    <div className="workspace-page admin-dashboard">
       {error && <p className="inline-notice inline-notice--warning">{error}</p>}
       <Routes>
         <Route index element={<AdminOverview onRefresh={loadDashboard} pendingReports={pendingReports} stats={stats} />} />

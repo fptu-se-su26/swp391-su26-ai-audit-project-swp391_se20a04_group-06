@@ -10,6 +10,7 @@ import './styles/tour-guide.css'
 import './styles/floating-contact.css'
 import './styles/live-preview.css'
 import './styles/theme.css'
+import './styles/role-backgrounds.css'
 import App from './App.jsx'
 
 // Initialize theme

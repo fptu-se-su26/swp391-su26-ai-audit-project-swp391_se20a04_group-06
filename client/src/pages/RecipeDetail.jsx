@@ -215,11 +215,11 @@ export default function RecipeDetail() {
           </Link>
         </header>
 
-        {/* 3 Columns Grid */}
-        <div className="recipe-detail-grid">
+        {/* 2 Columns Layout */}
+        <div className="recipe-detail-layout">
           
-          {/* Cột 1: Thông tin món */}
-          <div className="recipe-summary-card">
+          {/* Cột trái: Ảnh + thông tin món */}
+          <aside className="recipe-summary-card">
             <div className="recipe-summary-card__media">
               {recipe.imageUrl && !hasImageError ? (
                 <img
@@ -266,85 +266,90 @@ export default function RecipeDetail() {
                 )}
               </div>
             </div>
-          </div>
+          </aside>
 
-          {/* Cột 2: Nguyên liệu */}
-          <div className="recipe-ingredients-card">
-            <h2>Nguyên liệu ({recipe.ingredients?.length || 0})</h2>
-            <div className="recipe-card-scroll">
-              {recipe.ingredients && recipe.ingredients.length > 0 ? (
-                <ul className="magazine-ingredients-list" style={{ listStyle: "none", padding: 0 }}>
-                  {recipe.ingredients.map((item, index) => (
-                    <li key={`${item}-${index}`} className="magazine-ingredient-item">
-                      <Check className="magazine-ingredient-check" size={16} />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="recipe-empty-box" style={{ textAlign: "center", padding: "20px 0", color: "#475569" }}>
-                  <ChefHat size={32} style={{ margin: "0 auto 8px" }} />
-                  <p style={{ margin: 0, fontSize: "0.9rem" }}>Chưa có nguyên liệu.</p>
+          {/* Cột phải: Panel chứa Nguyên liệu, Cách làm & Nút hành động */}
+          <section className="recipe-right-panel">
+            <div className="recipe-content-grid">
+              {/* Nguyên liệu */}
+              <div className="recipe-ingredients-card">
+                <h2>Nguyên liệu ({recipe.ingredients?.length || 0})</h2>
+                <div className="recipe-card-scroll">
+                  {recipe.ingredients && recipe.ingredients.length > 0 ? (
+                    <ul className="magazine-ingredients-list" style={{ listStyle: "none", padding: 0 }}>
+                      {recipe.ingredients.map((item, index) => (
+                        <li key={`${item}-${index}`} className="magazine-ingredient-item">
+                          <Check className="magazine-ingredient-check" size={16} />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="recipe-empty-box" style={{ textAlign: "center", padding: "20px 0", color: "#475569" }}>
+                      <ChefHat size={32} style={{ margin: "0 auto 8px" }} />
+                      <p style={{ margin: 0, fontSize: "0.9rem" }}>Chưa có nguyên liệu.</p>
+                    </div>
+                  )}
                 </div>
+              </div>
+
+              {/* Cách thực hiện */}
+              <div className="recipe-steps-card">
+                <h2>Cách thực hiện ({recipe.instructions?.length || 0})</h2>
+                <div className="recipe-card-scroll">
+                  {recipe.instructions && recipe.instructions.length > 0 ? (
+                    <ol className="magazine-steps-list" style={{ listStyle: "none", padding: 0 }}>
+                      {recipe.instructions.map((item, index) => (
+                        <li key={`${item}-${index}`} className="magazine-step-item">
+                          <span className="magazine-step-number">{index + 1}</span>
+                          <p className="magazine-step-text">{cleanStepText(item)}</p>
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <div className="recipe-empty-box" style={{ textAlign: "center", padding: "20px 0", color: "#475569" }}>
+                      <ChefHat size={32} style={{ margin: "0 auto 8px" }} />
+                      <p style={{ margin: 0, fontSize: "0.9rem" }}>Chưa có bước thực hiện.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Action Bar bên dưới khu vực Nguyên liệu và Cách thực hiện */}
+            <div className="recipe-action-bar">
+              <button
+                className={`button button--primary like-button ${user && recipe.likes?.map(String).includes(String(user.id || user._id)) ? "is-liked" : ""}`}
+                onClick={like}
+                type="button"
+              >
+                <Heart size={16} />
+                <span>{user && recipe.likes?.map(String).includes(String(user.id || user._id)) ? "Đã thích" : "Thích"}</span>
+                <span>({recipe.likeCount ?? recipe.likes?.length ?? 0})</span>
+              </button>
+              
+              <button className="button button--secondary" onClick={shareRecipe} type="button">
+                <Share2 size={16} /> Chia sẻ
+              </button>
+
+              <button className="button button--secondary" onClick={() => setShowComments(true)} type="button">
+                <MessageSquare size={16} /> Bình luận ({recipe.comments?.length || 0})
+              </button>
+
+              <ReportButton onSubmit={(reason) => apiReports.createForRecipe(id, reason)} />
+
+              {canManageOwnedContent(user, recipe.authorId) && (
+                <>
+                  <button className="button button--secondary owner-edit-button" onClick={editRecipe} type="button">
+                    <Pencil size={16} /> Sửa
+                  </button>
+                  <button className="button owner-delete-button" disabled={deleting} onClick={deleteRecipe} type="button">
+                    <Trash2 size={16} /> Xóa
+                  </button>
+                </>
               )}
             </div>
-          </div>
-
-          {/* Cột 3: Cách thực hiện */}
-          <div className="recipe-steps-card">
-            <h2>Cách thực hiện ({recipe.instructions?.length || 0})</h2>
-            <div className="recipe-card-scroll">
-              {recipe.instructions && recipe.instructions.length > 0 ? (
-                <ol className="magazine-steps-list" style={{ listStyle: "none", padding: 0 }}>
-                  {recipe.instructions.map((item, index) => (
-                    <li key={`${item}-${index}`} className="magazine-step-item">
-                      <span className="magazine-step-number">{index + 1}</span>
-                      <p className="magazine-step-text">{cleanStepText(item)}</p>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <div className="recipe-empty-box" style={{ textAlign: "center", padding: "20px 0", color: "#475569" }}>
-                  <ChefHat size={32} style={{ margin: "0 auto 8px" }} />
-                  <p style={{ margin: 0, fontSize: "0.9rem" }}>Chưa có bước thực hiện.</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Hàng 2: Thanh nút hành động nằm ngang bên dưới */}
-          <div className="recipe-action-bar">
-            <button
-              className={`button button--primary like-button ${user && recipe.likes?.map(String).includes(String(user.id || user._id)) ? "is-liked" : ""}`}
-              onClick={like}
-              type="button"
-            >
-              <Heart size={16} />
-              <span>{user && recipe.likes?.map(String).includes(String(user.id || user._id)) ? "Đã thích" : "Thích"}</span>
-              <span>({recipe.likeCount ?? recipe.likes?.length ?? 0})</span>
-            </button>
-            
-            <button className="button button--secondary" onClick={shareRecipe} type="button">
-              <Share2 size={16} /> Chia sẻ
-            </button>
-
-            <button className="button button--secondary" onClick={() => setShowComments(true)} type="button">
-              <MessageSquare size={16} /> Bình luận ({recipe.comments?.length || 0})
-            </button>
-
-            <ReportButton onSubmit={(reason) => apiReports.createForRecipe(id, reason)} />
-
-            {canManageOwnedContent(user, recipe.authorId) && (
-              <>
-                <button className="button button--secondary owner-edit-button" onClick={editRecipe} type="button">
-                  <Pencil size={16} /> Sửa
-                </button>
-                <button className="button owner-delete-button" disabled={deleting} onClick={deleteRecipe} type="button">
-                  <Trash2 size={16} /> Xóa
-                </button>
-              </>
-            )}
-          </div>
+          </section>
 
         </div>
 

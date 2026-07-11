@@ -1,5 +1,6 @@
 import { MessageSquareText, Phone, X } from "lucide-react";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 
 const facebookUrl =
   import.meta.env.VITE_CONTACT_FACEBOOK_URL || "https://www.facebook.com/";
@@ -31,7 +32,7 @@ function ZaloIcon() {
 export default function FloatingContact() {
   const [open, setOpen] = useState(false);
 
-  return (
+  return createPortal(
     <aside
       aria-label="Kênh liên hệ"
       className={`floating-contact${open ? " is-open" : ""}`}
@@ -105,6 +106,7 @@ export default function FloatingContact() {
           <span className="floating-contact__label">Liên hệ</span>
         </button>
       )}
-    </aside>
+    </aside>,
+    document.body
   );
 }

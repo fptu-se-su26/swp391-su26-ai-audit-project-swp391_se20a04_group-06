@@ -1,9 +1,10 @@
 .floating-contact {
   position: fixed;
-  bottom: 20px;
-  left: 20px;
-  z-index: 1200;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  left: max(24px, env(safe-area-inset-left));
+  z-index: 9997 !important;
   max-width: calc(100vw - 24px);
+  pointer-events: auto;
 }
 
 .floating-contact__stack {
@@ -149,10 +150,10 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .floating-contact {
-    bottom: 12px;
-    left: 12px;
+    bottom: 16px;
+    left: 16px;
   }
 
   .floating-contact__button,
@@ -167,8 +168,7 @@
   }
 
   .floating-contact__label {
-    padding: 9px 13px;
-    font-size: 0.8rem;
+    display: none;
   }
 }
 

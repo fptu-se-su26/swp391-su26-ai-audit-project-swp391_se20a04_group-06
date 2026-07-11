@@ -80,54 +80,92 @@
 .on-dark,
 .hero-on-image,
 .dark-panel {
-  --local-text: #f8fafc !important;
-  --local-heading: #ffffff !important;
-  --local-muted: #cbd5e1 !important;
+  --local-text: #f8fafc;
+  --local-heading: #ffffff;
+  --local-muted: #cbd5e1;
+  color: #f8fafc;
 }
 
-/* Force layout consistency inside dark panel regions in both themes */
+/* -------------------------------------------------------
+   Hero text: always bright, in BOTH dark and light themes.
+   We must beat .theme-light .page-container h1 specificity
+   so we use combined selectors and !important on colors.
+   ------------------------------------------------------- */
+
+/* Headings */
 .hero-on-image h1,
 .hero-on-image h2,
 .hero-on-image h3,
 .hero-on-image h4,
 .dark-panel h1,
 .dark-panel h2,
-.dark-panel h3,
-.dark-panel h4,
 .on-dark h1,
 .on-dark h2,
-.on-dark h3,
-.on-dark h4,
-.hero-on-image .eyebrow,
-.dark-panel .eyebrow,
-.on-dark .eyebrow {
+.theme-light .hero-on-image h1,
+.theme-light .hero-on-image h2,
+.theme-light .hero-on-image h3,
+.theme-light .hero-on-image h4,
+.theme-light .dark-panel h1,
+.theme-light .dark-panel h2,
+.theme-light .on-dark h1,
+.theme-light .on-dark h2 {
   color: #ffffff !important;
   opacity: 1 !important;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.55), 0 1px 6px rgba(0, 0, 0, 0.35);
 }
 
+/* Eyebrow label */
+.hero-on-image .eyebrow,
+.dark-panel .eyebrow,
+.on-dark .eyebrow,
+.theme-light .hero-on-image .eyebrow,
+.theme-light .dark-panel .eyebrow,
+.theme-light .on-dark .eyebrow {
+  color: #67f8ff !important;
+  opacity: 1 !important;
+  text-shadow: none;
+}
+
+/* Body text / paragraphs */
 .hero-on-image p,
-.hero-on-image span,
 .dark-panel p,
-.dark-panel span,
 .on-dark p,
-.on-dark span {
-  color: #cbd5e1 !important;
+.theme-light .hero-on-image p,
+.theme-light .dark-panel p,
+.theme-light .on-dark p {
+  color: #dbeafe !important;
+  opacity: 1 !important;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Spans inside hero (NOT buttons) */
+.hero-on-image .market-hero__content > span,
+.theme-light .hero-on-image .market-hero__content > span {
+  color: #e2f0ff !important;
   opacity: 1 !important;
 }
 
+/* Secondary button ON dark background: keep visible */
 .hero-on-image .button--secondary,
 .dark-panel .button--secondary,
-.on-dark .button--secondary {
+.on-dark .button--secondary,
+.theme-light .hero-on-image .button--secondary,
+.theme-light .dark-panel .button--secondary,
+.theme-light .on-dark .button--secondary {
   background: rgba(255, 255, 255, 0.15) !important;
-  border-color: rgba(255, 255, 255, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
   color: #ffffff !important;
 }
 
 .hero-on-image .button--secondary:hover,
 .dark-panel .button--secondary:hover,
-.on-dark .button--secondary:hover {
-  background: rgba(255, 255, 255, 0.25) !important;
-  border-color: rgba(255, 255, 255, 0.4) !important;
+.on-dark .button--secondary:hover,
+.theme-light .hero-on-image .button--secondary:hover,
+.theme-light .dark-panel .button--secondary:hover,
+.theme-light .on-dark .button--secondary:hover {
+  background: rgba(255, 255, 255, 0.26) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  color: #ffffff !important;
 }
 
 /* ==================================================
@@ -593,11 +631,19 @@
    PHẦN 10: PROFILE DROPDOWN / MODAL / AI ASSISTANT
    ================================================== */
 
-/* Profile dropdown */
+/* Profile dropdown — light theme */
 .theme-light .profile-menu {
   background: var(--color-surface) !important;
   border-color: var(--color-border) !important;
-  box-shadow: var(--shadow-card) !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12) !important;
+}
+
+.theme-light .profile-menu__header {
+  border-bottom-color: var(--color-border) !important;
+}
+
+.theme-light .profile-menu__section {
+  border-bottom-color: var(--color-border) !important;
 }
 
 .theme-light .profile-menu__name {
@@ -608,8 +654,13 @@
   color: var(--color-muted) !important;
 }
 
+.theme-light .role-badge {
+  background: rgba(8, 145, 178, 0.1) !important;
+  color: var(--color-primary-strong) !important;
+}
+
 .theme-light .profile-menu__item {
-  color: var(--color-muted) !important;
+  color: var(--color-text) !important;
 }
 
 .theme-light .profile-menu__item:hover {
@@ -635,6 +686,27 @@
 
 .theme-light .profile-menu__item.logout svg {
   color: var(--color-danger) !important;
+}
+
+.theme-light .theme-switcher__label {
+  color: var(--color-muted) !important;
+}
+
+.theme-light .theme-option {
+  border-color: var(--color-border) !important;
+  color: var(--color-muted) !important;
+  background: var(--color-surface-soft) !important;
+}
+
+.theme-light .theme-option:hover {
+  color: var(--color-primary-strong) !important;
+  background: rgba(8, 145, 178, 0.08) !important;
+}
+
+.theme-light .theme-option.active {
+  border-color: var(--color-primary-strong) !important;
+  background: rgba(8, 145, 178, 0.12) !important;
+  color: var(--color-primary-strong) !important;
 }
 
 /* Modals */
@@ -773,4 +845,52 @@
 
 .theme-light .app-footer a:hover {
   color: var(--color-primary-strong) !important;
+}
+
+/* ==================================================
+   FINAL GUARD: Hero/dark-image areas ALWAYS use light text
+   These rules MUST come last to beat all page-container
+   color overrides above.
+   ================================================== */
+
+.theme-light .page-container .hero-on-image h1,
+.theme-light .page-container .hero-on-image h2,
+.theme-light .page-container .hero-on-image h3,
+.theme-light .page-container .hero-on-image h4,
+.theme-light .page-container .hero-on-image h5,
+.theme-light .page-container .hero-on-image h6 {
+  color: #ffffff !important;
+  opacity: 1 !important;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.6), 0 1px 6px rgba(0, 0, 0, 0.4) !important;
+}
+
+.theme-light .page-container .hero-on-image p,
+.theme-light .page-container .hero-on-image li {
+  color: #dbeafe !important;
+  opacity: 1 !important;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+.theme-light .page-container .hero-on-image .eyebrow {
+  color: #67f8ff !important;
+  opacity: 1 !important;
+}
+
+.theme-light .page-container .hero-on-image .button--secondary {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  color: #ffffff !important;
+}
+
+.theme-light .page-container .hero-on-image .button--secondary:hover {
+  background: rgba(255, 255, 255, 0.27) !important;
+  border-color: rgba(255, 255, 255, 0.55) !important;
+  color: #ffffff !important;
+}
+
+/* CTA featured card in hero */
+.theme-light .page-container .hero-on-image .market-hero__featured strong,
+.theme-light .page-container .hero-on-image .market-hero__featured small,
+.theme-light .page-container .hero-on-image .market-hero__featured em {
+  color: #ffffff !important;
 }

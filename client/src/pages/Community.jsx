@@ -282,7 +282,6 @@ export default function Community() {
     <div className="page-container community-page">
       <header className="page-heading" data-tour="community-heading">
         <div>
-          <span className="eyebrow">SEAFOOD COMMUNITY</span>
           <h1>Diễn đàn cộng đồng</h1>
           <p>Chia sẻ kinh nghiệm biển cả, bảo quản và nhận biết hải sản sạch.</p>
         </div>

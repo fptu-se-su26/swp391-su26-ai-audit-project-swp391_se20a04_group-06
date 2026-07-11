@@ -1419,6 +1419,7 @@ body.easy-mode button:hover,
 .seller-summary {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 10px;
   border: 1px solid var(--market-line);
   border-radius: 11px;

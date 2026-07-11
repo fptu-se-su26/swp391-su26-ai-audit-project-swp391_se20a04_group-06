@@ -33,8 +33,9 @@ export default function RecipeLivePreview({ form }) {
     .filter(Boolean);
 
   const getDifficultyLabel = (diff) => {
-    if (diff === "Easy") return "Dễ";
-    if (diff === "Hard") return "Khó";
+    const d = String(diff || "").toLowerCase();
+    if (d === "easy" || d === "dễ") return "Dễ";
+    if (d === "hard" || d === "khó") return "Khó";
     return "Trung bình";
   };
 

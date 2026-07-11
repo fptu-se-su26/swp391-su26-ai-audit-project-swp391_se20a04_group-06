@@ -5,7 +5,7 @@ export default function LivePreviewShell({
   children,
   title = "Xem trước trực tiếp",
   subtext = "Giao diện mô phỏng trước khi đăng",
-  badge = "Preview",
+  badge = "XEM TRƯỚC",
 }) {
   const [showMobilePreview, setShowMobilePreview] = useState(false);
 

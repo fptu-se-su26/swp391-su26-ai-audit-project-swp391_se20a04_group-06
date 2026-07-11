@@ -25,8 +25,8 @@ import {
   formatLandingDateTime,
   getLandingBatchImage,
   getLandingBatchStatus,
-  landingBatchCategoryLabels,
 } from "../utils/landingBatch";
+import { getCategoryLabel } from "../utils/labelMaps";
 
 export default function LandingBatchDetail() {
   const { confirm, alert } = useConfirm();
@@ -193,7 +193,7 @@ export default function LandingBatchDetail() {
 
       {timeline.length > 0 && (
         <section className="home-section landing-batch-timeline-section">
-          <header className="section-heading"><div><span className="eyebrow">JOURNEY</span><h2>Timeline chuyến biển</h2></div></header>
+          <header className="section-heading"><div><h2>Timeline chuyến biển</h2></div></header>
           <ol className="landing-batch-timeline">
             {timeline.map((item) => (
               <li key={item.label}><span /><strong>{item.label}</strong><time>{formatLandingDateTime(item.value)}</time></li>
@@ -204,20 +204,20 @@ export default function LandingBatchDetail() {
 
       {Number.isFinite(Number(batch.lat)) && Number.isFinite(Number(batch.lng)) && (
         <section className="home-section">
-          <header className="section-heading"><div><span className="eyebrow">LOCATION</span><h2>Vị trí bán</h2></div></header>
+          <header className="section-heading"><div><h2>Vị trí bán</h2></div></header>
           <SellerLocationMap lat={batch.lat} lng={batch.lng} sellerName={batch.sellerName} />
         </section>
       )}
 
       <section className="home-section">
         <header className="section-heading landing-batch-products-heading">
-          <div><span className="eyebrow">SEAFOOD IN THIS BATCH</span><h2>Hải sản trong vựa</h2></div>
+          <div><h2>Hải sản trong vựa</h2></div>
           {batch.products?.length > 0 && (
             <div className="landing-batch-product-filters">
               <select aria-label="Lọc theo danh mục" onChange={(event) => setCategory(event.target.value)} value={category}>
                 <option value="All">Tất cả</option>
                 {(batch.categories || []).map((item) => (
-                  <option key={item} value={item}>{landingBatchCategoryLabels[item] || item}</option>
+                  <option key={item} value={item}>{getCategoryLabel(item)}</option>
                 ))}
               </select>
               <select aria-label="Sắp xếp sản phẩm" onChange={(event) => setSort(event.target.value)} value={sort}>
@@ -241,7 +241,7 @@ export default function LandingBatchDetail() {
 
       {batch.boatLog && (
         <section className="home-section landing-batch-boat-log">
-          <header className="section-heading"><div><span className="eyebrow">CABIN LOG</span><h2>Nhật ký đi biển liên quan</h2></div></header>
+          <header className="section-heading"><div><h2>Nhật ký đi biển liên quan</h2></div></header>
           <article>
             {batch.boatLog.images?.[0] && <img alt="" src={batch.boatLog.images[0]} />}
             <div>

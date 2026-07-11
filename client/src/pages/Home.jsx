@@ -149,7 +149,7 @@ export default function Home() {
           </>
         )}
         <div className="market-hero__content">
-          <span className="eyebrow">DIRECT SEAFOOD MARKETPLACE</span>
+          <span className="eyebrow">CHỢ HẢI SẢN TRỰC TIẾP</span>
           <h1>Hải sản theo mẻ, theo vị trí, từ người bán thật.</h1>
           <p>
             Khám phá nguồn hàng, kiểm tra độ tươi và trò chuyện trực tiếp với ngư dân.
@@ -202,7 +202,7 @@ export default function Home() {
 
       <section className="home-section section-shell" data-tour="home-new-products">
         <header className="section-heading">
-          <div><span className="eyebrow">FRESH LISTINGS</span><h2>Mẻ hàng mới</h2></div>
+          <div><h2>Mẻ hàng mới</h2></div>
           <Link to="/marketplace">Xem tất cả</Link>
         </header>
 
@@ -226,7 +226,7 @@ export default function Home() {
 
       <section className="home-section section-shell" data-tour="home-featured-sellers">
         <header className="section-heading">
-          <div><span className="eyebrow">SELLER NETWORK</span><h2>Ngư dân nổi bật</h2></div>
+          <div><h2>Ngư dân nổi bật</h2></div>
         </header>
 
         {fishermen.length === 0 ? (

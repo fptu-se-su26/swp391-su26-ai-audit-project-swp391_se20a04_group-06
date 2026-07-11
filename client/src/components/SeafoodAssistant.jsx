@@ -130,10 +130,10 @@ export default function SeafoodAssistant() {
   return (
     <div className="seafood-assistant">
       {open && (
-        <section className="seafood-assistant__panel" aria-label="Seafood AI Assistant" data-tour="ai-panel">
+        <section className="seafood-assistant__panel" aria-label="Trợ lý Hải Sản AI" data-tour="ai-panel">
           <header>
             <span><Bot size={19} /></span>
-            <div><strong>Seafood AI Assistant</strong><small>Chuyên gia hải sản</small></div>
+            <div><strong>Trợ lý Hải Sản AI</strong><small>Chuyên gia hải sản</small></div>
             <button aria-label="Đóng trợ lý" onClick={() => setOpen(false)} type="button"><X size={18} /></button>
           </header>
           <div className="seafood-assistant__messages" aria-live="polite">

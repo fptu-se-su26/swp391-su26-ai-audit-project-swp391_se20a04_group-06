@@ -9,6 +9,7 @@ import {
   apiProducts,
 } from "../services/api";
 import { useConfirm } from "../context/ConfirmContext";
+import { getCategoryLabel } from "../utils/labelMaps";
 
 
 
@@ -161,7 +162,6 @@ export default function Marketplace() {
     <div className="marketplace-page page-container">
       <header className="page-heading" data-tour="marketplace-heading">
         <div>
-          <span className="eyebrow">SEAFOOD MARKETPLACE</span>
           <h1>Chợ hải sản</h1>
           <p>Tìm mẻ hàng phù hợp và trao đổi trực tiếp với người bán.</p>
         </div>
@@ -211,7 +211,7 @@ export default function Marketplace() {
             <span>Danh mục</span>
             <select onChange={(event) => setCategory(event.target.value)} value={category}>
               {categories.map((item) => (
-                <option key={item} value={item}>{item === "All" ? "Tất cả" : item}</option>
+                <option key={item} value={item}>{item === "All" ? "Tất cả" : getCategoryLabel(item)}</option>
               ))}
             </select>
           </label>

@@ -56,7 +56,6 @@ export default function SellerOverview({
     <div className="seller-overview">
       <header className="page-heading page-heading--compact">
         <div>
-          <span className="eyebrow">{statistics ? "SELLER ANALYTICS" : "SELLER DASHBOARD"}</span>
           <h1>{statistics ? "Thống kê hoạt động" : "Tổng quan người bán"}</h1>
           <p>Dữ liệu tập trung vào lượt quan tâm và kết nối trực tiếp với người mua.</p>
         </div>

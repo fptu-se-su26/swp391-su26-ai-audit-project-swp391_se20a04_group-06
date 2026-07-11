@@ -190,14 +190,15 @@ export default function RecipeDetail() {
   const author = typeof recipe.authorId === "object" ? recipe.authorId : null;
 
   const getDifficultyLabel = (diff) => {
-    if (diff === "Easy") return "Dễ";
-    if (diff === "Hard") return "Khó";
+    const d = String(diff || "").toLowerCase();
+    if (d === "easy" || d === "dễ") return "Dễ";
+    if (d === "hard" || d === "khó") return "Khó";
     return "Trung bình";
   };
 
-  const difficultyClass = recipe.difficulty === "Easy"
+  const difficultyClass = (recipe.difficulty === "Easy" || recipe.difficulty === "easy" || recipe.difficulty === "EASY")
     ? "difficulty-easy"
-    : recipe.difficulty === "Hard"
+    : (recipe.difficulty === "Hard" || recipe.difficulty === "hard" || recipe.difficulty === "HARD")
       ? "difficulty-hard"
       : "difficulty-medium";
 

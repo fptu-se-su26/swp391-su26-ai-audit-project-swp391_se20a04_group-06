@@ -1,5 +1,6 @@
 import { Image, Tag, Scale, MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
+import { getCategoryLabel } from "../../utils/labelMaps";
 
 export default function ProductLivePreview({ product }) {
   const [imageSrc, setImageSrc] = useState("");
@@ -23,18 +24,6 @@ export default function ProductLivePreview({ product }) {
   const formatPrice = (val) => {
     if (!val || isNaN(val)) return "Giá sẽ hiển thị ở đây";
     return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(val) + " / kg";
-  };
-
-  const getCategoryLabel = (cat) => {
-    const categoriesMap = {
-      Fish: "Cá",
-      Shrimp: "Tôm",
-      Squid: "Mực",
-      Crab: "Cua, ghẹ",
-      Shellfish: "Nhuyễn thể",
-      Others: "Hải sản khác",
-    };
-    return categoriesMap[cat] || cat || "Hải sản";
   };
 
   return (

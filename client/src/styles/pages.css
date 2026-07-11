@@ -358,6 +358,7 @@
 
 .market-hero__featured {
   display: flex;
+  justify-content: flex-start;
   width: min(450px, 100%);
   align-items: center;
   gap: 11px;

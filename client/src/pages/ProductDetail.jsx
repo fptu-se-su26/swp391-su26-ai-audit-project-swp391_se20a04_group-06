@@ -29,6 +29,7 @@ import {
   getProductId,
   getProductImage,
 } from "../utils/product";
+import { getCategoryLabel } from "../utils/labelMaps";
 
 export default function ProductDetail() {
   const { alert } = useConfirm();
@@ -166,7 +167,7 @@ export default function ProductDetail() {
         </div>
 
         <div className="product-detail-card__content">
-          <span className="eyebrow">{product.category || "HẢI SẢN"}</span>
+          <span className="eyebrow">{getCategoryLabel(product.category) || "HẢI SẢN"}</span>
           <h1>{product.name}</h1>
           <p className="product-detail-card__price">
             {formatCurrency(product.price)} <small>/ kg</small>

@@ -31,12 +31,24 @@ const difficultyClassNames = {
   Easy: "is-easy",
   Medium: "is-medium",
   Hard: "is-hard",
+  easy: "is-easy",
+  medium: "is-medium",
+  hard: "is-hard",
+  EASY: "is-easy",
+  MEDIUM: "is-medium",
+  HARD: "is-hard",
 };
 
 const difficultyLabels = {
   Easy: "Dễ",
   Medium: "Trung bình",
   Hard: "Khó",
+  easy: "Dễ",
+  medium: "Trung bình",
+  hard: "Khó",
+  EASY: "Dễ",
+  MEDIUM: "Trung bình",
+  HARD: "Khó",
 };
 
 const toMultilineText = (value) =>
@@ -324,7 +336,7 @@ export default function Recipes() {
   return (
     <div className="page-container recipes-page">
       <header className="page-heading" data-tour="recipes-heading">
-        <div><span className="eyebrow">SEAFOOD KITCHEN</span><h1>Cẩm nang công thức</h1><p>Công thức chế biến từ cộng đồng ngư dân đã xác minh.</p></div>
+        <div><h1>Cẩm nang công thức</h1><p>Công thức chế biến từ cộng đồng ngư dân đã xác minh.</p></div>
         <button className="button button--primary" data-tour="recipes-create" onClick={openForm} type="button"><Plus size={17} /> Chia sẻ công thức</button>
       </header>
 
@@ -550,8 +562,8 @@ export default function Recipes() {
                   <p>{recipe.description}</p>
                   <footer>
                     <small><Clock3 size={14} /> {recipe.cookingTime} phút</small>
-                    <small><Users size={14} /> {recipe.servings}</small>
-                    <small><Heart size={14} /> {recipe.likes?.length || 0}</small>
+                    <small><Users size={14} /> {recipe.servings} khẩu phần</small>
+                    <small><Heart size={14} /> {recipe.likes?.length || 0} lượt thích</small>
                     {recipe.createdAt && (
                       <small><Calendar size={14} /> {formatRelativeDate(recipe.createdAt)}</small>
                     )}

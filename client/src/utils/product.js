@@ -32,7 +32,7 @@ export function getFreshness(product) {
   if (!product?.catchTime) return "Chưa cập nhật";
 
   const ageHours = (Date.now() - new Date(product.catchTime).getTime()) / 3_600_000;
-  if (ageHours <= 24) return "Fresh Today";
+  if (ageHours <= 24) return "Tươi hôm nay";
   if (ageHours <= 72) return "Rất tươi";
   if (ageHours <= 168) return "Tươi";
   return "Đã bảo quản";
@@ -40,9 +40,9 @@ export function getFreshness(product) {
 
 const marketplaceStatuses = {
   available: { key: "available", label: "Còn hàng" },
-  reserved: { key: "reserved", label: "Reserved" },
-  "sold out": { key: "sold-out", label: "Sold Out" },
-  soldout: { key: "sold-out", label: "Sold Out" },
+  reserved: { key: "reserved", label: "Đã giữ chỗ" },
+  "sold out": { key: "sold-out", label: "Hết hàng" },
+  soldout: { key: "sold-out", label: "Hết hàng" },
   expired: { key: "expired", label: "Hết hạn" },
 };
 

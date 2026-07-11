@@ -22,6 +22,7 @@ import {
   getProductId,
   getProductImage,
 } from "../utils/product";
+import { getCategoryLabel } from "../utils/labelMaps";
 
 function ProductCard({
   product,
@@ -121,7 +122,7 @@ function ProductCard({
 
       <div className="market-product-card__body">
         <div className="market-product-card__eyebrow">
-          <span>{product.category || "Hải sản"}</span>
+          <span>{getCategoryLabel(product.category) || "Hải sản"}</span>
           <span>{product.type === "Fresh" ? "Tươi sống" : "Đồ khô"}</span>
         </div>
 

@@ -2459,9 +2459,9 @@ body.easy-mode button:hover,
 
 .seafood-assistant {
   position: fixed;
-  right: 20px;
-  bottom: 20px;
-  z-index: 1200;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: 24px;
+  z-index: 9998;
 }
 
 .seafood-assistant__launcher {
@@ -2509,24 +2509,33 @@ body.easy-mode button:hover,
 }
 
 .seafood-assistant__panel {
+  position: fixed;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: 96px;
+  left: auto;
+  width: min(420px, calc(100vw - 48px));
+  height: min(680px, calc(100vh - 130px));
   display: flex;
-  width: min(370px, calc(100vw - 28px));
-  height: min(500px, calc(100vh - 110px));
   flex-direction: column;
+  z-index: 9999;
   overflow: hidden;
   border: 1px solid var(--market-line);
-  border-radius: 16px;
-  margin-bottom: 10px;
+  border-radius: 20px;
   background: #111d30;
   box-shadow: 0 24px 70px rgba(2, 8, 23, 0.55);
 }
 
 .seafood-assistant__panel > header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 10px;
   border-bottom: 1px solid var(--market-line);
   padding: 13px;
+  background: #111d30;
 }
 
 .seafood-assistant__panel > header > span {
@@ -2555,6 +2564,9 @@ body.easy-mode button:hover,
 }
 
 .seafood-assistant__panel > header button {
+  position: relative;
+  z-index: 12;
+  flex-shrink: 0;
   border: 0;
   padding: 6px;
   background: transparent;
@@ -2664,10 +2676,15 @@ body.easy-mode button:hover,
 }
 
 .seafood-assistant__panel > form {
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
   display: flex;
   gap: 7px;
   border-top: 1px solid var(--market-line);
   padding: 10px;
+  background: #111d30;
 }
 
 .seafood-assistant__panel > form input {
@@ -3780,5 +3797,16 @@ body.easy-mode button:hover,
   .seafood-assistant__suggestion-chip {
     flex: 0 0 78%;
     scroll-snap-align: start;
+  }
+}
+
+@media (max-width: 768px) {
+  .seafood-assistant__panel {
+    left: 12px;
+    right: 12px;
+    bottom: 88px;
+    width: auto;
+    height: min(550px, calc(100vh - 120px));
+    border-radius: 18px;
   }
 }

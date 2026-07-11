@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Bot, Send, X } from "lucide-react";
 import { apiAssistant } from "../services/api";
 
@@ -127,7 +128,7 @@ export default function SeafoodAssistant() {
     }
   };
 
-  return (
+  return createPortal(
     <div className="seafood-assistant">
       {open && (
         <section className="seafood-assistant__panel" aria-label="Trợ lý Hải Sản AI" data-tour="ai-panel">
@@ -193,6 +194,7 @@ export default function SeafoodAssistant() {
       >
         {open ? <X size={22} /> : <Bot size={23} />}
       </button>
-    </div>
+    </div>,
+    document.body
   );
 }

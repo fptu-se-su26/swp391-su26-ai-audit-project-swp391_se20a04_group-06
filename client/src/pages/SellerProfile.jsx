@@ -106,12 +106,12 @@ export default function SellerProfile() {
       <div className="seller-public-stats">
         <article><PackageOpen /><strong>{stats.activeProducts || 0}</strong><span>Sản phẩm</span></article>
         <article><Star /><strong>{Number(stats.avgRating || 0).toFixed(1)}</strong><span>{stats.ratingCount || 0} đánh giá</span></article>
-        <article><Heart /><strong>{stats.followersCount || 0}</strong><span>Follower</span></article>
-        <article><Anchor /><strong>{stats.totalBoatLogs || 0}</strong><span>Cabin logs</span></article>
+        <article><Heart /><strong>{stats.followersCount || 0}</strong><span>Người theo dõi</span></article>
+        <article><Anchor /><strong>{stats.totalBoatLogs || 0}</strong><span>Nhật ký biển</span></article>
       </div>
 
       <section className="home-section">
-        <header className="section-heading"><div><span className="eyebrow">ACTIVE LISTINGS</span><h2>Sản phẩm đang bán</h2></div></header>
+        <header className="section-heading"><div><span className="eyebrow">SẢN PHẨM ĐANG BÁN</span><h2>Sản phẩm đang bán</h2></div></header>
         <div className="profile-product-grid">
           {products.map((product) => (
             <Link key={getProductId(product)} to={`/product/${getProductId(product)}`}>
@@ -125,7 +125,7 @@ export default function SellerProfile() {
 
       {landingBatches.length > 0 && (
         <section className="home-section">
-          <header className="section-heading"><div><span className="eyebrow">RECENT LANDINGS</span><h2>Vựa cá gần đây</h2></div></header>
+          <header className="section-heading"><div><span className="eyebrow">VỰA CÁ MỚI</span><h2>Vựa cá gần đây</h2></div></header>
           <div className="landing-batch-grid landing-batch-grid--profile">
             {landingBatches.map((batch) => (
               <LandingBatchCard batch={batch} key={batch.id || batch._id} />
@@ -135,7 +135,7 @@ export default function SellerProfile() {
       )}
 
       <section className="home-section">
-        <header className="section-heading"><div><span className="eyebrow">CABIN LOGS</span><h2>Nhật ký đi biển</h2></div></header>
+        <header className="section-heading"><div><span className="eyebrow">NHẬT KÝ BIỂN</span><h2>Nhật ký đi biển</h2></div></header>
         <div className="profile-log-grid">
           {boatLogs.map((log) => (
             <article key={log.id || log._id}>
@@ -143,7 +143,7 @@ export default function SellerProfile() {
               <p>{log.content}</p><small>{formatDate(log.createdAt)}</small>
             </article>
           ))}
-          {boatLogs.length === 0 && <div className="empty-state"><UserRound /> Chưa có Cabin Log.</div>}
+          {boatLogs.length === 0 && <div className="empty-state"><UserRound /> Chưa có nhật ký biển.</div>}
         </div>
       </section>
 

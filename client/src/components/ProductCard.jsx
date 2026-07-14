@@ -8,6 +8,7 @@ import {
   MapPin,
   MessageSquare,
   PackageOpen,
+  Ruler,
   ShieldCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -22,7 +23,7 @@ import {
   getProductId,
   getProductImage,
 } from "../utils/product";
-import { getCategoryLabel } from "../utils/labelMaps";
+import { getCategoryLabel, getProductSizeLabel } from "../utils/labelMaps";
 
 function ProductCard({
   product,
@@ -122,12 +123,21 @@ function ProductCard({
       </div>
 
       <div className="market-product-card__body">
-        <div className="market-product-card__eyebrow">
-          <span>{getCategoryLabel(product.category) || "Hải sản"}</span>
-          <span>{product.type === "Fresh" ? "Tươi sống" : "Đồ khô"}</span>
+        <div className="product-card-badges">
+          <span className="seafood-type-badge">
+            {getCategoryLabel(product.category) || "Hải sản"}
+          </span>
+          <span className="freshness-badge">
+            {product.type === "Fresh" ? "Tươi sống" : "Đồ khô"}
+          </span>
+          {product.productSize && product.productSize !== "Chưa cập nhật" && (
+            <span className="seafood-size-badge">
+              {getProductSizeLabel(product.productSize)}
+            </span>
+          )}
         </div>
 
-        <h3>{product.name}</h3>
+        <h3 className="product-card-title">{product.name}</h3>
         <p className="market-product-card__price">
           {formatCurrency(product.price)} <small>/ kg</small>
         </p>
@@ -147,6 +157,11 @@ function ProductCard({
             <CalendarDays size={15} />
             <dt>Đánh bắt</dt>
             <dd>{formatDate(product.catchTime)}</dd>
+          </div>
+          <div>
+            <Ruler size={15} />
+            <dt>Kích thước</dt>
+            <dd>{getProductSizeLabel(product.productSize)}</dd>
           </div>
           <div className="product-fact product-fact--origin">
             <Anchor size={15} />

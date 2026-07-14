@@ -73,6 +73,8 @@ const productBodyFields = {
   status: z.enum(["Active", "Expired", "Deleted"] as const).optional(),
   // Danh sách mảng hình ảnh mẻ hàng: Tùy chọn
   images: z.array(z.string()).optional(),
+  // Kích thước hải sản: Tùy chọn
+  productSize: z.enum(["LARGE", "MEDIUM", "SMALL"] as const).optional(),
 };
 
 // KHẮC PHỤC LỖI MEDIUM: Ràng buộc so khớp logic khối lượng còn lại không thể lớn hơn tổng khối lượng

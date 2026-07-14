@@ -24,7 +24,7 @@ export default function ConversationList({
   return (
     <aside className="conversation-list">
       <header>
-        <span className="eyebrow">DIRECT MARKETPLACE</span>
+        <span className="eyebrow">CHỢ HẢI SẢN TRỰC TIẾP</span>
         <h1>Tin nhắn</h1>
       </header>
 

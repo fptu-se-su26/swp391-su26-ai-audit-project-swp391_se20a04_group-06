@@ -22,29 +22,29 @@ const buyerNavigation = [
   { label: "Chợ hải sản", path: "/marketplace", icon: Store },
   { label: "Cộng đồng", path: "/community", icon: UsersRound },
   { label: "Công thức", path: "/recipes", icon: ChefHat },
-  { label: "Boat Log", path: "/boat-log", icon: BookOpenText },
+  { label: "Nhật ký biển", path: "/boat-log", icon: BookOpenText },
   { label: "Xếp hạng", path: "/leaderboard", icon: Trophy },
   { label: "Đã lưu", path: "/buyer/favorites", icon: Heart },
 ];
 
 const sellerNavigation = [
-  { label: "Dashboard", path: "/seller", icon: LayoutDashboard, exact: true },
+  { label: "Tổng quan", path: "/seller", icon: LayoutDashboard, exact: true },
   { label: "Quản lý sản phẩm", path: "/seller/products", icon: Fish },
   { label: "Vựa cá", path: "/seller/landing-batches", icon: PackageOpen },
   { label: "Cộng đồng", path: "/community", icon: UsersRound },
   { label: "Công thức", path: "/recipes", icon: ChefHat },
-  { label: "Boat Log", path: "/seller/boat-log", icon: BookOpenText },
+  { label: "Nhật ký biển", path: "/seller/boat-log", icon: BookOpenText },
 ];
 
 const adminNavigation = [
-  { label: "Dashboard", path: "/admin", icon: LayoutDashboard, exact: true },
-  { label: "Quản lý User", path: "/admin/users", icon: Users },
+  { label: "Tổng quan", path: "/admin", icon: LayoutDashboard, exact: true },
+  { label: "Quản lý người dùng", path: "/admin/users", icon: Users },
   { label: "Duyệt sản phẩm", path: "/admin/listings", icon: ShieldCheck },
   { label: "Vựa cá", path: "/admin/landing-batches", icon: PackageOpen },
-  { label: "Report", path: "/admin/reports", icon: AlertTriangle },
-  { label: "Premium", path: "/admin/payments", icon: Crown },
-  { label: "Broadcast", path: "/admin/broadcast", icon: Radio },
-  { label: "Settings", path: "/admin/settings", icon: Settings },
+  { label: "Báo cáo vi phạm", path: "/admin/reports", icon: AlertTriangle },
+  { label: "Doanh thu gói", path: "/admin/payments", icon: Crown },
+  { label: "Phát sóng", path: "/admin/broadcast", icon: Radio },
+  { label: "Cài đặt", path: "/admin/settings", icon: Settings },
 ];
 
 

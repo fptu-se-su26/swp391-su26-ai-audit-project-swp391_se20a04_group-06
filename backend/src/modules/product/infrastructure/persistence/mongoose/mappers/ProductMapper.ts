@@ -73,6 +73,8 @@ export class ProductMapper {
         expiryDate: mongooseDoc.expiryDate,
         // Ánh xạ danh sách hình ảnh sản phẩm (mặc định là mảng rỗng nếu không tồn tại)
         images: mongooseDoc.images || [],
+        // Ánh xạ kích thước hải sản
+        productSize: mongooseDoc.productSize,
         // Ánh xạ mốc thời gian đẩy bài gần nhất
         bumpedAt: mongooseDoc.bumpedAt,
         // Ánh xạ mốc thời gian sản phẩm được tạo
@@ -114,6 +116,8 @@ export class ProductMapper {
       status: props.status,
       // Thiết lập danh sách hình ảnh sản phẩm
       images: props.images,
+      // Thiết lập kích thước hải sản
+      productSize: props.productSize,
       // Thiết lập lượt xem sản phẩm
       viewCount: props.viewCount,
       // Thiết lập thời điểm đẩy bài viết gần nhất

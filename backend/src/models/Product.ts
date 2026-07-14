@@ -48,6 +48,8 @@ export interface IProduct extends Document {
   expiryDate?: Date;
   // Mảng chứa các đường dẫn hình ảnh thực tế của sản phẩm
   images: string[];
+  // Kích thước của hải sản
+  productSize?: "LARGE" | "MEDIUM" | "SMALL";
   // Số lượt xem chi tiết sản phẩm
   viewCount: number;
   // Thời điểm đẩy bài đăng lên top gần nhất
@@ -137,6 +139,8 @@ const productSchema = new Schema<IProduct>(
     expiryDate: { type: Date },
     // Cấu hình trường images: mảng chứa các URL ảnh dạng chuỗi
     images: [{ type: String }],
+    // Cấu hình trường productSize: kiểu chuỗi, nhận giá trị enum kích thước
+    productSize: { type: String, enum: ["LARGE", "MEDIUM", "SMALL"] },
 
     // Cấu hình trường viewCount: kiểu số lưu lượt xem, mặc định bằng 0
     viewCount: { type: Number, default: 0 },

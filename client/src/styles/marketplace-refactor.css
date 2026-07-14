@@ -1125,11 +1125,39 @@ body.easy-mode button:hover,
   color: #94a3b8;
 }
 
-.market-product-card h3 {
-  margin: 0;
-  color: var(--market-text);
-  font-size: 1rem;
-  line-height: 1.35;
+.market-product-card .product-card-title {
+  margin: 16px 0 10px 0;
+  color: #f8fafc;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .market-product-card .product-card-title {
+    font-size: 20px;
+  }
+}
+
+.market-product-card:hover .product-card-title {
+  color: #67f8ff;
+  text-shadow: 0 0 18px rgba(34, 243, 255, 0.18);
+}
+
+.theme-light .product-card-title {
+  color: #0f172a;
+  text-shadow: none;
+}
+
+.theme-light .market-product-card:hover .product-card-title {
+  color: #0e7490;
 }
 
 .market-product-card__price {
@@ -1379,7 +1407,14 @@ body.easy-mode button:hover,
 
 .product-detail-card__content h1 {
   margin: 0;
+  color: #f8fafc;
   font-size: clamp(1.7rem, 3vw, 2.25rem);
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.theme-light .product-detail-card__content h1 {
+  color: #0f172a;
 }
 
 .product-detail-card__price {
@@ -4364,5 +4399,143 @@ body.easy-mode button:hover,
   background: #f1f5f9;
   color: #0f172a;
 }
+
+/* ==========================================================================
+   Seafood Type & Size Badges & Segmented Controls
+   ========================================================================== */
+
+.product-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.seafood-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 243, 255, 0.38);
+  background: rgba(34, 243, 255, 0.10);
+  color: #67f8ff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.freshness-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 185, 129, 0.38);
+  background: rgba(16, 185, 129, 0.10);
+  color: #34d399;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.seafood-size-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(250, 204, 21, 0.38);
+  background: rgba(250, 204, 21, 0.10);
+  color: #facc15;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* Light Theme Badges */
+.theme-light .seafood-type-badge {
+  color: #0e7490;
+  background: rgba(8, 145, 178, 0.08);
+  border-color: rgba(8, 145, 178, 0.35);
+}
+
+.theme-light .freshness-badge {
+  color: #047857;
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.theme-light .seafood-size-badge {
+  color: #a16207;
+  background: rgba(250, 204, 21, 0.12);
+  border-color: rgba(202, 138, 4, 0.30);
+}
+
+/* Segmented Control for Forms */
+.segmented-control {
+  display: flex;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 4px;
+  width: fit-content;
+  min-width: 280px;
+  margin-top: 6px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.segmented-button {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+}
+
+.segmented-button:hover {
+  color: #ffffff;
+}
+
+.segmented-button.is-active {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(8, 145, 178, 0.3);
+  font-weight: 700;
+}
+
+.theme-light .segmented-control {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.theme-light .segmented-button {
+  color: #475569;
+}
+
+.theme-light .segmented-button:hover {
+  color: #0f172a;
+}
+
+.theme-light .segmented-button.is-active {
+  background: #ffffff;
+  color: #0891b2;
+  border: 1px solid rgba(8, 145, 178, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
 
 

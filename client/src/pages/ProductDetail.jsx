@@ -8,6 +8,7 @@ import {
   MapPin,
   MessageSquare,
   PackageOpen,
+  Ruler,
   Scale,
   ShieldCheck,
 } from "lucide-react";
@@ -29,7 +30,7 @@ import {
   getProductId,
   getProductImage,
 } from "../utils/product";
-import { getCategoryLabel } from "../utils/labelMaps";
+import { getCategoryLabel, getProductSizeLabel } from "../utils/labelMaps";
 
 export default function ProductDetail() {
   const { alert } = useConfirm();
@@ -160,6 +161,11 @@ export default function ProductDetail() {
           <img src={getProductImage(product)} alt={product.name} />
           <div className="product-detail-card__badges">
             <span>{product.type === "Fresh" ? "Hải sản tươi" : "Hải sản khô"}</span>
+            {product.productSize && product.productSize !== "Chưa cập nhật" && (
+              <span className="seafood-size-badge" style={{ fontSize: "12px", padding: "5px 10px", textTransform: "none" }}>
+                Size: {getProductSizeLabel(product.productSize)}
+              </span>
+            )}
             <span className={`status-chip status-chip--${marketplaceStatus.key}`}>
               {marketplaceStatus.label}
             </span>
@@ -167,7 +173,9 @@ export default function ProductDetail() {
         </div>
 
         <div className="product-detail-card__content">
-          <span className="eyebrow">{getCategoryLabel(product.category) || "HẢI SẢN"}</span>
+          <span className="seafood-type-badge" style={{ marginBottom: "12px", textTransform: "none" }}>
+            {getCategoryLabel(product.category) || "Hải sản"}
+          </span>
           <h1>{product.name}</h1>
           <p className="product-detail-card__price">
             {formatCurrency(product.price)} <small>/ kg</small>
@@ -181,6 +189,7 @@ export default function ProductDetail() {
             <div><CalendarDays /><dt>Ngày đánh bắt</dt><dd>{formatDate(product.catchTime)}</dd></div>
             <div><MapPin /><dt>Nguồn gốc</dt><dd>{product.origin || "Chưa cập nhật"}</dd></div>
             <div><Scale /><dt>Còn lại</dt><dd>{Number(product.remainingWeight || 0)} kg</dd></div>
+            <div><Ruler /><dt>Kích thước</dt><dd>{getProductSizeLabel(product.productSize)}</dd></div>
           </dl>
 
           {product.batchId && product.batchTitle && (

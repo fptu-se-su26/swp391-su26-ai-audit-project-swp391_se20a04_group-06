@@ -66,8 +66,8 @@ export default function SellerOverview({
         <MetricCard icon={MessageSquare} label="Tin nhắn" tone="violet" value={newMessages} />
         <MetricCard icon={FileText} label="Bài đăng" tone="teal" value={products.length} />
         <MetricCard icon={Ship} label="Vựa đang mở" tone="blue" value={activeBatches.length} />
-        <MetricCard icon={BookOpen} label="Boat Log" tone="green" value={boatLogs.length} />
-        <MetricCard icon={UsersRound} label="Follower" tone="amber" value={user?.followersCount || 0} />
+        <MetricCard icon={BookOpen} label="Nhật ký biển" tone="green" value={boatLogs.length} />
+        <MetricCard icon={UsersRound} label="Người theo dõi" tone="amber" value={user?.followersCount || 0} />
         <MetricCard icon={Bell} label="Thông báo" tone="rose" value={notifications.length} />
       </div>
 

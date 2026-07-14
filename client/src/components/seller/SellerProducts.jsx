@@ -6,6 +6,7 @@ import IconActionButton from "../common/IconActionButton";
 import ProductForm from "./ProductForm";
 import { formatDateTimeForInput, parseDateTimeForSubmit } from "../shared/DateTimePicker";
 import { useConfirm } from "../../context/ConfirmContext";
+import { getCategoryLabel, getProductSizeLabel } from "../../utils/labelMaps";
 
 
 
@@ -26,6 +27,7 @@ const emptyForm = {
   images: [],       // string[] — URL ảnh đã lưu (khi edit)
   lat: "",
   lng: "",
+  productSize: "MEDIUM",
 };
 
 
@@ -58,6 +60,7 @@ function productToForm(product) {
     imageFiles: [],
     lat: product.lat ?? "",
     lng: product.lng ?? "",
+    productSize: product.productSize ?? "MEDIUM",
   };
 }
 
@@ -236,7 +239,19 @@ export default function SellerProducts({ onUpdateProducts, products }) {
                 const marketplaceStatus = getMarketplaceStatus(product);
                 return (
                   <tr key={getProductId(product)}>
-                    <td>{product.name}</td>
+                    <td>
+                      <div style={{ fontWeight: "700" }}>{product.name}</div>
+                      <div className="product-card-badges" style={{ marginTop: "6px", marginBottom: "0" }}>
+                        <span className="seafood-type-badge" style={{ fontSize: "10px", padding: "2px 6px" }}>
+                          {getCategoryLabel(product.category) || "Hải sản"}
+                        </span>
+                        {product.productSize && product.productSize !== "Chưa cập nhật" && (
+                          <span className="seafood-size-badge" style={{ fontSize: "10px", padding: "2px 6px" }}>
+                            {getProductSizeLabel(product.productSize)}
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td>{formatCurrency(product.price)} / kg</td>
                     <td>{Number(product.remainingWeight || 0)} / {Number(product.totalWeight || 0)} kg</td>
                     <td>

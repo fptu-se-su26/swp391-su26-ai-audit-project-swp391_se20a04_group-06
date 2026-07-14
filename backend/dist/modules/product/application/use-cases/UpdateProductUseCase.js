@@ -133,7 +133,9 @@ class UpdateProductUseCase {
         // Cập nhật hạn sử dụng của sản phẩm nếu có truyền
         body.expiryDate !== undefined ? (body.expiryDate ? new Date(body.expiryDate) : undefined) : product.expiryDate, 
         // Gán danh sách hình ảnh cuối cùng sau xử lý
-        finalImages);
+        finalImages, 
+        // Cập nhật kích thước hải sản
+        body.productSize !== undefined ? body.productSize : product.productSize);
         // Nếu client có truyền trạng thái mới của sản phẩm lên
         if (body.status !== undefined) {
             // Cập nhật trạng thái sản phẩm vào props của thực thể sản phẩm

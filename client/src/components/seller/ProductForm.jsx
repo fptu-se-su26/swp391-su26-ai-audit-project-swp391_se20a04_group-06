@@ -86,6 +86,33 @@ export default function ProductForm({ form, onCancel, onChange, onSubmit, saving
           />
         </label>
 
+        <div className="form-field form-field--wide">
+          <span>Kích thước hải sản</span>
+          <div className="segmented-control">
+            <button
+              className={`segmented-button ${form.productSize === "LARGE" ? "is-active" : ""}`}
+              onClick={() => onChange("productSize", "LARGE")}
+              type="button"
+            >
+              To
+            </button>
+            <button
+              className={`segmented-button ${(!form.productSize || form.productSize === "MEDIUM") ? "is-active" : ""}`}
+              onClick={() => onChange("productSize", "MEDIUM")}
+              type="button"
+            >
+              Trung bình
+            </button>
+            <button
+              className={`segmented-button ${form.productSize === "SMALL" ? "is-active" : ""}`}
+              onClick={() => onChange("productSize", "SMALL")}
+              type="button"
+            >
+              Nhỏ
+            </button>
+          </div>
+        </div>
+
 
         {/* ── Hình ảnh sản phẩm (cả cũ và mới) ── */}
         <div className="form-field form-field--wide">

@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
 import { getTourForPathname, tourDefinitions } from "./tourSteps";
 
@@ -263,6 +264,14 @@ export default function TourGuide() {
     };
   }, [currentStepIndex, isOpen, updateTargetRect]);
 
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const interval = window.setInterval(() => {
+      updateTargetRect();
+    }, 250);
+    return () => window.clearInterval(interval);
+  }, [isOpen, updateTargetRect]);
+
   const goNext = useCallback(() => {
     if (currentStepIndex >= steps.length - 1) {
       closeTour({ markDone: true });
@@ -297,7 +306,7 @@ export default function TourGuide() {
 
   if (!isOpen || !currentStep || !targetRect) return null;
 
-  return (
+  return createPortal(
     <div
       className="tour-guide"
       data-active-tour={activeTourId}
@@ -372,6 +381,7 @@ export default function TourGuide() {
           </div>
         </footer>
       </section>
-    </div>
+    </div>,
+    document.body
   );
 }

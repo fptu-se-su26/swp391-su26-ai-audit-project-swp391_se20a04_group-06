@@ -232,8 +232,8 @@ export default function BoatLog({ readOnly = false }) {
     <div className={`workspace-page boat-log-page${readOnly ? " boat-log-page--readonly" : ""}`}>
       <header className="page-heading page-heading--compact" data-tour="boat-log-heading">
         <div>
-          <span className="eyebrow">TRACEABLE SEAFOOD</span>
-          <h1>Boat Log</h1>
+          <span className="eyebrow">NHẬT KÝ TRUY XUẤT</span>
+          <h1>Nhật ký biển</h1>
           <p>
             {readOnly
               ? "Theo dõi nhật ký chuyến biển và nguồn gốc hải sản từ cộng đồng ngư dân."

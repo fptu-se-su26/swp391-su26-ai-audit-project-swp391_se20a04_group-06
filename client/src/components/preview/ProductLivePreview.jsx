@@ -1,6 +1,6 @@
-import { Image, Tag, Scale, MapPin } from "lucide-react";
+import { Image, Tag, Scale, MapPin, Ruler } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getCategoryLabel } from "../../utils/labelMaps";
+import { getCategoryLabel, getProductSizeLabel } from "../../utils/labelMaps";
 
 export default function ProductLivePreview({ product }) {
   const [imageSrc, setImageSrc] = useState("");
@@ -62,6 +62,10 @@ export default function ProductLivePreview({ product }) {
             <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
               <Scale size={12} />
               <span>{product?.totalWeight || 0} kg</span>
+            </span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+              <Ruler size={12} />
+              <span>Size: {getProductSizeLabel(product?.productSize)}</span>
             </span>
           </div>
         </div>

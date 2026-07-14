@@ -109,7 +109,7 @@ class Product extends AggregateRoot_1.AggregateRoot {
         this.validate();
     }
     // Phương thức cập nhật thông tin hồ sơ chi tiết của sản phẩm
-    updateProfile(name, description, category, salesType, type, location, catchLocation, catchTime, origin, expiryDate, images) {
+    updateProfile(name, description, category, salesType, type, location, catchLocation, catchTime, origin, expiryDate, images, productSize) {
         // Cập nhật tên sản phẩm và tự động loại bỏ khoảng trắng thừa ở hai đầu
         this.props.name = name.trim();
         // Cập nhật thông tin mô tả chi tiết mới của sản phẩm
@@ -135,6 +135,8 @@ class Product extends AggregateRoot_1.AggregateRoot {
             // Thay thế danh sách hình ảnh cũ bằng danh sách hình ảnh mới cập nhật
             this.props.images = images;
         }
+        // Cập nhật kích thước hải sản
+        this.props.productSize = productSize;
         // Kiểm tra tính hợp lệ toàn diện của thực thể sản phẩm sau khi cập nhật thông tin chi tiết
         this.validate();
     }
@@ -187,6 +189,8 @@ class Product extends AggregateRoot_1.AggregateRoot {
             expiryDate: this.props.expiryDate,
             // Danh sách đường dẫn hình ảnh sản phẩm
             images: this.props.images,
+            // Kích thước của hải sản
+            productSize: this.props.productSize,
             // Mốc thời gian đẩy bài gần nhất
             bumpedAt: this.props.bumpedAt,
             // Mốc thời gian đăng bán sản phẩm
@@ -227,6 +231,8 @@ class Product extends AggregateRoot_1.AggregateRoot {
     get expiryDate() { return this.props.expiryDate; }
     // Getter để truy xuất danh sách hình ảnh sản phẩm
     get images() { return this.props.images; }
+    // Getter để truy xuất kích thước hải sản
+    get productSize() { return this.props.productSize; }
     // Getter để truy xuất thời điểm đẩy bài viết sản phẩm
     get bumpedAt() { return this.props.bumpedAt; }
     // Getter để truy xuất ngày đăng bán sản phẩm

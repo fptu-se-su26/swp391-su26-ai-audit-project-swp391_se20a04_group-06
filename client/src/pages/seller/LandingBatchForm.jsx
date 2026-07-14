@@ -42,6 +42,7 @@ const emptyProduct = () => ({
   remainingWeight: "",
   description: "",
   images: [],
+  productSize: "MEDIUM",
 });
 
 function toLocalDateTime(value) {
@@ -205,6 +206,7 @@ export default function LandingBatchForm() {
             salesType: "Retail",
             description: product.description.trim() || null,
             images: await uploadFiles(product.images),
+            productSize: product.productSize || "MEDIUM",
           })),
         );
         await apiLandingBatches.addProducts(batchId, productPayloads);
@@ -402,6 +404,34 @@ export default function LandingBatchForm() {
                       <span>Còn lại kg</span>
                       <input min="0" onChange={(event) => updateProduct(product.rowId, "remainingWeight", event.target.value)} placeholder="Mặc định bằng tổng kg" type="number" value={product.remainingWeight} />
                     </label>
+
+                    <div className="form-field form-field--wide">
+                      <span>Kích thước hải sản</span>
+                      <div className="segmented-control">
+                        <button
+                          className={`segmented-button ${product.productSize === "LARGE" ? "is-active" : ""}`}
+                          onClick={() => updateProduct(product.rowId, "productSize", "LARGE")}
+                          type="button"
+                        >
+                          To
+                        </button>
+                        <button
+                          className={`segmented-button ${(!product.productSize || product.productSize === "MEDIUM") ? "is-active" : ""}`}
+                          onClick={() => updateProduct(product.rowId, "productSize", "MEDIUM")}
+                          type="button"
+                        >
+                          Trung bình
+                        </button>
+                        <button
+                          className={`segmented-button ${product.productSize === "SMALL" ? "is-active" : ""}`}
+                          onClick={() => updateProduct(product.rowId, "productSize", "SMALL")}
+                          type="button"
+                        >
+                          Nhỏ
+                        </button>
+                      </div>
+                    </div>
+
                     <label className="form-field form-field--wide">
                       <span>Mô tả ngắn</span>
                       <textarea onChange={(event) => updateProduct(product.rowId, "description", event.target.value)} rows="2" value={product.description} />

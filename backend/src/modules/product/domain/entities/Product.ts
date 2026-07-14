@@ -40,6 +40,8 @@ export interface ProductProps {
   expiryDate?: Date;
   // Danh sách các đường dẫn (URL) hình ảnh thực tế của sản phẩm
   images: string[];
+  // Kích thước của hải sản: LARGE (To), MEDIUM (Trung bình), SMALL (Nhỏ) (tùy chọn)
+  productSize?: "LARGE" | "MEDIUM" | "SMALL";
   // Thời điểm sản phẩm được đẩy bài viết (bump) gần nhất để xếp lên đầu danh sách tìm kiếm
   bumpedAt?: Date;
   // Thời điểm sản phẩm được đăng bán lên hệ thống
@@ -171,7 +173,8 @@ export class Product extends AggregateRoot<ProductProps> {
     catchTime?: Date,
     origin?: string,
     expiryDate?: Date,
-    images?: string[]
+    images?: string[],
+    productSize?: "LARGE" | "MEDIUM" | "SMALL"
   ): void {
     // Cập nhật tên sản phẩm và tự động loại bỏ khoảng trắng thừa ở hai đầu
     this.props.name = name.trim();
@@ -198,6 +201,8 @@ export class Product extends AggregateRoot<ProductProps> {
       // Thay thế danh sách hình ảnh cũ bằng danh sách hình ảnh mới cập nhật
       this.props.images = images;
     }
+    // Cập nhật kích thước hải sản
+    this.props.productSize = productSize;
     // Kiểm tra tính hợp lệ toàn diện của thực thể sản phẩm sau khi cập nhật thông tin chi tiết
     this.validate();
   }
@@ -253,6 +258,8 @@ export class Product extends AggregateRoot<ProductProps> {
       expiryDate: this.props.expiryDate,
       // Danh sách đường dẫn hình ảnh sản phẩm
       images: this.props.images,
+      // Kích thước của hải sản
+      productSize: this.props.productSize,
       // Mốc thời gian đẩy bài gần nhất
       bumpedAt: this.props.bumpedAt,
       // Mốc thời gian đăng bán sản phẩm
@@ -294,6 +301,8 @@ export class Product extends AggregateRoot<ProductProps> {
   get expiryDate() { return this.props.expiryDate; }
   // Getter để truy xuất danh sách hình ảnh sản phẩm
   get images() { return this.props.images; }
+  // Getter để truy xuất kích thước hải sản
+  get productSize() { return this.props.productSize; }
   // Getter để truy xuất thời điểm đẩy bài viết sản phẩm
   get bumpedAt() { return this.props.bumpedAt; }
   // Getter để truy xuất ngày đăng bán sản phẩm

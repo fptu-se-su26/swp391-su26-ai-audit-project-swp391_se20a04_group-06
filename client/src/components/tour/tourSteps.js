@@ -157,7 +157,7 @@ export const tourDefinitions = {
       step(
         '[data-tour="boat-log-heading"]',
         "Nhật ký chuyến biển",
-        "Boat Log giúp người mua theo dõi hành trình đánh bắt và nguồn gốc của các mẻ hải sản.",
+        "Nhật ký biển giúp người mua theo dõi hành trình đánh bắt và nguồn gốc của các mẻ hải sản.",
       ),
       step(
         '[data-tour="boat-log-grid"]',
@@ -182,7 +182,7 @@ export const tourDefinitions = {
       step(
         '[data-tour="boat-log-create"]',
         "Ghi nhật ký mới",
-        "Với vai trò người bán, bạn có thể thêm Boat Log mới và dùng nhật ký để tạo vựa cá.",
+        "Với vai trò người bán, bạn có thể thêm nhật ký biển mới và dùng nhật ký để tạo vựa cá.",
       ),
     ],
   },

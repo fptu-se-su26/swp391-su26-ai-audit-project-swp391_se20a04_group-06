@@ -45,6 +45,8 @@ const productBodyFields = {
     status: zod_1.z.enum(["Active", "Expired", "Deleted"]).optional(),
     // Danh sách mảng hình ảnh mẻ hàng: Tùy chọn
     images: zod_1.z.array(zod_1.z.string()).optional(),
+    // Kích thước hải sản: Tùy chọn
+    productSize: zod_1.z.enum(["LARGE", "MEDIUM", "SMALL"]).optional(),
 };
 // KHẮC PHỤC LỖI MEDIUM: Ràng buộc so khớp logic khối lượng còn lại không thể lớn hơn tổng khối lượng
 // Xuất ra schema kiểm thực dữ liệu khi tạo mới sản phẩm mẻ hàng

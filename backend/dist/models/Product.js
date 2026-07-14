@@ -78,6 +78,8 @@ const productSchema = new mongoose_1.Schema({
     expiryDate: { type: Date },
     // Cấu hình trường images: mảng chứa các URL ảnh dạng chuỗi
     images: [{ type: String }],
+    // Cấu hình trường productSize: kiểu chuỗi, nhận giá trị enum kích thước
+    productSize: { type: String, enum: ["LARGE", "MEDIUM", "SMALL"] },
     // Cấu hình trường viewCount: kiểu số lưu lượt xem, mặc định bằng 0
     viewCount: { type: Number, default: 0 },
     // Cấu hình trường bumpedAt: kiểu thời gian lưu mốc đẩy bài, mặc định là thời điểm hiện tại

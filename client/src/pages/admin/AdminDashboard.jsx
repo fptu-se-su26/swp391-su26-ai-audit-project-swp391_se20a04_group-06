@@ -17,6 +17,7 @@ import {
 } from "../../services/api";
 import { formatLandingDateTime, getLandingBatchId } from "../../utils/landingBatch";
 import { useConfirm } from "../../context/ConfirmContext";
+import { getRoleLabel, getStatusLabel } from "../../utils/labelMaps";
 
 
 const unwrapRows = (payload) =>
@@ -61,7 +62,7 @@ function AdminOverview({ stats, pendingReports, onRefresh }) {
     <div className="admin-overview">
       <PageHeader
         description="Số liệu trực tiếp từ hệ thống HảiSản.vn."
-        eyebrow="ADMIN DASHBOARD"
+        eyebrow="BẢNG ĐIỀU KHIỂN QUẢN TRỊ"
         onRefresh={onRefresh}
         title="Tổng quan hệ thống"
       />
@@ -110,7 +111,7 @@ function AdminUsers({ users, onRefresh }) {
     <div>
       <PageHeader
         description="Khóa/mở khóa tài khoản và cấp verified badge."
-        eyebrow="USER MANAGEMENT"
+        eyebrow="QUẢN LÝ NGƯỜI DÙNG"
         onRefresh={onRefresh}
         title="Quản lý người dùng"
       />
@@ -122,9 +123,9 @@ function AdminUsers({ users, onRefresh }) {
             <tbody>
               {users.map((user) => (
                 <tr key={user.id}>
-                  <td>{user.name} {user.isVerified && <small className="table-badge">Verified</small>}</td>
+                  <td>{user.name} {user.isVerified && <small className="table-badge">Đã xác minh</small>}</td>
                   <td>{user.email}</td>
-                  <td>{user.role}</td>
+                  <td>{getRoleLabel(user.role)}</td>
                   <td>{user.postCount || 0}</td>
                   <td>{user.isActive ? "Hoạt động" : "Bị khóa"}</td>
                   <td>
@@ -183,7 +184,7 @@ function AdminListings({ listings, onRefresh }) {
     <div>
       <PageHeader
         description="Xem và gỡ sản phẩm vi phạm khỏi marketplace."
-        eyebrow="PRODUCT MODERATION"
+        eyebrow="KIỂM DUYỆT SẢN PHẨM"
         onRefresh={onRefresh}
         title="Quản lý sản phẩm"
       />
@@ -195,8 +196,8 @@ function AdminListings({ listings, onRefresh }) {
             <tbody>
               {listings.map((listing) => (
                 <tr key={listing.id}>
-                  <td>{listing.name}</td><td>{listing.sellerName}</td><td>{listing.type}</td>
-                  <td>{Number(listing.price || 0).toLocaleString("vi-VN")}đ</td><td>{listing.status}</td>
+                  <td>{listing.name}</td><td>{listing.sellerName}</td><td>{listing.type === "Fresh" ? "Tươi sống" : "Đồ khô"}</td>
+                  <td>{Number(listing.price || 0).toLocaleString("vi-VN")}đ</td><td>{getStatusLabel(listing.status)}</td>
                   <td><button className="button button--danger" disabled={busyId === listing.id} onClick={() => removeListing(listing)} type="button"><Trash2 size={15} /> Xóa</button></td>
                 </tr>
               ))}
@@ -240,7 +241,7 @@ function AdminLandingBatches({ batches, onRefresh }) {
     <div>
       <PageHeader
         description="Xem và ẩn vựa cá vi phạm mà không xóa sản phẩm liên quan."
-        eyebrow="LANDING BATCH MODERATION"
+        eyebrow="KIỂM DUYỆT VỰA CÁ"
         onRefresh={onRefresh}
         title="Quản lý vựa cá"
       />
@@ -256,7 +257,7 @@ function AdminLandingBatches({ batches, onRefresh }) {
                   <td>{batch.sellerName}</td>
                   <td>{Number(batch.productCount || 0)}</td>
                   <td>{formatLandingDateTime(batch.landingTime || batch.createdAt)}</td>
-                  <td>{batch.status}</td>
+                  <td>{getStatusLabel(batch.status)}</td>
                   <td>
                     <button
                       className="button button--danger"
@@ -319,7 +320,7 @@ function AdminReports() {
     <div>
       <PageHeader
         description="Kiểm tra và cập nhật trạng thái các báo cáo vi phạm."
-        eyebrow="SAFETY REPORTS"
+        eyebrow="BÁO CÁO VI PHẠM"
         onRefresh={load}
         title="Xử lý báo cáo"
       />
@@ -334,7 +335,7 @@ function AdminReports() {
             <tbody>
               {reports.map((report) => (
                 <tr key={report.id}>
-                  <td>{targetName(report)}</td><td>{report.targetType}</td><td>{report.reporterName}</td>
+                  <td>{targetName(report)}</td><td>{report.targetType === "Product" ? "Sản phẩm" : report.targetType === "Post" ? "Bài viết" : report.targetType === "Recipe" ? "Công thức" : report.targetType}</td><td>{report.reporterName}</td>
                   <td>{report.reason}</td><td>{new Date(report.createdAt).toLocaleDateString("vi-VN")}</td>
                   {status === "Pending" && <td><div className="admin-row-actions"><button disabled={busyId === report.id} onClick={() => handle(report, "resolve")} type="button">Xử lý</button><button disabled={busyId === report.id} onClick={() => handle(report, "dismiss")} type="button">Bỏ qua</button></div></td>}
                 </tr>

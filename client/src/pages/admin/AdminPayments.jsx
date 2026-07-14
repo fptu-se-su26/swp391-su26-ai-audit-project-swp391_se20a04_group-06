@@ -10,7 +10,7 @@ export default function AdminPayments() {
   return (
     <div className="workspace-page">
       <header className="page-heading page-heading--compact">
-        <div><span className="eyebrow">PREMIUM MANAGEMENT</span><h1>Premium</h1><p>Quản lý giao dịch nâng cấp tài khoản.</p></div>
+        <div><span className="eyebrow">QUẢN LÝ PREMIUM</span><h1>Quản lý Premium</h1><p>Quản lý giao dịch nâng cấp tài khoản.</p></div>
       </header>
       <div className="dashboard-metrics admin-metrics">
         {metrics.map(({ icon: Icon, label, tone, value }) => (

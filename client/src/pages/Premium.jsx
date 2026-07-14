@@ -178,7 +178,7 @@ export default function Premium() {
     <div className="page-container premium-page">
       <header className="page-heading">
         <div>
-          <span className="eyebrow">PREMIUM MEMBERSHIP</span>
+          <span className="eyebrow">THÀNH VIÊN PREMIUM</span>
           <h1>
             <Crown size={26} /> Premium & Omakase
           </h1>

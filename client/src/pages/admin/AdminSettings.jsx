@@ -5,8 +5,8 @@ export default function AdminSettings() {
     <div className="workspace-page">
       <header className="page-heading page-heading--compact">
         <div>
-          <span className="eyebrow">SYSTEM SETTINGS</span>
-          <h1>Settings</h1>
+          <span className="eyebrow">CÀI ĐẶT HỆ THỐNG</span>
+          <h1>Cài đặt</h1>
           <p>Cấu hình frontend quản trị. Không có thay đổi backend nào được thực hiện tại đây.</p>
         </div>
       </header>

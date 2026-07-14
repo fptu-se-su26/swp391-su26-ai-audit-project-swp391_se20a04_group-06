@@ -91,7 +91,7 @@ export default function SellerLandingBatches() {
     <div className="seller-landing-batches">
       <header className="page-heading page-heading--compact" data-tour="seller-batch-list-heading">
         <div>
-          <span className="eyebrow">LANDING BATCH MANAGEMENT</span>
+          <span className="eyebrow">QUẢN LÝ VỰA CÁ</span>
           <h1>Vựa cá của tôi</h1>
           <p>Quản lý các chuyến hàng mới cập bến và sản phẩm trong từng vựa.</p>
         </div>

@@ -41,7 +41,7 @@ export default function Broadcast() {
   return (
     <div className="workspace-page">
       <header className="page-heading page-heading--compact">
-        <div><span className="eyebrow">SYSTEM ANNOUNCEMENT</span><h1><Radio size={25} /> Broadcast Notification</h1><p>Gửi thông báo hệ thống tới đúng nhóm người dùng.</p></div>
+        <div><span className="eyebrow">THÔNG BÁO HỆ THỐNG</span><h1><Radio size={25} /> Phát thông báo</h1><p>Gửi thông báo hệ thống tới đúng nhóm người dùng.</p></div>
       </header>
       {notice && <p className="inline-notice">{notice}</p>}
       <form className="dashboard-panel broadcast-form" onSubmit={submit}>
@@ -54,7 +54,7 @@ export default function Broadcast() {
       <section className="dashboard-panel">
         <header><div><h2>Lịch sử broadcast</h2><p>Các thông báo được gửi gần đây.</p></div></header>
         <div className="responsive-table"><table><thead><tr><th>Nội dung</th><th>Đối tượng</th><th>Đã gửi</th><th>Thời gian</th></tr></thead><tbody>
-          {history.map((item) => <tr key={item.id}><td>{item.content}</td><td>{item.targetRole}</td><td>{item.sentCount}</td><td>{new Date(item.createdAt).toLocaleString("vi-VN")}</td></tr>)}
+          {history.map((item) => <tr key={item.id}><td>{item.content}</td><td>{item.targetRole === "all" ? "Tất cả" : item.targetRole === "Buyer" || item.targetRole === "buyer" ? "Người mua" : item.targetRole === "Seller" || item.targetRole === "seller" ? "Người bán" : item.targetRole}</td><td>{item.sentCount}</td><td>{new Date(item.createdAt).toLocaleString("vi-VN")}</td></tr>)}
           {!history.length && <tr><td className="table-empty" colSpan="4">Chưa có lịch sử gửi.</td></tr>}
         </tbody></table></div>
       </section>

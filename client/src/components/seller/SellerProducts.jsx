@@ -207,7 +207,7 @@ export default function SellerProducts({ onUpdateProducts, products }) {
     <div className="seller-products">
       <header className="page-heading page-heading--compact">
         <div>
-          <span className="eyebrow">PRODUCT MANAGEMENT</span>
+          <span className="eyebrow">QUẢN LÝ SẢN PHẨM</span>
           <h1>Quản lý sản phẩm</h1>
           <p>Quản lý mẻ hàng đang rao bán trên chợ.</p>
         </div>

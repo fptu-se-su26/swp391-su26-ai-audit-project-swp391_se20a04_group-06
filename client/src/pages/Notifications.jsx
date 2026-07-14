@@ -56,7 +56,7 @@ export default function Notifications() {
     <div className="page-container">
       <header className="page-heading">
         <div>
-          <span className="eyebrow">ACTIVITY</span>
+          <span className="eyebrow">HOẠT ĐỘNG</span>
           <h1><Bell size={25} /> Thông báo</h1>
           <p>Cập nhật hệ thống, tin nhắn và tương tác mới.</p>
         </div>

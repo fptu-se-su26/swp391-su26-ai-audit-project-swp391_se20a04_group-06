@@ -1151,13 +1151,52 @@ body.easy-mode button:hover,
   text-shadow: 0 0 18px rgba(34, 243, 255, 0.18);
 }
 
-.theme-light .product-card-title {
+.theme-light .market-product-card {
+  background: linear-gradient(180deg, #ffffff, #f4fbff);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.theme-light .market-product-card__media {
+  background:
+    radial-gradient(circle at 50% 40%, rgba(8, 145, 178, 0.1), transparent 55%),
+    #e8f4f8;
+}
+
+.theme-light .market-product-card .product-card-title {
   color: #0f172a;
   text-shadow: none;
 }
 
 .theme-light .market-product-card:hover .product-card-title {
   color: #0e7490;
+}
+
+.theme-light .market-product-card__eyebrow {
+  color: #0e7490;
+}
+
+.theme-light .market-product-card__eyebrow span:last-child {
+  color: #64748b;
+}
+
+.theme-light .product-facts > div,
+.theme-light .product-detail-facts > div,
+.theme-light .boat-log-card dl > div {
+  background: rgba(8, 145, 178, 0.06);
+}
+
+.theme-light .product-facts dd,
+.theme-light .product-detail-facts dd,
+.theme-light .boat-log-card dd {
+  color: #0f172a;
+}
+
+.theme-light .responsive-table th {
+  color: #64748b;
+}
+
+.theme-light .responsive-table td {
+  color: #334155;
 }
 
 .market-product-card__price {

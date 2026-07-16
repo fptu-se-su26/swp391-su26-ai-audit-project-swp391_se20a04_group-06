@@ -378,8 +378,7 @@
   .recipe-comments,
   .seller-public-hero,
   .profile-editor,
-  .premium-grid,
-  .omakase-panel {
+  .premium-grid {
     animation: hs-fade-up 480ms var(--motion-ease) both;
   }
 

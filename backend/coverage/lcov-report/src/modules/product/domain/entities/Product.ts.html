@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">27.53% </span>
+                <span class="strong">26.76% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>19/69</span>
+                <span class='fraction'>19/71</span>
             </div>
         
             
@@ -37,16 +37,16 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">17.85% </span>
+                <span class="strong">17.24% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>5/28</span>
+                <span class='fraction'>5/29</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">27.53% </span>
+                <span class="strong">26.76% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>19/69</span>
+                <span class='fraction'>19/71</span>
             </div>
         
             
@@ -366,10 +366,21 @@
 <a name='L301'></a><a href='#L301'>301</a>
 <a name='L302'></a><a href='#L302'>302</a>
 <a name='L303'></a><a href='#L303'>303</a>
-<a name='L304'></a><a href='#L304'>304</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L304'></a><a href='#L304'>304</a>
+<a name='L305'></a><a href='#L305'>305</a>
+<a name='L306'></a><a href='#L306'>306</a>
+<a name='L307'></a><a href='#L307'>307</a>
+<a name='L308'></a><a href='#L308'>308</a>
+<a name='L309'></a><a href='#L309'>309</a>
+<a name='L310'></a><a href='#L310'>310</a>
+<a name='L311'></a><a href='#L311'>311</a>
+<a name='L312'></a><a href='#L312'>312</a>
+<a name='L313'></a><a href='#L313'>313</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -542,7 +553,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -566,6 +576,10 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -631,6 +645,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -642,6 +658,8 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -711,6 +729,8 @@ export interface ProductProps {
   expiryDate?: Date;
   // Danh sách các đường dẫn (URL) hình ảnh thực tế của sản phẩm
   images: string[];
+  // Kích thước của hải sản: LARGE (To), MEDIUM (Trung bình), SMALL (Nhỏ) (tùy chọn)
+  productSize?: "LARGE" | "MEDIUM" | "SMALL";
   // Thời điểm sản phẩm được đẩy bài viết (bump) gần nhất để xếp lên đầu danh sách tìm kiếm
   bumpedAt?: Date;
   // Thời điểm sản phẩm được đăng bán lên hệ thống
@@ -842,7 +862,8 @@ export class Product extends AggregateRoot&lt;ProductProps&gt; {
     catchTime?: Date,
     origin?: string,
     expiryDate?: Date,
-    images?: string[]
+    images?: string[],
+    productSize?: "LARGE" | "MEDIUM" | "SMALL"
   ): void {
     // Cập nhật tên sản phẩm và tự động loại bỏ khoảng trắng thừa ở hai đầu
 <span class="cstat-no" title="statement not covered" >    this.props.name = name.trim();</span>
@@ -869,6 +890,8 @@ export class Product extends AggregateRoot&lt;ProductProps&gt; {
       // Thay thế danh sách hình ảnh cũ bằng danh sách hình ảnh mới cập nhật
 <span class="cstat-no" title="statement not covered" >      this.props.images = images;</span>
     }
+    // Cập nhật kích thước hải sản
+<span class="cstat-no" title="statement not covered" >    this.props.productSize = productSize;</span>
     // Kiểm tra tính hợp lệ toàn diện của thực thể sản phẩm sau khi cập nhật thông tin chi tiết
 <span class="cstat-no" title="statement not covered" >    this.validate();</span>
   }
@@ -924,6 +947,8 @@ export class Product extends AggregateRoot&lt;ProductProps&gt; {
       expiryDate: this.props.expiryDate,
       // Danh sách đường dẫn hình ảnh sản phẩm
       images: this.props.images,
+      // Kích thước của hải sản
+      productSize: this.props.productSize,
       // Mốc thời gian đẩy bài gần nhất
       bumpedAt: this.props.bumpedAt,
       // Mốc thời gian đăng bán sản phẩm
@@ -965,6 +990,8 @@ export class Product extends AggregateRoot&lt;ProductProps&gt; {
 <span class="fstat-no" title="function not covered" >  get e</span>xpiryDate() { <span class="cstat-no" title="statement not covered" >return this.props.expiryDate; </span>}
   // Getter để truy xuất danh sách hình ảnh sản phẩm
 <span class="fstat-no" title="function not covered" >  get i</span>mages() { <span class="cstat-no" title="statement not covered" >return this.props.images; </span>}
+  // Getter để truy xuất kích thước hải sản
+<span class="fstat-no" title="function not covered" >  get p</span>roductSize() { <span class="cstat-no" title="statement not covered" >return this.props.productSize; </span>}
   // Getter để truy xuất thời điểm đẩy bài viết sản phẩm
 <span class="fstat-no" title="function not covered" >  get b</span>umpedAt() { <span class="cstat-no" title="statement not covered" >return this.props.bumpedAt; </span>}
   // Getter để truy xuất ngày đăng bán sản phẩm
@@ -979,7 +1006,7 @@ export class Product extends AggregateRoot&lt;ProductProps&gt; {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-07-10T04:52:55.991Z
+                at 2026-07-16T08:04:35.572Z
             </div>
         <script src="../../../../../prettify.js"></script>
         <script>

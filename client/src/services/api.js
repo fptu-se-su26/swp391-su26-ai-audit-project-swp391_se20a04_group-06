@@ -337,8 +337,3 @@ export const apiPayment = {
   getStatus: () => apiClient.get("/payment/status"),
 };
 
-export const apiOmakase = {
-  getMine: () => apiClient.get("/omakase/me"),
-  subscribe: (data) => apiClient.post("/omakase", data),
-  cancel: () => apiClient.patch("/omakase/cancel"),
-};

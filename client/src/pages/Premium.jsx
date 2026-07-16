@@ -1,27 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  CalendarClock,
   CheckCircle2,
   Copy,
   Crown,
   Download,
-  MapPin,
-  Phone,
   QrCode,
   RefreshCw,
   Sparkles,
-  XCircle,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { apiAuth, apiOmakase, apiPayment } from "../services/api";
+import { apiAuth, apiPayment } from "../services/api";
 import { useConfirm } from "../context/ConfirmContext";
 
 
-const emptyForm = {
-  plan: "Weekly",
-  deliveryAddress: "",
-  phone: "",
-};
 
 const paymentAssets = {
   qr: "/qr-payment.png",
@@ -58,9 +49,7 @@ export default function Premium() {
   const { user, login } = useAuth();
   const [intent, setIntent] = useState(null);
   const [paymentStatus, setPaymentStatus] = useState(null);
-  const [subscription, setSubscription] = useState(null);
 
-  const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
@@ -72,22 +61,10 @@ export default function Premium() {
     const results = await Promise.allSettled([
       apiPayment.getPremiumIntent(),
       apiPayment.getStatus(),
-      apiOmakase.getMine(),
     ]);
 
     if (results[0].status === "fulfilled") setIntent(results[0].value);
     if (results[1].status === "fulfilled") setPaymentStatus(results[1].value);
-    if (results[2].status === "fulfilled") {
-      const current = results[2].value?.subscription || null;
-      setSubscription(current);
-      if (current) {
-        setForm({
-          plan: current.plan,
-          deliveryAddress: current.deliveryAddress,
-          phone: current.phone,
-        });
-      }
-    }
 
     const rejected = results.find((result) => result.status === "rejected");
     if (rejected) {
@@ -129,43 +106,6 @@ export default function Premium() {
     }
   };
 
-  const update = (field) => (event) =>
-    setForm((current) => ({ ...current, [field]: event.target.value }));
-
-  const subscribe = async (event) => {
-    event.preventDefault();
-    setBusy(true);
-    setNotice("");
-    try {
-      const result = await apiOmakase.subscribe(form);
-      setSubscription(result.subscription);
-      setNotice("Đăng ký Omakase thành công.");
-    } catch (error) {
-      setNotice(error.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const cancel = async () => {
-    const ok = await confirm({
-      title: "Hủy gói Omakase?",
-      message: "Bạn có chắc chắn muốn hủy gói Omakase?",
-      confirmText: "Hủy gói",
-      variant: "danger"
-    });
-    if (!ok) return;
-    setBusy(true);
-    try {
-      const result = await apiOmakase.cancel();
-      setSubscription(result.subscription);
-      setNotice("Đã hủy gói Omakase.");
-    } catch (error) {
-      setNotice(error.message);
-    } finally {
-      setBusy(false);
-    }
-  };
 
 
   const isPremium = Boolean(paymentStatus?.isPremium || user?.isPremium);
@@ -372,106 +312,6 @@ export default function Premium() {
         </section>
       </div>
 
-      <section className="dashboard-panel omakase-panel">
-        <header>
-          <div>
-            <span className="eyebrow">OMAKASE SUBSCRIPTION</span>
-            <h2>Hộp hải sản tuyển chọn</h2>
-            <p>
-              Ngư dân chọn sản phẩm theo mùa và giao định kỳ đến địa chỉ của bạn.
-            </p>
-          </div>
-          {subscription && (
-            <span className={`subscription-badge is-${subscription.status?.toLowerCase()}`}>
-              {subscription.status === "Active" ? (
-                <CheckCircle2 size={16} />
-              ) : (
-                <XCircle size={16} />
-              )}
-              {subscription.status}
-            </span>
-          )}
-        </header>
-
-        {subscription?.status === "Active" && (
-          <div className="subscription-summary">
-            <span>
-              <CalendarClock size={17} /> {subscription.plan === "Weekly" ? "Hàng tuần" : "Hàng tháng"}
-            </span>
-            <span>
-              <MapPin size={17} /> {subscription.deliveryAddress}
-            </span>
-            <span>
-              <Phone size={17} /> {subscription.phone}
-            </span>
-            <span>Đợt giao tiếp theo: {new Date(subscription.nextDeliveryAt).toLocaleDateString("vi-VN")}</span>
-          </div>
-        )}
-
-        <form className="form-grid" onSubmit={subscribe}>
-          <label className="form-field">
-            <span>Chu kỳ</span>
-            <select
-              disabled={!isPremium || busy}
-              onChange={update("plan")}
-              value={form.plan}
-            >
-              <option value="Weekly">Weekly — mỗi tuần</option>
-              <option value="Monthly">Monthly — mỗi tháng</option>
-            </select>
-          </label>
-
-          <label className="form-field">
-            <span>Số điện thoại</span>
-            <input
-              disabled={!isPremium || busy}
-              onChange={update("phone")}
-              pattern="(?:\\+84|0)\\d{9,10}"
-              placeholder="0901234567"
-              required
-              value={form.phone}
-            />
-          </label>
-
-          <label className="form-field form-field--wide">
-            <span>Địa chỉ giao hàng</span>
-            <textarea
-              disabled={!isPremium || busy}
-              minLength="10"
-              onChange={update("deliveryAddress")}
-              required
-              rows="3"
-              value={form.deliveryAddress}
-            />
-          </label>
-
-          <footer className="form-actions form-field--wide">
-            <button
-              className="button button--primary"
-              disabled={!isPremium || busy}
-              type="submit"
-            >
-              {subscription?.status === "Active" ? "Cập nhật gói" : "Đăng ký Omakase"}
-            </button>
-            {subscription?.status === "Active" && (
-              <button
-                className="button button--danger"
-                disabled={busy}
-                onClick={cancel}
-                type="button"
-              >
-                Hủy gói
-              </button>
-            )}
-          </footer>
-        </form>
-
-        {!isPremium && (
-          <p className="muted-copy">
-            Bạn cần hoàn tất nâng cấp Premium trước khi đăng ký Omakase.
-          </p>
-        )}
-      </section>
     </div>
   );
 }

@@ -106,7 +106,6 @@ const post_routes_1 = __importDefault(require("./routes/post.routes"));
 // Import định tuyến viết nhật ký đi biển cabin logs
 const boatLog_routes_1 = __importDefault(require("./routes/boatLog.routes"));
 const landingBatch_routes_1 = __importDefault(require("./routes/landingBatch.routes"));
-const omakase_routes_1 = __importDefault(require("./routes/omakase.routes"));
 // Khởi tạo đối tượng ứng dụng express
 const app = (0, express_1.default)();
 exports.app = app;
@@ -296,7 +295,6 @@ app.use("/api/posts", post_routes_1.default);
 app.use("/api/boat-logs", boatLog_routes_1.default);
 // Khai báo định tuyến Vựa cá / Phiên cập bến
 app.use("/api/landing-batches", landingBatch_routes_1.default);
-app.use("/api/omakase", omakase_routes_1.default);
 // Bắt các yêu cầu truy cập sai địa chỉ API và trả về lỗi 404
 app.use((_req, res) => res.status(404).json({ message: "Không tìm thấy endpoint này" }));
 // Sử dụng middleware errorHandler xử lý ngoại lệ tập trung ở cuối cùng ứng dụng

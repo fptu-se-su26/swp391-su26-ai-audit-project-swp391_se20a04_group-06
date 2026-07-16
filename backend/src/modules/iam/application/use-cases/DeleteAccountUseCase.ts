@@ -23,7 +23,6 @@ import { Notification } from "../../../../models/Notification";
 import { Post } from "../../../../models/Post";
 import { Recipe } from "../../../../models/Recipe";
 import { BoatLog } from "../../../../models/BoatLog";
-import { OmakaseSubscription } from "../../../../models/OmakaseSubscription";
 import { PaymentTransaction } from "../../../../models/PaymentTransaction";
 
 /**
@@ -139,8 +138,7 @@ export class DeleteAccountUseCase {
       await Recipe.deleteMany({ authorId: userId }, dbOptions);
       // Xóa nhật ký đi biển của người này
       await BoatLog.deleteMany({ userId: userId }, dbOptions);
-      // Xóa đăng ký Omakase và lịch sử thanh toán Premium gắn với tài khoản.
-      await OmakaseSubscription.deleteMany({ userId: userId }, dbOptions);
+      // Xóa lịch sử thanh toán Premium gắn với tài khoản.
       await PaymentTransaction.deleteMany({ userId: userId }, dbOptions);
 
       // Loại bỏ lượt thích (Likes) của người này khỏi tất cả các bài viết và công thức khác

@@ -42,8 +42,8 @@ export default function Home() {
 
   useEffect(() => {
     Promise.allSettled([
-      apiProducts.getAll(),
-      apiFishermen.getAll(),
+      apiProducts.getAll({ limit: 24 }),
+      apiFishermen.getAll({ limit: 6 }),
     ]).then(([productResult, fishermanResult]) => {
       if (productResult.status === "fulfilled") {
         const data = productResult.value;
@@ -66,24 +66,30 @@ export default function Home() {
       .catch(() => setFavorites(new Set()));
   }, [user]);
 
-  const activeProducts = useMemo(
-    () =>
-      products
-        .filter((product) => (product.status || "Active").toLowerCase() === "active")
-        .sort((left, right) => {
-          const featuredDifference =
-            Number(Boolean(right.featured || right.isFeatured || right.isNew || right.latest)) -
-            Number(Boolean(left.featured || left.isFeatured || left.isNew || left.latest));
-          if (featuredDifference) return featuredDifference;
+  const activeProducts = useMemo(() => {
+    const filtered = products.filter(
+      (product) => (product.status || "Active").toLowerCase() === "active"
+    );
 
-          const rightTime = new Date(right.bumpedAt || right.createdAt || 0).getTime();
-          const leftTime = new Date(left.bumpedAt || left.createdAt || 0).getTime();
-          if (rightTime !== leftTime) return rightTime - leftTime;
+    const mapped = filtered.map((p) => ({
+      product: p,
+      isFeatured: Boolean(p.featured || p.isFeatured || p.isNew || p.latest),
+      time: new Date(p.bumpedAt || p.createdAt || 0).getTime(),
+      views: Number(p.viewCount || 0)
+    }));
 
-          return Number(right.viewCount || 0) - Number(left.viewCount || 0);
-        }),
-    [products],
-  );
+    mapped.sort((left, right) => {
+      const featuredDiff = Number(right.isFeatured) - Number(left.isFeatured);
+      if (featuredDiff !== 0) return featuredDiff;
+
+      const timeDiff = right.time - left.time;
+      if (timeDiff !== 0) return timeDiff;
+
+      return right.views - left.views;
+    });
+
+    return mapped.map((item) => item.product);
+  }, [products]);
   const bannerProducts = useMemo(() => activeProducts.slice(0, 6), [activeProducts]);
   const featuredProduct = bannerProducts[slideIndex % Math.max(bannerProducts.length, 1)];
 

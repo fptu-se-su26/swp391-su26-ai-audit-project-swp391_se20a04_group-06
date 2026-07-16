@@ -2761,6 +2761,17 @@ body.modal-open {
 
 /* ─── Ocean Background and Shell Styles for Home Page ─────────────────── */
 .ocean-background {
+  position: relative;
+}
+
+.ocean-background::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
   background-color: #020617; /* Dark slate base */
   background-image: 
     radial-gradient(circle at 10% 20%, rgba(13, 148, 136, 0.08) 0%, transparent 40%),
@@ -2770,7 +2781,7 @@ body.modal-open {
     linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
   background-size: 100% 100%, 100% 100%, 100% 100%, 40px 40px, 40px 40px;
-  background-attachment: fixed;
+  pointer-events: none;
 }
 
 /* Card shells for home sections */

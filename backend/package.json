@@ -4,6 +4,7 @@
   "description": "Backend cho ứng dụng mua bán hải sản HảiSản.vn",
   "main": "dist/app.js",
   "scripts": {
+    "predev": "docker start seafood_mongo seafood_redis",
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/app.js",

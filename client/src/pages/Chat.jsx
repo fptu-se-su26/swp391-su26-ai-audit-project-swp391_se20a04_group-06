@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import ChatComposer from "../components/chat/ChatComposer";
 import ConversationList from "../components/chat/ConversationList";
 import MessageBubble from "../components/chat/MessageBubble";
+import VideoCall from "../components/chat/VideoCall";
 import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../context/SocketContext";
 import { apiMessages } from "../services/api";
@@ -336,6 +337,13 @@ export default function Chat() {
               <span><PackageOpen size={14} /> {activeThread.productName}</span>
             </div>
             <div className="chat-window__actions">
+              <VideoCall
+                currentUser={user}
+                partnerId={activeThread.partnerId}
+                partnerName={activeThread.partnerName}
+                productId={activeThread.productId}
+                socket={socket}
+              />
               {!socket && (
                 <span className="socket-status"><AlertCircle size={14} /> Mất kết nối realtime</span>
               )}

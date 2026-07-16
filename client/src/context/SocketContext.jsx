@@ -1,7 +1,9 @@
 /* oxlint-disable react/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
+import { useSelector, useDispatch } from "react-redux";
 import { useAuth } from "./AuthContext";
+import { addNotification, setNotifications } from "../store/slices/notificationSlice";
 
 const SocketContext = createContext(null);
 const socketUrl = import.meta.env.VITE_API_URL || window.location.origin;
@@ -10,7 +12,8 @@ export function SocketProvider({ children }) {
   const { user } = useAuth();
   const socketRef = useRef(null);
   const [socket, setSocket] = useState(null);
-  const [notifications, setNotifications] = useState([]);
+  const notifications = useSelector((state) => state.notifications.list);
+  const dispatch = useDispatch();
 
   useEffect(() => {
     if (!user || !socketUrl) {
@@ -29,7 +32,7 @@ export function SocketProvider({ children }) {
     setSocket(socketInstance);
 
     socketInstance.on("notification", (notification) => {
-      setNotifications((current) => [notification, ...current]);
+      dispatch(addNotification(notification));
     });
 
     socketInstance.on("connect_error", (error) => {
@@ -41,7 +44,7 @@ export function SocketProvider({ children }) {
       if (socketRef.current === socketInstance) socketRef.current = null;
       setSocket(null);
     };
-  }, [user]);
+  }, [user, dispatch]);
 
   const joinConversation = useCallback((productId, buyerId) => {
     socketRef.current?.emit("join_room", { productId, buyerId });
@@ -64,12 +67,21 @@ export function SocketProvider({ children }) {
     [],
   );
 
+  const handleSetNotifications = useCallback((newNotifs) => {
+    if (typeof newNotifs === "function") {
+      const resolved = newNotifs(notifications);
+      dispatch(setNotifications(resolved));
+    } else {
+      dispatch(setNotifications(newNotifs));
+    }
+  }, [dispatch, notifications]);
+
   return (
     <SocketContext.Provider
       value={{
         socket,
         notifications,
-        setNotifications,
+        setNotifications: handleSetNotifications,
         joinConversation,
         leaveConversation,
         sendChatMessage,

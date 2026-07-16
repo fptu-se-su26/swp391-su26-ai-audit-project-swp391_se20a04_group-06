@@ -1,0 +1,17 @@
+{
+  "name": "seafood-market-tests",
+  "version": "1.0.0",
+  "description": "Unified test runner for seafood market project",
+  "scripts": {
+    "test:backend": "npm run test --prefix backend",
+    "test:frontend": "npm run test:unit --prefix client",
+    "test:e2e": "npx playwright test",
+    "test:all": "npm run test:backend && npm run test:frontend && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
+  },
+  "dependencies": {
+    "docx": "^9.7.1"
+  }
+}

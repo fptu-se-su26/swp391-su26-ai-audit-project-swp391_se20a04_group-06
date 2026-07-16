@@ -211,6 +211,10 @@
    ================================================== */
 
 .theme-light .ocean-background {
+  background: transparent !important;
+}
+
+.theme-light .ocean-background::before {
   background-color: var(--color-page) !important;
   background-image: 
     radial-gradient(circle at 10% 20%, rgba(8, 145, 178, 0.05) 0%, transparent 40%),

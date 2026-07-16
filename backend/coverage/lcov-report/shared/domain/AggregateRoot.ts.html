@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">37.5% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>3/8</span>
+                <span class='fraction'>8/8</span>
             </div>
         
             
@@ -37,16 +37,16 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/4</span>
+                <span class='fraction'>4/4</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">37.5% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>3/8</span>
+                <span class='fraction'>8/8</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -96,35 +96,35 @@
 <a name='L31'></a><a href='#L31'>31</a>
 <a name='L32'></a><a href='#L32'>32</a>
 <a name='L33'></a><a href='#L33'>33</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">21x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// Import lớp thực thể Entity làm cơ sở để kế thừa thuộc tính định danh
@@ -135,28 +135,28 @@ import { IDomainEvent } from "./events/DomainEvent";
 import { DomainEvents } from "./events/DomainEvents";
 &nbsp;
 // Định nghĩa lớp trừu tượng AggregateRoot kế thừa từ lớp Entity để đại diện cho một Aggregate Root trong DDD
-<span class="fstat-no" title="function not covered" >export abstract class A</span>ggregateRoot&lt;T&gt; extends Entity&lt;T&gt; {
+export abstract class AggregateRoot&lt;T&gt; extends Entity&lt;T&gt; {
   // Khai báo mảng chứa các sự kiện miền phát sinh trong nội bộ thực thể gốc
-  private <span class="cstat-no" title="statement not covered" >_domainEvents: IDomainEvent[] = [];</span>
+  private _domainEvents: IDomainEvent[] = [];
 &nbsp;
   // Định nghĩa hàm getter để truy cập danh sách sự kiện miền bên ngoài thực thể
-<span class="fstat-no" title="function not covered" >  get d</span>omainEvents(): IDomainEvent[] {
+  get domainEvents(): IDomainEvent[] {
     // Trả về mảng các sự kiện miền hiện tại
-<span class="cstat-no" title="statement not covered" >    return this._domainEvents;</span>
+    return this._domainEvents;
   }
 &nbsp;
   // Định nghĩa hàm được bảo vệ (protected) để thêm một sự kiện miền mới phát sinh
-  protected <span class="fstat-no" title="function not covered" >addDomainEvent(</span>domainEvent: IDomainEvent): void {
+  protected addDomainEvent(domainEvent: IDomainEvent): void {
     // Đẩy sự kiện miền mới vào cuối mảng danh sách lưu trữ nội bộ
-<span class="cstat-no" title="statement not covered" >    this._domainEvents.push(domainEvent);</span>
+    this._domainEvents.push(domainEvent);
     // Đăng ký aggregate này với lớp quản lý DomainEvents để sẵn sàng gửi đi
-<span class="cstat-no" title="statement not covered" >    DomainEvents.markAggregateForDispatch(this);</span>
+    DomainEvents.markAggregateForDispatch(this);
   }
 &nbsp;
   // Định nghĩa hàm public để làm sạch toàn bộ mảng sự kiện sau khi đã được phân phối thành công
-  public <span class="fstat-no" title="function not covered" >clearEvents(</span>): void {
+  public clearEvents(): void {
     // Thiết lập lại mảng sự kiện miền về trạng thái rỗng
-<span class="cstat-no" title="statement not covered" >    this._domainEvents = [];</span>
+    this._domainEvents = [];
   }
 }
 &nbsp;</pre></td></tr></table></pre>
@@ -166,7 +166,7 @@ import { DomainEvents } from "./events/DomainEvents";
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-06-29T00:05:44.550Z
+                at 2026-07-16T21:35:59.873Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

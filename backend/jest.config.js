@@ -6,13 +6,20 @@ module.exports = {
   // Môi trường chạy test là Node.js
   testEnvironment: "node",
 
-  // Xác định vị trí các file test: nằm trong thư mục src và tests, có đuôi .test.ts hoặc .spec.ts
-  testMatch: [
-    "**/src/**/*.test.ts",
-    "**/src/**/*.spec.ts",
-    "**/tests/**/*.test.ts",
-    "**/tests/**/*.spec.ts"
+  // Cấu hình các thư mục chứa code và test
+  roots: [
+    "<rootDir>/src",
+    "<rootDir>/../tests/backend"
   ],
+
+  // Xác định vị trí các file test: nằm trong thư mục tests cấp độ root, có đuôi .test.ts hoặc .spec.ts
+  testMatch: [
+    "<rootDir>/../tests/backend/**/*.test.ts",
+    "<rootDir>/../tests/backend/**/*.spec.ts"
+  ],
+
+  // Cấu hình các thư mục tìm kiếm module/node_modules
+  moduleDirectories: ["node_modules", "<rootDir>/node_modules"],
 
   // Tự động dọn dẹp mock giữa các lượt test để không bị ảnh hưởng lẫn nhau
   clearMocks: true,

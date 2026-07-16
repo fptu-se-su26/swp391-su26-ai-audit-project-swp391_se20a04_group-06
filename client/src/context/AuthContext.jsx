@@ -1,5 +1,7 @@
 /* oxlint-disable react/only-export-components */
-import React, { createContext, useState, useEffect, useContext } from "react";
+import React, { createContext, useEffect, useContext } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { setUser, setLoading, clearUser } from "../store/slices/authSlice";
 import { apiAuth } from "../services/api";
 
 const AuthContext = createContext();
@@ -14,8 +16,9 @@ function normalizeUser(userData) {
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const user = useSelector((state) => state.auth.user);
+  const loading = useSelector((state) => state.auth.loading);
+  const dispatch = useDispatch();
   const apiOnline = true;
 
   useEffect(() => {
@@ -24,34 +27,34 @@ export function AuthProvider({ children }) {
         const data = await apiAuth.getProfile();
         if (data && data.id) {
           const normalized = normalizeUser(data);
-          setUser(normalized);
+          dispatch(setUser(normalized));
           localStorage.setItem("haisan-user", JSON.stringify(normalized));
         }
       } catch {
-        setUser(null);
+        dispatch(clearUser());
         localStorage.removeItem("haisan-user");
         localStorage.removeItem("haisan-token");
       } finally {
-        setLoading(false);
+        dispatch(setLoading(false));
       }
     }
     restoreSession();
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     const clearExpiredSession = () => {
-      setUser(null);
+      dispatch(clearUser());
       localStorage.removeItem("haisan-user");
       localStorage.removeItem("haisan-token");
     };
     window.addEventListener("haisan:session-expired", clearExpiredSession);
     return () =>
       window.removeEventListener("haisan:session-expired", clearExpiredSession);
-  }, []);
+  }, [dispatch]);
 
   const login = (userData) => {
     const normalized = normalizeUser(userData);
-    setUser(normalized);
+    dispatch(setUser(normalized));
     localStorage.setItem("haisan-user", JSON.stringify(normalized));
   };
 
@@ -59,13 +62,18 @@ export function AuthProvider({ children }) {
     try {
       await apiAuth.logout();
     } catch {}
-    setUser(null);
+    dispatch(clearUser());
     localStorage.removeItem("haisan-user");
     localStorage.removeItem("haisan-token");
   };
 
+  const handleSetUser = (userData) => {
+    const normalized = normalizeUser(userData);
+    dispatch(setUser(normalized));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, setUser, login, logout, apiOnline, loading }}>
+    <AuthContext.Provider value={{ user, setUser: handleSetUser, login, logout, apiOnline, loading }}>
       {children}
     </AuthContext.Provider>
   );

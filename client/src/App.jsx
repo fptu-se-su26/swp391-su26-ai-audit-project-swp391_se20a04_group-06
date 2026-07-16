@@ -3,6 +3,8 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { AuthProvider } from "./context/AuthContext";
 import { SocketProvider } from "./context/SocketContext";
 import { ConfirmProvider } from "./context/ConfirmContext";
+import { Provider } from "react-redux";
+import { store } from "./store";
 
 import Footer from "./components/Footer";
 import FloatingContact from "./components/FloatingContact";
@@ -109,15 +111,17 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <SocketProvider>
-        <ConfirmProvider>
-          <BrowserRouter>
-            <AppContent />
-          </BrowserRouter>
-        </ConfirmProvider>
-      </SocketProvider>
-    </AuthProvider>
+    <Provider store={store}>
+      <AuthProvider>
+        <SocketProvider>
+          <ConfirmProvider>
+            <BrowserRouter>
+              <AppContent />
+            </BrowserRouter>
+          </ConfirmProvider>
+        </SocketProvider>
+      </AuthProvider>
+    </Provider>
   );
 }
 

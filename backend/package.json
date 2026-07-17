@@ -8,9 +8,9 @@
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/app.js",
-    "test": "jest",
+    "test": "jest --runInBand --forceExit --coverage=false",
     "test:watch": "jest --watch",
-    "test:cov": "jest --coverage --forceExit",
+    "test:cov": "jest --runInBand --forceExit --coverage",
     "prepare": "husky"
   },
   "dependencies": {

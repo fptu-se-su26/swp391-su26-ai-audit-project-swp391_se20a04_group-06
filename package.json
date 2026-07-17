@@ -6,7 +6,10 @@
     "test:backend": "npm run test --prefix backend",
     "test:frontend": "npm run test:unit --prefix client",
     "test:e2e": "npx playwright test",
-    "test:all": "npm run test:backend && npm run test:frontend && npm run test:e2e"
+    "test:all": "npm run test:build && npm run test:backend && npm run test:frontend",
+    "test:build": "npm run build --prefix backend && npm run build --prefix client",
+    "test:e2e:backend": "E2E_WITH_BACKEND=true npx playwright test",
+    "test:full": "npm run test:all && npm run test:e2e"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1"

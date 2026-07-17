@@ -25,7 +25,7 @@ module.exports = {
   clearMocks: true,
 
   // Cấu hình báo cáo độ bao phủ (Coverage) nếu cần
-  collectCoverage: true,
+  collectCoverage: false,
   coverageDirectory: "coverage",
   coverageReporters: ["text", "lcov"],
 

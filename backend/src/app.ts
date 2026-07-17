@@ -408,14 +408,17 @@ process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 // Lắng nghe tín hiệu SIGINT (yêu cầu tắt tiến trình khi nhấn Ctrl+C ở terminal)
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
-// Gọi hàm khởi chạy bootstrap và bắt lỗi nếu quá trình khởi động bị lỗi nghiêm trọng
-bootstrap().catch((err) => {
-  // Ghi log lỗi bootstrap thất bại
-  logger.error(`[CRITICAL] Bootstrap failed: ${err.message}`, {
-    stack: err.stack,
+// Chỉ khởi động hạ tầng khi app.ts được chạy trực tiếp. Khi module được import
+// bởi Jest/Supertest, khối này không chạy nên test không mở MongoDB, Redis,
+// Socket.IO, cron job hoặc cổng HTTP ngoài ý muốn.
+if (require.main === module) {
+  bootstrap().catch((err) => {
+    logger.error(`[CRITICAL] Bootstrap failed: ${err.message}`, {
+      stack: err.stack,
+    });
+    process.exit(1);
   });
-  process.exit(1);
-});
+}
 
-// Xuất ra app và server để phục vụ cho viết kiểm thử tích hợp (integration tests)
-export { app, server };
+// Xuất các thành phần cần thiết cho kiểm thử và tái sử dụng trong runtime.
+export { app, server, bootstrap, gracefulShutdown };

@@ -12,6 +12,9 @@ const mongoose_1 = __importDefault(require("mongoose"));
 exports.broadcastLogRepository = {
     // Phương thức bất đồng bộ tạo mới một bản ghi lịch sử phát sóng thông báo từ quản trị viên
     async create(data) {
+        if (!data.adminId || !mongoose_1.default.Types.ObjectId.isValid(data.adminId)) {
+            throw new Error("Mã quản trị viên (adminId) không hợp lệ");
+        }
         // Khởi tạo một đối tượng tài liệu BroadcastLog mới từ dữ liệu đầu vào
         const log = new BroadcastLog_1.BroadcastLog({
             // Ép kiểu chuỗi adminId sang ObjectId của MongoDB để lưu trữ đúng định dạng quan hệ

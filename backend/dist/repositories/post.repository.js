@@ -1,6 +1,11 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.postRepository = void 0;
+// Import thư viện mongoose để thực hiện kiểm tra kiểu dữ liệu ObjectId của MongoDB
+const mongoose_1 = __importDefault(require("mongoose"));
 // Import mô hình Mongoose Post để truy vấn trực tiếp cơ sở dữ liệu MongoDB
 const Post_1 = require("../models/Post");
 // Import lớp MongoosePostRepository ở tầng hạ tầng của DDD để thực thi các nghiệp vụ lưu/xóa thực thể
@@ -34,11 +39,15 @@ exports.postRepository = {
     },
     // Tìm kiếm bài viết theo ID
     async findById(id) {
+        if (!id || !mongoose_1.default.Types.ObjectId.isValid(id))
+            return null;
         // Gọi phương thức findById của Mongoose model để tìm kiếm tài liệu
         return Post_1.Post.findById(id);
     },
     // Tìm kiếm bài viết theo ID và đồng thời tự động tăng chỉ số lượt xem (viewCount) thêm 1 đơn vị
     async findByIdAndIncrementView(id) {
+        if (!id || !mongoose_1.default.Types.ObjectId.isValid(id))
+            return null;
         // Tìm kiếm và cập nhật tài liệu
         return Post_1.Post.findByIdAndUpdate(id, 
         // Tăng trường viewCount thêm 1

@@ -39,8 +39,8 @@ const productBodyFields = {
     origin: zod_1.z.string().optional(),
     // Ngày hết hạn: Trường văn bản tùy chọn
     expiryDate: zod_1.z.string().optional(),
-    // Khối lượng còn lại: Tiền xử lý chuyển đổi số, phải là số dương và là tùy chọn
-    remainingWeight: zod_1.z.preprocess((val) => (val !== undefined ? Number(val) : undefined), zod_1.z.number().positive("Khối lượng còn lại phải lớn hơn 0").optional()),
+    // Khối lượng còn lại: Tiền xử lý chuyển đổi số, phải không âm và là tùy chọn
+    remainingWeight: zod_1.z.preprocess((val) => (val !== undefined ? Number(val) : undefined), zod_1.z.number().nonnegative("Khối lượng còn lại không được nhỏ hơn 0").optional()),
     // Trạng thái mẻ hàng: Chỉ chấp nhận "Active", "Expired" hoặc "Deleted"
     status: zod_1.z.enum(["Active", "Expired", "Deleted"]).optional(),
     // Danh sách mảng hình ảnh mẻ hàng: Tùy chọn

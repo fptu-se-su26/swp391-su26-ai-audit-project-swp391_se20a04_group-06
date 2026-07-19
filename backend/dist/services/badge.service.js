@@ -1,8 +1,12 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateUserBadges = updateUserBadges;
 // Import đối tượng userRepository để cập nhật thông tin danh sách huy hiệu của người dùng
 const user_repository_1 = require("../repositories/user.repository");
+const mongoose_1 = __importDefault(require("mongoose"));
 // Import đối tượng productRepository để đếm số lượng tin đăng bán hải sản
 const product_repository_1 = require("../repositories/product.repository");
 // Import đối tượng reviewRepository để tính toán thống kê đánh giá sao và đếm số lượng đánh giá gửi đi
@@ -42,7 +46,7 @@ async function updateUserBadges(userId) {
         // 3. Huy hiệu "Đệ nhất mẻ tươi": Khi người bán được đánh giá trung bình từ 4.5 sao trở lên và có ít nhất 1 bài đánh giá
         const reviewStats = await review_repository_1.reviewRepository.aggregate([
             // Lọc các bản ghi review thuộc về người bán này
-            { $match: { sellerId: userId } },
+            { $match: { sellerId: new mongoose_1.default.Types.ObjectId(userIdStr) } },
             {
                 // Nhóm tất cả lại để tính trung bình cộng rating và đếm tổng số bản ghi review
                 $group: {

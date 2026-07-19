@@ -121,6 +121,7 @@ export const messageRepository = {
     // Giới hạn số cuộc hội thoại trả về (mặc định lấy 50 cuộc)
     limit: number = 50,
   ) {
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) return [];
     // Sử dụng tính năng aggregate pipeline của Mongoose để xử lý gộp nhóm phức tạp
     return Message.aggregate([
       // Bước 1: Lọc lấy các tin nhắn mà người dùng này tham gia với tư cách là người gửi hoặc người nhận

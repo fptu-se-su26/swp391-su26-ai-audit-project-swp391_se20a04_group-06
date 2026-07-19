@@ -37,6 +37,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.server = exports.app = void 0;
+exports.bootstrap = bootstrap;
+exports.gracefulShutdown = gracefulShutdown;
 // Nạp các cấu hình biến môi trường từ file .env
 require("dotenv/config");
 // Import thư viện express để xây dựng ứng dụng Web Server API
@@ -395,11 +397,14 @@ async function gracefulShutdown(signal) {
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 // Lắng nghe tín hiệu SIGINT (yêu cầu tắt tiến trình khi nhấn Ctrl+C ở terminal)
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
-// Gọi hàm khởi chạy bootstrap và bắt lỗi nếu quá trình khởi động bị lỗi nghiêm trọng
-bootstrap().catch((err) => {
-    // Ghi log lỗi bootstrap thất bại
-    logger_1.logger.error(`[CRITICAL] Bootstrap failed: ${err.message}`, {
-        stack: err.stack,
+// Chỉ khởi động hạ tầng khi app.ts được chạy trực tiếp. Khi module được import
+// bởi Jest/Supertest, khối này không chạy nên test không mở MongoDB, Redis,
+// Socket.IO, cron job hoặc cổng HTTP ngoài ý muốn.
+if (require.main === module) {
+    bootstrap().catch((err) => {
+        logger_1.logger.error(`[CRITICAL] Bootstrap failed: ${err.message}`, {
+            stack: err.stack,
+        });
+        process.exit(1);
     });
-    process.exit(1);
-});
+}

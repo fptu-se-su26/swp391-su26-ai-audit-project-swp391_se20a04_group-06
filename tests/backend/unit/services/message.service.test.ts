@@ -58,6 +58,13 @@ describe("Unit Test: Message Service (message.service.ts)", () => {
         imageUrl: "hinh_anh_ca.png",
       };
 
+      // Giả lập sản phẩm tồn tại
+      (productRepository.findById as jest.Mock).mockResolvedValue({
+        _id: mockProductId,
+        sellerId: mockReceiverId,
+        status: "Active",
+      });
+
       // Giả lập hàm create lưu trữ tin nhắn trả về bản ghi có content đã được dọn sạch
       (messageRepository.create as jest.Mock).mockResolvedValue({
         _id: "msg_123",

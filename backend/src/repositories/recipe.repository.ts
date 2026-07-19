@@ -4,6 +4,7 @@ import { Recipe as MongooseRecipe } from "../models/Recipe";
 import { MongooseRecipeRepository } from "../modules/recipe/infrastructure/persistence/mongoose/MongooseRecipeRepository";
 // Import thực thể miền Recipe (Domain Entity) để khởi tạo và áp dụng quy tắc nghiệp vụ
 import { Recipe as DomainRecipe } from "../modules/recipe/domain/entities/Recipe";
+import mongoose from "mongoose";
 
 // Khởi tạo đối tượng Repository DDD quản lý thực thể miền Công thức nấu ăn
 const dddRecipeRepository = new MongooseRecipeRepository();
@@ -47,6 +48,7 @@ export const recipeRepository = {
 
   // Phương thức tìm kiếm công thức nấu ăn theo ID
   async findById(id: string) {
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) return null;
     // Tìm kiếm công thức nấu ăn và liên kết thông tin của tác giả
     return MongooseRecipe.findById(id).populate(
       "authorId",
@@ -56,6 +58,7 @@ export const recipeRepository = {
 
   // Phương thức tìm kiếm công thức nấu ăn theo ID và tăng số lượng lượt xem lên 1
   async findByIdAndIncrementView(id: string) {
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) return null;
     // Tìm kiếm theo ID và tăng biến viewCount thêm 1 đơn vị, trả về dữ liệu mới sau khi tăng
     return MongooseRecipe.findByIdAndUpdate(
       id,

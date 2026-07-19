@@ -31,6 +31,7 @@ describe("IAM Module - User Aggregate Root", () => {
       favorites: [],
       // Khởi tạo mảng người theo dõi trống
       following: [],
+      isGoogleLinked: false,
     });
 
     // Khởi tạo một đối tượng User đã bị khóa (isActive: false)
@@ -57,6 +58,7 @@ describe("IAM Module - User Aggregate Root", () => {
       favorites: [],
       // Khởi tạo mảng người theo dõi trống
       following: [],
+      isGoogleLinked: false,
     });
 
     // Kỳ vọng khi gọi hàm checkActive trên tài khoản active sẽ không ném lỗi nào
@@ -91,6 +93,7 @@ describe("IAM Module - User Aggregate Root", () => {
       favorites: [],
       // Danh sách đang theo dõi trống
       following: [],
+      isGoogleLinked: false,
     });
 
     // Kiểm tra cờ Premium lúc đầu phải là false
@@ -137,6 +140,7 @@ describe("IAM Module - User Aggregate Root", () => {
       favorites: [],
       // Mảng người đang theo dõi trống
       following: [],
+      isGoogleLinked: false,
     });
 
     // Kỳ vọng khi truyền tên chứa toàn khoảng trắng "   " sẽ ném lỗi thông báo tên không được bỏ trống

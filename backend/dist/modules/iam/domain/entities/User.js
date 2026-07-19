@@ -107,6 +107,12 @@ class User extends AggregateRoot_1.AggregateRoot {
         this.props.following = this.props.following.filter((id) => id !== sellerId);
     }
     /**
+     * THIẾT LẬP LIÊN KẾT GOOGLE OAUTH
+     */
+    linkGoogle() {
+        this.props.isGoogleLinked = true;
+    }
+    /**
      * CHUYỂN ĐỔI THÀNH ĐỐI TƯỢNG DATA PROPERTIES TRƠN (DTO/Props)
      * Phục vụ cho việc mapping lưu trữ xuống database hoặc chuyển đổi giữa các tầng kiến trúc
      */
@@ -124,6 +130,7 @@ class User extends AggregateRoot_1.AggregateRoot {
             badges: this.props.badges,
             favorites: this.props.favorites,
             following: this.props.following,
+            isGoogleLinked: this.props.isGoogleLinked || false,
         };
     }
     // CÁC HÀM GETTER ĐỂ TRUY XUẤT CÁC THUỘC TÍNH KHÔNG CHO PHÉP SỬA TRỰC TIẾP TỪ BÊN NGOÀI
@@ -138,5 +145,6 @@ class User extends AggregateRoot_1.AggregateRoot {
     get badges() { return this.props.badges; }
     get favorites() { return this.props.favorites; }
     get following() { return this.props.following; }
+    get isGoogleLinked() { return this.props.isGoogleLinked; }
 }
 exports.User = User;

@@ -32,6 +32,8 @@ const userSchema = new mongoose_1.Schema({
     following: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "User" }],
     // Cấu hình trường isPremium: kiểu boolean, mặc định là tài khoản thường (false)
     isPremium: { type: Boolean, default: false },
+    // Cấu hình trường isGoogleLinked: kiểu boolean, mặc định là false
+    isGoogleLinked: { type: Boolean, default: false },
     // Cấu hình trường badges: mảng chứa danh sách danh hiệu dạng chuỗi
     badges: [{ type: String }],
 }, 

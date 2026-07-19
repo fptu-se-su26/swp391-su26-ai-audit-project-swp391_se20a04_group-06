@@ -17,19 +17,21 @@ export const favoriteService = {
     if (!user) throw new HttpError(404, "Không tìm thấy người dùng");
 
     // Chuẩn hóa và làm sạch cấu trúc dữ liệu của các sản phẩm yêu thích trước khi trả về Client
-    return (user.favorites as any[]).map((p) => ({
-      id: p._id, // ID sản phẩm
-      name: p.name, // Tên sản phẩm
-      price: p.price, // Giá bán sản phẩm
-      type: p.type, // Loại sản phẩm (Fresh/Dried)
-      status: p.status, // Trạng thái bài đăng sản phẩm
-      remainingWeight: p.remainingWeight, // Khối lượng sản phẩm còn lại
-      viewCount: p.viewCount, // Số lượt xem
-      sellerName: p.sellerId?.name || "Một ngư dân", // Tên của người bán hàng (ngư dân)
-      sellerIsVerified: p.sellerId?.isVerified ? 1 : 0, // Trả về 1 nếu người bán đã được xác minh tích xanh, ngược lại 0
-      coverImg: p.images?.[0] || null, // Ảnh bìa sản phẩm (ảnh đầu tiên hoặc null nếu không có)
-      savedAt: p.createdAt, // Thời gian lưu bài đăng (hoặc tạo sản phẩm)
-    }));
+    return (user.favorites as any[])
+      .filter((p) => p !== null && p !== undefined)
+      .map((p) => ({
+        id: p._id, // ID sản phẩm
+        name: p.name, // Tên sản phẩm
+        price: p.price, // Giá bán sản phẩm
+        type: p.type, // Loại sản phẩm (Fresh/Dried)
+        status: p.status, // Trạng thái bài đăng sản phẩm
+        remainingWeight: p.remainingWeight, // Khối lượng sản phẩm còn lại
+        viewCount: p.viewCount, // Số lượt xem
+        sellerName: p.sellerId?.name || "Một ngư dân", // Tên của người bán hàng (ngư dân)
+        sellerIsVerified: p.sellerId?.isVerified ? 1 : 0, // Trả về 1 nếu người bán đã được xác minh tích xanh, ngược lại 0
+        coverImg: p.images?.[0] || null, // Ảnh bìa sản phẩm (ảnh đầu tiên hoặc null nếu không có)
+        savedAt: p.createdAt, // Thời gian lưu bài đăng (hoặc tạo sản phẩm)
+      }));
   },
 
   // Nghiệp vụ bật hoặc tắt trạng thái yêu thích một sản phẩm dựa trên productId

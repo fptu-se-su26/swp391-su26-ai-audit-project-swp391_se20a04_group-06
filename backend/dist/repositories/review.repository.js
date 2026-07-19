@@ -1,10 +1,14 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.reviewRepository = void 0;
 // Import mô hình Review và kiểu IReview để tương tác dữ liệu đánh giá sản phẩm
 const Review_1 = require("../models/Review");
 // Import mô hình Message để kiểm tra tương tác giữa người mua và người bán
 const Message_1 = require("../models/Message");
+const mongoose_1 = __importDefault(require("mongoose"));
 // Xuất ra đối tượng reviewRepository chứa các phương thức tương tác cơ sở dữ liệu cho phần đánh giá/review
 exports.reviewRepository = {
     // Kiểm tra xem người mua và người bán đã từng chat (tương tác) với nhau về sản phẩm đó chưa
@@ -15,6 +19,12 @@ exports.reviewRepository = {
     buyerId, 
     // ID của người bán
     sellerId) {
+        if (!productId || !mongoose_1.default.Types.ObjectId.isValid(productId))
+            return false;
+        if (!buyerId || !mongoose_1.default.Types.ObjectId.isValid(buyerId))
+            return false;
+        if (!sellerId || !mongoose_1.default.Types.ObjectId.isValid(sellerId))
+            return false;
         // Trả về true nếu tồn tại ít nhất một tin nhắn có liên quan đến sản phẩm này giữa hai người, ngược lại trả về false
         return !!(await Message_1.Message.exists({
             productId,
@@ -31,12 +41,16 @@ exports.reviewRepository = {
     reviewerId, 
     // ID sản phẩm được đánh giá
     productId) {
+        if (!reviewerId || !mongoose_1.default.Types.ObjectId.isValid(reviewerId))
+            return false;
+        if (!productId || !mongoose_1.default.Types.ObjectId.isValid(productId))
+            return false;
         // Tìm kiếm xem có đánh giá nào khớp với reviewerId và productId không, ép kiểu về Boolean
         return !!(await Review_1.Review.findOne({ reviewerId, productId }));
     },
     // Tìm kiếm một tài liệu đánh giá dựa theo điều kiện lọc
     async findOne(query) {
-        // Thực hiện tìm kiếm và trả về kết quả
+        // Tìm kiếm một tài liệu đánh giá dựa theo điều kiện lọc
         return Review_1.Review.findOne(query);
     },
     // Đếm tổng số lượng đánh giá khớp với bộ lọc
@@ -65,6 +79,9 @@ exports.reviewRepository = {
     },
     // Lấy danh sách đánh giá của một người bán có phân trang
     async findBySeller(sellerId, skip, limit) {
+        if (!sellerId || !mongoose_1.default.Types.ObjectId.isValid(sellerId)) {
+            return { rows: [], total: 0 };
+        }
         // Chạy song song lệnh tìm kiếm danh sách đánh giá và đếm tổng số lượng đánh giá của người bán này
         const [rows, total] = await Promise.all([
             // Tìm kiếm đánh giá của người bán cụ thể

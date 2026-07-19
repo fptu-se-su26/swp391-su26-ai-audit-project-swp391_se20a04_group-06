@@ -38,12 +38,14 @@ export const postRepository = {
 
   // Tìm kiếm bài viết theo ID
   async findById(id: string) {
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) return null;
     // Gọi phương thức findById của Mongoose model để tìm kiếm tài liệu
     return MongoosePost.findById(id);
   },
 
   // Tìm kiếm bài viết theo ID và đồng thời tự động tăng chỉ số lượt xem (viewCount) thêm 1 đơn vị
   async findByIdAndIncrementView(id: string) {
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) return null;
     // Tìm kiếm và cập nhật tài liệu
     return MongoosePost.findByIdAndUpdate(
       id,

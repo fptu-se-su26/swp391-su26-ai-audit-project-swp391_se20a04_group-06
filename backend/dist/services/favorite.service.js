@@ -22,7 +22,9 @@ exports.favoriteService = {
         if (!user)
             throw new HttpError_1.HttpError(404, "Không tìm thấy người dùng");
         // Chuẩn hóa và làm sạch cấu trúc dữ liệu của các sản phẩm yêu thích trước khi trả về Client
-        return user.favorites.map((p) => ({
+        return user.favorites
+            .filter((p) => p !== null && p !== undefined)
+            .map((p) => ({
             id: p._id, // ID sản phẩm
             name: p.name, // Tên sản phẩm
             price: p.price, // Giá bán sản phẩm

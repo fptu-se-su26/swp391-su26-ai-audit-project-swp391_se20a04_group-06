@@ -1,4 +1,7 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.recipeRepository = void 0;
 // Import mô hình Recipe của Mongoose để thực hiện các câu lệnh truy vấn cơ sở dữ liệu MongoDB
@@ -7,6 +10,7 @@ const Recipe_1 = require("../models/Recipe");
 const MongooseRecipeRepository_1 = require("../modules/recipe/infrastructure/persistence/mongoose/MongooseRecipeRepository");
 // Import thực thể miền Recipe (Domain Entity) để khởi tạo và áp dụng quy tắc nghiệp vụ
 const Recipe_2 = require("../modules/recipe/domain/entities/Recipe");
+const mongoose_1 = __importDefault(require("mongoose"));
 // Khởi tạo đối tượng Repository DDD quản lý thực thể miền Công thức nấu ăn
 const dddRecipeRepository = new MongooseRecipeRepository_1.MongooseRecipeRepository();
 /**
@@ -46,11 +50,15 @@ exports.recipeRepository = {
     },
     // Phương thức tìm kiếm công thức nấu ăn theo ID
     async findById(id) {
+        if (!id || !mongoose_1.default.Types.ObjectId.isValid(id))
+            return null;
         // Tìm kiếm công thức nấu ăn và liên kết thông tin của tác giả
         return Recipe_1.Recipe.findById(id).populate("authorId", "name avatar isVerified role");
     },
     // Phương thức tìm kiếm công thức nấu ăn theo ID và tăng số lượng lượt xem lên 1
     async findByIdAndIncrementView(id) {
+        if (!id || !mongoose_1.default.Types.ObjectId.isValid(id))
+            return null;
         // Tìm kiếm theo ID và tăng biến viewCount thêm 1 đơn vị, trả về dữ liệu mới sau khi tăng
         return Recipe_1.Recipe.findByIdAndUpdate(id, { $inc: { viewCount: 1 } }, { new: true }).populate("authorId", "name avatar isVerified role"); // Liên kết thông tin tác giả
     },

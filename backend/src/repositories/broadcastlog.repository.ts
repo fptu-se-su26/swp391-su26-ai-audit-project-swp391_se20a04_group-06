@@ -16,6 +16,9 @@ export const broadcastLogRepository = {
     // Số lượng người dùng đã gửi thành công
     sentCount: number;
   }): Promise<IBroadcastLog> {
+    if (!data.adminId || !mongoose.Types.ObjectId.isValid(data.adminId)) {
+      throw new Error("Mã quản trị viên (adminId) không hợp lệ");
+    }
     // Khởi tạo một đối tượng tài liệu BroadcastLog mới từ dữ liệu đầu vào
     const log = new BroadcastLog({
       // Ép kiểu chuỗi adminId sang ObjectId của MongoDB để lưu trữ đúng định dạng quan hệ

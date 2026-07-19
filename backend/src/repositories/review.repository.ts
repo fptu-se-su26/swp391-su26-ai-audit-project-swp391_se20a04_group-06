@@ -2,6 +2,7 @@
 import { Review, IReview } from "../models/Review";
 // Import mô hình Message để kiểm tra tương tác giữa người mua và người bán
 import { Message } from "../models/Message";
+import mongoose from "mongoose";
 
 // Xuất ra đối tượng reviewRepository chứa các phương thức tương tác cơ sở dữ liệu cho phần đánh giá/review
 export const reviewRepository = {
@@ -14,6 +15,9 @@ export const reviewRepository = {
     // ID của người bán
     sellerId: string,
   ): Promise<boolean> {
+    if (!productId || !mongoose.Types.ObjectId.isValid(productId)) return false;
+    if (!buyerId || !mongoose.Types.ObjectId.isValid(buyerId)) return false;
+    if (!sellerId || !mongoose.Types.ObjectId.isValid(sellerId)) return false;
     // Trả về true nếu tồn tại ít nhất một tin nhắn có liên quan đến sản phẩm này giữa hai người, ngược lại trả về false
     return !!(await Message.exists({
       productId,
@@ -32,13 +36,15 @@ export const reviewRepository = {
     // ID sản phẩm được đánh giá
     productId: string,
   ): Promise<boolean> {
+    if (!reviewerId || !mongoose.Types.ObjectId.isValid(reviewerId)) return false;
+    if (!productId || !mongoose.Types.ObjectId.isValid(productId)) return false;
     // Tìm kiếm xem có đánh giá nào khớp với reviewerId và productId không, ép kiểu về Boolean
     return !!(await Review.findOne({ reviewerId, productId }));
   },
 
   // Tìm kiếm một tài liệu đánh giá dựa theo điều kiện lọc
   async findOne(query: any): Promise<IReview | null> {
-    // Thực hiện tìm kiếm và trả về kết quả
+    // Tìm kiếm một tài liệu đánh giá dựa theo điều kiện lọc
     return Review.findOne(query);
   },
 
@@ -85,6 +91,9 @@ export const reviewRepository = {
 
   // Lấy danh sách đánh giá của một người bán có phân trang
   async findBySeller(sellerId: string, skip: number, limit: number) {
+    if (!sellerId || !mongoose.Types.ObjectId.isValid(sellerId)) {
+      return { rows: [], total: 0 };
+    }
     // Chạy song song lệnh tìm kiếm danh sách đánh giá và đếm tổng số lượng đánh giá của người bán này
     const [rows, total] = await Promise.all([
       // Tìm kiếm đánh giá của người bán cụ thể

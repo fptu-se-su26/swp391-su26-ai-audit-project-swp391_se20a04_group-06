@@ -31,6 +31,7 @@ class UserMapper {
             // Chuyển đổi mảng các ObjectId trong DB thành mảng các chuỗi string ID ở tầng Domain để độc lập với DB loại nào
             favorites: (mongooseDoc.favorites || []).map((id) => id.toString()),
             following: (mongooseDoc.following || []).map((id) => id.toString()),
+            isGoogleLinked: !!mongooseDoc.isGoogleLinked,
         }, mongooseDoc._id.toString() // Gán ID thô từ MongoDB làm ID định danh của thực thể Domain
         );
     }
@@ -51,6 +52,7 @@ class UserMapper {
             avatar: props.avatar,
             isPremium: props.isPremium,
             badges: props.badges,
+            isGoogleLinked: props.isGoogleLinked,
             // Chuyển đổi ngược mảng ID dạng chuỗi (string) thành kiểu ObjectId của Mongoose trước khi ghi vào MongoDB
             favorites: props.favorites.map((id) => new mongoose_1.default.Types.ObjectId(id)),
             following: props.following.map((id) => new mongoose_1.default.Types.ObjectId(id)),

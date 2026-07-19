@@ -74,6 +74,8 @@ export const boatLogRepository = {
 
   // Thêm lượt thích của người dùng vào bài nhật ký cabin
   async addLike(logId: string, userId: string) {
+    if (!logId || !mongoose.Types.ObjectId.isValid(logId)) return null;
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) return null;
     // Tìm kiếm thực thể Domain BoatLog thông qua DDD repository để thực hiện nghiệp vụ
     const domainLog = await dddBoatLogRepository.findById(logId);
     // Nếu không tìm thấy thực thể tương ứng, trả về null
@@ -92,6 +94,8 @@ export const boatLogRepository = {
 
   // Xóa lượt thích của người dùng khỏi bài nhật ký cabin
   async removeLike(logId: string, userId: string) {
+    if (!logId || !mongoose.Types.ObjectId.isValid(logId)) return null;
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) return null;
     // Tìm kiếm thực thể Domain BoatLog thông qua DDD repository
     const domainLog = await dddBoatLogRepository.findById(logId);
     // Nếu không tìm thấy thực thể tương ứng, trả về null
@@ -122,6 +126,7 @@ export const boatLogRepository = {
 
   // Xóa một nhật ký cabin theo ID
   async delete(id: string) {
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) return false;
     // Tìm kiếm thực thể miền của nhật ký cabin qua DDD repository
     const domainLog = await dddBoatLogRepository.findById(id);
     // Nếu thực thể miền có tồn tại trong hệ thống

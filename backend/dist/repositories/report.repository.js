@@ -12,6 +12,10 @@ const mongoose_1 = __importDefault(require("mongoose"));
 exports.reportRepository = {
     // Tìm báo cáo sai phạm dựa vào ID người báo cáo và ID sản phẩm
     async findByReporterAndProduct(reporterId, productId) {
+        if (!reporterId || !mongoose_1.default.Types.ObjectId.isValid(reporterId))
+            return null;
+        if (!productId || !mongoose_1.default.Types.ObjectId.isValid(productId))
+            return null;
         return Report_1.Report.findOne({
             reporterId: new mongoose_1.default.Types.ObjectId(reporterId),
             productId: new mongoose_1.default.Types.ObjectId(productId),
@@ -19,6 +23,10 @@ exports.reportRepository = {
     },
     // Tìm báo cáo sai phạm dựa vào ID người báo cáo và ID bài viết
     async findByReporterAndPost(reporterId, postId) {
+        if (!reporterId || !mongoose_1.default.Types.ObjectId.isValid(reporterId))
+            return null;
+        if (!postId || !mongoose_1.default.Types.ObjectId.isValid(postId))
+            return null;
         return Report_1.Report.findOne({
             reporterId: new mongoose_1.default.Types.ObjectId(reporterId),
             postId: new mongoose_1.default.Types.ObjectId(postId),
@@ -26,6 +34,10 @@ exports.reportRepository = {
     },
     // Tìm báo cáo sai phạm dựa vào ID người báo cáo và ID công thức
     async findByReporterAndRecipe(reporterId, recipeId) {
+        if (!reporterId || !mongoose_1.default.Types.ObjectId.isValid(reporterId))
+            return null;
+        if (!recipeId || !mongoose_1.default.Types.ObjectId.isValid(recipeId))
+            return null;
         return Report_1.Report.findOne({
             reporterId: new mongoose_1.default.Types.ObjectId(reporterId),
             recipeId: new mongoose_1.default.Types.ObjectId(recipeId),
@@ -65,6 +77,8 @@ exports.reportRepository = {
     },
     // Tìm kiếm báo cáo sai phạm theo ID
     async findById(reportId) {
+        if (!reportId || !mongoose_1.default.Types.ObjectId.isValid(reportId))
+            return null;
         return Report_1.Report.findById(reportId);
     },
     // Tạo mới một báo cáo sai phạm
@@ -81,6 +95,8 @@ exports.reportRepository = {
     },
     // Xóa các báo cáo sai phạm liên quan đến một sản phẩm cụ thể
     async deleteByProductId(productId) {
+        if (!productId || !mongoose_1.default.Types.ObjectId.isValid(productId))
+            return null;
         // Gọi phương thức deleteMany để xóa tất cả các báo cáo có trường productId khớp với giá trị truyền vào
         return Report_1.Report.deleteMany({
             productId: new mongoose_1.default.Types.ObjectId(productId),
@@ -88,6 +104,8 @@ exports.reportRepository = {
     },
     // Xóa các báo cáo sai phạm được gửi bởi một người dùng cụ thể
     async deleteByReporterId(reporterId) {
+        if (!reporterId || !mongoose_1.default.Types.ObjectId.isValid(reporterId))
+            return null;
         // Gọi phương thức deleteMany để xóa tất cả các báo cáo có trường reporterId khớp với giá trị truyền vào
         return Report_1.Report.deleteMany({
             reporterId: new mongoose_1.default.Types.ObjectId(reporterId),

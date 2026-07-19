@@ -181,17 +181,25 @@ exports.authService = {
             if (user.isActive === false) {
                 throw new HttpError_1.HttpError(403, "Tài khoản đã bị khoá. Vui lòng liên hệ admin.");
             }
-            // Tự động nâng cấp quyền Admin cho tài khoản mock Google có chữ admin trong email (phục vụ test)
-            if (isMockToken &&
-                email.toLowerCase().includes("admin") &&
-                user.role !== "Admin") {
-                const rawUser = await user_repository_1.userRepository.findRawById(userId);
-                if (rawUser) {
+            // Liên kết Google và tự động nâng cấp quyền Admin nếu là mock admin
+            const rawUser = await user_repository_1.userRepository.findRawById(userId);
+            if (rawUser) {
+                let needsSave = false;
+                if (!rawUser.isGoogleLinked) {
+                    rawUser.isGoogleLinked = true;
+                    needsSave = true;
+                }
+                if (isMockToken &&
+                    email.toLowerCase().includes("admin") &&
+                    rawUser.role !== "Admin") {
                     rawUser.role = "Admin";
                     rawUser.isVerified = true;
+                    needsSave = true;
+                    logger_1.logger.info(`✨ Auto-promoted existing user to Admin: Email=${email}`);
+                }
+                if (needsSave) {
                     await rawUser.save();
                 }
-                logger_1.logger.info(`✨ Auto-promoted existing user to Admin: Email=${email}`);
             }
             // Ghi log đăng nhập thành công
             logger_1.logger.info(`🚪 Existing Google User logged in: ID=${userId}, Email=${email}`);

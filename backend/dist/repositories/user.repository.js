@@ -119,6 +119,7 @@ exports.userRepository = {
             badges: [],
             favorites: [],
             following: [],
+            isGoogleLinked: passwordHash === "google_oauth_no_password_hash_placeholder",
         });
         // Gọi DDD repository để thực hiện kiểm chứng và lưu thực thể miền này xuống database
         await dddUserRepository.save(user);
@@ -127,6 +128,8 @@ exports.userRepository = {
     },
     // Lấy tên của người dùng từ ID
     async getNameById(userId) {
+        if (!userId || !mongoose_1.default.Types.ObjectId.isValid(userId))
+            return null;
         // Tìm kiếm thực thể miền của người dùng bằng ID chuyển sang chuỗi
         const user = await dddUserRepository.findById(userId.toString());
         // Trả về tên người dùng nếu tìm thấy, ngược lại trả về null
@@ -138,6 +141,8 @@ exports.userRepository = {
     userId, 
     // Các trường dữ liệu cho phép cập nhật thông tin hồ sơ
     fields) {
+        if (!userId || !mongoose_1.default.Types.ObjectId.isValid(userId))
+            return;
         // Tìm thực thể miền người dùng thông qua DDD repository
         const user = await dddUserRepository.findById(userId.toString());
         // Nếu không tìm thấy người dùng thì kết thúc sớm
@@ -154,6 +159,8 @@ exports.userRepository = {
     },
     // Cập nhật trạng thái hoạt động (khóa/mở khóa tài khoản) của người dùng
     async updateActiveStatus(userId, isActive) {
+        if (!userId || !mongoose_1.default.Types.ObjectId.isValid(userId))
+            return null;
         // Tìm thực thể miền người dùng bằng ID
         const user = await dddUserRepository.findById(userId);
         // Nếu không tìm thấy, trả về null
@@ -168,6 +175,8 @@ exports.userRepository = {
     },
     // Cập nhật trạng thái xác minh danh tính người dùng
     async updateVerificationStatus(userId, isVerified) {
+        if (!userId || !mongoose_1.default.Types.ObjectId.isValid(userId))
+            return null;
         // Tìm thực thể miền người dùng bằng ID
         const user = await dddUserRepository.findById(userId);
         // Nếu không tìm thấy, trả về null
@@ -182,6 +191,8 @@ exports.userRepository = {
     },
     // Cập nhật danh sách huy hiệu của người dùng
     async updateBadges(userId, badges) {
+        if (!userId || !mongoose_1.default.Types.ObjectId.isValid(userId))
+            return;
         // Tìm thực thể miền người dùng bằng ID
         const user = await dddUserRepository.findById(userId);
         // Nếu không tìm thấy thì kết thúc
@@ -194,6 +205,10 @@ exports.userRepository = {
     },
     // Thêm một sản phẩm vào danh sách sản phẩm yêu thích của người dùng
     async addFavorite(userId, productId) {
+        if (!userId || !mongoose_1.default.Types.ObjectId.isValid(userId))
+            return null;
+        if (!productId || !mongoose_1.default.Types.ObjectId.isValid(productId))
+            return null;
         // Tìm thực thể miền người dùng bằng ID
         const user = await dddUserRepository.findById(userId);
         // Nếu không tìm thấy, trả về null
@@ -208,6 +223,10 @@ exports.userRepository = {
     },
     // Xóa một sản phẩm khỏi danh sách sản phẩm yêu thích của người dùng
     async removeFavorite(userId, productId) {
+        if (!userId || !mongoose_1.default.Types.ObjectId.isValid(userId))
+            return null;
+        if (!productId || !mongoose_1.default.Types.ObjectId.isValid(productId))
+            return null;
         // Tìm thực thể miền người dùng bằng ID
         const user = await dddUserRepository.findById(userId);
         // Nếu không tìm thấy, trả về null
@@ -222,6 +241,8 @@ exports.userRepository = {
     },
     // Lấy chuỗi băm mật khẩu của người dùng từ ID
     async getPasswordHash(userId) {
+        if (!userId || !mongoose_1.default.Types.ObjectId.isValid(userId))
+            return null;
         // Tìm thực thể miền người dùng bằng ID chuyển sang chuỗi
         const user = await dddUserRepository.findById(userId.toString());
         // Trả về mã băm mật khẩu nếu tìm thấy thực thể miền, ngược lại trả về null
@@ -229,6 +250,8 @@ exports.userRepository = {
     },
     // Cập nhật mật khẩu mới cho người dùng
     async updatePassword(userId, newHash) {
+        if (!userId || !mongoose_1.default.Types.ObjectId.isValid(userId))
+            return;
         // Tìm thực thể miền người dùng bằng ID chuyển sang chuỗi
         const user = await dddUserRepository.findById(userId.toString());
         // Nếu không tìm thấy thì kết thúc
@@ -241,6 +264,10 @@ exports.userRepository = {
     },
     // Kiểm tra xem người dùng này có đang theo dõi người bán cụ thể không
     async isFollowing(userId, sellerId) {
+        if (!userId || !mongoose_1.default.Types.ObjectId.isValid(userId))
+            return false;
+        if (!sellerId || !mongoose_1.default.Types.ObjectId.isValid(sellerId))
+            return false;
         // Tìm thực thể miền người dùng bằng ID
         const user = await dddUserRepository.findById(userId);
         // Nếu không tìm thấy, trả về false
@@ -251,6 +278,10 @@ exports.userRepository = {
     },
     // Theo dõi một người bán hàng
     async followSeller(userId, sellerId) {
+        if (!userId || !mongoose_1.default.Types.ObjectId.isValid(userId))
+            return;
+        if (!sellerId || !mongoose_1.default.Types.ObjectId.isValid(sellerId))
+            return;
         // Tìm thực thể miền người dùng bằng ID
         const user = await dddUserRepository.findById(userId);
         // Nếu không tìm thấy thì kết thúc
@@ -263,6 +294,10 @@ exports.userRepository = {
     },
     // Hủy theo dõi một người bán hàng
     async unfollowSeller(userId, sellerId) {
+        if (!userId || !mongoose_1.default.Types.ObjectId.isValid(userId))
+            return;
+        if (!sellerId || !mongoose_1.default.Types.ObjectId.isValid(sellerId))
+            return;
         // Tìm thực thể miền người dùng bằng ID
         const user = await dddUserRepository.findById(userId);
         // Nếu không tìm thấy thì kết thúc
@@ -275,6 +310,8 @@ exports.userRepository = {
     },
     // Xóa tài khoản người dùng theo ID
     async deleteById(userId) {
+        if (!userId || !mongoose_1.default.Types.ObjectId.isValid(userId))
+            return null;
         // Tìm thực thể miền người dùng bằng ID
         const user = await dddUserRepository.findById(userId);
         // Nếu không tìm thấy, trả về null

@@ -89,6 +89,7 @@ class GoogleAuthUseCase {
                 badges: [], // Danh sách huy hiệu ban đầu trống rỗng
                 favorites: [], // Danh sách tin yêu thích ban đầu trống rỗng
                 following: [], // Danh sách người đang theo dõi ban đầu trống rỗng
+                isGoogleLinked: true,
             });
             // Lưu thông tin người dùng mới này vào cơ sở dữ liệu MongoDB
             await this.userRepository.save(user);

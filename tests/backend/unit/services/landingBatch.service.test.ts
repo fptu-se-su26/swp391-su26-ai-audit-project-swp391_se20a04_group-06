@@ -2,11 +2,15 @@ import mongoose from "mongoose";
 import { redis } from "../../../../backend/src/config/redis";
 import { LandingBatch } from "../../../../backend/src/models/LandingBatch";
 import { Product } from "../../../../backend/src/models/Product";
+import { User } from "../../../../backend/src/models/User";
 import { landingBatchService } from "../../../../backend/src/services/landingBatch.service";
 
 jest.mock("../../../../backend/src/config/redis", () => ({
   redis: {
     incr: jest.fn().mockResolvedValue(1),
+    get: jest.fn().mockResolvedValue(null),
+    incrby: jest.fn().mockResolvedValue(1),
+    expire: jest.fn().mockResolvedValue(true),
   },
 }));
 
@@ -113,6 +117,13 @@ describe("LandingBatch service", () => {
     jest
       .spyOn(LandingBatch, "findById")
       .mockResolvedValue(batch as any);
+    jest.spyOn(User, "findById").mockReturnValue({
+      lean: jest.fn().mockResolvedValue({
+        _id: ownerId,
+        role: "User",
+        isPremium: false,
+      }),
+    } as any);
     jest.spyOn(Product, "insertMany").mockResolvedValue([
       { _id: new mongoose.Types.ObjectId() },
     ] as any);

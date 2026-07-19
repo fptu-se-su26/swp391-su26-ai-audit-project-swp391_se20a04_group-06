@@ -10,6 +10,8 @@ export const reportRepository = {
     reporterId: string,
     productId: string,
   ): Promise<IReport | null> {
+    if (!reporterId || !mongoose.Types.ObjectId.isValid(reporterId)) return null;
+    if (!productId || !mongoose.Types.ObjectId.isValid(productId)) return null;
     return Report.findOne({
       reporterId: new mongoose.Types.ObjectId(reporterId),
       productId: new mongoose.Types.ObjectId(productId),
@@ -21,6 +23,8 @@ export const reportRepository = {
     reporterId: string,
     postId: string,
   ): Promise<IReport | null> {
+    if (!reporterId || !mongoose.Types.ObjectId.isValid(reporterId)) return null;
+    if (!postId || !mongoose.Types.ObjectId.isValid(postId)) return null;
     return Report.findOne({
       reporterId: new mongoose.Types.ObjectId(reporterId),
       postId: new mongoose.Types.ObjectId(postId),
@@ -32,6 +36,8 @@ export const reportRepository = {
     reporterId: string,
     recipeId: string,
   ): Promise<IReport | null> {
+    if (!reporterId || !mongoose.Types.ObjectId.isValid(reporterId)) return null;
+    if (!recipeId || !mongoose.Types.ObjectId.isValid(recipeId)) return null;
     return Report.findOne({
       reporterId: new mongoose.Types.ObjectId(reporterId),
       recipeId: new mongoose.Types.ObjectId(recipeId),
@@ -80,6 +86,7 @@ export const reportRepository = {
 
   // Tìm kiếm báo cáo sai phạm theo ID
   async findById(reportId: string): Promise<IReport | null> {
+    if (!reportId || !mongoose.Types.ObjectId.isValid(reportId)) return null;
     return Report.findById(reportId);
   },
 
@@ -105,6 +112,7 @@ export const reportRepository = {
 
   // Xóa các báo cáo sai phạm liên quan đến một sản phẩm cụ thể
   async deleteByProductId(productId: string): Promise<any> {
+    if (!productId || !mongoose.Types.ObjectId.isValid(productId)) return null;
     // Gọi phương thức deleteMany để xóa tất cả các báo cáo có trường productId khớp với giá trị truyền vào
     return Report.deleteMany({
       productId: new mongoose.Types.ObjectId(productId) as any,
@@ -113,6 +121,7 @@ export const reportRepository = {
 
   // Xóa các báo cáo sai phạm được gửi bởi một người dùng cụ thể
   async deleteByReporterId(reporterId: string): Promise<any> {
+    if (!reporterId || !mongoose.Types.ObjectId.isValid(reporterId)) return null;
     // Gọi phương thức deleteMany để xóa tất cả các báo cáo có trường reporterId khớp với giá trị truyền vào
     return Report.deleteMany({
       reporterId: new mongoose.Types.ObjectId(reporterId),

@@ -244,19 +244,29 @@ export const authService = {
         );
       }
 
-      // Tự động nâng cấp quyền Admin cho tài khoản mock Google có chữ admin trong email (phục vụ test)
-      if (
-        isMockToken &&
-        email.toLowerCase().includes("admin") &&
-        user.role !== "Admin"
-      ) {
-        const rawUser = await userRepository.findRawById(userId);
-        if (rawUser) {
+      // Liên kết Google và tự động nâng cấp quyền Admin nếu là mock admin
+      const rawUser = await userRepository.findRawById(userId);
+      if (rawUser) {
+        let needsSave = false;
+        if (!rawUser.isGoogleLinked) {
+          rawUser.isGoogleLinked = true;
+          needsSave = true;
+        }
+
+        if (
+          isMockToken &&
+          email.toLowerCase().includes("admin") &&
+          rawUser.role !== "Admin"
+        ) {
           rawUser.role = "Admin";
           rawUser.isVerified = true;
+          needsSave = true;
+          logger.info(`✨ Auto-promoted existing user to Admin: Email=${email}`);
+        }
+
+        if (needsSave) {
           await rawUser.save();
         }
-        logger.info(`✨ Auto-promoted existing user to Admin: Email=${email}`);
       }
 
       // Ghi log đăng nhập thành công

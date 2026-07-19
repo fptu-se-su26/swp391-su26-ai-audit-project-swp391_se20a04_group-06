@@ -67,8 +67,6 @@ const ensureCsrfToken = async (forceRefresh = false) => {
 
 apiClient.interceptors.request.use(
   async (config) => {
-    const token = localStorage.getItem("haisan-token");
-    if (token) config.headers.Authorization = `Bearer ${token}`;
     if (unsafeMethods.has(String(config.method || "get").toLowerCase())) {
       config.headers[CSRF_HEADER_NAME] = await ensureCsrfToken();
     }

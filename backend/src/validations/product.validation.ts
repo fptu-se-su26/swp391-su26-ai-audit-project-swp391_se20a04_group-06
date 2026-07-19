@@ -64,10 +64,10 @@ const productBodyFields = {
   origin: z.string().optional(),
   // Ngày hết hạn: Trường văn bản tùy chọn
   expiryDate: z.string().optional(),
-  // Khối lượng còn lại: Tiền xử lý chuyển đổi số, phải là số dương và là tùy chọn
+  // Khối lượng còn lại: Tiền xử lý chuyển đổi số, phải không âm và là tùy chọn
   remainingWeight: z.preprocess(
     (val) => (val !== undefined ? Number(val) : undefined),
-    z.number().positive("Khối lượng còn lại phải lớn hơn 0").optional(),
+    z.number().nonnegative("Khối lượng còn lại không được nhỏ hơn 0").optional(),
   ),
   // Trạng thái mẻ hàng: Chỉ chấp nhận "Active", "Expired" hoặc "Deleted"
   status: z.enum(["Active", "Expired", "Deleted"] as const).optional(),

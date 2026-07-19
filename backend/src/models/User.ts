@@ -25,6 +25,7 @@ export interface IUser extends Document {
   isPremium: boolean;
   // Mảng lưu danh hiệu/huy hiệu người dùng đạt được (ví dụ: "Sellers", "Top-rated"...) (không bắt buộc)
   badges?: string[];
+  isGoogleLinked?: boolean;
   // Mốc thời gian tự động tạo tài khoản trong DB
   createdAt: Date;
   // Mốc thời gian tự động cập nhật tài khoản trong DB
@@ -61,6 +62,8 @@ const userSchema = new Schema<IUser>(
     following: [{ type: Schema.Types.ObjectId, ref: "User" }],
     // Cấu hình trường isPremium: kiểu boolean, mặc định là tài khoản thường (false)
     isPremium: { type: Boolean, default: false },
+    // Cấu hình trường isGoogleLinked: kiểu boolean, mặc định là false
+    isGoogleLinked: { type: Boolean, default: false },
     // Cấu hình trường badges: mảng chứa danh sách danh hiệu dạng chuỗi
     badges: [{ type: String }],
   },

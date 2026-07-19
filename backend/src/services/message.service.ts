@@ -100,6 +100,15 @@ export const messageService = {
       throw new HttpError(400, "Tin nhắn không được rỗng");
     }
 
+    // Kiểm tra sản phẩm liên kết có tồn tại và không bị xóa hay không
+    const prod = await productRepository.findById(productId);
+    if (!prod) {
+      throw new HttpError(404, "Sản phẩm không tồn tại");
+    }
+    if (prod.status === "Deleted") {
+      throw new HttpError(400, "Không thể gửi tin nhắn cho sản phẩm đã bị xóa");
+    }
+
     // Cắt khoảng trắng dư thừa, làm sạch các thẻ HTML độc hại trong nội dung text và giới hạn tối đa 1000 ký tự
     const cleanContent = content
       ? content
@@ -120,8 +129,6 @@ export const messageService = {
     });
 
     try {
-      // Tìm sản phẩm để xác định tên phòng socket chat thời gian thực
-      const prod = await productRepository.findById(productId);
       if (prod) {
         // Xác định ID người mua
         const isSeller = prod.sellerId.toString() === userId;

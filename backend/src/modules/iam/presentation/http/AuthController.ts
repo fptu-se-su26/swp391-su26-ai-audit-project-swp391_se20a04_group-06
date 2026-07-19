@@ -487,6 +487,13 @@ export async function deletePassword(req: Request, res: Response, next: any) {
       return res.status(404).json({ message: "Không tìm thấy người dùng" });
     }
 
+    // Kiểm tra xem người dùng đã thực sự liên kết với tài khoản Google chưa
+    if (!rawUser.isGoogleLinked) {
+      return res.status(400).json({
+        message: "Bạn chưa liên kết tài khoản Google. Không thể gỡ mật khẩu khi chưa có phương thức đăng nhập thay thế.",
+      });
+    }
+
     // Gán lại placeholder của Google OAuth
     rawUser.passwordHash = "google_oauth_no_password_hash_placeholder";
     await rawUser.save();

@@ -18,6 +18,7 @@ export interface UserProps {
   badges: string[];           // Danh sách danh hiệu/huy hiệu đạt được
   favorites: string[];        // Danh sách ID sản phẩm hải sản yêu thích (thả tim)
   following: string[];        // Danh sách ID những người bán/ngư dân mà người dùng này theo dõi
+  isGoogleLinked: boolean;    // Trạng thái đã liên kết tài khoản Google
 }
 
 /**
@@ -131,6 +132,13 @@ export class User extends AggregateRoot<UserProps> {
   }
 
   /**
+   * THIẾT LẬP LIÊN KẾT GOOGLE OAUTH
+   */
+  public linkGoogle(): void {
+    this.props.isGoogleLinked = true;
+  }
+
+  /**
    * CHUYỂN ĐỔI THÀNH ĐỐI TƯỢNG DATA PROPERTIES TRƠN (DTO/Props)
    * Phục vụ cho việc mapping lưu trữ xuống database hoặc chuyển đổi giữa các tầng kiến trúc
    */
@@ -148,6 +156,7 @@ export class User extends AggregateRoot<UserProps> {
       badges: this.props.badges,
       favorites: this.props.favorites,
       following: this.props.following,
+      isGoogleLinked: this.props.isGoogleLinked || false,
     };
   }
 
@@ -163,5 +172,6 @@ export class User extends AggregateRoot<UserProps> {
   get badges() { return this.props.badges; }
   get favorites() { return this.props.favorites; }
   get following() { return this.props.following; }
+  get isGoogleLinked() { return this.props.isGoogleLinked; }
 }
 

@@ -118,6 +118,7 @@ export const userRepository = {
       badges: [],
       favorites: [],
       following: [],
+      isGoogleLinked: passwordHash === "google_oauth_no_password_hash_placeholder",
     });
     // Gọi DDD repository để thực hiện kiểm chứng và lưu thực thể miền này xuống database
     await dddUserRepository.save(user);

@@ -252,16 +252,58 @@ async function listBatches(
   page: number,
   limit: number,
   includeTopProducts = false,
+  onlyWithActiveProducts = false,
 ) {
   const skip = (page - 1) * limit;
-  const [batches, total] = await Promise.all([
-    LandingBatch.find(filter)
-      .sort({ landingTime: -1, createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    LandingBatch.countDocuments(filter),
-  ]);
+  let batches: any[];
+  let total: number;
+
+  if (onlyWithActiveProducts) {
+    const matchPipeline = [
+      { $match: filter },
+      {
+        $lookup: {
+          from: "products",
+          let: { batchId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$batchId", "$$batchId"] },
+                status: "Active",
+              },
+            },
+            { $project: { _id: 1 } },
+            { $limit: 1 },
+          ],
+          as: "activeProducts",
+        },
+      },
+      { $match: { "activeProducts.0": { $exists: true } } },
+    ];
+
+    const countResult = await LandingBatch.aggregate([
+      ...matchPipeline,
+      { $count: "count" },
+    ]);
+    total = countResult[0]?.count || 0;
+
+    batches = await LandingBatch.aggregate([
+      ...matchPipeline,
+      { $sort: { landingTime: -1, createdAt: -1 } },
+      { $skip: skip },
+      { $limit: limit },
+    ]);
+  } else {
+    [batches, total] = await Promise.all([
+      LandingBatch.find(filter)
+        .sort({ landingTime: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      LandingBatch.countDocuments(filter),
+    ]);
+  }
+
   const batchIds = batches.map((batch) => batch._id);
   const sellerIds = [...new Set(batches.map((batch) => batch.sellerId.toString()))];
   const [statsMap, sellers] = await Promise.all([
@@ -315,12 +357,18 @@ export const landingBatchService = {
     };
     if (query.sellerId) {
       ensureObjectId(query.sellerId, "ID người bán");
-      filter.sellerId = query.sellerId;
+      filter.sellerId = new mongoose.Types.ObjectId(query.sellerId);
     }
     if (typeof query.origin === "string" && query.origin.trim()) {
       filter.origin = { $regex: query.origin.trim(), $options: "i" };
     }
-    return listBatches(filter, page, limit, Boolean(query.marketplace));
+    return listBatches(
+      filter,
+      page,
+      limit,
+      Boolean(query.marketplace),
+      Boolean(query.marketplace),
+    );
   },
 
   async listMarketplace(query: Record<string, any>) {
@@ -436,6 +484,9 @@ export const landingBatchService = {
       throw new HttpError(409, "Chỉ có thể thêm sản phẩm vào vựa đang mở");
     }
 
+    const user = await User.findById(batch.sellerId).lean();
+    if (!user) throw new HttpError(404, "Không tìm thấy người bán");
+
     const documents = rows.map((row) => {
       const totalWeight = Number(row.totalWeight);
       const remainingWeight =
@@ -492,7 +543,41 @@ export const landingBatchService = {
       };
     });
 
-    const products = await Product.insertMany(documents, { ordered: true });
+    const isPremium = Boolean(user.isPremium);
+    const isAdmin = user.role === "Admin";
+    const limitKey = (() => {
+      if (!isPremium && !isAdmin) {
+        const nowVN = new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
+        const dateKey = `${nowVN.getUTCFullYear()}-${String(nowVN.getUTCMonth() + 1).padStart(2, "0")}-${String(nowVN.getUTCDate()).padStart(2, "0")}`;
+        return `product:limit:${batch.sellerId.toString()}:${dateKey}`;
+      }
+      return null;
+    })();
+
+    if (limitKey) {
+      const currentCountStr = await redis.get(limitKey);
+      const currentCount = currentCountStr ? parseInt(currentCountStr, 10) : 0;
+      if (currentCount + documents.length > 5) {
+        throw new HttpError(
+          409,
+          `Bạn đã đăng ${currentCount} sản phẩm hôm nay. Việc thêm ${documents.length} sản phẩm này sẽ vượt quá giới hạn 5 sản phẩm/ngày của tài khoản thường. Vui lòng nâng cấp lên Premium!`
+        );
+      }
+      await redis.incrby(limitKey, documents.length);
+      if (currentCount === 0) {
+        await redis.expire(limitKey, 24 * 3600);
+      }
+    }
+
+    let products;
+    try {
+      products = await Product.insertMany(documents, { ordered: true });
+    } catch (err) {
+      if (limitKey) {
+        await redis.decrby(limitKey, documents.length);
+      }
+      throw err;
+    }
     await LandingBatch.updateOne(
       { _id: batch._id },
       { $set: { updatedAt: new Date() } },

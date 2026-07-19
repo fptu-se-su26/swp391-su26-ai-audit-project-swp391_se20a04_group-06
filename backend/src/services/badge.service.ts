@@ -1,5 +1,6 @@
 // Import đối tượng userRepository để cập nhật thông tin danh sách huy hiệu của người dùng
 import { userRepository } from "../repositories/user.repository";
+import mongoose from "mongoose";
 // Import đối tượng productRepository để đếm số lượng tin đăng bán hải sản
 import { productRepository } from "../repositories/product.repository";
 // Import đối tượng reviewRepository để tính toán thống kê đánh giá sao và đếm số lượng đánh giá gửi đi
@@ -43,7 +44,7 @@ export async function updateUserBadges(userId: any): Promise<string[]> {
     // 3. Huy hiệu "Đệ nhất mẻ tươi": Khi người bán được đánh giá trung bình từ 4.5 sao trở lên và có ít nhất 1 bài đánh giá
     const reviewStats = await reviewRepository.aggregate([
       // Lọc các bản ghi review thuộc về người bán này
-      { $match: { sellerId: userId } },
+      { $match: { sellerId: new mongoose.Types.ObjectId(userIdStr) } },
       {
         // Nhóm tất cả lại để tính trung bình cộng rating và đếm tổng số bản ghi review
         $group: {

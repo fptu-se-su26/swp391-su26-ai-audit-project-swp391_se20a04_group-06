@@ -460,10 +460,23 @@ export const landingBatchService = {
 
   async update(id: string, actor: Actor, body: Record<string, any>) {
     const batch = await assertCanManage(id, actor);
+    const oldStatus = batch.status;
     const payload = toBatchPayload(body);
     delete payload.boatLogId;
     Object.assign(batch, payload);
     await batch.save();
+
+    if (oldStatus !== batch.status && (batch.status === "Closed" || batch.status === "Deleted")) {
+      await Product.updateMany(
+        { batchId: batch._id },
+        { $set: { status: "Deleted" } }
+      );
+      await Promise.all([
+        redis.incr("product:list:version:Fresh").catch(() => null),
+        redis.incr("product:list:version:Dried").catch(() => null),
+      ]);
+    }
+
     return { message: "Cập nhật vựa cá thành công" };
   },
 
@@ -471,6 +484,16 @@ export const landingBatchService = {
     const batch = await assertCanManage(id, actor);
     batch.status = "Deleted";
     await batch.save();
+
+    await Product.updateMany(
+      { batchId: batch._id },
+      { $set: { status: "Deleted" } }
+    );
+    await Promise.all([
+      redis.incr("product:list:version:Fresh").catch(() => null),
+      redis.incr("product:list:version:Dried").catch(() => null),
+    ]);
+
     return { message: "Đã ẩn vựa cá" };
   },
 

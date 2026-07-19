@@ -295,11 +295,20 @@ export function initSocket(server: HttpServer) {
         }
 
         try {
-          // Tìm kiếm thông tin sản phẩm mẻ hàng trong database
+          // Tìm kiếm thông tin sản phẩm mẻ hàng từ database
           const prod = await productRepository.findById(productId);
           // Nếu sản phẩm không tồn tại, báo lỗi về client và kết thúc
           if (!prod) {
             socket.emit("error", { message: "Sản phẩm không tồn tại" });
+            return;
+          }
+
+          // Truy vấn kiểm tra trạng thái tài khoản người nhận tin nhắn trong database
+          const receiver = await userRepository.findRawById(receiverId);
+          if (!receiver || !receiver.isActive) {
+            socket.emit("error", {
+              message: "Người nhận không tồn tại hoặc tài khoản đã bị khóa.",
+            });
             return;
           }
 

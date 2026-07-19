@@ -241,11 +241,19 @@ function initSocket(server) {
                 logger_1.logger.error(`Rate limiter Redis error: ${err.message}`);
             }
             try {
-                // Tìm kiếm thông tin sản phẩm mẻ hàng trong database
+                // Tìm kiếm thông tin sản phẩm mẻ hàng từ database
                 const prod = await product_repository_1.productRepository.findById(productId);
                 // Nếu sản phẩm không tồn tại, báo lỗi về client và kết thúc
                 if (!prod) {
                     socket.emit("error", { message: "Sản phẩm không tồn tại" });
+                    return;
+                }
+                // Truy vấn kiểm tra trạng thái tài khoản người nhận tin nhắn trong database
+                const receiver = await user_repository_1.userRepository.findRawById(receiverId);
+                if (!receiver || !receiver.isActive) {
+                    socket.emit("error", {
+                        message: "Người nhận không tồn tại hoặc tài khoản đã bị khóa.",
+                    });
                     return;
                 }
                 // Kiểm tra xem người dùng gửi tin nhắn hiện tại có phải là người bán mẻ hàng này không

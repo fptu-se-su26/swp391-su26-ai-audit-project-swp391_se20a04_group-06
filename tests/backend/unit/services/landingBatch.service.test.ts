@@ -23,6 +23,10 @@ describe("LandingBatch service", () => {
   const otherUserId = new mongoose.Types.ObjectId();
   const batchId = new mongoose.Types.ObjectId();
 
+  beforeEach(() => {
+    jest.spyOn(Product, "updateMany").mockResolvedValue({ acknowledged: true } as any);
+  });
+
   afterEach(() => {
     jest.restoreAllMocks();
     jest.clearAllMocks();

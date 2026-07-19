@@ -99,30 +99,31 @@ class GoogleAuthUseCase {
         else {
             // Kiểm tra xem tài khoản có đang bị khóa (isActive = false) hay không, nếu khóa sẽ tự động ném ra lỗi 403
             user.checkActive();
+            let needsSave = false;
+            const rawProps = user.toProps();
+            // Nếu tài khoản tồn tại nhưng chưa liên kết Google OAuth, thực hiện liên kết tự động khi đăng nhập Google thành công
+            if (!rawProps.isGoogleLinked) {
+                rawProps.isGoogleLinked = true;
+                needsSave = true;
+                logger_1.logger.info(`🔗 Auto-linked existing User account with Google: Email=${email}`);
+            }
             // Nếu là email admin được chỉ định nhưng tài khoản hiện tại chưa là Admin, nâng cấp ngay lập tức
-            if (isAdminEmail && user.role !== "Admin") {
-                const rawProps = user.toProps();
-                const updatedUser = new User_1.User({
-                    ...rawProps,
-                    role: "Admin",
-                    isVerified: true,
-                }, user.id);
-                user = updatedUser;
-                await this.userRepository.save(user);
+            if (isAdminEmail && rawProps.role !== "Admin") {
+                rawProps.role = "Admin";
+                rawProps.isVerified = true;
+                needsSave = true;
                 logger_1.logger.info(`✨ Auto-promoted existing user to Admin: Email=${email}`);
             }
             // Tiện ích môi trường Dev: Tự động nâng cấp tài khoản giả lập chứa từ khóa "admin" trong email lên làm Admin hệ thống
-            if (isMockToken && email.toLowerCase().includes("admin") && user.role !== "Admin") {
-                const rawProps = user.toProps(); // Lấy tất cả thuộc tính hiện tại của thực thể User
-                // Tạo thực thể User mới dựa trên thuộc tính cũ nhưng thay đổi role thành "Admin"
-                const updatedUser = new User_1.User({
-                    ...rawProps,
-                    role: "Admin",
-                    isVerified: true,
-                }, user.id); // Giữ nguyên ID của người dùng cũ
-                user = updatedUser; // Cập nhật lại biến user
-                await this.userRepository.save(user); // Lưu đè cập nhật lên Database
-                logger_1.logger.info(`✨ Auto-promoted existing user to Admin: Email=${email}`);
+            if (isMockToken && email.toLowerCase().includes("admin") && rawProps.role !== "Admin") {
+                rawProps.role = "Admin";
+                rawProps.isVerified = true;
+                needsSave = true;
+                logger_1.logger.info(`✨ Auto-promoted mock user to Admin: Email=${email}`);
+            }
+            if (needsSave) {
+                user = new User_1.User(rawProps, user.id);
+                await this.userRepository.save(user);
             }
             logger_1.logger.info(`🚪 Existing Google User logged in: ID=${user.id}, Email=${email}`); // Ghi nhận log đăng nhập thành công người dùng cũ
         }

@@ -12,6 +12,7 @@ export function SocketProvider({ children }) {
   const { user } = useAuth();
   const socketRef = useRef(null);
   const [socket, setSocket] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
   const notifications = useSelector((state) => state.notifications.list);
   const dispatch = useDispatch();
 
@@ -20,6 +21,7 @@ export function SocketProvider({ children }) {
       socketRef.current?.disconnect();
       socketRef.current = null;
       setSocket(null);
+      setIsConnected(false);
       return undefined;
     }
 
@@ -31,6 +33,16 @@ export function SocketProvider({ children }) {
     socketRef.current = socketInstance;
     setSocket(socketInstance);
 
+    const handleConnect = () => setIsConnected(true);
+    const handleDisconnect = () => setIsConnected(false);
+
+    socketInstance.on("connect", handleConnect);
+    socketInstance.on("disconnect", handleDisconnect);
+
+    if (socketInstance.connected) {
+      setIsConnected(true);
+    }
+
     socketInstance.on("notification", (notification) => {
       dispatch(addNotification(notification));
     });
@@ -40,9 +52,12 @@ export function SocketProvider({ children }) {
     });
 
     return () => {
+      socketInstance.off("connect", handleConnect);
+      socketInstance.off("disconnect", handleDisconnect);
       socketInstance.disconnect();
       if (socketRef.current === socketInstance) socketRef.current = null;
       setSocket(null);
+      setIsConnected(false);
     };
   }, [user, dispatch]);
 
@@ -80,6 +95,7 @@ export function SocketProvider({ children }) {
     <SocketContext.Provider
       value={{
         socket,
+        isConnected,
         notifications,
         setNotifications: handleSetNotifications,
         joinConversation,

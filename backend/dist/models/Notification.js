@@ -18,6 +18,8 @@ const notificationSchema = new mongoose_1.Schema({
     landingBatchId: { type: mongoose_1.Schema.Types.ObjectId, ref: "LandingBatch" },
     // Cấu hình trường reviewId: kiểu ObjectId tham chiếu đến bảng Review (không bắt buộc)
     reviewId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Review" },
+    // Cấu hình trường postId: kiểu ObjectId tham chiếu đến bảng Post (không bắt buộc)
+    postId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Post" },
 }, 
 // Cấu hình chỉ ghi nhận mốc thời gian tạo (createdAt: true), bỏ qua việc tự tạo trường updatedAt
 { timestamps: { createdAt: true, updatedAt: false } });

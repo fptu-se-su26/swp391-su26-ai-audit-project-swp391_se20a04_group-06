@@ -137,12 +137,17 @@ function RecipeCardImage({ imageUrl, title }) {
 }
 
 
+import useSEO from "../hooks/useSEO";
+
+
 export default function Recipes() {
+  useSEO("Góc ẩm thực", "Tìm kiếm và chia sẻ các công thức chế biến hải sản tươi ngon, hấp dẫn.");
   const { confirm, alert } = useConfirm();
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [recipes, setRecipes] = useState([]);
+  const [error, setError] = useState("");
 
   const [form, setForm] = useState(initialForm);
   const [formOpen, setFormOpen] = useState(false);
@@ -152,12 +157,18 @@ export default function Recipes() {
   const [editForm, setEditForm] = useState(initialForm);
   const [savingEdit, setSavingEdit] = useState(false);
 
-  const loadRecipes = () =>
+  const loadRecipes = () => {
+    setLoading(true);
+    setError("");
     apiRecipes
       .getAll({ limit: 30 })
       .then((data) => setRecipes(data?.recipes || []))
-      .catch(() => setRecipes([]))
+      .catch((err) => {
+        setRecipes([]);
+        setError(err.message || "Không thể kết nối đến máy chủ. Vui lòng kiểm tra đường truyền.");
+      })
       .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     loadRecipes();
@@ -205,6 +216,26 @@ export default function Recipes() {
 
   const createRecipe = async (event) => {
     event.preventDefault();
+    if (form.imageFile) {
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+      if (!allowedTypes.includes(form.imageFile.type)) {
+        await alert({
+          title: "Định dạng không hợp lệ",
+          message: "Chỉ cho phép tải lên hình ảnh định dạng JPG, PNG hoặc WEBP.",
+          variant: "warning"
+        });
+        return;
+      }
+      if (form.imageFile.size > 2 * 1024 * 1024) {
+        await alert({
+          title: "Kích thước ảnh quá lớn",
+          message: "Vui lòng chọn hình ảnh có dung lượng nhỏ hơn 2MB.",
+          variant: "warning"
+        });
+        return;
+      }
+    }
+
     try {
       let imageUrl = "";
       if (form.imageFile) {
@@ -277,6 +308,26 @@ export default function Recipes() {
     const id = editingRecipe?.id || editingRecipe?._id;
     if (!id || !canManageOwnedContent(user, editingRecipe.authorId)) return;
 
+    if (editForm.imageFile) {
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+      if (!allowedTypes.includes(editForm.imageFile.type)) {
+        await alert({
+          title: "Định dạng không hợp lệ",
+          message: "Chỉ cho phép tải lên hình ảnh định dạng JPG, PNG hoặc WEBP.",
+          variant: "warning"
+        });
+        return;
+      }
+      if (editForm.imageFile.size > 2 * 1024 * 1024) {
+        await alert({
+          title: "Kích thước ảnh quá lớn",
+          message: "Vui lòng chọn hình ảnh có dung lượng nhỏ hơn 2MB.",
+          variant: "warning"
+        });
+        return;
+      }
+    }
+
     setSavingEdit(true);
     try {
       let imageUrl = editForm.imageUrl;
@@ -340,6 +391,12 @@ export default function Recipes() {
         <div><h1>Cẩm nang công thức</h1><p>Công thức chế biến từ cộng đồng ngư dân đã xác minh.</p></div>
         <button className="button button--primary" data-tour="recipes-create" onClick={openForm} type="button"><Plus size={17} /> Chia sẻ công thức</button>
       </header>
+
+      {error && (
+        <div className="inline-notice inline-notice--danger" style={{ color: "#ef4444", background: "rgba(239, 68, 68, 0.08)", padding: "14px 18px", borderRadius: "8px", marginBottom: "20px", display: "flex", gap: "10px", alignItems: "center" }}>
+          <span>⚠️</span> {error}
+        </div>
+      )}
 
       {formOpen && (
         <div className="recipe-editor-layout" style={{ marginBottom: "28px" }}>

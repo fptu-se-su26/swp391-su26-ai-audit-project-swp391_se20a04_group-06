@@ -243,3 +243,94 @@ export async function notifySellerNewReview(params: {
     });
   }
 }
+
+export async function notifyPostLike(params: {
+  postId: string;
+  postTitle: string;
+  postAuthorId: string;
+  likerName: string;
+  likerId: string;
+}): Promise<void> {
+  const { postId, postTitle, postAuthorId, likerName, likerId } = params;
+  if (String(postAuthorId) === String(likerId)) return;
+
+  const previewText = `${likerName} đã thích bài viết của bạn: "${postTitle}"`;
+  try {
+    const notif = await notificationRepository.create({
+      userId: new mongoose.Types.ObjectId(postAuthorId) as any,
+      type: "post_like",
+      content: previewText,
+      postId: new mongoose.Types.ObjectId(postId) as any,
+    });
+
+    getIO().to(`user_${postAuthorId}`).emit("notification", {
+      id: notif._id.toString(),
+      type: "post_like",
+      postId,
+      preview: previewText,
+    });
+  } catch (err: any) {
+    logger.error("Lỗi khi gửi thông báo thích bài viết:", { message: err.message });
+  }
+}
+
+export async function notifyPostComment(params: {
+  postId: string;
+  postTitle: string;
+  postAuthorId: string;
+  commenterName: string;
+  commenterId: string;
+  commentText: string;
+}): Promise<void> {
+  const { postId, postTitle, postAuthorId, commenterName, commenterId, commentText } = params;
+  if (String(postAuthorId) === String(commenterId)) return;
+
+  const previewText = `${commenterName} đã bình luận về bài viết của bạn: "${commentText.slice(0, 40)}"`;
+  try {
+    const notif = await notificationRepository.create({
+      userId: new mongoose.Types.ObjectId(postAuthorId) as any,
+      type: "post_comment",
+      content: previewText,
+      postId: new mongoose.Types.ObjectId(postId) as any,
+    });
+
+    getIO().to(`user_${postAuthorId}`).emit("notification", {
+      id: notif._id.toString(),
+      type: "post_comment",
+      postId,
+      preview: previewText,
+    });
+  } catch (err: any) {
+    logger.error("Lỗi khi gửi thông báo bình luận bài viết:", { message: err.message });
+  }
+}
+
+export async function notifyCommentReply(params: {
+  postId: string;
+  parentCommentAuthorId: string;
+  replierName: string;
+  replierId: string;
+  replyText: string;
+}): Promise<void> {
+  const { postId, parentCommentAuthorId, replierName, replierId, replyText } = params;
+  if (String(parentCommentAuthorId) === String(replierId)) return;
+
+  const previewText = `${replierName} đã trả lời bình luận của bạn: "${replyText.slice(0, 40)}"`;
+  try {
+    const notif = await notificationRepository.create({
+      userId: new mongoose.Types.ObjectId(parentCommentAuthorId) as any,
+      type: "post_comment_reply",
+      content: previewText,
+      postId: new mongoose.Types.ObjectId(postId) as any,
+    });
+
+    getIO().to(`user_${parentCommentAuthorId}`).emit("notification", {
+      id: notif._id.toString(),
+      type: "post_comment_reply",
+      postId,
+      preview: previewText,
+    });
+  } catch (err: any) {
+    logger.error("Lỗi khi gửi thông báo trả lời bình luận:", { message: err.message });
+  }
+}

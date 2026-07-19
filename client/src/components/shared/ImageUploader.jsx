@@ -13,7 +13,12 @@ export default function ImageUploader({ files = [], onChange, maxFiles = 5 }) {
 
   const handleSelect = (e) => {
     const selected = Array.from(e.target.files || []);
-    const merged = [...files, ...selected].slice(0, maxFiles);
+    const tooLarge = selected.some((file) => file.size > 2 * 1024 * 1024);
+    if (tooLarge) {
+      alert("Một số tệp ảnh bị bỏ qua do vượt quá dung lượng tối đa 2MB mỗi ảnh.");
+    }
+    const valid = selected.filter((file) => file.size <= 2 * 1024 * 1024);
+    const merged = [...files, ...valid].slice(0, maxFiles);
     onChange(merged);
     e.target.value = "";
   };

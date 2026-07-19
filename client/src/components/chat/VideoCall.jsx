@@ -28,11 +28,72 @@ export default function VideoCall({
   const peerRef = useRef(null);
   const remoteIdRef = useRef(partnerId);
   const queuedCandidatesRef = useRef([]);
+  const callingTimeoutRef = useRef(null);
   const [phase, setPhase] = useState("idle");
   const [incoming, setIncoming] = useState(null);
   const [error, setError] = useState("");
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
+  const ringtoneRef = useRef(null);
+
+  const startRingtone = useCallback(() => {
+    if (ringtoneRef.current) return;
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+
+      const playRingTone = () => {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+
+        osc1.type = "sine";
+        osc1.frequency.value = 480; // Standard ringback tone frequencies
+        osc2.type = "sine";
+        osc2.frequency.value = 620;
+
+        gainNode.gain.setValueAtTime(0.15, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.5);
+
+        osc1.connect(gainNode);
+        osc2.connect(gainNode);
+        gainNode.connect(ctx.destination);
+
+        osc1.start();
+        osc2.start();
+
+        osc1.stop(ctx.currentTime + 1.5);
+        osc2.stop(ctx.currentTime + 1.5);
+      };
+
+      // Play immediately
+      playRingTone();
+      const intervalId = setInterval(playRingTone, 3000);
+      ringtoneRef.current = { ctx, intervalId };
+    } catch (err) {
+      console.warn("Failed to initialize ringtone AudioContext:", err);
+    }
+  }, []);
+
+  const stopRingtone = useCallback(() => {
+    if (ringtoneRef.current) {
+      clearInterval(ringtoneRef.current.intervalId);
+      try {
+        void ringtoneRef.current.ctx.close();
+      } catch {}
+      ringtoneRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (phase === "incoming" || phase === "calling") {
+      startRingtone();
+    } else {
+      stopRingtone();
+    }
+    return () => stopRingtone();
+  }, [phase, startRingtone, stopRingtone]);
 
   useEffect(() => {
     remoteIdRef.current = partnerId;
@@ -46,6 +107,10 @@ export default function VideoCall({
   }, []);
 
   const resetCall = useCallback(() => {
+    if (callingTimeoutRef.current) {
+      clearTimeout(callingTimeoutRef.current);
+      callingTimeoutRef.current = null;
+    }
     peerRef.current?.close();
     peerRef.current = null;
     queuedCandidatesRef.current = [];
@@ -122,6 +187,11 @@ export default function VideoCall({
         callerName: currentUser?.name,
         productId,
       });
+
+      callingTimeoutRef.current = setTimeout(() => {
+        setError("Người nhận không trả lời.");
+        endCall(true);
+      }, 30000);
     } catch (callError) {
       setError(callError.message || "Không thể khởi tạo cuộc gọi.");
       resetCall();
@@ -171,6 +241,10 @@ export default function VideoCall({
       try {
         if (String(acceptedProductId) !== String(productId)) return;
         if (!peerRef.current) return;
+        if (callingTimeoutRef.current) {
+          clearTimeout(callingTimeoutRef.current);
+          callingTimeoutRef.current = null;
+        }
         await peerRef.current.setRemoteDescription(answer);
         await flushCandidates(peerRef.current);
         setPhase("connected");

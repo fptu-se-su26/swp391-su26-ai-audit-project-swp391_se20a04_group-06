@@ -18,6 +18,7 @@ import ReportButton from "../components/ReportButton";
 import ReviewSection from "../components/ReviewSection";
 import { useAuth } from "../context/AuthContext";
 import { useConfirm } from "../context/ConfirmContext";
+import useSEO from "../hooks/useSEO";
 
 import { apiFavorites, apiFishermen, apiProducts, apiReports } from "../services/api";
 import {
@@ -38,6 +39,11 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [product, setProduct] = useState(null);
+
+  useSEO(
+    product ? `${product.name} - ${formatCurrency(product.price)}/kg` : "Chi tiết sản phẩm",
+    product ? product.description : "Chi tiết mẻ hải sản ngon từ người bán."
+  );
 
   const [seller, setSeller] = useState(null);
   const [loading, setLoading] = useState(true);

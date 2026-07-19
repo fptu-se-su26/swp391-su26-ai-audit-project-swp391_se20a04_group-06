@@ -1,6 +1,7 @@
 import { MessageSquareText, Phone, X } from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import styles from "./FloatingContact.module.css";
 
 const facebookUrl =
   import.meta.env.VITE_CONTACT_FACEBOOK_URL || "https://www.facebook.com/";
@@ -23,7 +24,7 @@ function FacebookIcon() {
 
 function ZaloIcon() {
   return (
-    <span aria-hidden="true" className="floating-contact__zalo-mark">
+    <span aria-hidden="true" className={styles["floating-contact__zalo-mark"]}>
       Zalo
     </span>
   );
@@ -35,13 +36,13 @@ export default function FloatingContact() {
   return createPortal(
     <aside
       aria-label="Kênh liên hệ"
-      className={`floating-contact${open ? " is-open" : ""}`}
+      className={`${styles["floating-contact"]}${open ? " " + styles["is-open"] : ""}`}
     >
       {open ? (
-        <div className="floating-contact__stack">
+        <div className={styles["floating-contact__stack"]}>
           <a
             aria-label="Liên hệ qua Facebook"
-            className="floating-contact__button floating-contact__button--facebook"
+            className={`${styles["floating-contact__button"]} ${styles["floating-contact__button--facebook"]}`}
             href={facebookUrl}
             rel="noreferrer"
             target="_blank"
@@ -53,7 +54,7 @@ export default function FloatingContact() {
           {contactPhone ? (
             <a
               aria-label={`Gọi hotline ${contactPhone}`}
-              className="floating-contact__button floating-contact__button--phone"
+              className={`${styles["floating-contact__button"]} ${styles["floating-contact__button--phone"]}`}
               href={`tel:${contactPhone}`}
               title={`Gọi ${contactPhone}`}
             >
@@ -62,7 +63,7 @@ export default function FloatingContact() {
           ) : (
             <button
               aria-label="Hotline chưa được cấu hình"
-              className="floating-contact__button floating-contact__button--phone"
+              className={`${styles["floating-contact__button"]} ${styles["floating-contact__button--phone"]}`}
               disabled
               title="Thêm VITE_CONTACT_PHONE để bật gọi điện"
               type="button"
@@ -73,7 +74,7 @@ export default function FloatingContact() {
 
           <a
             aria-label="Liên hệ qua Zalo"
-            className="floating-contact__button floating-contact__button--zalo"
+            className={`${styles["floating-contact__button"]} ${styles["floating-contact__button--zalo"]}`}
             href={zaloUrl}
             rel="noreferrer"
             target="_blank"
@@ -84,7 +85,7 @@ export default function FloatingContact() {
 
           <button
             aria-label="Đóng menu liên hệ"
-            className="floating-contact__button floating-contact__button--close"
+            className={`${styles["floating-contact__button"]} ${styles["floating-contact__button--close"]}`}
             onClick={() => setOpen(false)}
             title="Đóng"
             type="button"
@@ -96,14 +97,14 @@ export default function FloatingContact() {
         <button
           aria-expanded="false"
           aria-label="Mở các kênh liên hệ"
-          className="floating-contact__trigger"
+          className={styles["floating-contact__trigger"]}
           onClick={() => setOpen(true)}
           type="button"
         >
-          <span className="floating-contact__trigger-icon">
+          <span className={styles["floating-contact__trigger-icon"]}>
             <MessageSquareText size={25} />
           </span>
-          <span className="floating-contact__label">Liên hệ</span>
+          <span className={styles["floating-contact__label"]}>Liên hệ</span>
         </button>
       )}
     </aside>,

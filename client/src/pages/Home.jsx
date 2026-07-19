@@ -6,11 +6,13 @@ import ProductGrid from "../components/ProductGrid";
 import { useAuth } from "../context/AuthContext";
 import { apiFavorites, apiFishermen, apiProducts } from "../services/api";
 import { useConfirm } from "../context/ConfirmContext";
+import useSEO from "../hooks/useSEO";
 
 import { getOptimizedImageUrl } from "../utils/image";
 import { formatCurrency, getProductId, getProductImage } from "../utils/product";
 
 export default function Home() {
+  useSEO("Trang chủ", "Hệ thống kết nối trực tiếp Người mua & Ngư dân bán hải sản tươi sống chất lượng.");
   const { alert } = useConfirm();
   const navigate = useNavigate();
   const { user } = useAuth();

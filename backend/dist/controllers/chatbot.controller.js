@@ -70,6 +70,7 @@ async function askChatbot(req, res) {
             // { role: "user" | "model", parts: [{ text: string }] }
             const geminiHistory = Array.isArray(history)
                 ? history
+                    .slice(-10)
                     .filter((m) => m?.role && (m?.parts?.[0]?.text || m?.content))
                     .map((m) => {
                     const text = m.parts?.[0]?.text || m.content || "";
@@ -111,6 +112,7 @@ async function askChatbot(req, res) {
         try {
             const cleanedHistory = Array.isArray(history)
                 ? history
+                    .slice(-10)
                     .filter((m) => m?.role && (m?.parts?.[0]?.text || m?.content))
                     .map((m) => ({
                     role: m.role === "model" || m.role === "assistant" ? "assistant" : "user",

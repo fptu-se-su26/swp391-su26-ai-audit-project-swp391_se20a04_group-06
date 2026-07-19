@@ -2,6 +2,8 @@
 import { IPostRepository } from "../../domain/repositories/IPostRepository";
 // Import ngoại lệ nghiệp vụ NotFoundError để báo lỗi khi không tìm thấy bài đăng
 import { NotFoundError } from "../../../../shared/domain/exceptions/DomainException";
+import { notifyPostLike } from "../../../../services/notification.service";
+import { userRepository } from "../../../../repositories/user.repository";
 
 /**
  * Use Case thích hoặc bỏ thích bài đăng trên diễn đàn.
@@ -26,6 +28,21 @@ export class ToggleLikePostUseCase {
 
     // Lưu lại thay đổi vào cơ sở dữ liệu
     await this.postRepository.save(post);
+
+    if (liked) {
+      userRepository.findRawById(userId).then((user) => {
+        if (user) {
+          const props = post.toProps();
+          notifyPostLike({
+            postId,
+            postTitle: props.title,
+            postAuthorId: props.userId,
+            likerName: user.name,
+            likerId: userId,
+          }).catch((err) => console.error("Failed to notify post like:", err));
+        }
+      }).catch((err) => console.error("Failed to find liker user details:", err));
+    }
 
     // Trả về trạng thái thích (true/false) và tổng số lượng lượt thích hiện tại của bài viết
     return {

@@ -70,6 +70,8 @@ export default function Notifications() {
             <Link className={notification.isRead ? "" : "is-unread"} key={notification.id} onClick={() => markOne(notification)} to={`/landing-batches/${notification.landingBatchId}`}>{body}</Link>
           ) : notification.productId ? (
             <Link className={notification.isRead ? "" : "is-unread"} key={notification.id} onClick={() => markOne(notification)} to={`/product/${notification.productId}`}>{body}</Link>
+          ) : notification.postId ? (
+            <Link className={notification.isRead ? "" : "is-unread"} key={notification.id} onClick={() => markOne(notification)} to={`/community`}>{body}</Link>
           ) : (
             <article className={notification.isRead ? "" : "is-unread"} key={notification.id} onClick={() => markOne(notification)}>{body}</article>
           );

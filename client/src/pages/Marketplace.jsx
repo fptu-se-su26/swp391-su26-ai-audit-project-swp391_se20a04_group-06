@@ -10,10 +10,12 @@ import {
 } from "../services/api";
 import { useConfirm } from "../context/ConfirmContext";
 import { getCategoryLabel } from "../utils/labelMaps";
+import useSEO from "../hooks/useSEO";
 
 
 
 export default function Marketplace() {
+  useSEO("Chợ hải sản", "Khám phá các mẻ hải sản mới cập cảng và kết nối trực tiếp với ngư dân.");
   const { alert } = useConfirm();
   const { user } = useAuth();
   const [products, setProducts] = useState([]);
@@ -171,7 +173,11 @@ export default function Marketplace() {
       </header>
 
       {locationMessage && <p className="inline-notice">{locationMessage}</p>}
-      {loadError && <p className="inline-notice inline-notice--warning">{loadError}</p>}
+      {loadError && (
+        <div className="inline-notice inline-notice--danger" style={{ color: "#ef4444", background: "rgba(239, 68, 68, 0.08)", padding: "14px 18px", borderRadius: "8px", marginBottom: "20px", display: "flex", gap: "10px", alignItems: "center" }}>
+          <span>⚠️</span> {loadError}
+        </div>
+      )}
 
       <div className="marketplace-view-tabs" data-tour="marketplace-view-tabs" role="tablist" aria-label="Kiểu hiển thị chợ">
         <button

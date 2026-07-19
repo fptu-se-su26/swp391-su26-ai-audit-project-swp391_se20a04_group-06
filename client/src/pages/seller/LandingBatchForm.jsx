@@ -103,6 +103,28 @@ export default function LandingBatchForm() {
   }, [id]);
 
   useEffect(() => {
+    if (!editing && !batch.lat && !batch.lng) {
+      navigator.geolocation?.getCurrentPosition(
+        ({ coords }) => {
+          setBatch((current) => {
+            if (!current.lat && !current.lng) {
+              return {
+                ...current,
+                lat: String(coords.latitude.toFixed(6)),
+                lng: String(coords.longitude.toFixed(6)),
+              };
+            }
+            return current;
+          });
+        },
+        (error) => {
+          console.warn("Autofill landing batch GPS location failed:", error);
+        }
+      );
+    }
+  }, [editing]);
+
+  useEffect(() => {
     const handleTourStep = (event) => {
       const requestedStep = Number(event.detail?.step);
       if (requestedStep === 1 || requestedStep === 2) {

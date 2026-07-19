@@ -2,6 +2,7 @@ import { X } from "lucide-react";
 import ImageUploader from "../shared/ImageUploader";
 import LocationPicker from "../shared/LocationPicker";
 import DateTimePicker from "../shared/DateTimePicker";
+import { useEffect } from "react";
 
 
 const categories = [
@@ -15,6 +16,20 @@ const categories = [
 
 export default function ProductForm({ form, onCancel, onChange, onSubmit, saving }) {
   const update = (field) => (event) => onChange(field, event.target.value);
+
+  useEffect(() => {
+    if (!form.id && !form.lat && !form.lng) {
+      navigator.geolocation?.getCurrentPosition(
+        ({ coords }) => {
+          onChange("lat", String(coords.latitude.toFixed(6)));
+          onChange("lng", String(coords.longitude.toFixed(6)));
+        },
+        (error) => {
+          console.warn("Autofill product GPS location failed:", error);
+        }
+      );
+    }
+  }, [form.id]);
 
   return (
     <form className="product-form dashboard-panel" onSubmit={onSubmit}>

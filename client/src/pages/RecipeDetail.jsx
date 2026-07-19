@@ -7,6 +7,7 @@ import { apiRecipes, apiReports } from "../services/api";
 import { canManageOwnedContent } from "../utils/ownership";
 import { useConfirm } from "../context/ConfirmContext";
 import { formatRelativeDate } from "../utils/date";
+import useSEO from "../hooks/useSEO";
 
 function initials(name) {
   if (!name) return "?";
@@ -34,6 +35,11 @@ export default function RecipeDetail() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [recipe, setRecipe] = useState(null);
+
+  useSEO(
+    recipe ? `${recipe.title} (Công thức)` : "Chi tiết công thức",
+    recipe ? recipe.description : "Hướng dẫn chế biến hải sản ngon chi tiết."
+  );
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);

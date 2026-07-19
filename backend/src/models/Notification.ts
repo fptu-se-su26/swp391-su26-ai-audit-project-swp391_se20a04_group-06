@@ -17,6 +17,8 @@ export interface INotification extends Document {
   landingBatchId?: Types.ObjectId;
   // Mã ID đánh giá liên kết nếu thông báo liên quan đến đánh giá shop (tùy chọn)
   reviewId?: Types.ObjectId;
+  // Mã ID bài viết liên kết nếu thông báo phát sinh từ diễn đàn (tùy chọn)
+  postId?: Types.ObjectId;
   // Mốc thời gian tự động tạo thông báo
   createdAt: Date;
 }
@@ -37,6 +39,8 @@ const notificationSchema = new Schema<INotification>(
     landingBatchId: { type: Schema.Types.ObjectId, ref: "LandingBatch" },
     // Cấu hình trường reviewId: kiểu ObjectId tham chiếu đến bảng Review (không bắt buộc)
     reviewId: { type: Schema.Types.ObjectId, ref: "Review" },
+    // Cấu hình trường postId: kiểu ObjectId tham chiếu đến bảng Post (không bắt buộc)
+    postId: { type: Schema.Types.ObjectId, ref: "Post" },
   },
   // Cấu hình chỉ ghi nhận mốc thời gian tạo (createdAt: true), bỏ qua việc tự tạo trường updatedAt
   { timestamps: { createdAt: true, updatedAt: false } }

@@ -7,6 +7,9 @@ exports.broadcastToUsers = broadcastToUsers;
 exports.notifyFollowersNewProduct = notifyFollowersNewProduct;
 exports.notifyFollowersNewLandingBatch = notifyFollowersNewLandingBatch;
 exports.notifySellerNewReview = notifySellerNewReview;
+exports.notifyPostLike = notifyPostLike;
+exports.notifyPostComment = notifyPostComment;
+exports.notifyCommentReply = notifyCommentReply;
 // Import hàm getIO để gửi thông báo thời gian thực qua socket
 const socket_1 = require("../socket");
 // Import đối tượng notificationRepository để lưu trữ thông báo vào cơ sở dữ liệu
@@ -193,5 +196,74 @@ async function notifySellerNewReview(params) {
         logger_1.logger.error("Lỗi khi lưu và phát thông báo đánh giá:", {
             message: err.message,
         });
+    }
+}
+async function notifyPostLike(params) {
+    const { postId, postTitle, postAuthorId, likerName, likerId } = params;
+    if (String(postAuthorId) === String(likerId))
+        return;
+    const previewText = `${likerName} đã thích bài viết của bạn: "${postTitle}"`;
+    try {
+        const notif = await notification_repository_1.notificationRepository.create({
+            userId: new mongoose_1.default.Types.ObjectId(postAuthorId),
+            type: "post_like",
+            content: previewText,
+            postId: new mongoose_1.default.Types.ObjectId(postId),
+        });
+        (0, socket_1.getIO)().to(`user_${postAuthorId}`).emit("notification", {
+            id: notif._id.toString(),
+            type: "post_like",
+            postId,
+            preview: previewText,
+        });
+    }
+    catch (err) {
+        logger_1.logger.error("Lỗi khi gửi thông báo thích bài viết:", { message: err.message });
+    }
+}
+async function notifyPostComment(params) {
+    const { postId, postTitle, postAuthorId, commenterName, commenterId, commentText } = params;
+    if (String(postAuthorId) === String(commenterId))
+        return;
+    const previewText = `${commenterName} đã bình luận về bài viết của bạn: "${commentText.slice(0, 40)}"`;
+    try {
+        const notif = await notification_repository_1.notificationRepository.create({
+            userId: new mongoose_1.default.Types.ObjectId(postAuthorId),
+            type: "post_comment",
+            content: previewText,
+            postId: new mongoose_1.default.Types.ObjectId(postId),
+        });
+        (0, socket_1.getIO)().to(`user_${postAuthorId}`).emit("notification", {
+            id: notif._id.toString(),
+            type: "post_comment",
+            postId,
+            preview: previewText,
+        });
+    }
+    catch (err) {
+        logger_1.logger.error("Lỗi khi gửi thông báo bình luận bài viết:", { message: err.message });
+    }
+}
+async function notifyCommentReply(params) {
+    const { postId, parentCommentAuthorId, replierName, replierId, replyText } = params;
+    if (String(parentCommentAuthorId) === String(replierId))
+        return;
+    const previewText = `${replierName} đã trả lời bình luận của bạn: "${replyText.slice(0, 40)}"`;
+    try {
+        const notif = await notification_repository_1.notificationRepository.create({
+            userId: new mongoose_1.default.Types.ObjectId(parentCommentAuthorId),
+            type: "post_comment_reply",
+            content: previewText,
+            postId: new mongoose_1.default.Types.ObjectId(postId),
+        });
+        (0, socket_1.getIO)().to(`user_${parentCommentAuthorId}`).emit("notification", {
+            id: notif._id.toString(),
+            type: "post_comment_reply",
+            postId,
+            preview: previewText,
+        });
+    }
+    catch (err) {
+        logger_1.logger.error("Lỗi khi gửi thông báo trả lời bình luận:", { message: err.message });
     }
 }

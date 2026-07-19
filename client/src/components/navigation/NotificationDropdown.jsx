@@ -34,7 +34,9 @@ export default function NotificationDropdown({ notifications = [], onClose }) {
             ? `/landing-batches/${notification.landingBatchId}`
             : notification.productId
               ? `/product/${notification.productId}`
-              : "";
+              : notification.postId
+                ? `/community`
+                : "";
           return target ? (
             <Link
               className="notification-item"

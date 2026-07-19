@@ -1,0 +1,16 @@
+{
+  "short_name": "HảiSản.vn",
+  "name": "HảiSản.vn - Hệ thống kết nối trực tiếp Người mua & Ngư dân",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#071120",
+  "theme_color": "#12cbc7",
+  "display": "standalone",
+  "orientation": "portrait"
+}

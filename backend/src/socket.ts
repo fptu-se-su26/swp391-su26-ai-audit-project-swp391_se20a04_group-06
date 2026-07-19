@@ -234,6 +234,14 @@ export function initSocket(server: HttpServer) {
           return;
         }
 
+        // Ràng buộc độ dài tin nhắn tối đa
+        if (content && content.length > 2000) {
+          socket.emit("error", {
+            message: "Tin nhắn không được vượt quá 2000 ký tự",
+          });
+          return;
+        }
+
         try {
           // Truy vấn kiểm tra lại trạng thái tài khoản người gửi tin trong database
           const sender = await userRepository.findRawById(userId);

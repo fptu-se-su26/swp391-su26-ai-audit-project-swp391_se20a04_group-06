@@ -49,23 +49,28 @@ function cleanOptional(value: unknown, maxLength: number) {
 }
 
 function normalizeLocation(body: Record<string, any>) {
+  let lng: number | undefined;
+  let lat: number | undefined;
+
   if (
     body.location?.type === "Point" &&
     Array.isArray(body.location.coordinates) &&
     body.location.coordinates.length === 2
   ) {
-    return {
-      type: "Point" as const,
-      coordinates: [
-        Number(body.location.coordinates[0]),
-        Number(body.location.coordinates[1]),
-      ] as [number, number],
-    };
+    lng = Number(body.location.coordinates[0]);
+    lat = Number(body.location.coordinates[1]);
+  } else if (body.lat !== undefined && body.lng !== undefined) {
+    lng = Number(body.lng);
+    lat = Number(body.lat);
   }
-  if (body.lat !== undefined && body.lng !== undefined) {
+
+  if (lng !== undefined && lat !== undefined) {
+    if (isNaN(lng) || isNaN(lat) || lng < -180 || lng > 180 || lat < -90 || lat > 90) {
+      throw new HttpError(400, "Tọa độ địa lý không hợp lệ (Kinh độ [-180, 180], Vĩ độ [-90, 90])");
+    }
     return {
       type: "Point" as const,
-      coordinates: [Number(body.lng), Number(body.lat)] as [number, number],
+      coordinates: [lng, lat] as [number, number],
     };
   }
   return undefined;

@@ -5,6 +5,7 @@ exports.AddCommentUseCase = void 0;
 const user_repository_1 = require("../../../../repositories/user.repository");
 // Import ngoại lệ nghiệp vụ NotFoundError để báo lỗi khi không tìm thấy bài đăng hoặc người dùng
 const DomainException_1 = require("../../../../shared/domain/exceptions/DomainException");
+const notification_service_1 = require("../../../../services/notification.service");
 /**
  * Use Case thêm bình luận mới vào bài viết diễn đàn.
  */
@@ -37,6 +38,34 @@ class AddCommentUseCase {
         post.addComment(userId, user.name, user.avatar || null, text, parentId);
         // 4. Lưu lại bài viết đã cập nhật danh sách bình luận mới vào cơ sở dữ liệu
         await this.postRepository.save(post);
+        const props = post.toProps();
+        const postAuthorId = props.userId;
+        if (String(userId) !== String(postAuthorId)) {
+            (0, notification_service_1.notifyPostComment)({
+                postId,
+                postTitle: props.title,
+                postAuthorId,
+                commenterName: user.name,
+                commenterId: userId,
+                commentText: text,
+            }).catch((err) => console.error("Failed to notify post comment:", err));
+        }
+        if (parentId) {
+            const parentComment = props.comments.find(c => String(c.id) === String(parentId));
+            if (parentComment) {
+                const parentCommentAuthorId = parentComment.userId;
+                if (String(userId) !== String(parentCommentAuthorId) &&
+                    String(parentCommentAuthorId) !== String(postAuthorId)) {
+                    (0, notification_service_1.notifyCommentReply)({
+                        postId,
+                        parentCommentAuthorId,
+                        replierName: user.name,
+                        replierId: userId,
+                        replyText: text,
+                    }).catch((err) => console.error("Failed to notify comment reply:", err));
+                }
+            }
+        }
         // Trả về danh sách tất cả các bình luận của bài viết sau khi đã cập nhật
         return post.comments;
     }

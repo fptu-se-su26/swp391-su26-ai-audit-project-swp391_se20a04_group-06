@@ -7,7 +7,6 @@ import './styles/pages.css'
 import './styles/srs-features.css'
 import './styles/motion.css'
 import './styles/tour-guide.css'
-import './styles/floating-contact.css'
 import './styles/live-preview.css'
 import './styles/theme.css'
 import './styles/role-backgrounds.css'
@@ -28,3 +27,12 @@ createRoot(document.getElementById('root')).render(
     <App />
   </StrictMode>,
 )
+
+if ("serviceWorker" in navigator && import.meta.env.PROD) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((reg) => console.log("PWA Service Worker registered:", reg.scope))
+      .catch((err) => console.error("PWA Service Worker registration failed:", err));
+  });
+}

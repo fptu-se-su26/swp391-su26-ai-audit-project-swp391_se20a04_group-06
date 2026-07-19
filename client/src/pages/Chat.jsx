@@ -15,11 +15,35 @@ import {
   normalizeConversation,
 } from "../utils/chat";
 
+const playMessageBeep = () => {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+
+    gainNode.gain.setValueAtTime(0.08, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    osc.start();
+    osc.stop(ctx.currentTime + 0.12);
+  } catch (err) {
+    console.warn("Notification beep play failed:", err);
+  }
+};
+
 export default function Chat() {
   const { confirm, alert } = useConfirm();
   const { user } = useAuth();
   const location = useLocation();
-  const { socket, joinConversation, leaveConversation, sendChatMessage } = useSocket() || {};
+  const { socket, isConnected, joinConversation, leaveConversation, sendChatMessage } = useSocket() || {};
 
   const [threads, setThreads] = useState([]);
   const [activeThreadId, setActiveThreadId] = useState("");
@@ -114,6 +138,22 @@ export default function Chat() {
     };
   }, [activeConversationId, activePartnerId, activeProductId, joinConversation, leaveConversation, user]);
 
+  const wasConnectedRef = useRef(false);
+
+  useEffect(() => {
+    if (isConnected && !wasConnectedRef.current && activeConversationId && activeProductId && activePartnerId && user) {
+      const myId = user.id || user._id;
+      const buyerId = ["Seller", "seller"].includes(user.role)
+        ? activePartnerId
+        : myId;
+      joinConversation?.(activeProductId, buyerId);
+    }
+    wasConnectedRef.current = isConnected;
+  }, [isConnected, activeConversationId, activeProductId, activePartnerId, user, joinConversation]);
+
+  const activeThreadRef = useRef(null);
+  activeThreadRef.current = activeThread;
+
   useEffect(() => {
     if (!socket) return undefined;
     const updateMessage = (id, patch) => {
@@ -129,6 +169,19 @@ export default function Chat() {
       );
     };
     const handleMessage = (message) => {
+      const myId = user?.id || user?._id;
+      const isFromOthers = String(message.senderId) !== String(myId);
+
+      if (isFromOthers) {
+        const isCurrentThread = activeThreadRef.current &&
+          String(activeThreadRef.current.productId) === String(message.productId) &&
+          String(activeThreadRef.current.partnerId) === String(message.senderId);
+
+        if (document.hidden || !isCurrentThread) {
+          playMessageBeep();
+        }
+      }
+
       setThreads((current) =>
         current.map((thread) =>
           thread.productId === message.productId &&
@@ -169,6 +222,27 @@ export default function Chat() {
 
   const sendMessage = async ({ text, imageFile, replyTo: reply }) => {
     if (!activeThread || !user || (!text && !imageFile)) return false;
+
+    if (imageFile) {
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+      if (!allowedTypes.includes(imageFile.type)) {
+        await alert({
+          title: "Định dạng không hợp lệ",
+          message: "Chỉ cho phép gửi hình ảnh định dạng JPG, PNG hoặc WEBP.",
+          variant: "warning"
+        });
+        return false;
+      }
+      if (imageFile.size > 2 * 1024 * 1024) {
+        await alert({
+          title: "Kích thước ảnh quá lớn",
+          message: "Vui lòng chọn hình ảnh có dung lượng nhỏ hơn 2MB để gửi.",
+          variant: "warning"
+        });
+        return false;
+      }
+    }
+
     setSending(true);
     try {
       let imageUrl = null;
@@ -344,11 +418,17 @@ export default function Chat() {
                 productId={activeThread.productId}
                 socket={socket}
               />
-              {!socket && (
-                <span className="socket-status"><AlertCircle size={14} /> Mất kết nối realtime</span>
+              {(!socket || !isConnected) && (
+                <span className="socket-status" style={{ color: "#ef4444" }}><AlertCircle size={14} /> Ngoại tuyến</span>
               )}
             </div>
           </header>
+
+          {(!socket || !isConnected) && (
+            <div className="chat-offline-banner" style={{ background: "rgba(239, 68, 68, 0.08)", borderBottom: "1px solid rgba(239, 68, 68, 0.15)", color: "#ef4444", padding: "10px 16px", fontSize: "0.88rem", display: "flex", gap: "8px", alignItems: "center", fontWeight: "500" }}>
+              <AlertCircle size={16} /> Mất kết nối máy chủ chat thời gian thực. Đang kết nối lại...
+            </div>
+          )}
 
           <div className="chat-window__messages">
             {activeThread.messages.map((message, index) => (

@@ -47,9 +47,20 @@ export function AuthProvider({ children }) {
       localStorage.removeItem("haisan-user");
       localStorage.removeItem("haisan-token");
     };
+
+    const handleStorageChange = (event) => {
+      if (event.key === "haisan-token" && !event.newValue) {
+        dispatch(clearUser());
+      }
+    };
+
     window.addEventListener("haisan:session-expired", clearExpiredSession);
-    return () =>
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
       window.removeEventListener("haisan:session-expired", clearExpiredSession);
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, [dispatch]);
 
   const login = (userData) => {

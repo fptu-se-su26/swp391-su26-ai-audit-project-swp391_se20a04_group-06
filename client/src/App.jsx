@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { SocketProvider } from "./context/SocketContext";
@@ -13,6 +13,8 @@ import SeafoodAssistant from "./components/SeafoodAssistant";
 import TourGuide from "./components/tour/TourGuide";
 import { RequireAuth, RequireRole } from "./components/RouteGuard";
 import { useAuth } from "./context/AuthContext";
+import ErrorBoundary from "./components/common/ErrorBoundary";
+import ScrollToTop from "./components/common/ScrollToTop";
 
 const Home = lazy(() => import("./pages/Home"));
 const Chat = lazy(() => import("./pages/Chat"));
@@ -52,48 +54,69 @@ function AppContent() {
   const { user } = useAuth();
   const isAuthPage = ["/login", "/register"].includes(location.pathname);
   const shellClass = resolveShellClass(user);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   return (
     <div className={`app-shell ${shellClass}`}>
+      {!isOnline && (
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 9999, background: "#ef4444", color: "#fff", padding: "12px", textAlign: "center", fontSize: "0.9rem", fontWeight: "bold", display: "flex", gap: "8px", justifyContent: "center", alignItems: "center", boxShadow: "0 -4px 12px rgba(0,0,0,0.15)" }}>
+          <span>⚠️</span> Bạn đang ngoại tuyến. Một số tính năng cập nhật dữ liệu trực tuyến có thể không khả dụng.
+        </div>
+      )}
       {!isAuthPage && <Navbar />}
       <TourGuide />
 
       <div className="app-shell__body">
         <main className="app-main">
           <Suspense fallback={<div className="page-state">Đang tải trang...</div>}>
-            <div className="route-transition" key={location.pathname}>
-              <Routes location={location}>
-                <Route path="/" element={<Home />} />
-                <Route path="/marketplace" element={<Marketplace />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/product/:id" element={<ProductDetail />} />
-                <Route path="/landing-batches/:id" element={<LandingBatchDetail />} />
-                <Route path="/fisherman/:id" element={<SellerProfile />} />
-                <Route path="/chat" element={<Chat />} />
-                <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
-                <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
-                <Route path="/premium" element={<RequireAuth><Premium /></RequireAuth>} />
-                <Route path="/community" element={<Community />} />
-                <Route path="/recipes" element={<Recipes />} />
-                <Route path="/recipes/:id" element={<RecipeDetail />} />
-                <Route path="/leaderboard" element={<Leaderboard />} />
-                <Route path="/boat-log" element={<RequireRole roles={["buyer"]}><BoatLog readOnly /></RequireRole>} />
+            <ErrorBoundary>
+              <div className="route-transition" key={location.pathname}>
+                <Routes location={location}>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/marketplace" element={<Marketplace />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/product/:id" element={<ProductDetail />} />
+                  <Route path="/landing-batches/:id" element={<LandingBatchDetail />} />
+                  <Route path="/fisherman/:id" element={<SellerProfile />} />
+                  <Route path="/chat" element={<Chat />} />
+                  <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
+                  <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+                  <Route path="/premium" element={<RequireAuth><Premium /></RequireAuth>} />
+                  <Route path="/community" element={<Community />} />
+                  <Route path="/recipes" element={<Recipes />} />
+                  <Route path="/recipes/:id" element={<RecipeDetail />} />
+                  <Route path="/leaderboard" element={<Leaderboard />} />
+                  <Route path="/boat-log" element={<RequireRole roles={["buyer"]}><BoatLog readOnly /></RequireRole>} />
 
-                <Route path="/buyer" element={<Navigate to="/" replace />} />
-                <Route path="/buyer/favorites" element={<RequireAuth><Favorites /></RequireAuth>} />
+                  <Route path="/buyer" element={<Navigate to="/" replace />} />
+                  <Route path="/buyer/favorites" element={<RequireAuth><Favorites /></RequireAuth>} />
 
-                <Route path="/seller/boat-log" element={<RequireRole roles={["seller", "admin"]}><BoatLog /></RequireRole>} />
-                <Route path="/seller/*" element={<RequireRole roles={["seller", "admin"]}><SellerDashboard /></RequireRole>} />
+                  <Route path="/seller/boat-log" element={<RequireRole roles={["seller", "admin"]}><BoatLog /></RequireRole>} />
+                  <Route path="/seller/*" element={<RequireRole roles={["seller", "admin"]}><SellerDashboard /></RequireRole>} />
 
-                <Route path="/admin/payments" element={<RequireRole roles={["admin"]}><AdminPayments /></RequireRole>} />
-                <Route path="/admin/broadcast" element={<RequireRole roles={["admin"]}><Broadcast /></RequireRole>} />
-                <Route path="/admin/settings" element={<RequireRole roles={["admin"]}><AdminSettings /></RequireRole>} />
-                <Route path="/admin/*" element={<RequireRole roles={["admin"]}><AdminDashboard /></RequireRole>} />
+                  <Route path="/admin/payments" element={<RequireRole roles={["admin"]}><AdminPayments /></RequireRole>} />
+                  <Route path="/admin/broadcast" element={<RequireRole roles={["admin"]}><Broadcast /></RequireRole>} />
+                  <Route path="/admin/settings" element={<RequireRole roles={["admin"]}><AdminSettings /></RequireRole>} />
+                  <Route path="/admin/*" element={<RequireRole roles={["admin"]}><AdminDashboard /></RequireRole>} />
 
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </div>
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </div>
+            </ErrorBoundary>
           </Suspense>
         </main>
       </div>
@@ -116,6 +139,7 @@ export default function App() {
         <SocketProvider>
           <ConfirmProvider>
             <BrowserRouter>
+              <ScrollToTop />
               <AppContent />
             </BrowserRouter>
           </ConfirmProvider>

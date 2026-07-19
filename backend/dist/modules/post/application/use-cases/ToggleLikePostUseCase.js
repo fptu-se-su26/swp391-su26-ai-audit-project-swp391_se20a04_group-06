@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ToggleLikePostUseCase = void 0;
 // Import ngoại lệ nghiệp vụ NotFoundError để báo lỗi khi không tìm thấy bài đăng
 const DomainException_1 = require("../../../../shared/domain/exceptions/DomainException");
+const notification_service_1 = require("../../../../services/notification.service");
+const user_repository_1 = require("../../../../repositories/user.repository");
 /**
  * Use Case thích hoặc bỏ thích bài đăng trên diễn đàn.
  */
@@ -25,6 +27,20 @@ class ToggleLikePostUseCase {
         const liked = post.toggleLike(userId);
         // Lưu lại thay đổi vào cơ sở dữ liệu
         await this.postRepository.save(post);
+        if (liked) {
+            user_repository_1.userRepository.findRawById(userId).then((user) => {
+                if (user) {
+                    const props = post.toProps();
+                    (0, notification_service_1.notifyPostLike)({
+                        postId,
+                        postTitle: props.title,
+                        postAuthorId: props.userId,
+                        likerName: user.name,
+                        likerId: userId,
+                    }).catch((err) => console.error("Failed to notify post like:", err));
+                }
+            }).catch((err) => console.error("Failed to find liker user details:", err));
+        }
         // Trả về trạng thái thích (true/false) và tổng số lượng lượt thích hiện tại của bài viết
         return {
             liked,

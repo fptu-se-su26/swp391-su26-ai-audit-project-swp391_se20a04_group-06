@@ -210,6 +210,9 @@ app.use("/api/notifications", pollingLimiter);
 // Gắn bộ giới hạn admin cho toàn bộ các tuyến đường quản trị viên
 app.use("/api/admin", adminLimiter);
 
+// Gắn bộ giới hạn auth cho toàn bộ tuyến đường xác thực để chống brute-force
+app.use("/api/auth", authLimiter);
+
 // Gắn bộ giới hạn toàn cục cho toàn bộ các tuyến đường API đầu vào (phải đặt sau các bộ giới hạn cụ thể)
 app.use("/api", globalLimiter);
 

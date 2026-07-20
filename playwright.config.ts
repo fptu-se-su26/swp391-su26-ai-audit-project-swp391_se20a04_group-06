@@ -4,6 +4,7 @@ const runBackend = process.env.E2E_WITH_BACKEND === "true";
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  testMatch: "**/*.spec.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

@@ -85,6 +85,37 @@ describe("Unit Test: Nghiệp vụ Favorite Service (favorite.service.ts)", () =
         }),
       );
     });
+
+    // Ca kiểm thử 3: Lọc bỏ các sản phẩm đã bị xóa mềm (status: 'Deleted')
+    it("Nên lọc bỏ các sản phẩm đã bị xóa mềm (status: Deleted) khỏi danh sách", async () => {
+      const mockPopulatedUser = {
+        _id: mockUserId,
+        favorites: [
+          {
+            _id: mockProductId,
+            name: "Tôm hùm bông",
+            price: 850000,
+            type: "Fresh",
+            status: "Deleted", // Đã bị xóa
+            remainingWeight: 10,
+            viewCount: 120,
+            createdAt: new Date(),
+            images: ["tom_hum.png"],
+            sellerId: {
+              name: "Ngư dân Trần Văn Dũng",
+              isVerified: true,
+            },
+          },
+        ],
+      };
+
+      (userRepository.findFavoritesPopulated as jest.Mock).mockResolvedValue(
+        mockPopulatedUser,
+      );
+
+      const result = await favoriteService.getMyFavorites(mockUserId);
+      expect(result).toHaveLength(0);
+    });
   });
 
   // Nhóm kiểm thử dành cho nghiệp vụ bật/tắt yêu thích sản phẩm toggleFavorite

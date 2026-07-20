@@ -18,7 +18,7 @@ export const favoriteService = {
 
     // Chuẩn hóa và làm sạch cấu trúc dữ liệu của các sản phẩm yêu thích trước khi trả về Client
     return (user.favorites as any[])
-      .filter((p) => p !== null && p !== undefined)
+      .filter((p) => p !== null && p !== undefined && p.status !== "Deleted")
       .map((p) => ({
         id: p._id, // ID sản phẩm
         name: p.name, // Tên sản phẩm

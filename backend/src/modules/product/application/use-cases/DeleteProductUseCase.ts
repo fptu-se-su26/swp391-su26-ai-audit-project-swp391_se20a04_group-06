@@ -72,8 +72,8 @@ export class DeleteProductUseCase {
     await notificationRepository.deleteByProductId(productId).catch(() => {});
     // Thực hiện xóa toàn bộ các báo cáo vi phạm liên quan đến sản phẩm này trong DB
     await reportRepository.deleteByProductId(productId as any).catch(() => {});
-    // Loại bỏ ID sản phẩm này khỏi mảng yêu thích (favorites) của tất cả người dùng trong DB
-    await userRepository.updateMany({}, { $pull: { favorites: productId as any } }).catch(() => {});
+    // Loại bỏ ID sản phẩm này khỏi mảng yêu thích (favorites) chỉ của những người dùng có chứa sản phẩm đó trong DB
+    await userRepository.updateMany({ favorites: productId as any }, { $pull: { favorites: productId as any } }).catch(() => {});
 
     // 5. Xử lý cache Redis
     // Xóa cache chi tiết sản phẩm trên Redis để tránh trả về dữ liệu cũ đã bị xóa

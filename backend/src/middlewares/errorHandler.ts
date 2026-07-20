@@ -60,10 +60,14 @@ export function errorHandler(
     return res.status(400).json({ message: err.message });
   }
 
+  // 3.5. Xử lý lỗi Mongoose CastError (khi ObjectId không hợp lệ)
+  if (err.name === "CastError" || err.message.includes("Cast to ObjectId failed")) {
+    return res.status(400).json({ message: "Định dạng ID không hợp lệ" });
+  }
+  
   // 4. Xử lý các lỗi hệ thống không xác định khác (Lỗi runtime bất ngờ ví dụ lỗi kết nối DB, null pointer...)
   // Trả về lỗi mập mờ HTTP 500 để ẩn thông tin nhạy cảm của hệ thống đối với người dùng
   return res
     .status(500)
     .json({ message: "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau." });
 }
-

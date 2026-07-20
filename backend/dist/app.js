@@ -325,6 +325,9 @@ let serverInstance;
 async function bootstrap() {
     // Xác minh bắt buộc có các biến môi trường cấu hình nhạy cảm quan trọng
     const requiredEnvs = ["MONGO_URI", "JWT_SECRET", "OTP_SECRET"];
+    if (process.env.NODE_ENV === "production") {
+        requiredEnvs.push("GOOGLE_CLIENT_ID");
+    }
     // Lọc ra các biến môi trường bắt buộc chưa được khai báo
     const missingEnvs = requiredEnvs.filter((env) => !process.env[env]);
     // Nếu phát hiện thiếu bất kỳ biến cấu hình bắt buộc nào

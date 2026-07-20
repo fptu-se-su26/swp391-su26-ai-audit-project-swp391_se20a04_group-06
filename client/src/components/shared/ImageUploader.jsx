@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { ImagePlus, X } from "lucide-react";
 
 /**
@@ -10,6 +10,49 @@ import { ImagePlus, X } from "lucide-react";
  */
 export default function ImageUploader({ files = [], onChange, maxFiles = 5 }) {
   const inputRef = useRef(null);
+  const cacheRef = useRef(new Map());
+
+  // Cleanup all remaining object URLs when component is unmounted
+  useEffect(() => {
+    return () => {
+      cacheRef.current.forEach((url) => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          console.warn("Failed to revoke object URL:", e);
+        }
+      });
+      cacheRef.current.clear();
+    };
+  }, []);
+
+  // Update object URL cache and retrieve URL safely
+  const getUrl = (file) => {
+    if (!(file instanceof File)) {
+      return file;
+    }
+    if (cacheRef.current.has(file)) {
+      return cacheRef.current.get(file);
+    }
+    const url = URL.createObjectURL(file);
+    cacheRef.current.set(file, url);
+    return url;
+  };
+
+  // Revoke object URLs of files that are removed from the list
+  useEffect(() => {
+    const currentFilesSet = new Set(files);
+    cacheRef.current.forEach((url, file) => {
+      if (!currentFilesSet.has(file)) {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          console.warn("Failed to revoke object URL:", e);
+        }
+        cacheRef.current.delete(file);
+      }
+    });
+  }, [files]);
 
   const handleSelect = (e) => {
     const selected = Array.from(e.target.files || []);
@@ -34,7 +77,7 @@ export default function ImageUploader({ files = [], onChange, maxFiles = 5 }) {
       {files.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
           {files.map((file, i) => {
-            const url = file instanceof File ? URL.createObjectURL(file) : file;
+            const url = getUrl(file);
             return (
               <div
                 key={i}

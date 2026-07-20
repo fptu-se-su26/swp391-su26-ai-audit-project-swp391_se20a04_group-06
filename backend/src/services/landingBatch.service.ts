@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { redis } from "../config/redis";
 import { HttpError } from "../errors/HttpError";
 import { BoatLog } from "../models/BoatLog";
+import { logger } from "../utils/logger";
 import {
   ILandingBatch,
   LandingBatch,
@@ -576,18 +577,26 @@ export const landingBatchService = {
       }
       return null;
     })();
+    let redisQuotaChecked = false;
     if (limitKey) {
-      const nextCount = await redis.incrby(limitKey, documents.length);
-      if (nextCount === documents.length) {
-        await redis.expire(limitKey, 24 * 3600);
-      }
-      if (nextCount > 5) {
-        await redis.decrby(limitKey, documents.length);
-        const currentCount = nextCount - documents.length;
-        throw new HttpError(
-          409,
-          `Bạn đã đăng ${currentCount} sản phẩm hôm nay. Việc thêm ${documents.length} sản phẩm này sẽ vượt quá giới hạn 5 sản phẩm/ngày của tài khoản thường. Vui lòng nâng cấp lên Premium!`
-        );
+      try {
+        const nextCount = await redis.incrby(limitKey, documents.length);
+        redisQuotaChecked = true;
+        if (nextCount === documents.length) {
+          await redis.expire(limitKey, 24 * 3600);
+        }
+        if (nextCount > 5) {
+          await redis.decrby(limitKey, documents.length);
+          const currentCount = nextCount - documents.length;
+          throw new HttpError(
+            409,
+            `Bạn đã đăng ${currentCount} sản phẩm hôm nay. Việc thêm ${documents.length} sản phẩm này sẽ vượt quá giới hạn 5 sản phẩm/ngày của tài khoản thường. Vui lòng nâng cấp lên Premium!`
+          );
+        }
+      } catch (err) {
+        if (err instanceof HttpError) throw err;
+        logger.error(`[Redis Error] Failed to verify product quota for seller ${batch.sellerId}: ${err instanceof Error ? err.message : String(err)}`);
+        redisQuotaChecked = false;
       }
     }
 
@@ -595,8 +604,10 @@ export const landingBatchService = {
     try {
       products = await Product.insertMany(documents, { ordered: true });
     } catch (err) {
-      if (limitKey) {
-        await redis.decrby(limitKey, documents.length);
+      if (limitKey && redisQuotaChecked) {
+        await redis.decrby(limitKey, documents.length).catch((redisErr) => {
+          logger.error(`[Redis Error] Failed to rollback quota: ${redisErr instanceof Error ? redisErr.message : String(redisErr)}`);
+        });
       }
       throw err;
     }

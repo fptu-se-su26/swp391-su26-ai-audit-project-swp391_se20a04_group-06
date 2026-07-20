@@ -93,9 +93,9 @@ export async function askChatbot(req: Request, res: Response) {
         },
       });
 
-      // Tạo Promise đếm ngược 15 giây để tránh treo gateway
+      // Tạo Promise đếm ngược 5 giây để tránh treo gateway
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("timeout")), 15_000),
+        setTimeout(() => reject(new Error("timeout")), 5_000),
       );
 
       const completionPromise = chat.sendMessage(message.trim());
@@ -132,7 +132,7 @@ export async function askChatbot(req: Request, res: Response) {
           : [];
 
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("timeout")), 15_000),
+        setTimeout(() => reject(new Error("timeout")), 5_000),
       );
 
       const completionPromise = groq.chat.completions.create({

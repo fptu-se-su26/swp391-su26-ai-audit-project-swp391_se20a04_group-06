@@ -12,15 +12,10 @@ import './styles/theme.css'
 import './styles/role-backgrounds.css'
 import App from './App.jsx'
 
-// Initialize theme
-const savedTheme = localStorage.getItem("haisan_theme") || "dark";
-if (savedTheme === "light") {
-  document.documentElement.classList.add("theme-light");
-  document.documentElement.classList.remove("theme-dark");
-} else {
-  document.documentElement.classList.add("theme-dark");
-  document.documentElement.classList.remove("theme-light");
-}
+// Initialize theme (forced to light mode)
+document.documentElement.classList.add("theme-light");
+document.documentElement.classList.remove("theme-dark");
+localStorage.setItem("haisan_theme", "light");
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

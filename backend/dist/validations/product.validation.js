@@ -51,44 +51,63 @@ const productBodyFields = {
 // KHẮC PHỤC LỖI MEDIUM: Ràng buộc so khớp logic khối lượng còn lại không thể lớn hơn tổng khối lượng
 // Xuất ra schema kiểm thực dữ liệu khi tạo mới sản phẩm mẻ hàng
 exports.productCreateSchema = zod_1.z.object({
-    // Kiểm thực đối tượng body sử dụng bộ trường chung đã định nghĩa
-    body: zod_1.z.object(productBodyFields).refine(
-    // Hàm sàng lọc (refine) kiểm tra tính hợp lý giữa khối lượng còn lại và tổng khối lượng
-    (data) => {
-        // Nếu khối lượng còn lại được cung cấp
+    body: zod_1.z
+        .object(productBodyFields)
+        .refine((data) => {
+        const hasLat = data.lat !== undefined;
+        const hasLng = data.lng !== undefined;
+        return hasLat === hasLng;
+    }, {
+        message: "Vĩ độ (lat) và kinh độ (lng) phải đi kèm cùng nhau",
+        path: ["lng"],
+    })
+        .refine((data) => {
+        const hasCatchLat = data.catchLat !== undefined;
+        const hasCatchLng = data.catchLng !== undefined;
+        return hasCatchLat === hasCatchLng;
+    }, {
+        message: "Vĩ độ đánh bắt (catchLat) và kinh độ đánh bắt (catchLng) phải đi kèm cùng nhau",
+        path: ["catchLng"],
+    })
+        .refine((data) => {
         if (data.remainingWeight !== undefined) {
-            // Trả về true nếu khối lượng còn lại nhỏ hơn hoặc bằng tổng khối lượng ban đầu
             return data.remainingWeight <= data.totalWeight;
         }
-        // Trả về true nếu không cung cấp thuộc tính này
         return true;
     }, {
-        // Thông báo lỗi tùy chỉnh hiển thị khi điều kiện sàng lọc thất bại
         message: "Khối lượng còn lại không thể lớn hơn tổng khối lượng",
-        // Đường dẫn lỗi ánh xạ tới thuộc tính remainingWeight
         path: ["remainingWeight"],
     }),
 });
 // Xuất ra schema kiểm thực dữ liệu khi cập nhật thông tin sản phẩm mẻ hàng
 exports.productUpdateSchema = zod_1.z.object({
-    // Lấy các trường chung và chuyển đổi chúng sang dạng tùy chọn toàn bộ bằng partial()
     body: zod_1.z
         .object(productBodyFields)
         .partial()
-        // Hàm sàng lọc kiểm tra chéo tương tự schema tạo mới
         .refine((data) => {
-        // Chỉ tiến hành so sánh nếu cả hai thuộc tính khối lượng đều được gửi lên cập nhật
+        const hasLat = data.lat !== undefined;
+        const hasLng = data.lng !== undefined;
+        return hasLat === hasLng;
+    }, {
+        message: "Vĩ độ (lat) và kinh độ (lng) phải đi kèm cùng nhau",
+        path: ["lng"],
+    })
+        .refine((data) => {
+        const hasCatchLat = data.catchLat !== undefined;
+        const hasCatchLng = data.catchLng !== undefined;
+        return hasCatchLat === hasCatchLng;
+    }, {
+        message: "Vĩ độ đánh bắt (catchLat) và kinh độ đánh bắt (catchLng) phải đi kèm cùng nhau",
+        path: ["catchLng"],
+    })
+        .refine((data) => {
         if (data.remainingWeight !== undefined &&
             data.totalWeight !== undefined) {
-            // Khối lượng còn lại phải nhỏ hơn hoặc bằng tổng khối lượng
             return data.remainingWeight <= data.totalWeight;
         }
-        // Trả về true nếu thiếu 1 trong 2 thuộc tính để so sánh
         return true;
     }, {
-        // Thông điệp báo lỗi cụ thể
         message: "Khối lượng còn lại không thể lớn hơn tổng khối lượng",
-        // Đường dẫn trả lỗi
         path: ["remainingWeight"],
     }),
 });

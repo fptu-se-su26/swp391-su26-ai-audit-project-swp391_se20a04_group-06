@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, Crown, LogIn, Menu, MessageSquare, X } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { getNavigation, getUserRole, roleMeta } from "../config/navigation";
 import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../context/SocketContext";
@@ -28,30 +29,20 @@ function initials(name) {
 
 export default function Navbar() {
   const { user, logout } = useAuth();
-  const { notifications = [] } = useSocket() || {};
+  const notifications = useSelector((state) => state.notifications.list) || [];
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const actionsRef = useRef(null);
+  const [avatarError, setAvatarError] = useState(false);
 
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem("haisan_theme") === "light" ? "light" : "dark";
-  });
+  useEffect(() => {
+    setAvatarError(false);
+  }, [user]);
 
-  const toggleTheme = (newTheme) => {
-    setTheme(newTheme);
-    if (newTheme === "light") {
-      document.documentElement.classList.add("theme-light");
-      document.documentElement.classList.remove("theme-dark");
-      localStorage.setItem("haisan_theme", "light");
-    } else {
-      document.documentElement.classList.add("theme-dark");
-      document.documentElement.classList.remove("theme-light");
-      localStorage.setItem("haisan_theme", "dark");
-    }
-  };
+
 
   const role = getUserRole(user);
   const meta = roleMeta[role];
@@ -167,8 +158,8 @@ export default function Navbar() {
                   }}
                   type="button"
                 >
-                  {user.avatarUrl || user.avatar ? (
-                    <img src={user.avatarUrl || user.avatar} alt="" />
+                  {!avatarError && (user.avatarUrl || user.avatar) ? (
+                    <img src={user.avatarUrl || user.avatar} alt="" onError={() => setAvatarError(true)} />
                   ) : (
                     <span className="navbar-profile-button__avatar">{initials(user.name)}</span>
                   )}
@@ -183,8 +174,6 @@ export default function Navbar() {
                     role={role}
                     roleLabel={meta.label}
                     user={user}
-                    theme={theme}
-                    onThemeChange={toggleTheme}
                   />
                 )}
               </div>

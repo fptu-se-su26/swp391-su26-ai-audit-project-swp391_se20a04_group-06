@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bell, CheckCheck } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { useSocket } from "../context/SocketContext";
 import { apiNotifications } from "../services/api";
 
 export default function Notifications() {
-  const { notifications: realtime = [] } = useSocket() || {};
+  const realtime = useSelector((state) => state.notifications.list) || [];
   const [stored, setStored] = useState([]);
   const [notice, setNotice] = useState("");
 

@@ -87,8 +87,8 @@ async function askChatbot(req, res) {
                     temperature: 0.7,
                 },
             });
-            // Tạo Promise đếm ngược 15 giây để tránh treo gateway
-            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 15000));
+            // Tạo Promise đếm ngược 5 giây để tránh treo gateway
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000));
             const completionPromise = chat.sendMessage(message.trim());
             const result = await Promise.race([completionPromise, timeoutPromise]);
             const response = await result.response;
@@ -119,7 +119,7 @@ async function askChatbot(req, res) {
                     content: m.parts?.[0]?.text || m.content || "",
                 }))
                 : [];
-            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 15000));
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000));
             const completionPromise = groq.chat.completions.create({
                 model: "llama-3.1-8b-instant",
                 messages: [

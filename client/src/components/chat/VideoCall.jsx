@@ -12,6 +12,15 @@ const RTC_CONFIG = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
+    {
+      urls: [
+        "turn:openrelay.metered.ca:80",
+        "turn:openrelay.metered.ca:443",
+        "turn:openrelay.metered.ca:443?transport=tcp"
+      ],
+      username: "openrelay",
+      credential: "openrelay"
+    }
   ],
 };
 
@@ -30,6 +39,7 @@ export default function VideoCall({
   const queuedCandidatesRef = useRef([]);
   const callingTimeoutRef = useRef(null);
   const [phase, setPhase] = useState("idle");
+  const [isOpen, setIsOpen] = useState(false);
   const [incoming, setIncoming] = useState(null);
   const [error, setError] = useState("");
   const [micEnabled, setMicEnabled] = useState(true);
@@ -126,6 +136,7 @@ export default function VideoCall({
       socket?.emit("end_call", { to: remoteIdRef.current, productId });
     }
     resetCall();
+    setIsOpen(false);
   }, [productId, resetCall, socket]);
 
   const ensureMedia = useCallback(async () => {
@@ -175,6 +186,7 @@ export default function VideoCall({
     if (!socket || !partnerId || !productId) return;
     setError("");
     setPhase("calling");
+    setIsOpen(true);
     try {
       const stream = await ensureMedia();
       const peer = createPeer(partnerId);
@@ -222,6 +234,7 @@ export default function VideoCall({
   const rejectCall = () => {
     if (incoming?.from) socket?.emit("reject_call", { to: incoming.from, productId });
     resetCall();
+    setIsOpen(false);
   };
 
   useEffect(() => {
@@ -236,6 +249,7 @@ export default function VideoCall({
       remoteIdRef.current = data.from;
       setIncoming(data);
       setPhase("incoming");
+      setIsOpen(true);
     };
     const onAccepted = async ({ answer, productId: acceptedProductId }) => {
       try {
@@ -273,7 +287,14 @@ export default function VideoCall({
       setError("Người nhận đã từ chối cuộc gọi.");
     };
     const onEnded = ({ productId: endedProductId } = {}) => {
-      if (String(endedProductId) === String(productId)) resetCall();
+      if (String(endedProductId) === String(productId)) {
+        resetCall();
+        setError("Cuộc gọi đã kết thúc.");
+      }
+    };
+    const onError = (err) => {
+      setError(err?.message || "Lỗi cuộc gọi từ máy chủ.");
+      resetCall();
     };
 
     socket.on("incoming_call", onIncoming);
@@ -281,12 +302,14 @@ export default function VideoCall({
     socket.on("ice_candidate", onCandidate);
     socket.on("call_rejected", onRejected);
     socket.on("call_ended", onEnded);
+    socket.on("error", onError);
     return () => {
       socket.off("incoming_call", onIncoming);
       socket.off("call_accepted", onAccepted);
       socket.off("ice_candidate", onCandidate);
       socket.off("call_rejected", onRejected);
       socket.off("call_ended", onEnded);
+      socket.off("error", onError);
     };
   }, [flushCandidates, partnerId, phase, productId, resetCall, socket]);
 
@@ -319,15 +342,24 @@ export default function VideoCall({
         <Video size={18} /> Gọi video
       </button>
 
-      {phase !== "idle" && (
+      {(phase !== "idle" || isOpen) && (
         <div className="video-call-overlay" role="dialog" aria-modal="true">
           <section className="video-call-panel">
             <header>
-              <div><strong>{incoming?.callerName || partnerName}</strong><span>{phase === "incoming" ? "đang gọi cho bạn" : phase === "calling" ? "Đang đổ chuông..." : phase === "connected" ? "Đã kết nối" : "Đang kết nối..."}</span></div>
+              <div><strong>{incoming?.callerName || partnerName}</strong><span>{phase === "incoming" ? "đang gọi cho bạn" : phase === "calling" ? "Đang đổ chuông..." : phase === "connected" ? "Đã kết nối" : phase === "idle" ? "Cuộc gọi bị gián đoạn" : "Đang kết nối..."}</span></div>
             </header>
             <div className="video-call-stage">
-              <video autoPlay className="video-call-remote" playsInline ref={remoteVideoRef} />
-              <video autoPlay className="video-call-local" muted playsInline ref={localVideoRef} />
+              {phase !== "idle" ? (
+                <>
+                  <video autoPlay className="video-call-remote" playsInline ref={remoteVideoRef} />
+                  <video autoPlay className="video-call-local" muted playsInline ref={localVideoRef} />
+                </>
+              ) : (
+                <div className="video-call-placeholder">
+                  <VideoOff size={42} />
+                  <p>{error || "Không thể thực hiện cuộc gọi."}</p>
+                </div>
+              )}
               {phase === "incoming" && <div className="video-call-placeholder"><Video size={42} /><p>Cuộc gọi video đến</p></div>}
             </div>
             {error && <p className="video-call-error">{error}</p>}
@@ -337,6 +369,8 @@ export default function VideoCall({
                   <button className="video-control is-accept" onClick={acceptCall} type="button"><Phone size={20} /> Chấp nhận</button>
                   <button className="video-control is-end" onClick={rejectCall} type="button"><PhoneOff size={20} /> Từ chối</button>
                 </>
+              ) : phase === "idle" ? (
+                <button className="video-control is-end" onClick={() => setIsOpen(false)} type="button">Đóng</button>
               ) : (
                 <>
                   <button className="video-control" onClick={toggleMic} type="button">{micEnabled ? <Mic size={20} /> : <MicOff size={20} />}</button>

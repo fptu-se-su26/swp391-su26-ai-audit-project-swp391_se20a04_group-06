@@ -1,4 +1,5 @@
-import { Compass, Crown, LayoutDashboard, LogOut, Moon, Sun, User } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Compass, Crown, LayoutDashboard, LogOut, User } from "lucide-react";
 import { Link } from "react-router-dom";
 
 function initials(name) {
@@ -18,17 +19,20 @@ export default function ProfileDropdown({
   onClose,
   onLogout,
   onStartTour,
-  theme = "dark",
-  onThemeChange,
 }) {
   const workspacePath = role === "seller" ? "/seller" : role === "admin" ? "/admin" : null;
+  const [avatarError, setAvatarError] = useState(false);
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [user]);
 
   return (
     <section className="profile-menu" aria-label="Tài khoản">
       {/* Header User info */}
       <div className="profile-menu__header">
-        {user.avatarUrl || user.avatar ? (
-          <img className="profile-menu__avatar-img" src={user.avatarUrl || user.avatar} alt={user.name} />
+        {!avatarError && (user.avatarUrl || user.avatar) ? (
+          <img className="profile-menu__avatar-img" src={user.avatarUrl || user.avatar} alt={user.name} onError={() => setAvatarError(true)} />
         ) : (
           <div className="profile-menu__avatar">{initials(user.name)}</div>
         )}
@@ -56,27 +60,6 @@ export default function ProfileDropdown({
 
       {/* Nhóm giao diện & trợ giúp */}
       <div className="profile-menu__section">
-        <div className="theme-switcher">
-          <span className="theme-switcher__label">Giao diện</span>
-          <div className="theme-switcher__options">
-            <button
-              type="button"
-              className={`theme-option ${theme === "dark" ? "active" : ""}`}
-              onClick={() => onThemeChange("dark")}
-              aria-label="Giao diện tối"
-            >
-              <Moon size={14} /> Tối
-            </button>
-            <button
-              type="button"
-              className={`theme-option ${theme === "light" ? "active" : ""}`}
-              onClick={() => onThemeChange("light")}
-              aria-label="Giao diện sáng"
-            >
-              <Sun size={14} /> Sáng
-            </button>
-          </div>
-        </div>
         <button
           className="profile-menu__item profile-menu__button"
           onClick={onStartTour}

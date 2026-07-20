@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Route, Routes } from "react-router-dom";
+import { useSelector } from "react-redux";
 import SellerOverview from "../../components/seller/SellerOverview";
 import SellerProducts from "../../components/seller/SellerProducts";
 import LandingBatchForm from "./LandingBatchForm";
@@ -15,7 +16,7 @@ import {
 
 export default function SellerDashboard() {
   const { user } = useAuth();
-  const { notifications = [] } = useSocket() || {};
+  const notifications = useSelector((state) => state.notifications.list) || [];
   const [products, setProducts] = useState([]);
   const [conversations, setConversations] = useState([]);
   const [boatLogs, setBoatLogs] = useState([]);

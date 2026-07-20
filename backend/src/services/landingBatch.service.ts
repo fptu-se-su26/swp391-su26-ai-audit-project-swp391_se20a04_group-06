@@ -576,19 +576,18 @@ export const landingBatchService = {
       }
       return null;
     })();
-
     if (limitKey) {
-      const currentCountStr = await redis.get(limitKey);
-      const currentCount = currentCountStr ? parseInt(currentCountStr, 10) : 0;
-      if (currentCount + documents.length > 5) {
+      const nextCount = await redis.incrby(limitKey, documents.length);
+      if (nextCount === documents.length) {
+        await redis.expire(limitKey, 24 * 3600);
+      }
+      if (nextCount > 5) {
+        await redis.decrby(limitKey, documents.length);
+        const currentCount = nextCount - documents.length;
         throw new HttpError(
           409,
           `Bạn đã đăng ${currentCount} sản phẩm hôm nay. Việc thêm ${documents.length} sản phẩm này sẽ vượt quá giới hạn 5 sản phẩm/ngày của tài khoản thường. Vui lòng nâng cấp lên Premium!`
         );
-      }
-      await redis.incrby(limitKey, documents.length);
-      if (currentCount === 0) {
-        await redis.expire(limitKey, 24 * 3600);
       }
     }
 

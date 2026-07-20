@@ -66,6 +66,7 @@ export default function Community() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
+  const [likingIds, setLikingIds] = useState(new Set());
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState({ title: "", content: "", imageFiles: [], tags: "" });
 
@@ -142,6 +143,14 @@ export default function Community() {
   const toggleLike = async (post) => {
     if (!requireLogin()) return;
     const id = post.id || post._id;
+    if (likingIds.has(id)) return;
+
+    setLikingIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+
     const currentUserId = String(user.id || user._id);
     const originalPosts = [...posts];
 
@@ -190,6 +199,12 @@ export default function Community() {
         message: error.message,
         variant: "danger",
       });
+    } finally {
+      setLikingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
@@ -198,13 +213,21 @@ export default function Community() {
     const id = post.id || post._id;
     const text = comments[id]?.trim();
     if (!text) return;
-    const result = await apiPosts.addComment(id, text);
-    setPosts((current) =>
-      current.map((item) =>
-        (item.id || item._id) === id ? { ...item, comments: result.comments } : item,
-      ),
-    );
-    setComments((current) => ({ ...current, [id]: "" }));
+    try {
+      const result = await apiPosts.addComment(id, text);
+      setPosts((current) =>
+        current.map((item) =>
+          (item.id || item._id) === id ? { ...item, comments: result.comments } : item,
+        ),
+      );
+      setComments((current) => ({ ...current, [id]: "" }));
+    } catch (error) {
+      await alert({
+        title: "Lỗi bình luận",
+        message: error.message || "Không thể gửi bình luận của bạn.",
+        variant: "danger",
+      });
+    }
   };
 
   const deletePost = async (post) => {

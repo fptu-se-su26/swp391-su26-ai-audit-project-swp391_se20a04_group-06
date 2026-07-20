@@ -68,7 +68,10 @@ export class GoogleAuthUseCase {
 
       // Bảo mật bổ sung: Kiểm tra xem client_id ghi trong token có khớp với Client ID của ứng dụng chúng ta cấu hình hay không
       const envClientId = process.env.GOOGLE_CLIENT_ID;
-      if (envClientId && payload.aud !== envClientId) {
+      if (!envClientId) {
+        throw new ValidationError("Cấu hình GOOGLE_CLIENT_ID chưa được thiết lập trên hệ thống.");
+      }
+      if (payload.aud !== envClientId) {
         throw new ValidationError("Audience token không khớp với Client ID hệ thống");
       }
 

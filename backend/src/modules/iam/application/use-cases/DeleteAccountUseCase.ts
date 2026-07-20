@@ -54,8 +54,6 @@ export class DeleteAccountUseCase {
       session.startTransaction();
       dbOptions = { session };
     } catch (err: any) {
-      // Kết thúc phiên giao dịch ngay nếu không bắt đầu được
-      session.endSession();
       // Nếu MongoDB chạy ở chế độ Standalone (local dev) không hỗ trợ Replica Set, bỏ qua báo lỗi và chạy non-transactional
       if (err.message && err.message.includes("replica set")) {
         logger.warn("MongoDB Standalone detected. Bỏ qua Transaction ACID.");

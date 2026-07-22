@@ -22,8 +22,10 @@
    - *Nguyên lý vận hành web 5 bước, 4 Sơ đồ hệ thống đẹp mắt (Consolas font), Ma trận phân công tác giả test, 30+ Use Cases, Chỉ số hiệu năng, Bảo mật OWASP Top 10, 7 Design Patterns và **Bộ 25 Câu hỏi phản biện chuyên gia**.*
 2. 📙 **[Huong_Dan_Lam_Slide_Bao_Ve_Do_An_HaiSan_VN.docx](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/Huong_Dan_Lam_Slide_Bao_Ve_Do_An_HaiSan_VN.docx)** (26.1 KB)
    - *Hướng dẫn chi tiết 16 trang Slide thuyết trình, Kịch bản lời thoại đọc sẵn từng từ, Ma trận RTM đối chiếu yêu cầu SRS v2.0, Bảng so sánh công nghệ và Kịch bản Demo + Phương án dự phòng (Backup Plan).*
-3. 📗 **[so_sanh_voi_product_real.docx](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/so_sanh_voi_product_real.docx)** (12.5 KB)
+3. 📗 **[so_sanh_voi_product_real.docx](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/so_sanh_voi_product_real.docx)** (14.5 KB)
    - *Báo cáo phân tích đối chiếu 7 tiêu chí giữa Đồ án Prototype SWP391 và Sản phẩm Thương mại Thực tế sinh lời (Escrow Payment, Cold-Chain Logistics, eKYC, Monetization Streams & Offline-First Mobile).*
+4. 📕 **[ke_hoach_phan_chia_cong_viec_sap_toi.docx](file:///c:/Users/PC/OneDrive/Desktop/sea_shop/swp391-su26-ai-audit-project-swp391_se20a04_group-06/ke_hoach_phan_chia_cong_viec_sap_toi.docx)** (11.8 KB)
+   - *Kế hoạch phân công 4 nhóm công việc nước rút: Review Test QA, Manual Test & Fix UI/UX, Slide Design 16 trang & Code Tính năng Quảng cáo Doanh thu.*
 
 ### 📑 Thư Mục Tài Liệu Kỹ Thuật Chi Tiết (`docs/core/`):
 - 📐 **[Chuyên đề 01: Kiến Trúc & Thiết Kế Hệ Thống](docs/core/01_architecture_and_design.md)** — Phân tích luồng truyền dữ liệu, Auth JWT HttpOnly, ERD 11 collections & GeoJSON Indexing.

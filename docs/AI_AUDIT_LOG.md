@@ -182,6 +182,22 @@
 
 ---
 
+### AL-011
+
+| | |
+|---|---|
+| **Ngày** | 22/07/2026 |
+| **Sinh viên** | HE186165 |
+| **Công cụ AI** | Antigravity AI |
+| **Branch** | `main` |
+| **Nhiệm vụ** | Cải thiện UX chọn ngày/hạn sử dụng, chuẩn hóa định dạng tiền tệ VND, audit toàn bộ dự án & khắc phục các sự cố trước khi nộp đồ án |
+| **Mục đích** | Thay thế text-mask date picker bằng native date/datetime-local inputs; áp dụng `Intl.NumberFormat("vi-VN")` cho giá sản phẩm; rà soát bảo mật rate limiters, dọn dẹp các file rác/tracked dist và kiểm tra build TypeScript |
+| **Prompt tham chiếu** | HE186165/PROMPTS.md → P-008 |
+| **Kết quả** | Tải lại `DateTimePicker` & `DatePicker` native UX dễ dùng trên mobile/desktop; áp dụng chuẩn định dạng VND (ví dụ: 320.000 ₫); đưa `authLimiter` từ 1000 về 20; hủy tracking `backend/dist/`; fix lỗi kiểu `window` trong test Playwright; biên dịch TypeScript thành công 0 lỗi. |
+| **Đánh giá** | ✅ Tốt — Đã fix hoàn toàn các vấn đề kỹ thuật và bảo mật trước khi nộp project. |
+
+---
+
 *Thêm log mới vào bên dưới khi sử dụng AI tiếp theo.*
 
 ---
@@ -191,6 +207,7 @@
 | Công cụ | Số lần dùng | Tỷ lệ dùng được |
 |---|---|---|
 | Claude Sonnet | 8 | 85% dùng trực tiếp, 15% cần chỉnh |
+| Antigravity AI | 1 | ✅ |
 | GitHub Copilot | 1 | ✅ |
 | ChatGPT | 1 | ✅ |
 

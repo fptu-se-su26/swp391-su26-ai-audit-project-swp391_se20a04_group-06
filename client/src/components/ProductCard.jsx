@@ -123,30 +123,32 @@ function ProductCard({
       </div>
 
       <div className="market-product-card__body">
-        <div className="product-card-badges">
-          <span className="seafood-type-badge">
-            {getCategoryLabel(product.category) || "Hải sản"}
-          </span>
-          <span className="freshness-badge">
-            {product.type === "Fresh" ? "Tươi sống" : "Đồ khô"}
-          </span>
-          {product.productSize && product.productSize !== "Chưa cập nhật" && (
-            <span className="seafood-size-badge">
-              {getProductSizeLabel(product.productSize)}
+        <div className="product-card-header-group" style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <div className="product-card-badges">
+            <span className="seafood-type-badge">
+              {getCategoryLabel(product.category) || "Hải sản"}
             </span>
-          )}
-        </div>
+            <span className="freshness-badge">
+              {product.type === "Fresh" ? "Tươi" : "Đồ khô"}
+            </span>
+            {product.productSize && product.productSize !== "Chưa cập nhật" && (
+              <span className="seafood-size-badge">
+                {getProductSizeLabel(product.productSize)}
+              </span>
+            )}
+          </div>
 
-        <h3 className="product-card-title">{product.name}</h3>
-        <p className="market-product-card__price">
-          {formatCurrency(product.price)} <small>/ kg</small>
-        </p>
+          <h3 className="product-card-title">{product.name}</h3>
+          <p className="market-product-card__price">
+            {formatCurrency(product.price)} <small>/ kg</small>
+          </p>
+        </div>
 
         <dl className="product-facts">
           <div>
             <MapPin size={15} />
             <dt>Khoảng cách</dt>
-            <dd>{formatDistance(distanceKm)}</dd>
+            <dd>{formatDistance(distanceKm, (product.lat != null && product.lng != null) || (product.location?.coordinates?.[0] != null && product.location?.coordinates?.[1] != null))}</dd>
           </div>
           <div>
             <Clock3 size={15} />
@@ -186,32 +188,9 @@ function ProductCard({
           </button>
         )}
 
-        <button className="seller-identity" data-tour="product-seller-info" onClick={openSeller} type="button">
-          <span className="seller-identity__avatar">
-            {(product.sellerName || "ND").slice(0, 2).toUpperCase()}
-          </span>
-          <span>
-            <strong>{product.sellerName || "Ngư dân"}</strong>
-            <small>
-              {sellerVerified && <><ShieldCheck size={13} /> Đã xác minh</>}
-              {sellerPremium && <><Crown size={13} /> Premium</>}
-              {!sellerVerified && !sellerPremium && "Người bán trên chợ"}
-            </small>
-          </span>
-        </button>
-
-        <div className="market-product-card__actions">
+        <div className="market-product-card__actions" style={{ gridTemplateColumns: "1fr" }}>
           <button className="button button--primary" data-tour="product-chat-button" onClick={(event) => openChat(event)} type="button">
             <MessageSquare size={16} /> Nhắn người bán
-          </button>
-          <button
-            className="button button--secondary"
-            data-tour="product-reserve-button"
-            disabled={!canReserve}
-            onClick={(event) => openChat(event, true)}
-            type="button"
-          >
-            Giữ chỗ
           </button>
         </div>
       </div>

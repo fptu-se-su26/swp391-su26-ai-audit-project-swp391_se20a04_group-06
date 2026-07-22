@@ -8,6 +8,7 @@ import {
   EyeOff,
   Edit3,
   Link2,
+  Loader,
   MapPin,
   PackageOpen,
   Plus,
@@ -21,6 +22,7 @@ import { formatDate, getProductId } from "../../utils/product";
 import ImageUploader from "../../components/shared/ImageUploader";
 import DateTimePicker, { formatDateTimeForInput } from "../../components/shared/DateTimePicker";
 import { useConfirm } from "../../context/ConfirmContext";
+import { useToast } from "../../context/ToastContext";
 import IconActionButton from "../../components/common/IconActionButton";
 
 
@@ -37,7 +39,8 @@ function getArchivedLogIds() {
 }
 
 export default function BoatLog({ readOnly = false }) {
-  const { confirm, alert } = useConfirm();
+  const { confirm } = useConfirm();
+  const toast = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [logs, setLogs] = useState([]);
@@ -55,6 +58,8 @@ export default function BoatLog({ readOnly = false }) {
   const [formOpen, setFormOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [archivedIds, setArchivedIds] = useState(getArchivedLogIds);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     if (!user && !readOnly) return;
@@ -139,13 +144,37 @@ export default function BoatLog({ readOnly = false }) {
 
   const saveLog = async (event) => {
     event.preventDefault();
+    setSaving(true);
+    const toastId = toast.loading(editingId ? "Đang cập nhật nhật ký..." : "Đang đăng nhật ký...");
     try {
+      if (content.trim().length === 0) {
+        toast.update(toastId, "Nội dung nhật ký cabin không được để trống.", "error");
+        setSaving(false);
+        return;
+      }
+      if (content.trim().length > 5000) {
+        toast.update(toastId, "Nội dung nhật ký cabin không được vượt quá 5000 ký tự.", "error");
+        setSaving(false);
+        return;
+      }
+      if (landingTime && new Date(landingTime) > new Date()) {
+        toast.update(toastId, "Thời gian cập bến không thể ở tương lai.", "error");
+        setSaving(false);
+        return;
+      }
+
       let images = [...existingImages];
       if (imageFiles.length > 0) {
         const formData = new FormData();
         imageFiles.forEach((file) => formData.append("images", file));
         const uploadResult = await apiBoatLogs.uploadImages(formData);
         images = [...images, ...(uploadResult?.urls || [])];
+      }
+
+      if (images.length > 10) {
+        toast.update(toastId, "Chỉ được đăng tối đa 10 hình ảnh cho mỗi nhật ký.", "error");
+        setSaving(false);
+        return;
       }
 
       const payload = {
@@ -161,28 +190,25 @@ export default function BoatLog({ readOnly = false }) {
 
       await refreshLogs();
       closeForm();
+      toast.update(toastId, editingId ? "Cập nhật nhật ký thành công!" : "Đăng nhật ký thành công!", "success");
     } catch (error) {
-      await alert({
-        title: "Lỗi đăng nhật ký",
-        message: error.message,
-        variant: "danger"
-      });
+      toast.update(toastId, error.message || "Không thể lưu nhật ký.", "error");
+    } finally {
+      setSaving(false);
     }
   };
 
   const createLandingBatch = async (log) => {
     const logId = String(log.id || log._id);
     setBusyBatchId(logId);
+    const toastId = toast.loading("Đang tạo vựa cá từ nhật ký...");
     try {
       const result = await apiBoatLogs.createLandingBatch(logId);
       await refreshLogs();
+      toast.update(toastId, "Tạo vựa cá thành công!", "success");
       navigate(`/seller/landing-batches/${result.id}/edit`);
     } catch (error) {
-      await alert({
-        title: "Lỗi tạo vựa cá",
-        message: error.message,
-        variant: "danger"
-      });
+      toast.update(toastId, error.message || "Không thể tạo vựa cá.", "error");
     } finally {
       setBusyBatchId("");
     }
@@ -197,6 +223,7 @@ export default function BoatLog({ readOnly = false }) {
       variant: "danger"
     });
     if (!ok) return;
+    setDeletingId(id);
     try {
       await apiBoatLogs.delete(id);
       setArchivedIds((current) => {
@@ -206,12 +233,11 @@ export default function BoatLog({ readOnly = false }) {
         return next;
       });
       await refreshLogs();
+      toast.success("Đã xóa nhật ký thành công.");
     } catch (error) {
-      await alert({
-        title: "Lỗi xóa nhật ký",
-        message: error.message,
-        variant: "danger"
-      });
+      toast.error(error.message || "Không thể xóa nhật ký.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -261,6 +287,7 @@ export default function BoatLog({ readOnly = false }) {
             <label className="form-field bl-form__content-field">
               <span>Nội dung nhật ký <span className="bl-form__required">*</span></span>
               <textarea
+                maxLength="5000"
                 onChange={(event) => setContent(event.target.value)}
                 placeholder="Hôm nay tàu cập bến lúc..., đánh bắt tại..., hải sản gồm..."
                 required
@@ -348,9 +375,10 @@ export default function BoatLog({ readOnly = false }) {
               </button>
               <button
                 className="button button--primary bl-form__submit"
+                disabled={saving}
                 type="submit"
               >
-                {editingId ? "Cập nhật nhật ký" : "Đăng nhật ký"}
+                {saving ? <><Loader size={15} className="toast-spinner" /> Đang xử lý...</> : (editingId ? "Cập nhật nhật ký" : "Đăng nhật ký")}
               </button>
             </div>
           </div>
@@ -384,6 +412,7 @@ export default function BoatLog({ readOnly = false }) {
                         icon={<Trash2 />}
                         label="Xóa"
                         variant="danger"
+                        disabled={deletingId === String(log.id || log._id)}
                         onClick={() => deleteLog(log)}
                       />
                       <IconActionButton

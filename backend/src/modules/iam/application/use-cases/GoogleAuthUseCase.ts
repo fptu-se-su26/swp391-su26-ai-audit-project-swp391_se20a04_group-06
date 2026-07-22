@@ -146,6 +146,16 @@ export class GoogleAuthUseCase {
         logger.info(`✨ Auto-promoted mock user to Admin: Email=${email}`);
       }
 
+      // Đồng bộ hóa Tên hiển thị và Ảnh đại diện nếu có sự thay đổi từ tài khoản Google
+      if (name && rawProps.name !== name) {
+        rawProps.name = name;
+        needsSave = true;
+      }
+      if (avatar && rawProps.avatar !== avatar) {
+        rawProps.avatar = avatar;
+        needsSave = true;
+      }
+
       if (needsSave) {
         user = new User(rawProps, user.id);
         await this.userRepository.save(user);

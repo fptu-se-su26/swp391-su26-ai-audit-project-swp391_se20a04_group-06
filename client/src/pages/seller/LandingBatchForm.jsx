@@ -5,6 +5,7 @@ import ImageUploader from "../../components/shared/ImageUploader";
 import LocationPicker from "../../components/shared/LocationPicker";
 import DateTimePicker, { formatDateTimeForInput } from "../../components/shared/DateTimePicker";
 import { apiLandingBatches } from "../../services/api";
+import { useToast } from "../../context/ToastContext";
 import LivePreviewShell from "../../components/preview/LivePreviewShell";
 import LandingBatchLivePreview from "../../components/preview/LandingBatchLivePreview";
 
@@ -14,13 +15,14 @@ const categories = [
   ["Shrimp", "Tôm"],
   ["Squid", "Mực"],
   ["Crab", "Cua, ghẹ"],
-  ["Shellfish", "Nhuyễn thể"],
+  ["Shellfish", "Ốc, sò"],
   ["Others", "Khác"],
 ];
 
 const emptyBatch = {
   title: "",
   description: "",
+  boatType: "LargeBoat",
   boatName: "",
   catchArea: "",
   catchTime: "",
@@ -40,6 +42,7 @@ const emptyProduct = () => ({
   price: "",
   totalWeight: "",
   remainingWeight: "",
+  salesType: "Retail",
   description: "",
   images: [],
   productSize: "MEDIUM",
@@ -68,6 +71,7 @@ async function uploadFiles(items) {
 export default function LandingBatchForm() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
   const editing = Boolean(id);
   const [step, setStep] = useState(1);
   const [batch, setBatch] = useState(emptyBatch);
@@ -86,6 +90,7 @@ export default function LandingBatchForm() {
           ...emptyBatch,
           title: data.title || "",
           description: data.description || "",
+          boatType: data.boatType || "LargeBoat",
           boatName: data.boatName || "",
           catchArea: data.catchArea || "",
           catchTime: toLocalDateTime(data.catchTime),
@@ -161,6 +166,24 @@ export default function LandingBatchForm() {
     if (hasFreshProduct && (batch.lat === "" || batch.lng === "")) {
       throw new Error("Vựa có hải sản tươi cần vị trí GPS.");
     }
+    if (batch.catchTime) {
+      const cTime = new Date(batch.catchTime);
+      if (cTime > new Date()) {
+        throw new Error("Thời gian đánh bắt của vựa cá không thể ở tương lai.");
+      }
+    }
+    if (batch.landingTime) {
+      const lTime = new Date(batch.landingTime);
+      if (lTime > new Date()) {
+        throw new Error("Thời gian cập bến của vựa cá không thể ở tương lai.");
+      }
+      if (batch.catchTime) {
+        const cTime = new Date(batch.catchTime);
+        if (lTime < cTime) {
+          throw new Error("Thời gian cập bến phải sau thời gian đánh bắt.");
+        }
+      }
+    }
   };
 
   const validateProducts = () => {
@@ -186,6 +209,7 @@ export default function LandingBatchForm() {
     event.preventDefault();
     setNotice("");
     setSaving(true);
+    const toastId = toast.loading(editing ? "Đang cập nhật vựa cá..." : "Đang tạo vựa cá...");
     try {
       validateBatch();
       const filledRows = validateProducts();
@@ -193,7 +217,8 @@ export default function LandingBatchForm() {
       const payload = {
         title: batch.title.trim(),
         description: batch.description.trim() || null,
-        boatName: batch.boatName.trim() || null,
+        boatType: batch.boatType,
+        boatName: batch.boatType === "SmallBoat" ? null : (batch.boatName.trim() || null),
         catchArea: batch.catchArea.trim() || null,
         catchTime: toIso(batch.catchTime),
         landingTime: toIso(batch.landingTime),
@@ -225,7 +250,7 @@ export default function LandingBatchForm() {
               product.remainingWeight === ""
                 ? Number(product.totalWeight)
                 : Number(product.remainingWeight),
-            salesType: "Retail",
+            salesType: product.salesType || "Retail",
             description: product.description.trim() || null,
             images: await uploadFiles(product.images),
             productSize: product.productSize || "MEDIUM",
@@ -234,6 +259,7 @@ export default function LandingBatchForm() {
         await apiLandingBatches.addProducts(batchId, productPayloads);
       }
 
+      toast.update(toastId, editing ? "Cập nhật vựa cá thành công!" : "Tạo vựa cá thành công!", "success");
       navigate("/seller/landing-batches", {
         replace: true,
         state: {
@@ -243,6 +269,7 @@ export default function LandingBatchForm() {
         },
       });
     } catch (error) {
+      toast.update(toastId, error.message || "Không thể lưu vựa cá.", "error");
       setNotice(error.message);
     } finally {
       setSaving(false);
@@ -255,7 +282,7 @@ export default function LandingBatchForm() {
     <div className="landing-batch-form-page">
       <header className="page-heading page-heading--compact">
         <div>
-          <span className="eyebrow">LANDING BATCH</span>
+          <span className="eyebrow">VỰA CÁ</span>
           <h1>{editing ? "Chỉnh sửa vựa cá" : "Tạo vựa cá"}</h1>
           <p>Gom nhiều loại hải sản thật trong cùng một phiên cập bến.</p>
         </div>
@@ -292,10 +319,36 @@ export default function LandingBatchForm() {
                   value={batch.title}
                 />
               </label>
-              <label className="form-field">
-                <span>Tên tàu</span>
-                <input onChange={(event) => updateBatch("boatName", event.target.value)} value={batch.boatName} />
-              </label>
+              <div className="form-field form-field--wide">
+                <span>Quy mô đánh bắt</span>
+                <div className="segmented-control">
+                  <button
+                    className={`segmented-button ${batch.boatType === "LargeBoat" ? "is-active" : ""}`}
+                    onClick={() => updateBatch("boatType", "LargeBoat")}
+                    type="button"
+                    style={{ flex: 1, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}
+                  >
+                    Tàu lớn (Xa bờ)
+                  </button>
+                  <button
+                    className={`segmented-button ${batch.boatType === "SmallBoat" ? "is-active" : ""}`}
+                    onClick={() => {
+                      updateBatch("boatType", "SmallBoat");
+                      updateBatch("boatName", "");
+                    }}
+                    type="button"
+                    style={{ flex: 1, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}
+                  >
+                    Thuyền nhỏ / Thúng (Gần bờ)
+                  </button>
+                </div>
+              </div>
+              {batch.boatType !== "SmallBoat" && (
+                <label className="form-field">
+                  <span>Tên tàu</span>
+                  <input onChange={(event) => updateBatch("boatName", event.target.value)} value={batch.boatName} />
+                </label>
+              )}
               <label className="form-field">
                 <span>Khu vực đánh bắt</span>
                 <input onChange={(event) => updateBatch("catchArea", event.target.value)} value={batch.catchArea} />
@@ -410,8 +463,15 @@ export default function LandingBatchForm() {
                     <label className="form-field">
                       <span>Loại</span>
                       <select onChange={(event) => updateProduct(product.rowId, "type", event.target.value)} value={product.type}>
-                        <option value="Fresh">Tươi sống</option>
+                        <option value="Fresh">Tươi</option>
                         <option value="Dried">Đồ khô</option>
+                      </select>
+                    </label>
+                    <label className="form-field">
+                      <span>Hình thức bán</span>
+                      <select onChange={(event) => updateProduct(product.rowId, "salesType", event.target.value)} value={product.salesType || "Retail"}>
+                        <option value="Retail">Bán lẻ</option>
+                        <option value="Wholesale">Bán sỉ thương lượng</option>
                       </select>
                     </label>
                     <label className="form-field">

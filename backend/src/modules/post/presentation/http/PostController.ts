@@ -19,6 +19,7 @@ import { AddCommentUseCase } from "../../application/use-cases/AddCommentUseCase
 // Import lớp DeleteCommentUseCase để thực hiện nghiệp vụ xóa bình luận
 import { DeleteCommentUseCase } from "../../application/use-cases/DeleteCommentUseCase";
 import { ToggleLikeCommentUseCase } from "../../application/use-cases/ToggleLikeCommentUseCase";
+import { UpdatePostUseCase } from "../../application/use-cases/UpdatePostUseCase";
 
 // Khởi tạo đối tượng Repository dùng chung cho các Use Cases
 const postRepository = new MongoosePostRepository();
@@ -28,6 +29,7 @@ const createPostUseCase = new CreatePostUseCase(postRepository);
 const deletePostUseCase = new DeletePostUseCase(postRepository);
 // Khởi tạo Use Case thích/bỏ thích bài viết, tiêm Repository vào qua Constructor
 const toggleLikePostUseCase = new ToggleLikePostUseCase(postRepository);
+const updatePostUseCase = new UpdatePostUseCase(postRepository);
 // Khởi tạo Use Case thêm bình luận, tiêm Repository vào qua Constructor
 const addCommentUseCase = new AddCommentUseCase(postRepository);
 // Khởi tạo Use Case xóa bình luận, tiêm Repository vào qua Constructor
@@ -203,22 +205,12 @@ export async function updatePost(req: Request, res: Response, next: NextFunction
   if (!id) return res.status(400).json({ message: "ID bài đăng không hợp lệ" });
 
   try {
-    const post = await postRepository.findById(id);
-    if (!post) {
-      return res.status(404).json({ message: "Không tìm thấy bài đăng" });
-    }
-
-    if (role !== "Admin" && post.userId !== userId) {
-      return res.status(403).json({ message: "Bạn không có quyền chỉnh sửa bài đăng này" });
-    }
-
-    const { title, content, images, tags } = req.body;
-    post.props.title = title || post.props.title;
-    post.props.content = content || post.props.content;
-    if (images !== undefined) post.props.images = images;
-    if (tags !== undefined) post.props.tags = tags;
-
-    await postRepository.save(post);
+    const post = await updatePostUseCase.execute(id, userId, role, {
+      title: req.body.title,
+      content: req.body.content,
+      images: req.body.images,
+      tags: req.body.tags,
+    });
 
     return res.json({
       message: "Cập nhật bài đăng thành công",

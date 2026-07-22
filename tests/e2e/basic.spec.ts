@@ -4,7 +4,7 @@ test.describe("Basic E2E User Flow", () => {
   test("should load the home page and navigate to marketplace", async ({ page, context }) => {
     // Inject localStorage item to skip the tour guide
     await context.addInitScript(() => {
-      window.localStorage.setItem("haisan_home_tour_done", "true");
+      (globalThis as any).window?.localStorage.setItem("haisan_home_tour_done", "true");
     });
 
     // Navigate to the home page (baseURL is http://localhost:5173)

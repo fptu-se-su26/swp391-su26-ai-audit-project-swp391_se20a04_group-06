@@ -18,14 +18,15 @@ const productBodyFields = {
     .min(2, "Tên quá ngắn")
     .max(150, "Tên quá dài"),
   // Đơn giá bán: Tiền xử lý (preprocess) chuyển đổi đầu vào sang kiểu số và bắt buộc phải là số dương lớn hơn 0
+  // Đơn giá bán: Tiền xử lý (preprocess) chuyển đổi đầu vào sang kiểu số và bắt buộc phải là số dương lớn hơn 0
   price: z.preprocess(
     (val) => Number(val),
-    z.number().positive("Đơn giá phải lớn hơn 0"),
+    z.number().positive("Đơn giá phải lớn hơn 0").max(100000000, "Đơn giá tối đa 100 triệu VND/kg"),
   ),
   // Tổng khối lượng: Tiền xử lý chuyển đổi đầu vào sang số và bắt buộc là số dương lớn hơn 0
   totalWeight: z.preprocess(
     (val) => Number(val),
-    z.number().positive("Khối lượng phải lớn hơn 0"),
+    z.number().positive("Khối lượng phải lớn hơn 0").max(100000, "Khối lượng tối đa 100 tấn"),
   ),
   // Hình thức bán: Tùy chọn (Retail - Bán lẻ, Wholesale - Bán buôn)
   salesType: z.enum(["Retail", "Wholesale"] as const).optional(),
@@ -63,11 +64,11 @@ const productBodyFields = {
   // Nguồn gốc xuất xứ: Trường văn bản tùy chọn
   origin: z.string().optional(),
   // Ngày hết hạn: Trường văn bản tùy chọn
-  expiryDate: z.string().optional(),
+  expiryDate: z.string().optional().nullable(),
   // Khối lượng còn lại: Tiền xử lý chuyển đổi số, phải không âm và là tùy chọn
   remainingWeight: z.preprocess(
-    (val) => (val !== undefined ? Number(val) : undefined),
-    z.number().nonnegative("Khối lượng còn lại không được nhỏ hơn 0").optional(),
+    (val) => (val !== undefined && val !== "" && val !== null ? Number(val) : undefined),
+    z.number().nonnegative("Khối lượng còn lại không được nhỏ hơn 0").max(100000, "Khối lượng còn lại tối đa 100 tấn").optional(),
   ),
   // Trạng thái mẻ hàng: Chỉ chấp nhận "Active", "Expired" hoặc "Deleted"
   status: z.enum(["Active", "Expired", "Deleted"] as const).optional(),
@@ -75,6 +76,8 @@ const productBodyFields = {
   images: z.array(z.string()).optional(),
   // Kích thước hải sản: Tùy chọn
   productSize: z.enum(["LARGE", "MEDIUM", "SMALL"] as const).optional(),
+  // ID vựa cá liên kết: Tùy chọn
+  batchId: z.string().optional().nullable(),
 };
 
 // KHẮC PHỤC LỖI MEDIUM: Ràng buộc so khớp logic khối lượng còn lại không thể lớn hơn tổng khối lượng
@@ -115,6 +118,18 @@ export const productCreateSchema = z.object({
         message: "Khối lượng còn lại không thể lớn hơn tổng khối lượng",
         path: ["remainingWeight"],
       }
+    )
+    .refine(
+      (data) => {
+        if (data.expiryDate && data.catchTime) {
+          return new Date(data.expiryDate) >= new Date(data.catchTime);
+        }
+        return true;
+      },
+      {
+        message: "Hạn sử dụng không thể trước ngày đánh bắt",
+        path: ["expiryDate"],
+      }
     ),
 });
 
@@ -147,17 +162,28 @@ export const productUpdateSchema = z.object({
     )
     .refine(
       (data) => {
-        if (
-          data.remainingWeight !== undefined &&
-          data.totalWeight !== undefined
-        ) {
-          return data.remainingWeight <= data.totalWeight;
+        const rW = data.remainingWeight;
+        const tW = data.totalWeight;
+        if (rW !== undefined && tW !== undefined) {
+          return rW <= tW;
         }
         return true;
       },
       {
         message: "Khối lượng còn lại không thể lớn hơn tổng khối lượng",
         path: ["remainingWeight"],
+      }
+    )
+    .refine(
+      (data) => {
+        if (data.expiryDate && data.catchTime) {
+          return new Date(data.expiryDate) >= new Date(data.catchTime);
+        }
+        return true;
+      },
+      {
+        message: "Hạn sử dụng không thể trước ngày đánh bắt",
+        path: ["expiryDate"],
       }
     ),
 });

@@ -7,7 +7,7 @@ test_1.test.describe("Basic E2E User Flow", () => {
         await context.addInitScript(() => {
             window.localStorage.setItem("haisan_home_tour_done", "true");
         });
-        // Navigate to the home page (baseURL is http://localhost:5173)
+        // Navigate to the home page (baseURL is http://localhost:3000)
         await page.goto("/");
         // Verify the hero heading text
         const heading = page.locator("h1");

@@ -108,6 +108,9 @@ function toBatchPayload(body: Record<string, any>) {
   if (body.status === "Active" || body.status === "Closed") {
     payload.status = body.status;
   }
+  if (body.boatType === "LargeBoat" || body.boatType === "SmallBoat") {
+    payload.boatType = body.boatType;
+  }
   if (body.boatLogId) {
     ensureObjectId(body.boatLogId, "ID nhật ký");
     payload.boatLogId = body.boatLogId;
@@ -212,6 +215,7 @@ function formatBatch(
     sellerIsPremium: Boolean(seller?.isPremium),
     title: batch.title,
     description: batch.description || "",
+    boatType: batch.boatType || "LargeBoat",
     boatName: batch.boatName || "",
     catchArea: batch.catchArea || "",
     catchTime: batch.catchTime || null,
@@ -379,8 +383,12 @@ export const landingBatchService = {
   async listMine(userId: string, query: Record<string, any>) {
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 50));
+    const filter: Record<string, any> = { sellerId: userId, status: { $ne: "Deleted" } };
+    if (query.status === "Active" || query.status === "Closed") {
+      filter.status = query.status;
+    }
     return listBatches(
-      { sellerId: userId, status: { $ne: "Deleted" } },
+      filter,
       page,
       limit,
       true,
@@ -444,6 +452,16 @@ export const landingBatchService = {
   async create(userId: string, body: Record<string, any>) {
     const payload = toBatchPayload(body);
     if (!payload.title) throw new HttpError(400, "Tên vựa cá là bắt buộc");
+
+    const existing = await LandingBatch.findOne({
+      sellerId: userId,
+      title: payload.title,
+      status: "Active",
+    });
+    if (existing) {
+      throw new HttpError(409, `Bạn đã có vựa cá "${payload.title}" đang mở.`);
+    }
+
     const batch = await LandingBatch.create({
       ...payload,
       sellerId: userId,
@@ -464,18 +482,42 @@ export const landingBatchService = {
     const oldStatus = batch.status;
     const payload = toBatchPayload(body);
     delete payload.boatLogId;
+
+    if (payload.title && payload.title !== batch.title && payload.status !== "Deleted") {
+      const existing = await LandingBatch.findOne({
+        _id: { $ne: batch._id },
+        sellerId: batch.sellerId,
+        title: payload.title,
+        status: "Active",
+      });
+      if (existing) {
+        throw new HttpError(409, `Bạn đã có vựa cá "${payload.title}" đang mở.`);
+      }
+    }
+
     Object.assign(batch, payload);
     await batch.save();
 
-    if (oldStatus !== batch.status && (batch.status === "Closed" || batch.status === "Deleted")) {
-      await Product.updateMany(
-        { batchId: batch._id },
-        { $set: { status: "Deleted" } }
-      );
-      await Promise.all([
-        redis.incr("product:list:version:Fresh").catch(() => null),
-        redis.incr("product:list:version:Dried").catch(() => null),
-      ]);
+    if (oldStatus !== batch.status) {
+      if (batch.status === "Closed") {
+        await Product.updateMany(
+          { batchId: batch._id, status: "Active" },
+          { $set: { status: "Expired" } }
+        );
+        await Promise.all([
+          redis.incr("product:list:version:Fresh").catch(() => null),
+          redis.incr("product:list:version:Dried").catch(() => null),
+        ]);
+      } else if (batch.status === "Deleted") {
+        await Product.updateMany(
+          { batchId: batch._id },
+          { $set: { status: "Deleted" } }
+        );
+        await Promise.all([
+          redis.incr("product:list:version:Fresh").catch(() => null),
+          redis.incr("product:list:version:Dried").catch(() => null),
+        ]);
+      }
     }
 
     return { message: "Cập nhật vựa cá thành công" };
@@ -513,10 +555,20 @@ export const landingBatchService = {
 
     const documents = rows.map((row) => {
       const totalWeight = Number(row.totalWeight);
+      if (isNaN(totalWeight) || totalWeight <= 0) {
+        throw new HttpError(400, `Tổng khối lượng của "${row.name}" phải lớn hơn 0`);
+      }
+      const price = Number(row.price);
+      if (isNaN(price) || price <= 0) {
+        throw new HttpError(400, `Giá sản phẩm của "${row.name}" phải lớn hơn 0`);
+      }
       const remainingWeight =
         row.remainingWeight === undefined
           ? totalWeight
           : Number(row.remainingWeight);
+      if (isNaN(remainingWeight) || remainingWeight < 0) {
+        throw new HttpError(400, `Khối lượng còn lại của "${row.name}" không được là số âm`);
+      }
       const rowLocation =
         row.lat !== undefined && row.lng !== undefined
           ? {
@@ -536,6 +588,17 @@ export const landingBatchService = {
           400,
           `Khối lượng còn lại của "${row.name}" vượt quá tổng khối lượng`,
         );
+      }
+
+      const catchTime = row.catchTime ? new Date(row.catchTime) : batch.catchTime;
+      if (catchTime && catchTime > new Date()) {
+        throw new HttpError(400, `Ngày đánh bắt của "${row.name}" không thể ở tương lai`);
+      }
+      if (row.expiryDate) {
+        const expDate = new Date(row.expiryDate);
+        if (catchTime && expDate <= catchTime) {
+          throw new HttpError(400, `Ngày hết hạn của "${row.name}" phải sau ngày đánh bắt`);
+        }
       }
 
       return {
@@ -563,6 +626,7 @@ export const landingBatchService = {
           Array.isArray(row.images) && row.images.length > 0
             ? row.images.slice(0, 5)
             : batch.images.slice(0, 5),
+        productSize: row.productSize || "MEDIUM",
         bumpedAt: new Date(),
       };
     });

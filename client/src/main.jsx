@@ -10,6 +10,8 @@ import './styles/tour-guide.css'
 import './styles/live-preview.css'
 import './styles/theme.css'
 import './styles/role-backgrounds.css'
+import './styles/footer.css'
+import './styles/toast.css'
 import App from './App.jsx'
 
 // Initialize theme (forced to light mode)

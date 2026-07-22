@@ -25,6 +25,7 @@ const locationSchema = z
 const landingBatchFields = {
   title: z.string().trim().min(2, "Tên vựa cá quá ngắn").max(160),
   description: optionalText(3000),
+  boatType: z.enum(["LargeBoat", "SmallBoat"] as const).optional(),
   boatName: optionalText(120),
   catchArea: optionalText(200),
   catchTime: z.string().datetime().optional().nullable(),
@@ -61,6 +62,7 @@ const productRowSchema = z
     lat: optionalNumber(-90, 90),
     lng: optionalNumber(-180, 180),
     images: z.array(z.string().url()).max(5).optional(),
+    productSize: z.enum(["LARGE", "MEDIUM", "SMALL"] as const).optional(),
   })
   .refine(
     (product) =>

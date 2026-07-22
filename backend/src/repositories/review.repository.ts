@@ -18,15 +18,19 @@ export const reviewRepository = {
     if (!productId || !mongoose.Types.ObjectId.isValid(productId)) return false;
     if (!buyerId || !mongoose.Types.ObjectId.isValid(buyerId)) return false;
     if (!sellerId || !mongoose.Types.ObjectId.isValid(sellerId)) return false;
-    // Trả về true nếu tồn tại ít nhất một tin nhắn có liên quan đến sản phẩm này giữa hai người, ngược lại trả về false
-    return !!(await Message.exists({
+
+    // Yêu cầu hội thoại hai chiều thực tế: người mua nhắn cho người bán VÀ người bán có phản hồi lại
+    const buyerSent = await Message.exists({
       productId,
-      // Hoặc là người mua nhắn cho người bán, hoặc người bán nhắn cho người mua
-      $or: [
-        { senderId: buyerId, receiverId: sellerId },
-        { senderId: sellerId, receiverId: buyerId },
-      ],
-    }));
+      senderId: buyerId,
+      receiverId: sellerId,
+    });
+    const sellerSent = await Message.exists({
+      productId,
+      senderId: sellerId,
+      receiverId: buyerId,
+    });
+    return !!(buyerSent && sellerSent);
   },
 
   // Kiểm tra xem người đánh giá đã từng đánh giá sản phẩm này chưa

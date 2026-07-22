@@ -163,4 +163,24 @@ Tính năng:
 
 ---
 
+## P-008 — Cải thiện DatePicker, Format Tiền VND & Audit Dự án trước khi nộp
+
+**Công cụ:** Antigravity AI  
+**Ngày:** 22/07/2026  
+**Tham chiếu:** AL-009
+
+**Prompt đã gửi:**
+```
+Sửa lại 2 ô nhập thông tin trong ảnh dễ dùng dễ nhập thông tin hơn, giá của sản phẩm hiển thị cần chuẩn format việt nam đồng. Sau đó review toàn bộ dự án trước khi nộp đồ án và tiến hành fix các lỗi được phát hiện.
+```
+
+**Output AI trả về (tóm tắt):**
+1. Thay thế text-mask `DateTimePicker` và `DatePicker` bằng browser native `datetime-local` và `date` input, bổ sung CSS icon calendar teal theme.
+2. Cập nhật `formatCurrency` trong `product.js` và toàn bộ các trang AdminDashboard, ProductLivePreview, Premium sử dụng `Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" })`.
+3. Audit dự án: Khôi phục `authLimiter` max từ 1000 về 20, loại bỏ tracking folder `backend/dist/`, xóa file tạm `.docx`, sửa `playwright.config.ts` port 5173 và kiểm tra build `npx tsc --noEmit` thành công.
+
+**Đã chỉnh sửa:** Giữ nguyên các cải tiến trực tiếp, chạy kiểm thử lại toàn bộ ứng dụng.
+
+---
+
 *Thêm prompt mới khi có phiên làm việc AI tiếp theo.*

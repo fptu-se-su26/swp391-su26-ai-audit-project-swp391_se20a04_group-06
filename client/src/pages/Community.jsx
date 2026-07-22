@@ -1,4 +1,4 @@
-import { Heart, Image, MessageCircle, Pencil, Plus, Send, Trash2, X, Flag } from "lucide-react";
+import { Heart, Image, Loader, MessageCircle, Pencil, Plus, Send, Trash2, X, Flag } from "lucide-react";
 import ImageUploader from "../components/shared/ImageUploader";
 
 import { useEffect, useState } from "react";
@@ -9,7 +9,9 @@ import { apiPosts, apiReports } from "../services/api";
 import { getOptimizedImageUrl } from "../utils/image";
 import { canManageOwnedContent, getIdentityId } from "../utils/ownership";
 import { useConfirm } from "../context/ConfirmContext";
+import { useToast } from "../context/ToastContext";
 import IconActionButton from "../components/common/IconActionButton";
+import useSEO from "../hooks/useSEO";
 
 
 const initialEditForm = { title: "", content: "", tags: "" };
@@ -62,7 +64,9 @@ function PostAvatar({ avatar, name }) {
 }
 
 export default function Community() {
-  const { confirm, alert } = useConfirm();
+  useSEO("Diễn đàn", "Diễn đàn chia sẻ kiến thức đánh bắt, bảo quản hải sản và giao lưu cùng ngư dân.");
+  const { confirm } = useConfirm();
+  const toast = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
@@ -77,7 +81,16 @@ export default function Community() {
   const [editingPost, setEditingPost] = useState(null);
   const [editForm, setEditForm] = useState(initialEditForm);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [savingPost, setSavingPost] = useState(false);
   const [reportTarget, setReportTarget] = useState(null);
+  const [expandedComments, setExpandedComments] = useState({});
+
+  const toggleComments = (postId) => {
+    setExpandedComments((current) => ({
+      ...current,
+      [postId]: !current[postId]
+    }));
+  };
 
   const load = () =>
     apiPosts
@@ -105,13 +118,50 @@ export default function Community() {
 
   const requireLogin = () => {
     if (user) return true;
-    navigate("/login", { state: { message: "Bạn cần đăng nhập để tương tác cộng đồng." } });
+    navigate("/login", { state: { message: "Bạn cần đăng nhập để tương tác diễn đàn." } });
     return false;
+  };
+
+  const validatePostForm = (postForm) => {
+    if (!postForm.title || postForm.title.trim().length === 0) {
+      throw new Error("Tiêu đề bài viết không được để trống.");
+    }
+    if (postForm.title.trim().length > 150) {
+      throw new Error("Tiêu đề bài viết không được vượt quá 150 ký tự.");
+    }
+    if (!postForm.content || postForm.content.trim().length === 0) {
+      throw new Error("Nội dung bài viết không được để trống.");
+    }
+    if (postForm.content.trim().length > 10000) {
+      throw new Error("Nội dung bài viết không được vượt quá 10000 ký tự.");
+    }
+    if (postForm.imageFiles && postForm.imageFiles.length > 10) {
+      throw new Error("Chỉ được đăng tối đa 10 hình ảnh.");
+    }
+    const tagsArray = (postForm.tags || "").split(",").map((item) => item.trim()).filter(Boolean);
+    if (tagsArray.length > 10) {
+      throw new Error("Số lượng tags tối đa là 10.");
+    }
+    for (const tag of tagsArray) {
+      if (tag.length > 30) {
+        throw new Error("Mỗi tag tối đa 30 ký tự.");
+      }
+    }
   };
 
   const createPost = async (event) => {
     event.preventDefault();
     if (!requireLogin()) return;
+
+    try {
+      validatePostForm(form);
+    } catch (err) {
+      toast.error(err.message);
+      return;
+    }
+
+    setSavingPost(true);
+    const toastId = toast.loading("Đang đăng bài viết...");
     try {
       let images = [];
       if (form.imageFiles?.length > 0) {
@@ -129,12 +179,11 @@ export default function Community() {
       await load();
       setForm({ title: "", content: "", imageFiles: [], tags: "" });
       setFormOpen(false);
+      toast.update(toastId, "Đăng bài viết thành công!", "success");
     } catch (error) {
-      await alert({
-        title: "Lỗi đăng bài viết",
-        message: error.message,
-        variant: "danger"
-      });
+      toast.update(toastId, error.message || "Không thể đăng bài viết.", "error");
+    } finally {
+      setSavingPost(false);
     }
   };
 
@@ -194,11 +243,7 @@ export default function Community() {
       );
     } catch (error) {
       setPosts(originalPosts);
-      await alert({
-        title: "Lỗi tương tác",
-        message: error.message,
-        variant: "danger",
-      });
+      toast.error(error.message || "Không thể tương tác.");
     } finally {
       setLikingIds((prev) => {
         const next = new Set(prev);
@@ -222,11 +267,7 @@ export default function Community() {
       );
       setComments((current) => ({ ...current, [id]: "" }));
     } catch (error) {
-      await alert({
-        title: "Lỗi bình luận",
-        message: error.message || "Không thể gửi bình luận của bạn.",
-        variant: "danger",
-      });
+      toast.error(error.message || "Không thể gửi bình luận.");
     }
   };
 
@@ -245,12 +286,9 @@ export default function Community() {
     try {
       await apiPosts.delete(id);
       setPosts((current) => current.filter((item) => (item.id || item._id) !== id));
+      toast.success("Đã xóa bài viết thành công.");
     } catch (error) {
-      await alert({
-        title: "Lỗi xóa bài viết",
-        message: error.message,
-        variant: "danger"
-      });
+      toast.error(error.message || "Không thể xóa bài viết.");
     } finally {
       setDeletingId(null);
     }
@@ -277,7 +315,15 @@ export default function Community() {
     const id = editingPost?.id || editingPost?._id;
     if (!id || !canManageOwnedContent(user, editingPost.userId)) return;
 
+    try {
+      validatePostForm(editForm);
+    } catch (err) {
+      toast.error(err.message);
+      return;
+    }
+
     setSavingEdit(true);
+    const toastId = toast.loading("Đang cập nhật bài viết...");
     try {
       const result = await apiPosts.update(id, {
         title: editForm.title.trim(),
@@ -291,12 +337,9 @@ export default function Community() {
       );
       setEditingPost(null);
       setEditForm(initialEditForm);
+      toast.update(toastId, "Cập nhật bài viết thành công!", "success");
     } catch (error) {
-      await alert({
-        title: "Lỗi sửa bài viết",
-        message: error.message,
-        variant: "danger"
-      });
+      toast.update(toastId, error.message || "Không thể cập nhật bài viết.", "error");
     } finally {
       setSavingEdit(false);
     }
@@ -305,11 +348,7 @@ export default function Community() {
 
   return (
     <div className="page-container community-page">
-      <header className="page-heading" data-tour="community-heading">
-        <div>
-          <h1>Diễn đàn cộng đồng</h1>
-          <p>Chia sẻ kinh nghiệm biển cả, bảo quản và nhận biết hải sản sạch.</p>
-        </div>
+      <header className="page-heading" data-tour="community-heading" style={{ justifyContent: "flex-end", marginBottom: "16px" }}>
         <button className="button button--primary" data-tour="community-create-post" onClick={() => requireLogin() && setFormOpen((open) => !open)} type="button">
           <Plus size={17} /> Tạo bài viết
         </button>
@@ -327,7 +366,7 @@ export default function Community() {
             />
           </div>
           <input onChange={(event) => setForm({ ...form, tags: event.target.value })} placeholder="Thẻ: đánh bắt, bảo quản, vùng biển..." value={form.tags} />
-          <div className="form-actions"><button className="button button--primary" type="submit"><Send size={16} /> Đăng bài</button></div>
+          <div className="form-actions"><button className="button button--primary" disabled={savingPost} type="submit">{savingPost ? <><Loader size={15} className="toast-spinner" /> Đang xử lý...</> : <><Send size={16} /> Đăng bài</>}</button></div>
         </form>
       )}
 
@@ -424,7 +463,7 @@ export default function Community() {
                   <PostAvatar avatar={post.userAvatar} name={authorName} />
                   <span>
                     <strong>{authorName}</strong>
-                    <small>Thành viên cộng đồng HảiSản.vn</small>
+                    <small>Thành viên diễn đàn HảiSản.vn</small>
                   </span>
                 </Link>
                 <div className="community-post__header-meta">
@@ -452,10 +491,51 @@ export default function Community() {
               <p>{post.content}</p>
               {post.images?.length > 0 && (
                 <div className="community-post__images">
-                  {post.images.slice(0, 4).map((imageUrl) => <img alt="" key={imageUrl} loading="lazy" src={imageUrl} />)}
+                  {post.images.slice(0, 4).map((imageUrl) => (
+                    <img
+                      alt=""
+                      key={imageUrl}
+                      loading="lazy"
+                      src={imageUrl}
+                      style={{
+                        objectFit: "cover",
+                        width: "100%",
+                        height: post.images.length === 1 ? "auto" : "220px",
+                        borderRadius: "12px",
+                        display: "block"
+                      }}
+                    />
+                  ))}
                 </div>
               )}
               <div className="tag-list">{post.tags?.map((tag) => <span key={tag}>#{tag}</span>)}</div>
+              
+              {/* Hàng thống kê Lượt thích & Bình luận nổi bật */}
+              {(post.likes?.length > 0 || post.comments?.length > 0) && (
+                <div className="community-post__stats" style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "10px 14px",
+                  borderBottom: "1px solid var(--market-line)",
+                  fontSize: "0.95rem",
+                  marginTop: "12px",
+                  background: "rgba(8, 145, 178, 0.08)",
+                  borderRadius: "10px",
+                  borderLeft: "4px solid var(--market-primary)"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <Heart size={16} style={{ fill: "#e11d48", color: "#e11d48" }} />
+                    <span style={{ fontWeight: "800", color: "var(--color-primary-strong)" }}>
+                      {post.likeCount ?? post.likes?.length ?? 0} <span style={{ fontWeight: "700", color: "var(--color-text)" }}>lượt thích</span>
+                    </span>
+                  </div>
+                  <div style={{ fontWeight: "800", color: "var(--color-primary-strong)" }}>
+                    {post.comments?.length || 0} <span style={{ fontWeight: "700", color: "var(--color-text)" }}>bình luận</span>
+                  </div>
+                </div>
+              )}
+
               <div className="community-post__actions" data-tour="community-post-actions">
                 <button
                   className={`like-button ${user && post.likes?.map(String).includes(String(user.id || user._id)) ? "is-liked" : ""}`}
@@ -464,9 +544,19 @@ export default function Community() {
                 >
                   <Heart size={16} />
                   <span>{user && post.likes?.map(String).includes(String(user.id || user._id)) ? "Đã thích" : "Thích"}</span>
-                  <strong>{post.likeCount ?? post.likes?.length ?? 0}</strong>
                 </button>
-                <span><MessageCircle size={16} /> Bình luận <strong>{post.comments?.length || 0}</strong></span>
+                <button
+                  className={`comment-button ${expandedComments[id] ? "is-active" : ""}`}
+                  onClick={() => toggleComments(id)}
+                  type="button"
+                  style={{
+                    color: expandedComments[id] ? "#67e8f9" : "#8fa4bb",
+                    background: expandedComments[id] ? "rgba(34, 243, 255, 0.07)" : "transparent"
+                  }}
+                >
+                  <MessageCircle size={16} />
+                  <span>Bình luận</span>
+                </button>
                 <button
                   className="button button--ghost"
                   onClick={() => setReportTarget({ id, title: post.title })}
@@ -475,19 +565,24 @@ export default function Community() {
                   <Flag size={15} /> Báo cáo
                 </button>
               </div>
-              <div className="comment-list">
-                {post.comments?.map((comment) => (
-                  <p key={comment._id || `${comment.userId}-${comment.createdAt}`}><strong>{comment.userName}</strong> {comment.text}</p>
-                ))}
-              </div>
-              <div className="comment-composer" data-tour="community-comment">
-                <input onChange={(event) => setComments((current) => ({ ...current, [id]: event.target.value }))} placeholder="Viết bình luận..." value={comments[id] || ""} />
-                <button aria-label="Gửi bình luận" onClick={() => addComment(post)} type="button"><Send size={16} /></button>
-              </div>
+
+              {expandedComments[id] && (
+                <>
+                  <div className="comment-list">
+                    {post.comments?.map((comment) => (
+                      <p key={comment._id || `${comment.userId}-${comment.createdAt}`}><strong>{comment.userName}</strong> {comment.text}</p>
+                    ))}
+                  </div>
+                  <div className="comment-composer" data-tour="community-comment">
+                    <input onChange={(event) => setComments((current) => ({ ...current, [id]: event.target.value }))} placeholder="Viết bình luận..." value={comments[id] || ""} />
+                    <button aria-label="Gửi bình luận" onClick={() => addComment(post)} type="button"><Send size={16} /></button>
+                  </div>
+                </>
+              )}
             </article>
           );
         })}
-        {!loading && posts.length === 0 && <div className="empty-state"><Image size={28} /><p>Chưa có bài viết cộng đồng.</p></div>}
+        {!loading && posts.length === 0 && <div className="empty-state"><Image size={28} /><p>Chưa có bài viết diễn đàn.</p></div>}
       </div>
       <ReportDialog
         open={Boolean(reportTarget)}

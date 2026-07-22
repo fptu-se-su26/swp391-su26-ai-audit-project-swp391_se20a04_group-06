@@ -75,6 +75,7 @@ export function initSocket(server: HttpServer) {
       const payload = jwt.verify(
         token,
         process.env.JWT_SECRET as string,
+        { algorithms: ["HS256"] },
       ) as AuthPayload;
 
       const user = await userRepository.findRawById(payload.userId);
@@ -101,12 +102,13 @@ export function initSocket(server: HttpServer) {
       try {
         const prod = await productRepository.findById(productId);
         if (!prod) return;
-        const isSeller = prod.sellerId.toString() === userId;
+        const sellerId = prod.sellerId.toString();
+        const isSeller = sellerId === userId;
         const isBuyer = buyerId === userId;
 
         if (isSeller || isBuyer) {
-          socket.join(`product_${productId}_${buyerId}`);
-          logger.info(`Socket User ${userId} joined room product_${productId}_${buyerId}`);
+          socket.join(`chat_${buyerId}_${sellerId}`);
+          logger.info(`Socket User ${userId} joined room chat_${buyerId}_${sellerId}`);
         }
       } catch (err: any) {
         logger.error(`Socket join_room error: ${err.message}`);
@@ -114,12 +116,20 @@ export function initSocket(server: HttpServer) {
     });
 
     // Thoát khỏi phòng chat
-    socket.on("leave_room", (data: any) => {
+    socket.on("leave_room", async (data: any) => {
       let productId: string = data?.productId || (typeof data === "string" ? data : "");
       let buyerId: string = data?.buyerId || (typeof data === "string" ? userId : "");
       if (productId && buyerId) {
-        socket.leave(`product_${productId}_${buyerId}`);
-        logger.info(`Socket User ${userId} left room product_${productId}_${buyerId}`);
+        try {
+          const prod = await productRepository.findById(productId);
+          if (prod) {
+            const sellerId = prod.sellerId.toString();
+            socket.leave(`chat_${buyerId}_${sellerId}`);
+            logger.info(`Socket User ${userId} left room chat_${buyerId}_${sellerId}`);
+          }
+        } catch (err) {
+          // ignore
+        }
       }
     });
 
@@ -203,6 +213,7 @@ export function initSocket(server: HttpServer) {
           }
 
           const buyerId = isSeller ? receiverId : userId;
+          const sellerId = prod.sellerId.toString();
           const cleanContent = content ? content.trim().replace(/<[^>]*>/g, "").slice(0, 1000) : null;
 
           const newMsg = await messageRepository.create({
@@ -226,7 +237,7 @@ export function initSocket(server: HttpServer) {
             isRead: false,
           };
 
-          const roomName = `product_${productId}_${buyerId}`;
+          const roomName = `chat_${buyerId}_${sellerId}`;
           io.to(roomName).emit("new_message", messageResponse);
 
           // Gửi thông báo notification đẩy

@@ -14,16 +14,17 @@ export function getProductImage(product) {
     normalizeImageUrl(product?.coverImg) ||
     firstImage ||
     normalizeImageUrl(product?.imageUrl) ||
-    "/favicon.svg"
+    "/favicon.png"
   );
 }
 
 export function formatCurrency(value) {
-  return new Intl.NumberFormat("vi-VN", {
+  const num = Number(value) || 0;
+  const formatted = new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency: "VND",
-    maximumFractionDigits: 0,
-  }).format(Number(value) || 0);
+  }).format(num);
+  return formatted;
 }
 
 export function formatDate(value, fallback = "Chưa cập nhật") {
@@ -91,8 +92,8 @@ export function calculateDistanceKm(from, product) {
   return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-export function formatDistance(distanceKm) {
-  if (distanceKm == null) return "Chưa có vị trí";
+export function formatDistance(distanceKm, productHasCoords = true) {
+  if (distanceKm == null) return productHasCoords ? "Chưa tính" : "Chưa có vị trí";
   if (distanceKm < 1) return `${Math.round(distanceKm * 1000)} m`;
   return `${distanceKm.toFixed(distanceKm < 10 ? 1 : 0)} km`;
 }

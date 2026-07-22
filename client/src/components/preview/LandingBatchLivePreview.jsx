@@ -63,10 +63,17 @@ export default function LandingBatchLivePreview({ batch, products }) {
 
       {/* Metadata Panel */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", padding: "12px", background: "rgba(34, 243, 255, 0.04)", border: "1px solid rgba(34, 243, 255, 0.1)", borderRadius: "10px", marginBottom: "16px", fontSize: "0.75rem", color: "#cbd5e1" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <Ship size={14} style={{ color: "#22f3ff" }} />
-          <span>Tàu: {batch.boatName?.trim() || <span style={{ color: "#475569" }}>Chưa nhập</span>}</span>
-        </div>
+        {batch.boatType !== "SmallBoat" ? (
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <Ship size={14} style={{ color: "#22f3ff" }} />
+            <span>Tàu: {batch.boatName?.trim() || <span style={{ color: "#475569" }}>Chưa nhập</span>}</span>
+          </div>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <Ship size={14} style={{ color: "#22f3ff" }} />
+            <span>Quy mô: Ghe nhỏ / Thúng</span>
+          </div>
+        )}
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <MapPin size={14} style={{ color: "#22f3ff" }} />
           <span>Nguồn: {batch.origin?.trim() || <span style={{ color: "#475569" }}>Chưa nhập</span>}</span>

@@ -172,7 +172,7 @@ const pollingLimiter = rateLimit({
 const adminLimiter = rateLimit({
   // Khoảng thời gian đo lường là 1 phút
   windowMs: 60 * 1000,
-  // Giới hạn tối đa 300 yêu cầu mỗi phút
+  // Giới hạn tối đa 3000 yêu cầu mỗi phút
   max: 3000,
   // Báo lỗi admin yêu cầu quá nhiều
   message: { message: "Quá nhiều yêu cầu admin." },
@@ -187,7 +187,7 @@ const globalLimiter = rateLimit({
   // Khoảng thời gian đo lường là 1 phút
   windowMs: 60 * 1000,
   // Cho phép tối đa 1500 yêu cầu mỗi phút từ một IP
-  max: 15000,
+  max: 1500,
   // Phản hồi lỗi hệ thống quá tải
   message: {
     message: "Hệ thống đang xử lý quá nhiều yêu cầu. Vui lòng chậm lại.",

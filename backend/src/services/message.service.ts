@@ -18,8 +18,8 @@ export const messageService = {
     role: string,
     buyerIdStr?: string,
   ) {
-    // Khởi tạo bộ lọc theo productId
-    const filter: any = { productId };
+    // Khởi tạo bộ lọc (không lọc theo productId nữa để hiển thị mọi tin nhắn của cặp người dùng này)
+    const filter: any = {};
 
     // Nếu người xem không phải quản trị viên hệ thống (role !== "Admin")
     if (role !== "Admin") {
@@ -46,7 +46,7 @@ export const messageService = {
       // Xác định ID của đối tác trò chuyện (người nhắn) để đánh dấu đã đọc
       const partnerId = isSeller ? buyerId : prod.sellerId.toString();
       // Đánh dấu toàn bộ các tin nhắn do đối tác gửi là đã đọc đối với người xem hiện tại
-      await messageRepository.markAsRead(productId, partnerId, userId);
+      await messageRepository.markAsRead(partnerId, userId);
     } else if (buyerIdStr) {
       // Nếu người xem là Admin và có truyền ID người mua
       const prod = await productRepository.findById(productId);
@@ -133,8 +133,9 @@ export const messageService = {
         // Xác định ID người mua
         const isSeller = prod.sellerId.toString() === userId;
         const buyerId = isSeller ? receiverId : userId;
-        // Định danh tên phòng chat Socket: product_{productId}_{buyerId}
-        const roomName = `product_${productId}_${buyerId}`;
+        const sellerId = prod.sellerId.toString();
+        // Định danh tên phòng chat Socket: chat_{buyerId}_{sellerId}
+        const roomName = `chat_${buyerId}_${sellerId}`;
 
         // Lấy server socket.io
         const io = getIO();
@@ -205,7 +206,7 @@ export const messageService = {
 
       // Trả về cấu trúc thông tin cuộc hội thoại
       return {
-        productId: conv._id.productId?.toString() || "", // ID sản phẩm liên quan
+        productId: conv.productId?.toString() || "", // ID sản phẩm liên quan
         otherUserId: conv._id.otherUserId?.toString() || "", // ID người trò chuyện cùng
         productSellerId: conv.product?.sellerId?.toString() || "", // ID người bán sản phẩm
         productName: conv.product?.name || "Sản phẩm đã bị xóa", // Tên sản phẩm

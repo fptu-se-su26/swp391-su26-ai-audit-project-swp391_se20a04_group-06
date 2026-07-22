@@ -183,7 +183,11 @@ export default function LandingBatchDetail() {
       </section>
 
       <section className="landing-batch-summary">
-        <article><Ship /><span>Tên tàu</span><strong>{batch.boatName || "Chưa cập nhật"}</strong></article>
+        {batch.boatType !== "SmallBoat" ? (
+          <article><Ship /><span>Tên tàu</span><strong>{batch.boatName || "Chưa cập nhật"}</strong></article>
+        ) : (
+          <article><Ship /><span>Quy mô</span><strong>Ghe nhỏ / Thúng (Gần bờ)</strong></article>
+        )}
         <article><MapPin /><span>Khu vực đánh bắt</span><strong>{batch.catchArea || "Chưa cập nhật"}</strong></article>
         <article><Clock3 /><span>Thời gian cập bến</span><strong>{formatLandingDateTime(batch.landingTime)}</strong></article>
         <article><Anchor /><span>Nguồn gốc</span><strong>{batch.origin || "Chưa cập nhật"}</strong></article>

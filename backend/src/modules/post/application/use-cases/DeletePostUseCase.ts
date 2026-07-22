@@ -2,6 +2,9 @@
 import { IPostRepository } from "../../domain/repositories/IPostRepository";
 // Import ngoại lệ nghiệp vụ NotFoundError và UnauthorizedError để báo lỗi khi không tìm thấy hoặc không có quyền xóa
 import { NotFoundError, UnauthorizedError } from "../../../../shared/domain/exceptions/DomainException";
+import { deleteFromCloudinary } from "../../../../middlewares/upload";
+import { extractPublicId } from "../../../../utils/cloudinary";
+import { logger } from "../../../../utils/logger";
 
 /**
  * Use Case xóa bài đăng trên diễn đàn.
@@ -28,8 +31,24 @@ export class DeletePostUseCase {
       throw new UnauthorizedError("Bạn không có quyền xóa bài đăng này");
     }
 
+    const postImages = post.images || [];
+
     // Thực hiện xóa bài viết khỏi cơ sở dữ liệu
     await this.postRepository.delete(post);
+
+    // Xóa ảnh của bài đăng trên Cloudinary để giải phóng dung lượng
+    if (postImages.length > 0) {
+      await Promise.all(
+        postImages.map(async (url) => {
+          const publicId = extractPublicId(url);
+          if (publicId) {
+            await deleteFromCloudinary(publicId).catch((err) => {
+              logger.error(`[Cloudinary Clean] Lỗi xóa ảnh bài đăng bị xóa ${publicId}: ${err.message}`);
+            });
+          }
+        })
+      );
+    }
   }
 }
 

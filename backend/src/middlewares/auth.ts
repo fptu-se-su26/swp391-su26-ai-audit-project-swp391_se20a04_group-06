@@ -32,17 +32,22 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     };
     
     // Gắn thông tin payload đã giải mã thành công (userId, role) vào đối tượng Request để sử dụng ở các controller tiếp theo
-    const activeUser = await User.exists({
+    const activeUser = await User.findOne({
       _id: payload.userId,
       isActive: true,
-    });
+    }).lean();
     if (!activeUser) {
       return res.status(403).json({
         code: "ACCOUNT_DISABLED",
         message: "Tài khoản đã bị khóa hoặc không còn tồn tại.",
       });
     }
-    req.user = payload;
+    req.user = {
+      userId: activeUser._id.toString(),
+      role: activeUser.role,
+      isVerified: activeUser.isVerified,
+      isPremium: activeUser.isPremium,
+    };
     // Chuyển tiếp yêu cầu sang middleware hoặc controller kế tiếp
     next();
   } catch (err) {
@@ -78,13 +83,17 @@ export function adminOnly(req: Request, res: Response, next: NextFunction) {
 
 /**
  * Bảo vệ các thao tác nghiệp vụ dành riêng cho người bán. Admin luôn được
- * phép; tài khoản thường phải đăng nhập trong phiên "seller".
+ * phép; tài khoản thường phải là tài khoản Premium hoặc Ngư dân đã xác minh.
  */
 export function sellerOnly(req: Request, res: Response, next: NextFunction) {
-  if (req.user?.role !== "Admin" && req.user?.sessionRole !== "seller") {
+  if (
+    req.user?.role !== "Admin" &&
+    !req.user?.isVerified &&
+    !req.user?.isPremium
+  ) {
     return res.status(403).json({
       code: "SELLER_ONLY",
-      message: "Chỉ phiên Ngư dân bán hàng mới có quyền thực hiện thao tác này",
+      message: "Chỉ tài khoản Premium hoặc Ngư dân đã xác minh mới có quyền thực hiện thao tác này",
     });
   }
   next();

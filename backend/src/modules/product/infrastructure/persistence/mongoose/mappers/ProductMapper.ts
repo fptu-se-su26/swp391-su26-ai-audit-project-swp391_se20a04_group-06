@@ -81,6 +81,8 @@ export class ProductMapper {
         createdAt: mongooseDoc.createdAt,
         // Ánh xạ lượt xem của sản phẩm
         viewCount: mongooseDoc.viewCount,
+        // Ánh xạ mã định danh vựa cá liên kết
+        batchId: mongooseDoc.batchId?.toString(),
       },
       // Chuyển đổi mã định danh của tài liệu Mongoose từ ObjectId sang chuỗi làm ID thực thể Domain
       mongooseDoc._id.toString()
@@ -122,6 +124,8 @@ export class ProductMapper {
       viewCount: props.viewCount,
       // Thiết lập thời điểm đẩy bài viết gần nhất
       bumpedAt: props.bumpedAt,
+      // Thiết lập mã vựa cá liên kết
+      batchId: props.batchId ? new mongoose.Types.ObjectId(props.batchId) : undefined,
     };
 
     // Nếu thực thể Domain có thông tin vị trí tọa độ hiện tại

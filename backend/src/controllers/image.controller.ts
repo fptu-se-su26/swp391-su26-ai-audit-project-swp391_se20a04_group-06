@@ -42,6 +42,9 @@ export async function uploadContentImages(req: Request, res: Response) {
   if (!files?.length) {
     return res.status(400).json({ message: "Chưa chọn ảnh nào" });
   }
+  if (files.length > 10) {
+    return res.status(400).json({ message: "Chỉ được phép tải lên tối đa 10 hình ảnh mỗi lần" });
+  }
 
   try {
     const uploaded = await Promise.all(
@@ -83,6 +86,11 @@ export async function uploadImages(req: Request, res: Response) {
     // Nếu sản phẩm không tồn tại, trả về lỗi 404
     if (!prod)
       return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+
+    // Không cho phép tải ảnh cho sản phẩm đã bị xóa hoặc hết hạn
+    if (prod.status === "Deleted" || prod.status === "Expired") {
+      return res.status(400).json({ message: "Không thể tải ảnh cho sản phẩm đã bị xóa hoặc đã hết hạn" });
+    }
 
     // Kiểm tra quyền sở hữu: chỉ có chủ bài đăng (sellerId) hoặc tài khoản Admin mới được tải ảnh lên
     if (prod.sellerId.toString() !== userId && role !== "Admin")

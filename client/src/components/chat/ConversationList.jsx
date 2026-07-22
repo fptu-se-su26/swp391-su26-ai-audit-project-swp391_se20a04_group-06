@@ -14,9 +14,9 @@ export default function ConversationList({
   pinnedIds,
   threads,
 }) {
-  const orderedThreads = [...threads].sort((left, right) => {
-    const leftPinned = pinnedIds.has(left.id) ? 1 : 0;
-    const rightPinned = pinnedIds.has(right.id) ? 1 : 0;
+  const orderedThreads = [...(threads || [])].filter(Boolean).sort((left, right) => {
+    const leftPinned = pinnedIds?.has?.(left.id) ? 1 : 0;
+    const rightPinned = pinnedIds?.has?.(right.id) ? 1 : 0;
     if (leftPinned !== rightPinned) return rightPinned - leftPinned;
     return new Date(right.lastSentAt || 0) - new Date(left.lastSentAt || 0);
   });
@@ -29,7 +29,7 @@ export default function ConversationList({
       </header>
 
       <div className="conversation-list__items">
-        {orderedThreads.map((thread) => {
+        {orderedThreads.filter(Boolean).map((thread) => {
           const lastMessage = thread.messages?.at(-1);
           const preview = lastMessage?.content || thread.lastMessage || "Chưa có tin nhắn";
           const active = thread.id === activeThreadId;

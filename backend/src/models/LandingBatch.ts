@@ -6,6 +6,7 @@ export interface ILandingBatch extends Document {
   sellerId: Types.ObjectId;
   title: string;
   description: string | null;
+  boatType: "LargeBoat" | "SmallBoat";
   boatName?: string;
   catchArea?: string;
   catchTime?: Date;
@@ -33,6 +34,12 @@ const landingBatchSchema = new Schema<ILandingBatch>(
     },
     title: { type: String, required: true, trim: true, maxlength: 160 },
     description: { type: String, default: null, maxlength: 3000 },
+    boatType: {
+      type: String,
+      enum: ["LargeBoat", "SmallBoat"],
+      default: "LargeBoat",
+      required: true,
+    },
     boatName: { type: String, trim: true, maxlength: 120 },
     catchArea: { type: String, trim: true, maxlength: 200 },
     catchTime: { type: Date },

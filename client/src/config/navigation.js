@@ -20,23 +20,24 @@ import {
 const buyerNavigation = [
   { label: "Trang chủ", path: "/", icon: Home },
   { label: "Chợ hải sản", path: "/marketplace", icon: Store },
-  { label: "Cộng đồng", path: "/community", icon: UsersRound },
+  { label: "Diễn đàn", path: "/community", icon: UsersRound },
   { label: "Công thức", path: "/recipes", icon: ChefHat },
   { label: "Nhật ký biển", path: "/boat-log", icon: BookOpenText },
   { label: "Xếp hạng", path: "/leaderboard", icon: Trophy },
-  { label: "Đã lưu", path: "/buyer/favorites", icon: Heart },
 ];
 
 const sellerNavigation = [
+  { label: "Xem chợ", path: "/marketplace", icon: Store },
   { label: "Tổng quan", path: "/seller", icon: LayoutDashboard, exact: true },
   { label: "Quản lý sản phẩm", path: "/seller/products", icon: Fish },
   { label: "Vựa cá", path: "/seller/landing-batches", icon: PackageOpen },
-  { label: "Cộng đồng", path: "/community", icon: UsersRound },
+  { label: "Diễn đàn", path: "/community", icon: UsersRound },
   { label: "Công thức", path: "/recipes", icon: ChefHat },
   { label: "Nhật ký biển", path: "/seller/boat-log", icon: BookOpenText },
 ];
 
 const adminNavigation = [
+  { label: "Xem chợ", path: "/marketplace", icon: Store },
   { label: "Tổng quan", path: "/admin", icon: LayoutDashboard, exact: true },
   { label: "Quản lý người dùng", path: "/admin/users", icon: Users },
   { label: "Duyệt sản phẩm", path: "/admin/listings", icon: ShieldCheck },
@@ -51,24 +52,25 @@ const adminNavigation = [
 const guestNavigation = [
   { label: "Trang chủ", path: "/", icon: Home },
   { label: "Chợ hải sản", path: "/marketplace", icon: Store },
-  { label: "Cộng đồng", path: "/community", icon: UsersRound },
+  { label: "Diễn đàn", path: "/community", icon: UsersRound },
   { label: "Công thức", path: "/recipes", icon: ChefHat },
   { label: "Xếp hạng", path: "/leaderboard", icon: Trophy },
 ];
 
 export function getUserRole(user) {
-  if (user?.role === "Admin" || user?.role === "admin") return "admin";
-  const role = user?.sessionRole || user?.role || "guest";
-  if (role === "Seller" || role === "seller") return "seller";
-  if (role === "User" || role === "Buyer" || role === "buyer") return "buyer";
-  return "guest";
+  if (!user) return "guest";
+  if (user.role === "Admin" || user.role === "admin") return "admin";
+  if (user.isPremium || user.isVerified) return "seller";
+  return "buyer";
 }
 
-export function getNavigation(user) {
+export function getNavigation(user, pathname) {
   const role = getUserRole(user);
-  if (role === "seller") return sellerNavigation;
-  if (role === "admin") return adminNavigation;
-  if (role === "buyer") return buyerNavigation;
+  if (role === "admin" && pathname?.startsWith("/admin")) return adminNavigation;
+  if (pathname?.startsWith("/seller")) return sellerNavigation;
+  if (user) {
+    return buyerNavigation;
+  }
   return guestNavigation;
 }
 

@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, PackageOpen } from "lucide-react";
+import { AlertCircle, PackageOpen, X, Video } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import ChatComposer from "../components/chat/ChatComposer";
 import ConversationList from "../components/chat/ConversationList";
 import MessageBubble from "../components/chat/MessageBubble";
-import VideoCall from "../components/chat/VideoCall";
 import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../context/SocketContext";
 import { apiMessages } from "../services/api";
@@ -51,10 +50,29 @@ export default function Chat() {
   const [sending, setSending] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
   const [initialText, setInitialText] = useState("");
-  const [pinnedIds, setPinnedIds] = useState(
-    () => new Set(JSON.parse(localStorage.getItem("haisan-pinned-conversations") || "[]")),
-  );
+  const [pinnedIds, setPinnedIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem("haisan-pinned-conversations");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return new Set(parsed);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to parse pinned conversations:", e);
+    }
+    return new Set();
+  });
   const routeHandledRef = useRef("");
+  const [showWarning, setShowWarning] = useState(() => {
+    return localStorage.getItem("haisan-chat-warning-dismissed") !== "true";
+  });
+
+  const dismissWarning = () => {
+    setShowWarning(false);
+    localStorage.setItem("haisan-chat-warning-dismissed", "true");
+  };
   const messagesEndRef = useRef(null);
 
   const activeThread = useMemo(
@@ -64,6 +82,12 @@ export default function Chat() {
   const activeConversationId = activeThread?.id;
   const activeProductId = activeThread?.productId;
   const activePartnerId = activeThread?.partnerId;
+
+  // Determine if the current user is the product seller by comparing IDs,
+  // NOT by checking user.role (roles are "User"/"Admin", never "Seller").
+  const myId = user?.id || user?._id;
+  const isMeSeller = activeThread?.productSellerId && String(activeThread.productSellerId) === String(myId);
+  const activeBuyerId = isMeSeller ? activePartnerId : myId;
 
   useEffect(() => {
     if (!user) {
@@ -88,11 +112,25 @@ export default function Chat() {
     if (!target?.startChatWith) return;
 
     const productId = target.productId || "";
-    const threadId = `${productId}:${target.startChatWith}`;
+    const threadId = target.startChatWith;
     if (routeHandledRef.current === threadId) return;
     routeHandledRef.current = threadId;
     setThreads((current) => {
-      if (current.some((thread) => thread.id === threadId)) return current;
+      const exists = current.some((thread) => thread.id === threadId);
+      if (exists) {
+        return current.map((thread) => {
+          if (thread.id === threadId) {
+            return {
+              ...thread,
+              productId,
+              productName: target.productName || thread.productName,
+              productPrice: target.productPrice || thread.productPrice,
+              productSellerId: target.startChatWith,
+            };
+          }
+          return thread;
+        });
+      }
       return [
         normalizeConversation({
           id: threadId,
@@ -101,6 +139,7 @@ export default function Chat() {
           productPrice: target.productPrice || 0,
           partnerId: target.startChatWith,
           partnerName: target.sellerName || "Ngư dân",
+          productSellerId: target.startChatWith,
           messages: [],
         }),
         ...current,
@@ -111,15 +150,11 @@ export default function Chat() {
   }, [location.state]);
 
   useEffect(() => {
-    if (!activeConversationId || !activeProductId || !activePartnerId || !user) return undefined;
-    const myId = user.id || user._id;
-    const buyerId = ["Seller", "seller"].includes(user.role)
-      ? activePartnerId
-      : myId;
+    if (!activeConversationId || !activeProductId || !activePartnerId || !user || !activeBuyerId) return undefined;
     let active = true;
 
     apiMessages
-      .getHistory(activeProductId, buyerId)
+      .getHistory(activeProductId, activeBuyerId)
       .then((data) => {
         if (!active) return;
         const messages = Array.isArray(data) ? data : data?.messages || [];
@@ -131,25 +166,21 @@ export default function Chat() {
       })
       .catch((error) => console.error("Failed to load chat history:", error));
 
-    joinConversation?.(activeProductId, buyerId);
+    joinConversation?.(activeProductId, activeBuyerId);
     return () => {
       active = false;
-      leaveConversation?.(activeProductId, buyerId);
+      leaveConversation?.(activeProductId, activeBuyerId);
     };
-  }, [activeConversationId, activePartnerId, activeProductId, joinConversation, leaveConversation, user]);
+  }, [activeConversationId, activePartnerId, activeProductId, activeBuyerId, joinConversation, leaveConversation, user]);
 
   const wasConnectedRef = useRef(false);
 
   useEffect(() => {
-    if (isConnected && !wasConnectedRef.current && activeConversationId && activeProductId && activePartnerId && user) {
-      const myId = user.id || user._id;
-      const buyerId = ["Seller", "seller"].includes(user.role)
-        ? activePartnerId
-        : myId;
-      joinConversation?.(activeProductId, buyerId);
+    if (isConnected && !wasConnectedRef.current && activeConversationId && activeProductId && activePartnerId && user && activeBuyerId) {
+      joinConversation?.(activeProductId, activeBuyerId);
     }
     wasConnectedRef.current = isConnected;
-  }, [isConnected, activeConversationId, activeProductId, activePartnerId, user, joinConversation]);
+  }, [isConnected, activeConversationId, activeProductId, activePartnerId, activeBuyerId, user, joinConversation]);
 
   const activeThreadRef = useRef(null);
   activeThreadRef.current = activeThread;
@@ -171,11 +202,11 @@ export default function Chat() {
     const handleMessage = (message) => {
       const myId = user?.id || user?._id;
       const isFromOthers = String(message.senderId) !== String(myId);
+      const partnerId = isFromOthers ? String(message.senderId) : String(message.receiverId);
 
       if (isFromOthers) {
         const isCurrentThread = activeThreadRef.current &&
-          String(activeThreadRef.current.productId) === String(message.productId) &&
-          String(activeThreadRef.current.partnerId) === String(message.senderId);
+          String(activeThreadRef.current.partnerId) === partnerId;
 
         if (document.hidden || !isCurrentThread) {
           playMessageBeep();
@@ -183,12 +214,19 @@ export default function Chat() {
       }
 
       setThreads((current) =>
-        current.map((thread) =>
-          thread.productId === message.productId &&
-          [message.senderId, message.receiverId].map(String).includes(String(thread.partnerId))
-            ? { ...thread, messages: [...thread.messages, message], lastMessage: message.content }
-            : thread,
-        ),
+        current.map((thread) => {
+          if (!thread) return thread;
+          const matches = String(thread.partnerId) === partnerId;
+          return matches
+            ? {
+                ...thread,
+                productId: message.productId,
+                messages: [...(thread.messages || []), message],
+                lastMessage: message.content || (message.imageUrl ? "📷 [Hình ảnh]" : message.location ? "📍 [Vị trí]" : ""),
+                lastSentAt: message.sentAt || message.createdAt
+              }
+            : thread;
+        })
       );
     };
     const handleRecall = ({ id }) => updateMessage(id, { isRecalled: true, content: null });
@@ -411,13 +449,29 @@ export default function Chat() {
               <span><PackageOpen size={14} /> {activeThread.productName}</span>
             </div>
             <div className="chat-window__actions">
-              <VideoCall
-                currentUser={user}
-                partnerId={activeThread.partnerId}
-                partnerName={activeThread.partnerName}
-                productId={activeThread.productId}
-                socket={socket}
-              />
+              <button
+                aria-label="Gọi video"
+                className="video-call-trigger"
+                disabled={!socket || !isConnected}
+                onClick={() => {
+                  console.log("[Chat.jsx] Video call clicked", {
+                    partnerId: activeThread?.partnerId,
+                    partnerName: activeThread?.partnerName,
+                    productId: activeThread?.productId
+                  });
+                  window.dispatchEvent(new CustomEvent("start_video_call", {
+                    detail: {
+                      partnerId: activeThread.partnerId,
+                      partnerName: activeThread.partnerName,
+                      productId: activeThread.productId
+                    }
+                  }));
+                }}
+                title={socket && isConnected ? "Gọi video" : "Socket chưa kết nối"}
+                type="button"
+              >
+                <Video size={18} /> Gọi video
+              </button>
               {(!socket || !isConnected) && (
                 <span className="socket-status" style={{ color: "#ef4444" }}><AlertCircle size={14} /> Ngoại tuyến</span>
               )}
@@ -430,8 +484,27 @@ export default function Chat() {
             </div>
           )}
 
+          {showWarning && (
+            <div className="chat-trade-warning-banner" style={{ background: "rgba(245, 158, 11, 0.08)", borderBottom: "1px solid rgba(245, 158, 11, 0.15)", color: "#d97706", padding: "10px 16px", fontSize: "0.83rem", display: "flex", gap: "8px", alignItems: "center", justifyContent: "space-between", fontWeight: "500", lineHeight: "1.4" }}>
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                <span>
+                  <strong>Cảnh báo an toàn:</strong> HảiSản.vn không xử lý thanh toán và vận chuyển. Vui lòng tự kiểm tra kỹ hàng hóa trước khi giao dịch trực tiếp, tuyệt đối không chuyển khoản đặt cọc trước cho người lạ.
+                </span>
+              </div>
+              <button 
+                onClick={dismissWarning} 
+                style={{ background: "transparent", border: 0, color: "#d97706", cursor: "pointer", padding: "4px", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.8 }}
+                type="button"
+                aria-label="Đóng cảnh báo"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+
           <div className="chat-window__messages">
-            {activeThread.messages.map((message, index) => (
+            {(activeThread.messages || []).filter(Boolean).map((message, index) => (
               <MessageBubble
                 isMine={String(message.senderId) === String(user.id || user._id)}
                 key={message.id || message._id || index}

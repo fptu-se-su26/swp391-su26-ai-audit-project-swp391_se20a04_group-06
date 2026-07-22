@@ -26,16 +26,20 @@ const RTC_CONFIG = {
 
 export default function VideoCall({
   currentUser,
-  partnerId,
-  partnerName,
-  productId,
+  partnerId: propPartnerId,
+  partnerName: propPartnerName,
+  productId: propProductId,
   socket,
 }) {
+  const [partnerId, setPartnerId] = useState(propPartnerId || "");
+  const [partnerName, setPartnerName] = useState(propPartnerName || "");
+  const [productId, setProductId] = useState(propProductId || "");
+
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const localStreamRef = useRef(null);
   const peerRef = useRef(null);
-  const remoteIdRef = useRef(partnerId);
+  const remoteIdRef = useRef(propPartnerId || "");
   const queuedCandidatesRef = useRef([]);
   const callingTimeoutRef = useRef(null);
   const [phase, setPhase] = useState("idle");
@@ -45,6 +49,18 @@ export default function VideoCall({
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const ringtoneRef = useRef(null);
+
+  // Sync props to state if provided (for local/backward-compatible mode)
+  useEffect(() => {
+    if (propPartnerId) setPartnerId(propPartnerId);
+    if (propPartnerName) setPartnerName(propPartnerName);
+    if (propProductId) setProductId(propProductId);
+  }, [propPartnerId, propPartnerName, propProductId]);
+
+  const productIdRef = useRef(productId);
+  useEffect(() => {
+    productIdRef.current = productId;
+  }, [productId]);
 
   const startRingtone = useCallback(() => {
     if (ringtoneRef.current) return;
@@ -131,13 +147,13 @@ export default function VideoCall({
     setCameraEnabled(true);
   }, [stopMedia]);
 
-  const endCall = useCallback((notify = true) => {
-    if (notify && remoteIdRef.current) {
-      socket?.emit("end_call", { to: remoteIdRef.current, productId });
+  const endCall = useCallback((notify = true, targetPartnerId = partnerId, targetProductId = productId) => {
+    if (notify && targetPartnerId) {
+      socket?.emit("end_call", { to: targetPartnerId, productId: targetProductId });
     }
     resetCall();
     setIsOpen(false);
-  }, [productId, resetCall, socket]);
+  }, [productId, partnerId, resetCall, socket]);
 
   const ensureMedia = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -162,12 +178,12 @@ export default function VideoCall({
     }
   }, []);
 
-  const createPeer = useCallback((remoteId) => {
+  const createPeer = useCallback((remoteId, targetProductId) => {
     peerRef.current?.close();
     const peer = new RTCPeerConnection(RTC_CONFIG);
     remoteIdRef.current = remoteId;
     peer.onicecandidate = ({ candidate }) => {
-      if (candidate) socket?.emit("ice_candidate", { to: remoteId, candidate, productId });
+      if (candidate) socket?.emit("ice_candidate", { to: remoteId, candidate, productId: targetProductId });
     };
     peer.ontrack = ({ streams }) => {
       if (remoteVideoRef.current && streams[0]) {
@@ -180,35 +196,39 @@ export default function VideoCall({
     };
     peerRef.current = peer;
     return peer;
-  }, [productId, resetCall, socket]);
+  }, [resetCall, socket]);
 
-  const startCall = async () => {
-    if (!socket || !partnerId || !productId) return;
+  const startCall = useCallback(async (targetPartnerId = partnerId, targetProductId = productId) => {
+    console.log("[VideoCall.jsx] startCall invoked", { targetPartnerId, targetProductId, hasSocket: !!socket });
+    if (!socket || !targetPartnerId || !targetProductId) {
+      console.warn("[VideoCall.jsx] startCall aborted - missing parameters", { hasSocket: !!socket, targetPartnerId, targetProductId });
+      return;
+    }
     setError("");
     setPhase("calling");
     setIsOpen(true);
     try {
       const stream = await ensureMedia();
-      const peer = createPeer(partnerId);
+      const peer = createPeer(targetPartnerId, targetProductId);
       stream.getTracks().forEach((track) => peer.addTrack(track, stream));
       const offer = await peer.createOffer();
       await peer.setLocalDescription(offer);
       socket.emit("call_user", {
-        to: partnerId,
+        to: targetPartnerId,
         offer,
         callerName: currentUser?.name,
-        productId,
+        productId: targetProductId,
       });
 
       callingTimeoutRef.current = setTimeout(() => {
         setError("Người nhận không trả lời.");
-        endCall(true);
+        endCall(true, targetPartnerId, targetProductId);
       }, 30000);
     } catch (callError) {
       setError(callError.message || "Không thể khởi tạo cuộc gọi.");
       resetCall();
     }
-  };
+  }, [socket, currentUser, ensureMedia, createPeer, endCall, resetCall, partnerId, productId]);
 
   const acceptCall = async () => {
     if (!incoming) return;
@@ -216,36 +236,53 @@ export default function VideoCall({
     setPhase("connecting");
     try {
       const stream = await ensureMedia();
-      const peer = createPeer(incoming.from);
+      const peer = createPeer(incoming.from, incoming.productId);
       stream.getTracks().forEach((track) => peer.addTrack(track, stream));
       await peer.setRemoteDescription(incoming.offer);
       await flushCandidates(peer);
       const answer = await peer.createAnswer();
       await peer.setLocalDescription(answer);
-      socket.emit("answer_call", { to: incoming.from, answer, productId });
+      socket.emit("answer_call", { to: incoming.from, answer, productId: incoming.productId });
       setIncoming(null);
     } catch (callError) {
       setError(callError.message || "Không thể chấp nhận cuộc gọi.");
-      socket?.emit("reject_call", { to: incoming.from, productId });
+      socket?.emit("reject_call", { to: incoming.from, productId: incoming.productId });
       resetCall();
     }
   };
 
   const rejectCall = () => {
-    if (incoming?.from) socket?.emit("reject_call", { to: incoming.from, productId });
+    if (incoming?.from) socket?.emit("reject_call", { to: incoming.from, productId: incoming.productId });
     resetCall();
     setIsOpen(false);
   };
+
+  // Register window custom event listener for triggering outgoing call globally
+  useEffect(() => {
+    const handleStartCall = (e) => {
+      const { partnerId: pId, partnerName: pName, productId: prodId } = e.detail;
+      console.log("[VideoCall.jsx] Custom event start_video_call received on window", { pId, pName, prodId });
+      setPartnerId(pId);
+      setPartnerName(pName);
+      setProductId(prodId);
+      void startCall(pId, prodId);
+    };
+    window.addEventListener("start_video_call", handleStartCall);
+    return () => window.removeEventListener("start_video_call", handleStartCall);
+  }, [startCall]);
 
   useEffect(() => {
     if (!socket) return undefined;
 
     const onIncoming = (data) => {
-      if (
-        String(data.from) !== String(partnerId) ||
-        String(data.productId) !== String(productId) ||
-        phase !== "idle"
-      ) return;
+      console.log("[VideoCall.jsx] socket event incoming_call received", data);
+      if (phase !== "idle") {
+        console.warn("[VideoCall.jsx] incoming_call ignored - current phase is not idle", phase);
+        return;
+      }
+      setPartnerId(data.from);
+      setPartnerName(data.callerName || "Người dùng");
+      setProductId(data.productId);
       remoteIdRef.current = data.from;
       setIncoming(data);
       setPhase("incoming");
@@ -253,7 +290,7 @@ export default function VideoCall({
     };
     const onAccepted = async ({ answer, productId: acceptedProductId }) => {
       try {
-        if (String(acceptedProductId) !== String(productId)) return;
+        if (String(acceptedProductId) !== String(productIdRef.current)) return;
         if (!peerRef.current) return;
         if (callingTimeoutRef.current) {
           clearTimeout(callingTimeoutRef.current);
@@ -268,7 +305,7 @@ export default function VideoCall({
       }
     };
     const onCandidate = async ({ candidate, productId: candidateProductId }) => {
-      if (String(candidateProductId) !== String(productId)) return;
+      if (String(candidateProductId) !== String(productIdRef.current)) return;
       if (!candidate) return;
       const peer = peerRef.current;
       if (!peer?.remoteDescription) {
@@ -282,12 +319,12 @@ export default function VideoCall({
       }
     };
     const onRejected = ({ productId: rejectedProductId } = {}) => {
-      if (String(rejectedProductId) !== String(productId)) return;
+      if (String(rejectedProductId) !== String(productIdRef.current)) return;
       resetCall();
       setError("Người nhận đã từ chối cuộc gọi.");
     };
     const onEnded = ({ productId: endedProductId } = {}) => {
-      if (String(endedProductId) === String(productId)) {
+      if (String(endedProductId) === String(productIdRef.current)) {
         resetCall();
         setError("Cuộc gọi đã kết thúc.");
       }
@@ -311,7 +348,7 @@ export default function VideoCall({
       socket.off("call_ended", onEnded);
       socket.off("error", onError);
     };
-  }, [flushCandidates, partnerId, phase, productId, resetCall, socket]);
+  }, [flushCandidates, phase, resetCall, socket]);
 
   useEffect(() => () => {
     peerRef.current?.close();
@@ -329,18 +366,22 @@ export default function VideoCall({
     setCameraEnabled(enabled);
   };
 
+  const isGlobal = !propPartnerId;
+
   return (
     <>
-      <button
-        aria-label="Gọi video"
-        className="video-call-trigger"
-        disabled={!socket || phase !== "idle"}
-        onClick={startCall}
-        title={socket ? "Gọi video" : "Socket chưa kết nối"}
-        type="button"
-      >
-        <Video size={18} /> Gọi video
-      </button>
+      {!isGlobal && (
+        <button
+          aria-label="Gọi video"
+          className="video-call-trigger"
+          disabled={!socket || phase !== "idle"}
+          onClick={() => void startCall()}
+          title={socket ? "Gọi video" : "Socket chưa kết nối"}
+          type="button"
+        >
+          <Video size={18} /> Gọi video
+        </button>
+      )}
 
       {(phase !== "idle" || isOpen) && (
         <div className="video-call-overlay" role="dialog" aria-modal="true">

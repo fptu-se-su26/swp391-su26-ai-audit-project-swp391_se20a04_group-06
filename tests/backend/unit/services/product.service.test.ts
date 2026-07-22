@@ -196,6 +196,10 @@ describe("Unit Test: Nghiệp vụ Product Service (product.service.ts)", () => 
         sellerId: mockUserId,
         // Loại sản phẩm tươi sống
         type: "Fresh",
+        // Trạng thái sản phẩm
+        status: "Active",
+        // Khối lượng còn lại
+        remainingWeight: 10,
         // Mốc thời gian đẩy tin gần nhất là 12 tiếng trước
         bumpedAt: past12Hours,
       });
@@ -231,6 +235,10 @@ describe("Unit Test: Nghiệp vụ Product Service (product.service.ts)", () => 
         sellerId: mockUserId,
         // Loại sản phẩm tươi sống
         type: "Fresh",
+        // Trạng thái sản phẩm
+        status: "Active",
+        // Khối lượng còn lại
+        remainingWeight: 10,
         // Mốc thời gian đẩy tin cũ là 30 giờ trước
         bumpedAt: past30Hours,
       });
@@ -250,6 +258,46 @@ describe("Unit Test: Nghiệp vụ Product Service (product.service.ts)", () => 
         // Tham số thứ hai chứa toán tử $set để cập nhật trường bumpedAt bằng một đối tượng Date mới
         expect.objectContaining({
           $set: expect.objectContaining({ bumpedAt: expect.any(Date) }),
+        }),
+      );
+    });
+
+    // Ca kiểm thử chặn đẩy tin nếu sản phẩm không ở trạng thái Active
+    it("Nên chặn đẩy tin nếu sản phẩm không ở trạng thái Active", async () => {
+      (productRepository.findById as jest.Mock).mockResolvedValue({
+        _id: mockProductId,
+        sellerId: mockUserId,
+        type: "Fresh",
+        status: "Hidden",
+        remainingWeight: 10,
+      });
+
+      await expect(
+        productService.bump(mockProductId, mockUserId),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          status: 400,
+          message: "Không thể đẩy bài viết cho sản phẩm không còn hoạt động.",
+        }),
+      );
+    });
+
+    // Ca kiểm thử chặn đẩy tin nếu sản phẩm hết hàng
+    it("Nên chặn đẩy tin nếu sản phẩm đã hết hàng", async () => {
+      (productRepository.findById as jest.Mock).mockResolvedValue({
+        _id: mockProductId,
+        sellerId: mockUserId,
+        type: "Fresh",
+        status: "Active",
+        remainingWeight: 0,
+      });
+
+      await expect(
+        productService.bump(mockProductId, mockUserId),
+      ).rejects.toThrow(
+        expect.objectContaining({
+          status: 400,
+          message: "Không thể đẩy bài viết cho sản phẩm đã hết hàng.",
         }),
       );
     });

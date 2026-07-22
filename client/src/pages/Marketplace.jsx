@@ -24,7 +24,14 @@ export default function Marketplace() {
   const [category, setCategory] = useState("All");
   const [type, setType] = useState("All");
   const [sort, setSort] = useState("fresh");
-  const [viewerLocation, setViewerLocation] = useState(null);
+  const [viewerLocation, setViewerLocation] = useState(() => {
+    try {
+      const saved = localStorage.getItem("viewerLocation");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [locationMessage, setLocationMessage] = useState("");
   const [favorites, setFavorites] = useState(new Set());
   const [landingBatches, setLandingBatches] = useState([]);
@@ -49,6 +56,38 @@ export default function Marketplace() {
       );
       if (rejected) setLoadError(rejected.reason?.message || "Lỗi tải dữ liệu");
     });
+  }, []);
+
+  useEffect(() => {
+    const handleLocationUpdate = () => {
+      try {
+        const saved = localStorage.getItem("viewerLocation");
+        if (saved) {
+          setViewerLocation(JSON.parse(saved));
+        }
+      } catch (e) {
+        console.error("Error reading updated location:", e);
+      }
+    };
+    window.addEventListener("locationUpdated", handleLocationUpdate);
+    
+    // Also try to check and run geolocation on mount
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => {
+          const loc = { latitude: coords.latitude, longitude: coords.longitude };
+          setViewerLocation(loc);
+          localStorage.setItem("viewerLocation", JSON.stringify(loc));
+          window.dispatchEvent(new Event("locationUpdated"));
+        },
+        (error) => {
+          console.warn("Auto geolocation failed in Marketplace:", error);
+        },
+        { enableHighAccuracy: false, timeout: 8000 }
+      );
+    }
+
+    return () => window.removeEventListener("locationUpdated", handleLocationUpdate);
   }, []);
 
   useEffect(() => {
@@ -145,7 +184,9 @@ export default function Marketplace() {
     setLocationMessage("Đang xác định vị trí...");
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        setViewerLocation({ latitude: coords.latitude, longitude: coords.longitude });
+        const loc = { latitude: coords.latitude, longitude: coords.longitude };
+        setViewerLocation(loc);
+        localStorage.setItem("viewerLocation", JSON.stringify(loc));
         setLocationMessage("Đã tính khoảng cách tới từng người bán.");
       },
       () => setLocationMessage("Không thể truy cập vị trí. Bạn có thể cấp quyền rồi thử lại."),
@@ -167,9 +208,26 @@ export default function Marketplace() {
           <h1>Chợ hải sản</h1>
           <p>Tìm mẻ hàng phù hợp và trao đổi trực tiếp với người bán.</p>
         </div>
-        <button className="button button--secondary" data-tour="marketplace-location-button" onClick={useCurrentLocation} type="button">
-          <LocateFixed size={17} /> Dùng vị trí của tôi
-        </button>
+        {viewerLocation ? (
+          <button
+            className="button button--secondary"
+            data-tour="marketplace-location-button"
+            onClick={useCurrentLocation}
+            type="button"
+            style={{
+              color: "var(--market-primary-strong)",
+              borderColor: "rgba(8, 145, 178, 0.3)",
+              background: "rgba(8, 145, 178, 0.08)",
+              fontWeight: "700"
+            }}
+          >
+            <LocateFixed size={17} style={{ color: "var(--market-primary)" }} /> Đã xác định vị trí (Nhấp để cập nhật)
+          </button>
+        ) : (
+          <button className="button button--secondary" data-tour="marketplace-location-button" onClick={useCurrentLocation} type="button">
+            <LocateFixed size={17} /> Dùng vị trí của tôi
+          </button>
+        )}
       </header>
 
       {locationMessage && <p className="inline-notice">{locationMessage}</p>}
@@ -238,7 +296,7 @@ export default function Marketplace() {
         {viewMode === "products" && <div className="filter-pills" data-tour="marketplace-type-filter">
           {[
             ["All", "Tất cả"],
-            ["Fresh", "Tươi sống"],
+            ["Fresh", "Tươi"],
             ["Dried", "Đồ khô"],
           ].map(([value, label]) => (
             <button

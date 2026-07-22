@@ -19,6 +19,9 @@ export const reviewService = {
     const { productId, sellerId, rating, comment } = body;
     // Chuyển đổi điểm đánh giá rating từ dạng chuỗi sang dạng số thực
     const numRating = Number(rating);
+    if (isNaN(numRating) || numRating < 1 || numRating > 5) {
+      throw new HttpError(400, "Đánh giá phải từ 1 đến 5 sao");
+    }
 
     // Ràng buộc nghiệp vụ: Không cho phép người dùng tự gửi đánh giá, tự nâng điểm uy tín cho chính mình
     if (reviewerId.toString() === sellerId.toString()) {

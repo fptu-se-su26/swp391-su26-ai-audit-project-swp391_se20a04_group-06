@@ -2,6 +2,9 @@
 import { IRecipeRepository } from "../../domain/repositories/IRecipeRepository";
 // Import ngoại lệ nghiệp vụ NotFoundError và UnauthorizedError để báo lỗi khi dữ liệu hoặc quyền hạn không hợp lệ
 import { NotFoundError, UnauthorizedError } from "../../../../shared/domain/exceptions/DomainException";
+import { deleteFromCloudinary } from "../../../../middlewares/upload";
+import { extractPublicId } from "../../../../utils/cloudinary";
+import { logger } from "../../../../utils/logger";
 
 /**
  * Use Case xóa công thức món ăn.
@@ -31,8 +34,20 @@ export class DeleteRecipeUseCase {
       throw new UnauthorizedError("Bạn không có quyền xóa công thức này");
     }
 
+    const imageUrl = recipe.imageUrl;
+
     // Thực hiện xóa công thức nấu ăn khỏi cơ sở dữ liệu
     await this.recipeRepository.delete(recipe);
+
+    // Xóa hình ảnh tương ứng trên Cloudinary để tránh rác tài nguyên
+    if (imageUrl) {
+      const publicId = extractPublicId(imageUrl);
+      if (publicId) {
+        await deleteFromCloudinary(publicId).catch((error) => {
+          logger.error(`Không thể xóa ảnh Recipe ${publicId}: ${error.message}`);
+        });
+      }
+    }
   }
 }
 

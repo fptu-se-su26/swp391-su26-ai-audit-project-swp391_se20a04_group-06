@@ -22,6 +22,17 @@ export function RequireRole({ children, roles }) {
   const { loading, user } = useAuth();
   if (loading) return <div className="page-state">Đang kiểm tra quyền truy cập...</div>;
   if (!user) return <Navigate replace to="/login" />;
-  if (!roles.includes(getUserRole(user))) return <Navigate replace to="/" />;
+  
+  const userRoles = ["buyer"];
+  if (user.role === "Admin" || user.role === "admin") {
+    userRoles.push("admin", "seller");
+  }
+  if (user.isPremium || user.isVerified) {
+    userRoles.push("seller");
+  }
+
+  const hasRequiredRole = roles.some((role) => userRoles.includes(role));
+  if (!hasRequiredRole) return <Navigate replace to="/" />;
+  
   return children;
 }

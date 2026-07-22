@@ -2,7 +2,7 @@ const CACHE_NAME = "haisan-v1";
 const ASSETS = [
   "/",
   "/index.html",
-  "/favicon.svg",
+  "/favicon.png",
   "/src/main.jsx",
   "/src/index.css"
 ];

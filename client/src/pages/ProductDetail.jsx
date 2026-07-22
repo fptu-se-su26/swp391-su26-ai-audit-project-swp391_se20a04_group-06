@@ -47,7 +47,14 @@ export default function ProductDetail() {
 
   const [seller, setSeller] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [viewerLocation, setViewerLocation] = useState(null);
+  const [viewerLocation, setViewerLocation] = useState(() => {
+    try {
+      const saved = localStorage.getItem("viewerLocation");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [favorites, setFavorites] = useState(new Set());
 
   useEffect(() => {
@@ -87,6 +94,36 @@ export default function ProductDetail() {
       .then((ids) => setFavorites(new Set((ids || []).map(String))))
       .catch(() => setFavorites(new Set()));
   }, [user]);
+
+  useEffect(() => {
+    const handleLocationUpdate = () => {
+      try {
+        const saved = localStorage.getItem("viewerLocation");
+        if (saved) {
+          setViewerLocation(JSON.parse(saved));
+        }
+      } catch (e) {
+        console.error("Error reading updated location:", e);
+      }
+    };
+    window.addEventListener("locationUpdated", handleLocationUpdate);
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => {
+          const loc = { latitude: coords.latitude, longitude: coords.longitude };
+          setViewerLocation(loc);
+          localStorage.setItem("viewerLocation", JSON.stringify(loc));
+          window.dispatchEvent(new Event("locationUpdated"));
+        },
+        (error) => {
+          console.warn("Geolocation warning in ProductDetail:", error);
+        }
+      );
+    }
+
+    return () => window.removeEventListener("locationUpdated", handleLocationUpdate);
+  }, []);
 
   const requireLogin = () => {
     if (user) return true;
@@ -135,7 +172,9 @@ export default function ProductDetail() {
 
   const calculateDistance = () => {
     navigator.geolocation?.getCurrentPosition(({ coords }) => {
-      setViewerLocation({ latitude: coords.latitude, longitude: coords.longitude });
+      const loc = { latitude: coords.latitude, longitude: coords.longitude };
+      setViewerLocation(loc);
+      localStorage.setItem("viewerLocation", JSON.stringify(loc));
     });
   };
 
@@ -164,8 +203,34 @@ export default function ProductDetail() {
 
       <article className="product-detail-card">
         <div className="product-detail-card__media">
-          <img src={getProductImage(product)} alt={product.name} />
-          <div className="product-detail-card__badges">
+          <img
+            aria-hidden="true"
+            alt=""
+            className="product-detail-card__media-backdrop"
+            src={getProductImage(product)}
+            style={{
+              position: "absolute",
+              inset: "-5%",
+              width: "110%",
+              height: "110%",
+              objectFit: "cover",
+              opacity: 0.35,
+              filter: "blur(15px) saturate(0.8) brightness(0.6)",
+            }}
+          />
+          <img
+            src={getProductImage(product)}
+            alt={product.name}
+            style={{
+              position: "relative",
+              zIndex: 1,
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+              padding: "16px",
+            }}
+          />
+          <div className="product-detail-card__badges" style={{ zIndex: 2 }}>
             <span>{product.type === "Fresh" ? "Hải sản tươi" : "Hải sản khô"}</span>
             {product.productSize && product.productSize !== "Chưa cập nhật" && (
               <span className="seafood-size-badge" style={{ fontSize: "12px", padding: "5px 10px", textTransform: "none" }}>
@@ -225,14 +290,6 @@ export default function ProductDetail() {
               <MessageSquare size={17} /> Nhắn người bán
             </button>
             <button
-              className="button button--secondary"
-              disabled={!canReserve}
-              onClick={() => openChat(true)}
-              type="button"
-            >
-              Giữ chỗ
-            </button>
-            <button
               aria-label={isFavorite ? "Bỏ lưu" : "Lưu sản phẩm"}
               className={`button button--icon ${isFavorite ? "is-saved" : ""}`}
               onClick={toggleFavorite}
@@ -257,13 +314,11 @@ export default function ProductDetail() {
           </div>
           <button className="button button--secondary" onClick={calculateDistance} type="button">
             <MapPin size={16} />
-            {viewerLocation ? formatDistance(distanceKm) : "Tính khoảng cách"}
+            {viewerLocation ? formatDistance(distanceKm, (product.lat != null && product.lng != null) || (product.location?.coordinates?.[0] != null && product.location?.coordinates?.[1] != null)) : "Tính khoảng cách"}
           </button>
         </div>
         <SellerLocationMap lat={product.lat} lng={product.lng} sellerName={product.sellerName} />
       </section>
-
-      <PriceHistory history={product.priceHistory} />
 
       <ReviewSection
         allowReview
@@ -271,25 +326,5 @@ export default function ProductDetail() {
         sellerId={product.sellerId}
       />
     </div>
-  );
-}
-
-function PriceHistory({ history = [] }) {
-  if (!history.length) return null;
-  const points = history.slice(-12);
-  const max = Math.max(...points.map((point) => Number(point.price || 0)), 1);
-  return (
-    <section className="dashboard-panel price-history-panel">
-      <header><div><span className="eyebrow">PRICE HISTORY</span><h2>Lịch sử thay đổi giá</h2></div></header>
-      <div className="price-history-chart">
-        {points.map((point, index) => (
-          <div className="price-history-point" key={`${point.changedAt}-${index}`}>
-            <span style={{ height: `${Math.max(12, Number(point.price || 0) / max * 100)}%` }} />
-            <strong>{formatCurrency(point.price)}</strong>
-            <small>{formatDate(point.changedAt)}</small>
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }

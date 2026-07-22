@@ -259,6 +259,7 @@ export const productService = {
         catchLng: p.catchLocation?.coordinates?.[0] || null, // Kinh độ đánh bắt
         origin: p.origin,
         expiryDate: p.expiryDate,
+        productSize: p.productSize || "MEDIUM",
         createdAt: p.createdAt,
         viewCount: p.viewCount,
         bumpedAt: p.bumpedAt,
@@ -371,6 +372,7 @@ export const productService = {
       catchLng: p.catchLocation?.coordinates?.[0] || null,
       origin: p.origin,
       expiryDate: p.expiryDate,
+      productSize: p.productSize || "MEDIUM",
       createdAt: p.createdAt,
       viewCount: p.viewCount,
       bumpedAt: p.bumpedAt,
@@ -472,6 +474,8 @@ export const productService = {
       origin,
       expiryDate,
       images,
+      productSize,
+      batchId,
     } = body;
 
     // Yêu cầu bắt buộc phải truyền tọa độ GPS vị trí mẻ hàng đối với hải sản tươi sống (Fresh)
@@ -494,11 +498,21 @@ export const productService = {
 
     // Nếu người dùng không phải Premium và không phải Admin (bị giới hạn tối đa 5 bài/ngày)
     if (!user.isPremium && user.role !== "Admin") {
-      // Tăng số lượng trong ngày lên 1 đơn vị
-      const currentCount = await redis.incr(limitKey);
-      // Thiết lập thời gian hết hạn khóa đếm là 24 giờ nếu đây là lượt đăng đầu tiên
-      if (currentCount === 1) {
-        await redis.expire(limitKey, 24 * 3600);
+      const script = `
+        local c = redis.call('INCR', KEYS[1])
+        if c == 1 then
+          redis.call('EXPIRE', KEYS[1], 86400)
+        end
+        return c
+      `;
+      let currentCount: number;
+      if (typeof redis.eval === "function") {
+        currentCount = (await redis.eval(script, 1, limitKey)) as number;
+      } else {
+        currentCount = await redis.incr(limitKey);
+        if (currentCount === 1) {
+          await redis.expire(limitKey, 86400);
+        }
       }
 
       // Nếu số lượng vượt quá mức cho phép (5 bài đăng)
@@ -508,6 +522,24 @@ export const productService = {
         throw new HttpError(
           403,
           "Tài khoản thường chỉ được phép đăng tối đa 5 bài viết mỗi ngày. Vui lòng nâng cấp lên Premium để đăng không giới hạn!",
+        );
+      }
+    }
+
+    // Xác thực batchId nếu có
+    if (batchId) {
+      if (!mongoose.Types.ObjectId.isValid(batchId)) {
+        throw new HttpError(400, "ID vựa cá không hợp lệ");
+      }
+      const batch = await LandingBatch.findOne({
+        _id: batchId,
+        sellerId: userId,
+        status: "Active",
+      });
+      if (!batch) {
+        throw new HttpError(
+          403,
+          "Vựa cá không tồn tại, đã bị đóng hoặc không thuộc quyền sở hữu của bạn"
         );
       }
     }
@@ -533,6 +565,70 @@ export const productService = {
       }
       // Ném lỗi 400
       throw new HttpError(400, "Thông tin giá cả hoặc khối lượng không hợp lệ");
+    }
+
+    // Kiểm tra giá trị dương cho price và totalWeight
+    if (parsedPrice <= 0) {
+      if (!user.isPremium && user.role !== "Admin") {
+        await redis.decr(limitKey);
+      }
+      throw new HttpError(400, "Giá sản phẩm phải lớn hơn 0");
+    }
+    if (parsedWeight <= 0) {
+      if (!user.isPremium && user.role !== "Admin") {
+        await redis.decr(limitKey);
+      }
+      throw new HttpError(400, "Khối lượng sản phẩm phải lớn hơn 0");
+    }
+
+    // Kiểm tra giới hạn số lượng ảnh
+    if (images && Array.isArray(images) && images.length > 10) {
+      if (!user.isPremium && user.role !== "Admin") {
+        await redis.decr(limitKey);
+      }
+      throw new HttpError(400, "Chỉ được đăng tối đa 10 hình ảnh cho mỗi sản phẩm");
+    }
+
+    // Kiểm tra tính hợp lệ của ngày giờ đánh bắt và hạn sử dụng
+    if (catchTime) {
+      const catchDateObj = new Date(catchTime);
+      if (isNaN(catchDateObj.getTime())) {
+        if (!user.isPremium && user.role !== "Admin") {
+          await redis.decr(limitKey);
+        }
+        throw new HttpError(400, "Thời gian đánh bắt không hợp lệ");
+      }
+      if (catchDateObj > new Date()) {
+        if (!user.isPremium && user.role !== "Admin") {
+          await redis.decr(limitKey);
+        }
+        throw new HttpError(400, "Thời gian đánh bắt không thể ở tương lai.");
+      }
+    }
+
+    if (expiryDate) {
+      const expiryDateObj = new Date(expiryDate);
+      if (isNaN(expiryDateObj.getTime())) {
+        if (!user.isPremium && user.role !== "Admin") {
+          await redis.decr(limitKey);
+        }
+        throw new HttpError(400, "Hạn sử dụng không hợp lệ");
+      }
+      if (expiryDateObj <= new Date()) {
+        if (!user.isPremium && user.role !== "Admin") {
+          await redis.decr(limitKey);
+        }
+        throw new HttpError(400, "Hạn sử dụng phải ở tương lai.");
+      }
+      if (catchTime) {
+        const catchDateObj = new Date(catchTime);
+        if (expiryDateObj <= catchDateObj) {
+          if (!user.isPremium && user.role !== "Admin") {
+            await redis.decr(limitKey);
+          }
+          throw new HttpError(400, "Hạn sử dụng phải sau thời điểm đánh bắt.");
+        }
+      }
     }
 
     // Xây dựng mảng coordinates [lng, lat] cho vị trí mẻ hàng
@@ -577,6 +673,8 @@ export const productService = {
         catchLocation: catchCoordinates
           ? { type: "Point", coordinates: catchCoordinates }
           : undefined,
+        productSize: productSize ?? "MEDIUM",
+        batchId: batchId || undefined,
       });
     } catch (saveErr) {
       // Hoàn tác khóa giới hạn đăng bài nếu xảy ra lỗi ghi DB
@@ -636,6 +734,20 @@ export const productService = {
     if (role !== "Admin" && currentProduct.sellerId.toString() !== userId)
       throw new HttpError(403, "Bạn không có quyền chỉnh sửa bài đăng này");
 
+    // Kiểm tra tính hợp lệ của khối lượng đầu vào
+    if (body.totalWeight !== undefined) {
+      const parsedTotal = parseFloat(body.totalWeight);
+      if (isNaN(parsedTotal) || parsedTotal <= 0) {
+        throw new HttpError(400, "Tổng khối lượng phải lớn hơn 0");
+      }
+    }
+    if (body.remainingWeight !== undefined) {
+      const parsedRemaining = parseFloat(body.remainingWeight);
+      if (isNaN(parsedRemaining) || parsedRemaining < 0) {
+        throw new HttpError(400, "Khối lượng còn lại không thể nhỏ hơn 0");
+      }
+    }
+
     // Tính toán tổng khối lượng mới và khối lượng còn lại mới
     const finalTotalWeight =
       body.totalWeight !== undefined
@@ -652,6 +764,43 @@ export const productService = {
         400,
         "Khối lượng còn lại không thể lớn hơn tổng khối lượng của mẻ hàng.",
       );
+    }
+
+    // Kiểm tra giới hạn số lượng ảnh khi cập nhật
+    if (body.images !== undefined && Array.isArray(body.images)) {
+      if (body.images.length > 10) {
+        throw new HttpError(400, "Chỉ được đăng tối đa 10 hình ảnh cho mỗi sản phẩm");
+      }
+    }
+
+    // Kiểm tra tính hợp lệ của ngày giờ đánh bắt và hạn sử dụng mới
+    const targetCatchTime = body.catchTime !== undefined
+      ? (body.catchTime ? new Date(body.catchTime) : null)
+      : (currentProduct.catchTime ? new Date(currentProduct.catchTime) : null);
+
+    const targetExpiryDate = body.expiryDate !== undefined
+      ? (body.expiryDate ? new Date(body.expiryDate) : null)
+      : (currentProduct.expiryDate ? new Date(currentProduct.expiryDate) : null);
+
+    if (targetCatchTime) {
+      if (isNaN(targetCatchTime.getTime())) {
+        throw new HttpError(400, "Thời gian đánh bắt không hợp lệ");
+      }
+      if (targetCatchTime > new Date()) {
+        throw new HttpError(400, "Thời gian đánh bắt không thể ở tương lai.");
+      }
+    }
+
+    if (targetExpiryDate) {
+      if (isNaN(targetExpiryDate.getTime())) {
+        throw new HttpError(400, "Hạn sử dụng không hợp lệ");
+      }
+      if (targetExpiryDate <= new Date()) {
+        throw new HttpError(400, "Hạn sử dụng phải ở tương lai.");
+      }
+      if (targetCatchTime && targetExpiryDate <= targetCatchTime) {
+        throw new HttpError(400, "Hạn sử dụng phải sau thời điểm đánh bắt.");
+      }
     }
 
     // Lấy thông tin kiểu sản phẩm và tọa độ GPS mới hoặc giữ nguyên cũ
@@ -677,8 +826,13 @@ export const productService = {
     // Ép kiểu giá bán
     const newPrice =
       body.price !== undefined ? parseInt(body.price, 10) : undefined;
-    if (newPrice !== undefined && isNaN(newPrice)) {
-      throw new HttpError(400, "Giá sản phẩm mới không hợp lệ");
+    if (newPrice !== undefined) {
+      if (isNaN(newPrice)) {
+        throw new HttpError(400, "Giá sản phẩm mới không hợp lệ");
+      }
+      if (newPrice <= 0) {
+        throw new HttpError(400, "Giá sản phẩm phải lớn hơn 0");
+      }
     }
 
     // Khởi tạo các trường set và unset cho truy vấn MongoDB
@@ -699,6 +853,7 @@ export const productService = {
     if (body.category !== undefined) updateFields.category = body.category;
     if (body.salesType !== undefined) updateFields.salesType = body.salesType;
     if (body.status !== undefined) updateFields.status = body.status;
+    if (body.productSize !== undefined) updateFields.productSize = body.productSize;
 
     // Xử lý cập nhật danh sách ảnh: xóa ảnh đã bị gỡ bỏ khỏi bài đăng trên Cloudinary CDN
     if (body.images !== undefined && Array.isArray(body.images)) {
@@ -847,15 +1002,25 @@ export const productService = {
     if (currentProduct.sellerId.toString() !== userId)
       throw new HttpError(403, "Không có quyền");
 
+    // Chỉ cho phép đẩy bài viết của sản phẩm đang hoạt động (Active) và còn hàng
+    if (currentProduct.status !== "Active") {
+      throw new HttpError(400, "Không thể đẩy bài viết cho sản phẩm không còn hoạt động.");
+    }
+    if (currentProduct.remainingWeight <= 0) {
+      throw new HttpError(400, "Không thể đẩy bài viết cho sản phẩm đã hết hàng.");
+    }
+
     // Mốc thời gian giới hạn cooldown: lùi lại 24 giờ trước thời điểm hiện tại
     const cutoffTime = new Date(Date.now() - 24 * 3600 * 1000);
 
     // Thực hiện tìm kiếm và cập nhật thời gian đẩy bài (bumpedAt) về thời điểm hiện tại
-    // Điều kiện: Sản phẩm thuộc người bán này và (đã đẩy bài cách đây hơn 24 giờ HOẶC chưa từng đẩy bài)
+    // Điều kiện: Sản phẩm thuộc người bán này, đang hoạt động, còn hàng và (đã đẩy bài cách đây hơn 24 giờ HOẶC chưa từng đẩy bài)
     const updated = await productRepository.findOneAndUpdate(
       {
         _id: id,
         sellerId: userId,
+        status: "Active",
+        remainingWeight: { $gt: 0 },
         $or: [
           { bumpedAt: { $lte: cutoffTime } },
           { bumpedAt: { $exists: false } },

@@ -196,8 +196,8 @@ function AdminListings({ listings, onRefresh }) {
             <tbody>
               {listings.map((listing) => (
                 <tr key={listing.id}>
-                  <td>{listing.name}</td><td>{listing.sellerName}</td><td>{listing.type === "Fresh" ? "Tươi sống" : "Đồ khô"}</td>
-                  <td>{Number(listing.price || 0).toLocaleString("vi-VN")}đ</td><td>{getStatusLabel(listing.status)}</td>
+                  <td>{listing.name}</td><td>{listing.sellerName}</td><td>{listing.type === "Fresh" ? "Tươi" : "Đồ khô"}</td>
+                  <td>{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(Number(listing.price || 0))}</td><td>{getStatusLabel(listing.status)}</td>
                   <td><button className="button button--danger" disabled={busyId === listing.id} onClick={() => removeListing(listing)} type="button"><Trash2 size={15} /> Xóa</button></td>
                 </tr>
               ))}

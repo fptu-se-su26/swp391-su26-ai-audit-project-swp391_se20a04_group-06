@@ -74,12 +74,17 @@ export default function SellerOverview({
       <section className="dashboard-panel seller-batch-overview" data-tour="seller-batch-overview">
         <header>
           <div>
-            <h2>Vựa cá của tôi</h2>
-            <p>Tổng hợp các phiên cập bến từ dữ liệu thật.</p>
+            <h2>Vựa cá & Mẻ hải sản</h2>
+            <p>Phiên cập bến và đăng bán hải sản riêng lẻ.</p>
           </div>
-          <Link className="button button--primary" data-tour="seller-create-batch" to="/seller/landing-batches/new">
-            <Plus size={16} /> Tạo vựa cá
-          </Link>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <Link className="button button--secondary" to="/seller/products?action=new">
+              <Plus size={16} /> Đăng sản phẩm mới
+            </Link>
+            <Link className="button button--primary" data-tour="seller-create-batch" to="/seller/landing-batches/new">
+              <Plus size={16} /> Tạo vựa cá
+            </Link>
+          </div>
         </header>
         {landingBatches.length > 0 ? (
           <>
@@ -97,16 +102,24 @@ export default function SellerOverview({
             )}
             <div className="seller-batch-overview__actions">
               <Link className="button button--secondary" to="/seller/landing-batches">Quản lý vựa cá</Link>
-              <Link className="button button--ghost" to="/seller/landing-batches">Quản lý sản phẩm trong vựa</Link>
+              <Link className="button button--ghost" to="/seller/products">Quản lý mẻ hải sản</Link>
             </div>
           </>
         ) : (
           <div className="empty-state">
             <Ship size={30} />
-            <strong>Bạn chưa tạo phiên cập bến nào</strong>
-            <Link className="button button--primary" to="/seller/landing-batches/new">
-              Tạo vựa cá đầu tiên
-            </Link>
+            <strong>Bạn chưa có hoạt động bán hàng nào</strong>
+            <p style={{ color: "#64748b", margin: "8px 0 16px", fontSize: "0.9rem", maxWidth: "480px", textAlign: "center", lineHeight: "1.5" }}>
+              Nếu bạn là thuyền nhỏ (1-2 ngư dân), bạn có thể đăng bán sản phẩm trực tiếp mà không cần tạo vựa cá. Các thuyền lớn nên tạo vựa cá để quản lý cập bến chuyên nghiệp.
+            </p>
+            <div style={{ display: "flex", gap: "12px" }}>
+              <Link className="button button--secondary" to="/seller/products?action=new">
+                Đăng sản phẩm bán lẻ
+              </Link>
+              <Link className="button button--primary" to="/seller/landing-batches/new">
+                Tạo vựa cá cập bến
+              </Link>
+            </div>
           </div>
         )}
       </section>

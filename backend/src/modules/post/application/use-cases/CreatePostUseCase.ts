@@ -6,8 +6,8 @@ import { Post } from "../../domain/entities/Post";
 import { userRepository } from "../../../../repositories/user.repository";
 // Import hàm updateUserBadges phục vụ việc tính toán nâng cấp danh hiệu người dùng
 import { updateUserBadges } from "../../../../services/badge.service";
-// Import ngoại lệ nghiệp vụ NotFoundError để báo lỗi khi không tìm thấy người dùng
-import { NotFoundError } from "../../../../shared/domain/exceptions/DomainException";
+// Import các ngoại lệ nghiệp vụ NotFoundError và ValidationError để báo lỗi khi không tìm thấy hoặc dữ liệu sai lệch
+import { NotFoundError, ValidationError } from "../../../../shared/domain/exceptions/DomainException";
 // Import đối tượng logger phục vụ ghi nhật ký lỗi hoạt động của hệ thống
 import { logger } from "../../../../utils/logger";
 
@@ -42,6 +42,27 @@ export class CreatePostUseCase {
     // Nếu không tìm thấy người dùng, ném lỗi NotFoundError
     if (!user) {
       throw new NotFoundError("Không tìm thấy người dùng");
+    }
+
+    // Xác thực các ràng buộc về tiêu đề, nội dung, hình ảnh và tags
+    if (dto.title.length > 150) {
+      throw new ValidationError("Tiêu đề bài viết không được vượt quá 150 ký tự.");
+    }
+    if (dto.content.length > 10000) {
+      throw new ValidationError("Nội dung bài viết không được vượt quá 10000 ký tự.");
+    }
+    if (dto.images && dto.images.length > 10) {
+      throw new ValidationError("Chỉ được đăng tối đa 10 hình ảnh.");
+    }
+    if (dto.tags) {
+      if (dto.tags.length > 10) {
+        throw new ValidationError("Số lượng tags tối đa là 10.");
+      }
+      for (const tag of dto.tags) {
+        if (tag.length > 30) {
+          throw new ValidationError("Mỗi tag tối đa 30 ký tự.");
+        }
+      }
     }
 
     // 2. Tạo thực thể bài đăng mới từ thông tin người dùng và DTO

@@ -3,7 +3,7 @@ export const landingBatchCategoryLabels = {
   Shrimp: "Tôm",
   Squid: "Mực",
   Crab: "Cua, ghẹ",
-  Shellfish: "Nhuyễn thể",
+  Shellfish: "Ốc, sò",
   Others: "Khác",
 };
 

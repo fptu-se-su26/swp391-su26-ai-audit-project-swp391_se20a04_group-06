@@ -89,18 +89,18 @@ export const tourDefinitions = {
     steps: [
       step(
         '[data-tour="community-heading"]',
-        "Cộng đồng HảiSản.vn",
+        "Diễn đàn HảiSản.vn",
         "Đây là nơi người mua và ngư dân chia sẻ kinh nghiệm chọn, bảo quản và chế biến hải sản.",
       ),
       step(
         '[data-tour="community-create-post"]',
         "Chia sẻ bài viết",
-        "Khi đăng nhập, bạn có thể tạo bài viết mới để chia sẻ kiến thức hoặc đặt câu hỏi cho cộng đồng.",
+        "Khi đăng nhập, bạn có thể tạo bài viết mới để chia sẻ kiến thức hoặc đặt câu hỏi trên diễn đàn.",
       ),
       step(
         '[data-tour="community-feed"]',
-        "Bảng tin cộng đồng",
-        "Các bài viết thật từ cộng đồng sẽ xuất hiện tại đây. Nếu chưa có dữ liệu, trang vẫn sẵn sàng khi có bài mới.",
+        "Bảng tin diễn đàn",
+        "Các bài viết thật trên diễn đàn sẽ xuất hiện tại đây. Nếu chưa có dữ liệu, trang vẫn sẵn sàng khi có bài mới.",
       ),
       step(
         '[data-tour="community-post-card"]',
@@ -109,7 +109,7 @@ export const tourDefinitions = {
       ),
       step(
         '[data-tour="community-post-actions"]',
-        "Tương tác với cộng đồng",
+        "Tương tác trên diễn đàn",
         "Bạn có thể thích, xem số bình luận hoặc báo cáo nội dung không phù hợp.",
       ),
       step(

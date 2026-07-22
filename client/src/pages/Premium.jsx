@@ -26,7 +26,7 @@ const paymentInfo = {
   content: "TMC0430",
 };
 
-const formatCurrency = (value) => `${Number(value || 0).toLocaleString("vi-VN")}đ`;
+const formatCurrency = (value) => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(Number(value || 0));
 
 const copyText = async (text) => {
   if (navigator?.clipboard?.writeText) {
@@ -194,7 +194,7 @@ export default function Premium() {
                   <img
                     alt="Mã QR thanh toán Premium"
                     className="premium-qr-image"
-                    src={paymentAssets.qr}
+                    src={intent?.qrUrl || paymentAssets.qr}
                   />
                 </div>
 
@@ -204,8 +204,8 @@ export default function Premium() {
 
                 <a
                   className="button button--secondary premium-download-button"
-                  download="premium-qr-tmc0430.png"
-                  href={paymentAssets.qr}
+                  download={intent?.qrUrl ? "premium-qr.png" : "premium-qr-tmc0430.png"}
+                  href={intent?.qrUrl || paymentAssets.qr}
                 >
                   <Download size={16} /> Tải xuống Qrcode
                 </a>
@@ -230,17 +230,19 @@ export default function Premium() {
                           src={paymentAssets.bankLogo}
                         />
                       </span>
-                      <span>{paymentInfo.bankName}</span>
+                      <span>
+                        {intent?.bankId ? `${intent.bankId.toUpperCase()} (Vietcombank)` : paymentInfo.bankName}
+                      </span>
                     </dd>
                   </div>
 
                   <div>
                     <dt>STK:</dt>
                     <dd className="premium-copy-row">
-                      <strong>{paymentInfo.accountNumber}</strong>
+                      <strong>{intent?.accountNumber || paymentInfo.accountNumber}</strong>
                       <button
                         aria-label="Sao chép số tài khoản"
-                        onClick={() => copy(paymentInfo.accountNumber)}
+                        onClick={() => copy(intent?.accountNumber || paymentInfo.accountNumber)}
                         type="button"
                       >
                         <Copy size={15} />
@@ -250,7 +252,7 @@ export default function Premium() {
 
                   <div>
                     <dt>Chủ tài khoản:</dt>
-                    <dd>{paymentInfo.accountName}</dd>
+                    <dd>{intent?.accountName || paymentInfo.accountName}</dd>
                   </div>
 
                   <div>
@@ -264,11 +266,11 @@ export default function Premium() {
                     <dt>Nội dung thanh toán:</dt>
                     <dd className="premium-copy-row">
                       <span className="premium-content-pill">
-                        {paymentInfo.content}
+                        {intent?.transferContent || paymentInfo.content}
                       </span>
                       <button
                         aria-label="Sao chép nội dung thanh toán"
-                        onClick={() => copy(paymentInfo.content)}
+                        onClick={() => copy(intent?.transferContent || paymentInfo.content)}
                         type="button"
                       >
                         <Copy size={15} />

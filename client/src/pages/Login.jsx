@@ -11,17 +11,11 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
-  const [selectedRole, setSelectedRole] = useState("buyer");
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const selectedRoleRef = useRef(selectedRole);
-
-  useEffect(() => {
-    selectedRoleRef.current = selectedRole;
-  }, [selectedRole]);
 
   const handleGoogleResponse = useCallback(
-    async (googleResponse, roleOverride) => {
+    async (googleResponse) => {
       const idToken = googleResponse?.credential;
       if (!idToken) {
         setErrorMessage("Không nhận được ID Token từ Google.");
@@ -31,17 +25,17 @@ export default function Login() {
       setLoading(true);
       setErrorMessage("");
       try {
-        const result = await apiAuth.googleLogin({
-          idToken,
-          selectedRole: roleOverride || selectedRoleRef.current,
-        });
+        const result = await apiAuth.googleLogin({ idToken });
         if (!result?.user) throw new Error("Phản hồi đăng nhập không hợp lệ.");
 
         login(result.user);
-        const role = result.user.sessionRole || result.user.role;
-        if (["Admin", "admin"].includes(result.user.role)) navigate("/admin");
-        else if (["Seller", "seller"].includes(role)) navigate("/seller");
-        else navigate("/");
+        if (["Admin", "admin"].includes(result.user.role)) {
+          navigate("/admin");
+        } else if (result.user.isPremium || result.user.isVerified) {
+          navigate("/seller");
+        } else {
+          navigate("/");
+        }
       } catch (error) {
         setErrorMessage(error.message);
       } finally {
@@ -92,8 +86,7 @@ export default function Login() {
   }, [handleGoogleResponse]);
 
   return (
-    <main className="auth-page auth-page--underwater">
-      <InteractiveUnderwaterBackground />
+    <main className="auth-page">
       <section className="auth-card">
         <Link className="back-link" to="/"><ArrowLeft size={16} /> Quay về trang chủ</Link>
         <div className="auth-card__heading">
@@ -106,24 +99,6 @@ export default function Login() {
         {errorMessage && (
           <div className="auth-card__error"><AlertCircle size={17} /><span>{errorMessage}</span></div>
         )}
-
-        <fieldset className="role-selector">
-          <legend>Bạn tham gia với vai trò</legend>
-          <button
-            className={selectedRole === "buyer" ? "is-active" : ""}
-            onClick={() => setSelectedRole("buyer")}
-            type="button"
-          >
-            Người mua
-          </button>
-          <button
-            className={selectedRole === "seller" ? "is-active" : ""}
-            onClick={() => setSelectedRole("seller")}
-            type="button"
-          >
-            Ngư dân bán hàng
-          </button>
-        </fieldset>
 
         <div className="google-login-slot">
           {loading ? <span><Loader2 className="spin" size={20} /> Đang xử lý...</span> : <div id="google-signin-btn" />}

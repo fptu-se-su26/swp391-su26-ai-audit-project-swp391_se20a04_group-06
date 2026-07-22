@@ -49,12 +49,10 @@ export const messageRepository = {
     return query;
   },
 
-  // Phương thức bất đồng bộ tìm kiếm toàn bộ lịch sử tin nhắn trong cuộc trò chuyện giữa 2 người trên một sản phẩm
-  async findConversation(productId: string, userId1: string, userId2: string) {
-    // Tìm các tin nhắn khớp productId và thuộc về cặp người gửi - người nhận tương ứng
+  // Phương thức bất đồng bộ tìm kiếm toàn bộ lịch sử tin nhắn trong cuộc trò chuyện giữa 2 người
+  async findConversation(userId1: string, userId2: string) {
+    // Tìm các tin nhắn thuộc về cặp người gửi - người nhận tương ứng
     return Message.find({
-      // Lọc theo mã ID sản phẩm
-      productId,
       // Sử dụng toán tử $or để lọc các tin nhắn của 2 người chat qua lại với nhau
       $or: [
         // Người 1 gửi cho người 2
@@ -70,12 +68,10 @@ export const messageRepository = {
   },
 
   // Phương thức bất đồng bộ đánh dấu tất cả các tin nhắn là Đã đọc khi người dùng mở hộp thoại chat
-  async markAsRead(productId: string, fromUserId: string, toUserId: string) {
+  async markAsRead(fromUserId: string, toUserId: string) {
     // Cập nhật trạng thái isRead thành true hàng loạt cho các tin nhắn khớp điều kiện
     return Message.updateMany(
       {
-        // Khớp ID sản phẩm làm ngữ cảnh chat
-        productId,
         // Khớp ID người gửi tin nhắn (người gửi tin nhắn chưa đọc)
         senderId: fromUserId,
         // Khớp ID người nhận tin nhắn (chính người dùng đang mở hộp thoại chat)
@@ -135,12 +131,11 @@ export const messageRepository = {
       },
       // Bước 2: Sắp xếp các tin nhắn theo thứ tự thời gian tạo giảm dần (tin mới nhất lên trên)
       { $sort: { createdAt: -1 } },
-      // Bước 3: Gộp nhóm (Group) các tin nhắn theo cặp [productId + otherUserId]
+      // Bước 3: Gộp nhóm (Group) các tin nhắn theo cặp [otherUserId]
       {
         $group: {
-          // Định danh khóa gộp nhóm _id chứa productId và ID đối tác trò chuyện (otherUserId)
+          // Định danh khóa gộp nhóm _id chứa ID đối tác trò chuyện (otherUserId)
           _id: {
-            productId: "$productId",
             // Tính toán logic otherUserId: nếu người gửi là userId hiện tại thì otherUserId là người nhận, ngược lại là người gửi
             otherUserId: {
               $cond: [
@@ -150,6 +145,8 @@ export const messageRepository = {
               ],
             },
           },
+          // Lấy ID sản phẩm liên quan đến tin nhắn mới nhất trong cuộc trò chuyện
+          productId: { $first: "$productId" },
           // Lấy nội dung tin nhắn của tài liệu đầu tiên trong nhóm làm nội dung tin nhắn mới nhất
           lastMessage: { $first: "$content" },
           // Lấy đường dẫn ảnh tin nhắn của tài liệu đầu tiên làm ảnh tin nhắn mới nhất
@@ -182,7 +179,7 @@ export const messageRepository = {
       {
         $lookup: {
           from: "products",
-          localField: "_id.productId",
+          localField: "productId",
           foreignField: "_id",
           as: "product",
         },

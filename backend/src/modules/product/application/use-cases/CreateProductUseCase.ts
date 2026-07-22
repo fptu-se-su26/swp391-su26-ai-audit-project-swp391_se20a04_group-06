@@ -42,6 +42,7 @@ export class CreateProductUseCase {
       catchLat,        // Vĩ độ GPS địa điểm đánh bắt hải sản ngoài biển
       catchLng,        // Kinh độ GPS địa điểm đánh bắt hải sản ngoài biển
       productSize,     // Kích thước hải sản (LARGE, MEDIUM, SMALL)
+      batchId,         // ID vựa cá liên kết (nếu có)
     } = body;
 
     // 1. Kiểm tra vị trí GPS nếu là hàng tươi sống
@@ -150,6 +151,7 @@ export class CreateProductUseCase {
       expiryDate: expiryDate ? new Date(expiryDate) : undefined, // Gán hạn sử dụng nếu có
       images: Array.isArray(images) ? images : [], // Gán danh sách ảnh (mặc định là mảng rỗng nếu không phải mảng)
       productSize,                             // Gán kích thước hải sản
+      batchId: batchId || undefined,           // Gán ID vựa cá liên kết
     });
 
     try {

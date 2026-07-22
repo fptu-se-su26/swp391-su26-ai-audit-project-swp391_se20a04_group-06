@@ -16,7 +16,7 @@ describe("product utilities", () => {
       "cover.jpg",
     );
     expect(getProductImage({ images: [{ secure_url: "first.jpg" }] })).toBe("first.jpg");
-    expect(getProductImage({})).toBe("/favicon.svg");
+    expect(getProductImage({})).toBe("/favicon.png");
   });
 
   it("classifies product freshness from catch time", () => {
@@ -44,6 +44,6 @@ describe("product utilities", () => {
     expect(distance).toBeCloseTo(0, 5);
     expect(formatDistance(0.42)).toBe("420 m");
     expect(formatDistance(4.25)).toBe("4.3 km");
-    expect(formatDistance(null)).toBe("Chưa có vị trí");
+    expect(formatDistance(null, false)).toBe("Chưa có vị trí");
   });
 });

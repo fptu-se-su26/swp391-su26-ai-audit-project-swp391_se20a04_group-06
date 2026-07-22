@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { apiLandingBatches } from "../../services/api";
 import { useConfirm } from "../../context/ConfirmContext";
+import { useToast } from "../../context/ToastContext";
 import IconActionButton from "../../components/common/IconActionButton";
 import {
   formatLandingDateTime,
@@ -20,7 +21,8 @@ import {
 } from "../../utils/landingBatch";
 
 export default function SellerLandingBatches() {
-  const { confirm, alert } = useConfirm();
+  const { confirm } = useConfirm();
+  const toast = useToast();
   const location = useLocation();
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,10 +58,10 @@ export default function SellerLandingBatches() {
     setBusyId(id);
     try {
       await apiLandingBatches.update(id, { status: "Closed" });
-      setNotice("Đã đóng vựa cá.");
+      toast.success("Đã đóng vựa cá thành công.");
       await load();
     } catch (error) {
-      setNotice(error.message);
+      toast.error(error.message || "Không thể đóng vựa cá.");
     } finally {
       setBusyId("");
     }
@@ -77,10 +79,10 @@ export default function SellerLandingBatches() {
     setBusyId(id);
     try {
       await apiLandingBatches.delete(id);
-      setNotice("Đã ẩn vựa cá. Các sản phẩm liên quan vẫn được giữ nguyên.");
+      toast.success("Đã ẩn vựa cá. Các sản phẩm liên quan vẫn được giữ nguyên.");
       await load();
     } catch (error) {
-      setNotice(error.message);
+      toast.error(error.message || "Không thể ẩn vựa cá.");
     } finally {
       setBusyId("");
     }
@@ -135,7 +137,11 @@ export default function SellerLandingBatches() {
                     <tr key={id}>
                       <td>
                         <strong>{batch.title}</strong>
-                        <small className="table-secondary">{batch.boatName || batch.origin || "Chưa cập nhật nguồn gốc"}</small>
+                        <small className="table-secondary">
+                          {batch.boatType === "SmallBoat"
+                            ? "Thuyền nhỏ / Thúng (Gần bờ)"
+                            : (batch.boatName || batch.origin || "Chưa cập nhật nguồn gốc")}
+                        </small>
                       </td>
                       <td><PackageOpen size={14} /> {Number(batch.productCount || 0)} loại</td>
                       <td><Scale size={14} /> {Number(batch.remainingWeight || 0)} / {Number(batch.totalWeight || 0)} kg</td>

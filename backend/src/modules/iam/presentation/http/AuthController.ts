@@ -43,7 +43,6 @@ const refreshSessionKey = (refreshToken: string) =>
 type RefreshSession = {
   userId: string;
   role: string;
-  sessionRole?: string;
 };
 
 async function storeRefreshSession(
@@ -107,7 +106,6 @@ async function findRefreshSession(
   const session: RefreshSession = {
     userId,
     role: user.role,
-    sessionRole: user.isVerified ? "seller" : "buyer",
   };
   await redis.set(
     refreshSessionKey(refreshToken),
@@ -119,11 +117,11 @@ async function findRefreshSession(
 }
 
 // Hàm tiện ích để ký (tạo mới) Access Token mã hóa chứa ID người dùng và Quyền (Role)
-function signToken(userId: string, role: string, sessionRole?: string): string {
+function signToken(userId: string, role: string): string {
   const secret = process.env.JWT_SECRET; // Đọc khóa bí mật JWT_SECRET từ biến môi trường .env
   if (!secret) throw new Error("JWT_SECRET chưa được cấu hình");
   const options: SignOptions = { expiresIn: "15m" }; // Cấu hình thời gian hết hạn của token là 15 phút
-  return jwt.sign({ userId, role, sessionRole }, secret, options); // Trả về chuỗi JWT đã ký
+  return jwt.sign({ userId, role }, secret, options); // Trả về chuỗi JWT đã ký
 }
 
 // Khởi tạo các Adapter hạ tầng (Infrastructure) duy nhất một lần
@@ -236,7 +234,6 @@ export async function me(req: Request, res: Response, next: any) {
     const payload = jwt.verify(token, process.env.JWT_SECRET as string) as {
       userId: string;
       role: "User" | "Admin";
-      sessionRole?: string;
     };
 
     const userDoc = await userRepository.findRawById(payload.userId);
@@ -267,7 +264,6 @@ export async function me(req: Request, res: Response, next: any) {
       createdAt: userDoc.createdAt,
       hasPassword: userDoc.passwordHash !== "google_oauth_no_password_hash_placeholder",
       stats,
-      sessionRole: payload.sessionRole || (userDoc.isVerified ? "seller" : "buyer"),
     });
   } catch (err: any) {
     logger.warn(`Invalid access token provided: ${err.message}`);
@@ -376,7 +372,7 @@ export async function refreshToken(req: Request, res: Response, next: any) {
     await redis.del(redisKey, refreshSessionKey(oldRefreshToken));
 
     // Ký Access Token mới chứa thông tin ID người dùng và quyền hạn
-    const newAccessToken = signToken(decoded.userId, decoded.role, decoded.sessionRole);
+    const newAccessToken = signToken(decoded.userId, decoded.role);
     // Sinh Refresh Token mới ngẫu nhiên dài 40 bytes dưới dạng chuỗi hexa
     const newRefreshToken = crypto.randomBytes(40).toString("hex");
 
@@ -408,17 +404,11 @@ export async function googleAuth(req: Request, res: Response, next: any) {
   }
 
   try {
-    const { selectedRole } = req.body;
     // Gọi UseCase xử lý đăng nhập Google ở tầng nghiệp vụ và lấy thông tin người dùng sạch
-    const authResult = await googleAuthUseCase.execute(idToken, selectedRole);
-
-    const sessionRole =
-      authResult.role === "Admin"
-        ? undefined
-        : selectedRole || (authResult.isVerified ? "seller" : "buyer");
+    const authResult = await googleAuthUseCase.execute(idToken);
 
     // Ký Access Token mới từ thông tin đăng nhập thành công
-    const accessToken = signToken(authResult.userId, authResult.role, sessionRole);
+    const accessToken = signToken(authResult.userId, authResult.role);
     // Sinh Refresh Token dài hạn ngẫu nhiên
     const refreshToken = crypto.randomBytes(40).toString("hex");
 
@@ -426,14 +416,13 @@ export async function googleAuth(req: Request, res: Response, next: any) {
     await storeRefreshSession(refreshToken, {
       userId: authResult.userId,
       role: authResult.role,
-      sessionRole,
     });
 
     // Thiết lập cookies chứa token gửi ngược lại trình duyệt
     res.cookie("token", accessToken, ACCESS_COOKIE_OPTS);
     res.cookie("refreshToken", refreshToken, REFRESH_COOKIE_OPTS);
 
-    return res.json({ user: { ...authResult, sessionRole } }); // Trả về thông tin người dùng dạng JSON
+    return res.json({ user: authResult }); // Trả về thông tin người dùng dạng JSON
   } catch (err: any) {
     next(err); // Đẩy lỗi sang Global Error Handler để đóng gói JSON trả về Client
   }

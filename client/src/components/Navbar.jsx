@@ -46,7 +46,7 @@ export default function Navbar() {
 
   const role = getUserRole(user);
   const meta = roleMeta[role];
-  const navigation = getNavigation(user);
+  const navigation = getNavigation(user, location.pathname);
 
   const isActive = (item) => {
     if (item.exact || item.path === "/") return location.pathname === item.path;
@@ -95,7 +95,6 @@ export default function Navbar() {
 
         <nav className="app-navbar__desktop" aria-label="Điều hướng chính">
           {navigation.map((item) => {
-            const Icon = item.icon;
             return (
               <Link
                 className={`app-nav-link ${isActive(item) ? "is-active" : ""} ${item.highlight ? "is-highlight" : ""}`}
@@ -103,7 +102,6 @@ export default function Navbar() {
                 key={item.path}
                 to={item.path}
               >
-                <Icon size={16} />
                 <span>{item.label}</span>
                 {item.highlight && <Crown className="app-nav-link__premium" size={12} />}
               </Link>
@@ -202,10 +200,8 @@ export default function Navbar() {
       {mobileOpen && (
         <nav className="app-navbar__mobile" aria-label="Điều hướng di động">
           {navigation.map((item) => {
-            const Icon = item.icon;
             return (
               <Link className={isActive(item) ? "is-active" : ""} key={item.path} to={item.path}>
-                <Icon size={19} />
                 <span>{item.label}</span>
               </Link>
             );

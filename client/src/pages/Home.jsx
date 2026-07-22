@@ -22,6 +22,29 @@ export default function Home() {
   const [slideIndex, setSlideIndex] = useState(0);
   const [favorites, setFavorites] = useState(new Set());
   const [heroBackgroundReady, setHeroBackgroundReady] = useState(false);
+  const [viewerLocation, setViewerLocation] = useState(() => {
+    try {
+      const saved = localStorage.getItem("viewerLocation");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    const handleLocationUpdate = () => {
+      try {
+        const saved = localStorage.getItem("viewerLocation");
+        if (saved) {
+          setViewerLocation(JSON.parse(saved));
+        }
+      } catch (e) {
+        console.error("Error reading updated location:", e);
+      }
+    };
+    window.addEventListener("locationUpdated", handleLocationUpdate);
+    return () => window.removeEventListener("locationUpdated", handleLocationUpdate);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -158,7 +181,7 @@ export default function Home() {
         )}
         <div className="market-hero__content">
           <span className="eyebrow">CHỢ HẢI SẢN TRỰC TIẾP</span>
-          <h1>Hải sản theo mẻ, theo vị trí, từ người bán thật.</h1>
+          <h1>Hải sản theo mẻ theo vị trí từ người bán thật.</h1>
           <p>
             Khám phá nguồn hàng, kiểm tra độ tươi và trò chuyện trực tiếp với ngư dân.
             Mọi trao đổi mua bán diễn ra trực tiếp giữa hai bên qua tin nhắn.
@@ -226,6 +249,7 @@ export default function Home() {
             favorites={favorites}
             onToggleFavorite={toggleFavorite}
             products={activeProducts.slice(0, 4)}
+            viewerLocation={viewerLocation}
           />
         )}
       </section>

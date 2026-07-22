@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { apiRecipes, apiReports } from "../services/api";
 import { canManageOwnedContent } from "../utils/ownership";
 import { useConfirm } from "../context/ConfirmContext";
+import { useToast } from "../context/ToastContext";
 import { formatRelativeDate } from "../utils/date";
 import useSEO from "../hooks/useSEO";
 
@@ -30,7 +31,8 @@ const formatCommentDate = (dateVal) => {
 };
 
 export default function RecipeDetail() {
-  const { confirm, alert } = useConfirm();
+  const { confirm } = useConfirm();
+  const toast = useToast();
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -100,11 +102,7 @@ export default function RecipeDetail() {
       });
     } catch (error) {
       setRecipe(originalRecipe);
-      await alert({
-        title: "Lỗi tương tác",
-        message: error.message,
-        variant: "danger"
-      });
+      toast.error(error.message || "Không thể tương tác.");
     }
   };
 
@@ -116,11 +114,7 @@ export default function RecipeDetail() {
       setRecipe((current) => ({ ...current, comments: result.comments }));
       setComment("");
     } catch (error) {
-      await alert({
-        title: "Lỗi bình luận",
-        message: error.message,
-        variant: "danger"
-      });
+      toast.error(error.message || "Không thể gửi bình luận.");
     }
   };
 
@@ -152,17 +146,9 @@ export default function RecipeDetail() {
   const copyLinkFallback = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
-      await alert({
-        title: "Đã chia sẻ",
-        message: "Liên kết công thức đã được sao chép vào clipboard của bạn!",
-        variant: "success",
-      });
+      toast.success("Liên kết công thức đã được sao chép!");
     } catch (err) {
-      await alert({
-        title: "Lỗi chia sẻ",
-        message: "Không thể tự động sao chép liên kết. Hãy copy thanh địa chỉ trình duyệt nhé.",
-        variant: "danger",
-      });
+      toast.error("Không thể sao chép liên kết. Hãy copy thanh địa chỉ trình duyệt nhé.");
     }
   };
 
@@ -179,13 +165,10 @@ export default function RecipeDetail() {
     setDeleting(true);
     try {
       await apiRecipes.delete(id);
+      toast.success("Đã xóa công thức thành công.");
       navigate("/recipes", { replace: true });
     } catch (error) {
-      await alert({
-        title: "Lỗi xóa công thức",
-        message: error.message,
-        variant: "danger"
-      });
+      toast.error(error.message || "Không thể xóa công thức.");
       setDeleting(false);
     }
   };
@@ -216,157 +199,178 @@ export default function RecipeDetail() {
   return (
     <div className="page-container recipe-detail-page">
       <div className="recipe-one-screen">
-        {/* Header */}
-        <header className="recipe-one-screen__header" style={{ marginBottom: "12px" }}>
-          <Link className="back-link recipe-back-link" to="/recipes">
+        {/* Header Back Link */}
+        <header className="recipe-one-screen__header" style={{ marginBottom: "16px" }}>
+          <Link className="back-link recipe-back-link" to="/recipes" style={{ display: "inline-flex", alignItems: "center", gap: "6px", textDecoration: "none", color: "var(--market-muted)", fontWeight: "600" }}>
             <ArrowLeft size={17} /> Cẩm nang công thức
           </Link>
         </header>
 
-        {/* 2 Columns Layout */}
-        <div className="recipe-detail-layout">
+        {/* Modern 2-Column Container */}
+        <div className="recipe-detail-container">
           
-          {/* Cột trái: Ảnh + thông tin món */}
-          <aside className="recipe-summary-card">
-            <div className="recipe-summary-card__media">
+          {/* Cột trái: Nội dung chính */}
+          <main className="recipe-main-content">
+            
+            {/* Header thông tin món */}
+            <div style={{ borderBottom: "1px solid var(--market-line)", paddingBottom: "20px" }}>
+              <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+                <span className={`recipe-meta-pill ${difficultyClass}`} style={{ fontWeight: "700", textTransform: "uppercase", fontSize: "0.75rem", padding: "6px 12px", borderRadius: "20px" }}>
+                  {getDifficultyLabel(recipe.difficulty)}
+                </span>
+              </div>
+              <h1 style={{ fontSize: "2.4rem", fontWeight: "900", color: "var(--market-text)", margin: "0 0 10px 0", lineHeight: "1.2" }}>{recipe.title}</h1>
+              <p style={{ fontSize: "1.05rem", color: "var(--market-muted)", lineHeight: "1.6", margin: 0, fontStyle: "italic" }}>{recipe.description}</p>
+            </div>
+
+            {/* Banner ảnh món ăn */}
+            <div className="recipe-hero-banner">
               {recipe.imageUrl && !hasImageError ? (
                 <img
                   alt={recipe.title}
-                  className="recipe-summary-image"
                   onError={() => setHasImageError(true)}
                   src={recipe.imageUrl}
                 />
               ) : (
-                <div className="recipe-hero-image__placeholder" style={{ borderRadius: "14px", height: "100%" }}>
-                  <ChefHat size={48} />
-                  <span style={{ fontSize: "0.85rem" }}>Chưa có ảnh món ăn</span>
+                <div className="recipe-hero-image__placeholder" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", background: "var(--market-surface)", color: "var(--market-muted)", gap: "12px" }}>
+                  <ChefHat size={64} />
+                  <span>Chưa có ảnh món ăn</span>
                 </div>
               )}
             </div>
 
-            <div className="recipe-card-body">
-              <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
-                <span className={`recipe-meta-pill ${difficultyClass}`} style={{ fontWeight: "700" }}>
-                  {getDifficultyLabel(recipe.difficulty)}
-                </span>
-              </div>
-              
-              <h1 style={{ fontSize: "1.4rem", fontWeight: "800", color: "var(--market-text)", margin: "8px 0 10px 0", lineHeight: "1.3" }}>{recipe.title}</h1>
-              
-              <p style={{ fontSize: "0.85rem", color: "var(--market-muted)", lineHeight: "1.5", margin: "0 0 14px 0" }}>{recipe.description}</p>
-              
-              <div className="recipe-summary-card__meta" style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                <div className="recipe-meta-pill">
-                  <Clock3 size={14} style={{ color: "var(--market-primary)" }} />
-                  <span>{recipe.cookingTime || 30} phút</span>
+            {/* Thẻ Nguyên liệu */}
+            <section className="recipe-section-card">
+              <h2 style={{ fontSize: "1.35rem", fontWeight: "800", color: "var(--market-text)", margin: "0 0 20px 0", display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ display: "inline-block", width: "6px", height: "20px", background: "var(--market-primary)", borderRadius: "3px" }} />
+                Nguyên liệu nấu ({recipe.ingredients?.length || 0})
+              </h2>
+              {recipe.ingredients && recipe.ingredients.length > 0 ? (
+                <ul className="recipe-ingredients-list-modern">
+                  {recipe.ingredients.map((item, index) => (
+                    <li key={`${item}-${index}`} className="recipe-ingredient-item-modern">
+                      <Check style={{ color: "var(--market-primary)", flexShrink: 0 }} size={18} />
+                      <span style={{ fontSize: "0.95rem", color: "var(--market-text)", fontWeight: "500" }}>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p style={{ color: "var(--market-subtle)", margin: 0 }}>Chưa có nguyên liệu.</p>
+              )}
+            </section>
+
+            {/* Thẻ Các bước thực hiện */}
+            <section className="recipe-section-card">
+              <h2 style={{ fontSize: "1.35rem", fontWeight: "800", color: "var(--market-text)", margin: "0 0 24px 0", display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ display: "inline-block", width: "6px", height: "20px", background: "var(--market-primary)", borderRadius: "3px" }} />
+                Các bước thực hiện ({recipe.instructions?.length || 0})
+              </h2>
+              {recipe.instructions && recipe.instructions.length > 0 ? (
+                <div className="recipe-steps-list-modern">
+                  {recipe.instructions.map((item, index) => (
+                    <div key={`${item}-${index}`} className="recipe-step-item-modern">
+                      <div className="recipe-step-badge">
+                        {index + 1}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <h4 style={{ fontSize: "1.05rem", fontWeight: "700", color: "var(--market-text)", margin: "0 0 6px 0" }}>Bước {index + 1}</h4>
+                        <p style={{ margin: 0, fontSize: "0.95rem", color: "var(--market-muted)", lineHeight: "1.6" }}>{cleanStepText(item)}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="recipe-meta-pill">
-                  <Users size={14} style={{ color: "var(--market-primary)" }} />
-                  <span>{recipe.servings || 2} khẩu phần</span>
+              ) : (
+                <p style={{ color: "var(--market-subtle)", margin: 0 }}>Chưa có bước thực hiện.</p>
+              )}
+            </section>
+          </main>
+
+          {/* Cột phải: Sidebar thông tin & hành động */}
+          <aside className="recipe-sidebar">
+            
+            {/* Thông tin chung */}
+            <section className="recipe-section-card" style={{ padding: "24px" }}>
+              <h3 style={{ fontSize: "1.05rem", fontWeight: "800", color: "var(--market-text)", margin: "0 0 16px 0", borderBottom: "1px solid var(--market-line)", paddingBottom: "10px" }}>
+                Thông tin chung
+              </h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div className="recipe-quick-info-box">
+                  <Clock3 size={18} style={{ color: "var(--market-primary)", flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--market-muted)" }}>Thời gian chế biến</div>
+                    <strong style={{ fontSize: "0.95rem", color: "var(--market-text)" }}>{recipe.cookingTime || 30} phút</strong>
+                  </div>
                 </div>
+                
+                <div className="recipe-quick-info-box">
+                  <Users size={18} style={{ color: "var(--market-primary)", flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--market-muted)" }}>Khẩu phần</div>
+                    <strong style={{ fontSize: "0.95rem", color: "var(--market-text)" }}>{recipe.servings || 2} người</strong>
+                  </div>
+                </div>
+
                 {recipe.createdAt && (
-                  <div className="recipe-meta-pill">
-                    <Calendar size={14} style={{ color: "var(--market-primary)" }} />
-                    <span>{formatRelativeDate(recipe.createdAt)}</span>
+                  <div className="recipe-quick-info-box">
+                    <Calendar size={18} style={{ color: "var(--market-primary)", flexShrink: 0 }} />
+                    <div>
+                      <div style={{ fontSize: "0.75rem", color: "var(--market-muted)" }}>Ngày đăng</div>
+                      <strong style={{ fontSize: "0.95rem", color: "var(--market-text)" }}>{formatRelativeDate(recipe.createdAt)}</strong>
+                    </div>
                   </div>
                 )}
+
                 {author && (
-                  <Link to={`/fisherman/${author._id || author.id}`} className="recipe-meta-pill" style={{ textDecoration: "none" }}>
-                    <span className="recipe-author__avatar" style={{ width: "16px", height: "16px", fontSize: "0.6rem", background: "var(--market-primary)", color: "var(--market-bg)", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", fontWeight: "700", marginRight: "4px" }}>
+                  <Link to={`/fisherman/${author._id || author.id}`} className="recipe-quick-info-box" style={{ textDecoration: "none" }}>
+                    <span className="recipe-author__avatar" style={{ width: "24px", height: "24px", fontSize: "0.75rem", background: "var(--market-primary)", color: "var(--market-bg)", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", fontWeight: "700", flexShrink: 0 }}>
                       {initials(author.name)}
                     </span>
-                    <span>Đăng bởi: <strong>{author.name}</strong></span>
+                    <div>
+                      <div style={{ fontSize: "0.75rem", color: "var(--market-muted)" }}>Đăng bởi</div>
+                      <strong style={{ fontSize: "0.95rem", color: "var(--market-text)", display: "block" }}>{author.name}</strong>
+                    </div>
                   </Link>
                 )}
               </div>
-            </div>
-          </aside>
- 
-          {/* Cột phải: Panel chứa Nguyên liệu, Cách làm & Nút hành động */}
-          <section className="recipe-right-panel">
-            <div className="recipe-content-grid">
-              {/* Nguyên liệu */}
-              <div className="recipe-ingredients-card">
-                <h2>Nguyên liệu ({recipe.ingredients?.length || 0})</h2>
-                <div className="recipe-card-scroll">
-                  {recipe.ingredients && recipe.ingredients.length > 0 ? (
-                    <ul className="magazine-ingredients-list" style={{ listStyle: "none", padding: 0 }}>
-                      {recipe.ingredients.map((item, index) => (
-                        <li key={`${item}-${index}`} className="magazine-ingredient-item">
-                          <Check className="magazine-ingredient-check" size={16} />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div className="recipe-empty-box" style={{ textAlign: "center", padding: "20px 0", color: "var(--market-subtle)" }}>
-                      <ChefHat size={32} style={{ margin: "0 auto 8px" }} />
-                      <p style={{ margin: 0, fontSize: "0.9rem" }}>Chưa có nguyên liệu.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
+            </section>
 
-              {/* Cách thực hiện */}
-              <div className="recipe-steps-card">
-                <h2>Cách thực hiện ({recipe.instructions?.length || 0})</h2>
-                <div className="recipe-card-scroll">
-                  {recipe.instructions && recipe.instructions.length > 0 ? (
-                    <ol className="magazine-steps-list" style={{ listStyle: "none", padding: 0 }}>
-                      {recipe.instructions.map((item, index) => (
-                        <li key={`${item}-${index}`} className="magazine-step-item">
-                          <span className="magazine-step-number">{index + 1}</span>
-                          <p className="magazine-step-text">{cleanStepText(item)}</p>
-                        </li>
-                      ))}
-                    </ol>
-                  ) : (
-                    <div className="recipe-empty-box" style={{ textAlign: "center", padding: "20px 0", color: "var(--market-subtle)" }}>
-                      <ChefHat size={32} style={{ margin: "0 auto 8px" }} />
-                      <p style={{ margin: 0, fontSize: "0.9rem" }}>Chưa có bước thực hiện.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Action Bar bên dưới khu vực Nguyên liệu và Cách thực hiện */}
-            <div className="recipe-action-bar">
+            {/* Bảng tương tác & hành động */}
+            <section className="recipe-section-card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "12px" }}>
               <button
                 className={`button button--primary like-button ${user && recipe.likes?.map(String).includes(String(user.id || user._id)) ? "is-liked" : ""}`}
                 onClick={like}
                 type="button"
+                style={{ width: "100%", height: "45px", display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", borderRadius: "14px" }}
               >
                 <Heart size={16} />
                 <span>{user && recipe.likes?.map(String).includes(String(user.id || user._id)) ? "Đã thích" : "Thích"}</span>
                 <span>({recipe.likeCount ?? recipe.likes?.length ?? 0})</span>
               </button>
               
-              <button className="button button--secondary" onClick={shareRecipe} type="button">
+              <button className="button button--secondary" onClick={shareRecipe} type="button" style={{ width: "100%", height: "45px", display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", borderRadius: "14px", border: "1px solid var(--market-line)" }}>
                 <Share2 size={16} /> Chia sẻ
               </button>
 
-              <button className="button button--secondary" onClick={() => setShowComments(true)} type="button">
+              <button className="button button--secondary" onClick={() => setShowComments(true)} type="button" style={{ width: "100%", height: "45px", display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", borderRadius: "14px", border: "1px solid var(--market-line)" }}>
                 <MessageSquare size={16} /> Bình luận ({recipe.comments?.length || 0})
               </button>
 
-              <ReportButton onSubmit={(reason) => apiReports.createForRecipe(id, reason)} />
+              <ReportButton onSubmit={(reason) => apiReports.createForRecipe(id, reason)} style={{ width: "100%", height: "45px" }} />
 
               {canManageOwnedContent(user, recipe.authorId) && (
-                <>
-                  <button className="button button--secondary owner-edit-button" onClick={editRecipe} type="button">
-                    <Pencil size={16} /> Sửa
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "8px", borderTop: "1px solid var(--market-line)", paddingTop: "16px" }}>
+                  <button className="button button--secondary owner-edit-button" onClick={editRecipe} type="button" style={{ height: "40px", borderRadius: "12px" }}>
+                    <Pencil size={15} /> Sửa
                   </button>
-                  <button className="button owner-delete-button" disabled={deleting} onClick={deleteRecipe} type="button">
-                    <Trash2 size={16} /> Xóa
+                  <button className="button owner-delete-button" disabled={deleting} onClick={deleteRecipe} type="button" style={{ height: "40px", borderRadius: "12px", background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.2)" }}>
+                    <Trash2 size={15} /> Xóa
                   </button>
-                </>
+                </div>
               )}
-            </div>
-          </section>
+            </section>
+          </aside>
 
         </div>
-
       </div>
 
       {/* Slide-out Comments Drawer */}

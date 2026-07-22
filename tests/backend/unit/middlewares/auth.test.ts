@@ -30,7 +30,7 @@ describe("RBAC guards", () => {
   it("allows a seller session and rejects a buyer session", () => {
     const next = jest.fn();
     sellerOnly(
-      { user: { userId: "seller", role: "User", sessionRole: "seller" } } as any,
+      { user: { userId: "seller", role: "User", isVerified: true } } as any,
       createResponse(),
       next,
     );
@@ -38,7 +38,7 @@ describe("RBAC guards", () => {
 
     const denied = createResponse();
     sellerOnly(
-      { user: { userId: "buyer", role: "User", sessionRole: "buyer" } } as any,
+      { user: { userId: "buyer", role: "User", isVerified: false, isPremium: false } } as any,
       denied,
       jest.fn(),
     );
@@ -49,7 +49,7 @@ describe("RBAC guards", () => {
   it("allows Admin through sellerOnly regardless of session mode", () => {
     const next = jest.fn();
     sellerOnly(
-      { user: { userId: "admin", role: "Admin", sessionRole: "buyer" } } as any,
+      { user: { userId: "admin", role: "Admin", isVerified: false } } as any,
       createResponse(),
       next,
     );

@@ -4,6 +4,9 @@ import { IRecipeRepository } from "../../domain/repositories/IRecipeRepository";
 import { Recipe } from "../../domain/entities/Recipe";
 // Import ngoại lệ nghiệp vụ NotFoundError và UnauthorizedError để báo lỗi khi dữ liệu hoặc quyền hạn không hợp lệ
 import { NotFoundError, UnauthorizedError } from "../../../../shared/domain/exceptions/DomainException";
+import { deleteFromCloudinary } from "../../../../middlewares/upload";
+import { extractPublicId } from "../../../../utils/cloudinary";
+import { logger } from "../../../../utils/logger";
 
 /**
  * Request DTO cho việc cập nhật công thức.
@@ -82,11 +85,24 @@ export class UpdateRecipeUseCase {
       updates.tags = Array.isArray(dto.tags) ? dto.tags : [];
     }
 
+    const oldImageUrl = recipe.imageUrl;
+    const nextImageUrl = dto.imageUrl;
+
     // 4. Ủy quyền cho Domain Entity thực thi logic cập nhật & kiểm chứng (validation)
     recipe.update(updates);
 
     // 5. Lưu lại trạng thái mới của thực thể công thức vào cơ sở dữ liệu
     await this.recipeRepository.save(recipe);
+
+    // Xóa ảnh cũ trên Cloudinary nếu ảnh mới được thay thế hoặc bị gỡ bỏ
+    if (oldImageUrl && nextImageUrl !== undefined && oldImageUrl !== nextImageUrl) {
+      const publicId = extractPublicId(oldImageUrl);
+      if (publicId) {
+        await deleteFromCloudinary(publicId).catch((error) => {
+          logger.error(`Không thể xóa ảnh Recipe cũ ${publicId}: ${error.message}`);
+        });
+      }
+    }
 
     // Trả về thực thể công thức nấu ăn sau khi đã được cập nhật thông tin
     return recipe;

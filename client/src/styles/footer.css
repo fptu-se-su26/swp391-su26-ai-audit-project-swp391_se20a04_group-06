@@ -1,0 +1,340 @@
+/* premium footer styling for HaiSan.vn */
+
+.app-footer {
+  background: linear-gradient(180deg, #091220 0%, #040910 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 60px 0 30px 0;
+  color: #94a3b8;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 40px;
+}
+
+.footer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.footer-section h3 {
+  color: #ffffff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  letter-spacing: 0.5px;
+  position: relative;
+}
+
+.footer-section h3::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  width: 35px;
+  height: 2px;
+  background: #12cbc7;
+  border-radius: 2px;
+}
+
+/* Brand Section */
+.footer-brand {
+  gap: 18px;
+}
+
+.footer-brand__logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.footer-brand__logo img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.footer-brand__logo span {
+  color: #ffffff;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.footer-brand__tagline {
+  line-height: 1.6;
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.footer-brand__socials {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.footer-brand__social-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  color: #94a3b8;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+}
+
+.footer-brand__social-link:hover {
+  background: #12cbc7;
+  color: #071120;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(18, 203, 199, 0.35);
+  border-color: #12cbc7;
+}
+
+/* List Links */
+.footer-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footer-links a {
+  color: #94a3b8;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+}
+
+.footer-links a:hover {
+  color: #12cbc7;
+  transform: translateX(4px);
+}
+
+/* Contact Info */
+.footer-contact {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.footer-contact li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.5;
+}
+
+.footer-contact svg {
+  color: #12cbc7;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+/* Footer Bottom */
+.footer-bottom {
+  margin-top: 50px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 24px;
+}
+
+.footer-bottom__content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  font-size: 0.82rem;
+}
+
+.footer-bottom__copyright {
+  margin: 0;
+}
+
+/* Status Indicator */
+.footer-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.footer-status__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.footer-status__dot--online {
+  background-color: #10b981;
+  animation: pulse 2s infinite;
+}
+
+.footer-status__dot--offline {
+  background-color: #ef4444;
+  animation: pulse-offline 2s infinite;
+}
+
+.footer-status span {
+  font-weight: 500;
+  font-size: 0.8rem;
+}
+
+.footer-status__text--online {
+  color: #10b981;
+}
+
+.footer-status__text--offline {
+  color: #ef4444;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+@keyframes pulse-offline {
+  0% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  70% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+  100% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+/* Light Theme overrides if active */
+.theme-light .app-footer {
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  color: #475569;
+}
+
+.theme-light .footer-section h3 {
+  color: #0f172a;
+}
+
+.theme-light .footer-brand__logo span {
+  color: #0f172a;
+}
+
+.theme-light .footer-brand__social-link {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+}
+
+.theme-light .footer-brand__social-link:hover {
+  background: #12cbc7;
+  color: #ffffff;
+}
+
+.theme-light .footer-links a {
+  color: #475569;
+}
+
+.theme-light .footer-links a:hover {
+  color: #0891b2;
+}
+
+.theme-light .footer-bottom {
+  border-top: 1px solid #e2e8f0;
+}
+
+.theme-light .footer-status {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+}
+
+/* Contact Actions in Footer */
+.footer-contact-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.footer-contact-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+}
+
+.footer-contact-btn--facebook {
+  background: rgba(24, 119, 242, 0.1);
+  color: #1877f2;
+  border-color: rgba(24, 119, 242, 0.2);
+}
+
+.footer-contact-btn--facebook:hover {
+  background: #1877f2;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(24, 119, 242, 0.3);
+}
+
+.footer-contact-btn--zalo {
+  background: rgba(0, 104, 255, 0.1);
+  color: #0068ff;
+  border-color: rgba(0, 104, 255, 0.2);
+}
+
+.footer-contact-btn--zalo:hover {
+  background: #0068ff;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 104, 255, 0.3);
+}
+
+.theme-light .footer-contact-btn--facebook {
+  background: rgba(24, 119, 242, 0.06);
+}
+
+.theme-light .footer-contact-btn--zalo {
+  background: rgba(0, 104, 255, 0.06);
+}

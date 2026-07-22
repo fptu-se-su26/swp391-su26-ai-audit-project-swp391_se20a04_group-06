@@ -4,8 +4,8 @@ import { IBoatLogRepository } from "../../domain/repositories/IBoatLogRepository
 import { BoatLog } from "../../domain/entities/BoatLog";
 // Import userRepository dùng chung để lấy dữ liệu thô của người dùng từ MongoDB
 import { userRepository } from "../../../../repositories/user.repository";
-// Import các ngoại lệ nghiệp vụ NotFoundError và UnauthorizedError để kiểm duyệt và xử lý lỗi
-import { NotFoundError, UnauthorizedError } from "../../../../shared/domain/exceptions/DomainException";
+// Import các ngoại lệ nghiệp vụ NotFoundError, UnauthorizedError và ValidationError để kiểm duyệt và xử lý lỗi
+import { NotFoundError, UnauthorizedError, ValidationError } from "../../../../shared/domain/exceptions/DomainException";
 
 // Định nghĩa giao diện DTO chứa cấu trúc dữ liệu đầu vào của yêu cầu tạo nhật ký cabin
 export interface CreateBoatLogRequestDTO {
@@ -40,6 +40,23 @@ export class CreateBoatLogUseCase {
       throw new UnauthorizedError(
         "Chức năng đăng Nhật ký Cabin chỉ dành cho ngư thuyền đã xác minh hoặc Premium."
       );
+    }
+
+    // 2.1. Xác thực các ràng buộc về nội dung, hình ảnh và ngày giờ
+    if (dto.content.length > 5000) {
+      throw new ValidationError("Nội dung nhật ký cabin không được vượt quá 5000 ký tự.");
+    }
+    if (dto.images && dto.images.length > 10) {
+      throw new ValidationError("Chỉ được đăng tối đa 10 hình ảnh.");
+    }
+    if (dto.landingTime) {
+      const lTime = new Date(dto.landingTime);
+      if (isNaN(lTime.getTime())) {
+        throw new ValidationError("Thời gian cập bến không hợp lệ.");
+      }
+      if (lTime > new Date()) {
+        throw new ValidationError("Thời gian cập bến không thể ở tương lai.");
+      }
     }
 
     // 3. Khởi tạo một thực thể miền Domain BoatLog mới với dữ liệu đã được cấu trúc

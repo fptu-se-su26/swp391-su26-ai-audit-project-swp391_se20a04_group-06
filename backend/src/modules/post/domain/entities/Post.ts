@@ -197,5 +197,27 @@ export class Post extends AggregateRoot<PostProps> {
   get likes() { return this.props.likes; }
   // Getter truy xuất danh sách các bình luận
   get comments() { return this.props.comments; }
+  get title() { return this.props.title; }
+  get content() { return this.props.content; }
+  get images() { return this.props.images; }
+  get tags() { return this.props.tags; }
+
+  public update(title?: string, content?: string, images?: string[], tags?: string[]): void {
+    if (title !== undefined) {
+      if (title.trim() === "") throw new ValidationError("Tiêu đề bài viết không được trống.");
+      this.props.title = title;
+    }
+    if (content !== undefined) {
+      if (content.trim() === "") throw new ValidationError("Nội dung bài viết không được trống.");
+      this.props.content = content;
+    }
+    if (images !== undefined) {
+      this.props.images = images;
+    }
+    if (tags !== undefined) {
+      this.props.tags = tags;
+    }
+    this.validate();
+  }
 }
 

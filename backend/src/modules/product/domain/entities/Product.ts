@@ -48,6 +48,8 @@ export interface ProductProps {
   createdAt?: Date;
   // Số lượt xem hoặc truy cập vào chi tiết sản phẩm này
   viewCount?: number;
+  // Mã định danh vựa cá liên kết
+  batchId?: string;
 }
 
 // Định nghĩa thực thể gốc AggregateRoot đại diện cho Product trong miền (Domain)
@@ -266,6 +268,8 @@ export class Product extends AggregateRoot<ProductProps> {
       createdAt: this.props.createdAt,
       // Tổng số lượt xem sản phẩm
       viewCount: this.props.viewCount,
+      // Mã định danh vựa cá liên kết
+      batchId: this.props.batchId,
     };
   }
 
@@ -309,4 +313,6 @@ export class Product extends AggregateRoot<ProductProps> {
   get createdAt() { return this.props.createdAt; }
   // Getter để truy xuất lượt xem sản phẩm
   get viewCount() { return this.props.viewCount; }
+  // Getter để truy xuất mã vựa cá liên kết
+  get batchId() { return this.props.batchId; }
 }

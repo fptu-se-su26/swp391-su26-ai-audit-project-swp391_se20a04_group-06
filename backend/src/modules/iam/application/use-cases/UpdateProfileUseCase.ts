@@ -12,6 +12,8 @@ import { logger } from "../../../../utils/logger";
 import { postRepository } from "../../../../repositories/post.repository";
 // Import repository của nhật ký đi biển phục vụ cập nhật đồng bộ
 import { boatLogRepository } from "../../../../repositories/boatlog.repository";
+// Import repository của công thức nấu ăn phục vụ cập nhật đồng bộ
+import { recipeRepository } from "../../../../repositories/recipe.repository";
 
 // Định nghĩa giao diện cho bộ tải ảnh lên (Image Uploader Interface) dành cho avatar người dùng
 export interface IImageUploader {
@@ -63,18 +65,8 @@ export class UpdateProfileUseCase {
     }
 
     // 3. XỬ LÝ NẾU CÓ TẢI LÊN ẢNH ĐẠI DIỆN (AVATAR) MỚI
+    const oldAvatar = user.avatar;
     if (data.fileBuffer) {
-      // Nếu người dùng đã có avatar cũ từ trước
-      if (user.avatar) {
-        // Trích xuất publicId của ảnh cũ trên Cloudinary để xóa, giảm thiểu rác tài nguyên đám mây
-        const oldPublicId = extractPublicId(user.avatar);
-        if (oldPublicId) {
-          // Xóa ảnh cũ bất đồng bộ (không chặn tiến trình chính bằng catch bắt lỗi)
-          deleteFromCloudinary(oldPublicId).catch((err) =>
-            logger.error(`Failed to delete old avatar on Cloudinary: ${err.message}`)
-          );
-        }
-      }
       // Tải lên avatar mới bằng imageUploader và lấy URL trả về
       newAvatarUrl = await this.imageUploader.uploadAvatar(data.fileBuffer);
       // Cập nhật URL avatar mới vào thực thể domain
@@ -84,10 +76,25 @@ export class UpdateProfileUseCase {
     // 4. LƯU LẠI THAY ĐỔI VÀO CƠ SỞ DỮ LIỆU
     await this.userRepository.save(user);
 
+    // 4b. XÓA ẢNH ĐẠI DIỆN CŨ TRÊN CLOUDINARY (Chỉ thực hiện sau khi DB đã cập nhật thành công ảnh mới)
+    if (data.fileBuffer && oldAvatar) {
+      const oldPublicId = extractPublicId(oldAvatar);
+      if (oldPublicId) {
+        // Xóa ảnh cũ bất đồng bộ (không chặn tiến trình chính bằng catch bắt lỗi)
+        deleteFromCloudinary(oldPublicId).catch((err) =>
+          logger.error(`Failed to delete old avatar on Cloudinary: ${err.message}`)
+        );
+      }
+    }
+
     // 5. CẬP NHẬT ĐỒNG BỘ CASCADING (Cập nhật thông tin tên và ảnh đại diện ở các bài đăng, bình luận để hiển thị đồng bộ)
     try {
       const cascadeObj: any = { userName: user.name };
-      if (user.avatar !== null) cascadeObj.userAvatar = user.avatar;
+      if (user.avatar !== null) {
+        cascadeObj.userAvatar = user.avatar;
+      } else {
+        cascadeObj.userAvatar = null;
+      }
 
       // Cập nhật thông tin tác giả bài viết trong bảng Posts
       await postRepository.updateMany({ userId } as any, { $set: cascadeObj });
@@ -95,7 +102,7 @@ export class UpdateProfileUseCase {
       // Chuẩn bị cập nhật thông tin bình luận trong các bài viết khác
       const commentUpdate: any = {};
       commentUpdate["comments.$[elem].userName"] = user.name;
-      if (user.avatar !== null) commentUpdate["comments.$[elem].userAvatar"] = user.avatar;
+      commentUpdate["comments.$[elem].userAvatar"] = user.avatar; // Gán giá trị mới (kể cả null) để đồng nhất
 
       // Sử dụng arrayFilters của Mongoose để chỉ cập nhật các phần tử bình luận có userId khớp với người dùng hiện tại
       await postRepository.updateMany(
@@ -106,6 +113,13 @@ export class UpdateProfileUseCase {
 
       // Cập nhật thông tin tác giả trong các nhật ký hành trình đi biển (Boat Logs)
       await boatLogRepository.updateMany({ userId } as any, { $set: cascadeObj });
+
+      // Cập nhật thông tin bình luận trong các công thức nấu ăn (Recipes)
+      await recipeRepository.updateMany(
+        { "comments.userId": userId } as any,
+        { $set: commentUpdate },
+        { arrayFilters: [{ "elem.userId": userId }] } as any
+      );
     } catch (err: any) {
       // Log lỗi đồng bộ nhưng không quăng ra ngoài để tránh làm hỏng yêu cầu cập nhật hồ sơ chính
       logger.error(`Failed to cascade update profile details for UserId=${userId}: ${err.message}`);

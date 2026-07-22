@@ -12,6 +12,8 @@ import { uploadToCloudinary } from "../middlewares/upload";
 import { parsePagination } from "../utils/pagination"; 
 // Import Model Mongoose của Tin nhắn
 import { Message } from "../models/Message";
+// Import productRepository để truy vấn thông tin mẻ hàng phục vụ tìm sellerId
+import { productRepository } from "../repositories/product.repository";
 // Import hàm lấy đối tượng Socket.io Server (IO) để gửi sự kiện realtime
 import { getIO } from "../socket";
 
@@ -38,19 +40,24 @@ export async function recallMessage(req: Request, res: Response) {
         .json({ message: "Bạn không có quyền thu hồi tin nhắn này" });
     }
 
+    if (msg.isRecalled) {
+      return res.status(400).json({ message: "Tin nhắn này đã bị thu hồi trước đó" });
+    }
+
     // Đánh dấu cờ 'isRecalled' thành true đại diện cho tin nhắn đã bị thu hồi
     msg.isRecalled = true;
     // Lưu trạng thái cập nhật vào DB
     await msg.save();
 
     // Đồng bộ Realtime trạng thái thu hồi cho cả phòng người gửi và người nhận qua Socket.io
-    // Phòng (room) được định danh theo định dạng: product_[id_sản_phẩm]_[id_người_dùng]
-    getIO()
-      .to(`product_${msg.productId}_${msg.senderId}`)
-      .emit("message_recalled", { id });
-    getIO()
-      .to(`product_${msg.productId}_${msg.receiverId}`)
-      .emit("message_recalled", { id });
+    const prod = await productRepository.findById(msg.productId.toString());
+    if (prod) {
+      const sellerId = prod.sellerId.toString();
+      const buyerId = msg.senderId.toString() === sellerId ? msg.receiverId.toString() : msg.senderId.toString();
+      getIO()
+        .to(`chat_${buyerId}_${sellerId}`)
+        .emit("message_recalled", { id });
+    }
 
     // Trả về kết quả thành công cho Client
     return res.json({ success: true, message: "Thu hồi thành công" });
@@ -81,6 +88,11 @@ export async function reactMessage(req: Request, res: Response) {
     ) {
       return res.status(403).json({ message: "Bạn không thuộc cuộc trò chuyện này" });
     }
+
+    if (msg.isRecalled) {
+      return res.status(400).json({ message: "Không thể thả cảm xúc cho tin nhắn đã thu hồi" });
+    }
+
     if (reaction && (typeof reaction !== "string" || reaction.length > 16)) {
       return res.status(400).json({ message: "Cảm xúc không hợp lệ" });
     }
@@ -90,13 +102,15 @@ export async function reactMessage(req: Request, res: Response) {
     await msg.save();
 
     // Đồng bộ cảm xúc realtime qua Socket.io tới cả hai phòng chat
-    const eventData = { id, reaction: msg.reaction };
-    getIO()
-      .to(`product_${msg.productId}_${msg.senderId}`)
-      .emit("message_reacted", eventData);
-    getIO()
-      .to(`product_${msg.productId}_${msg.receiverId}`)
-      .emit("message_reacted", eventData);
+    const prod = await productRepository.findById(msg.productId.toString());
+    if (prod) {
+      const sellerId = prod.sellerId.toString();
+      const buyerId = msg.senderId.toString() === sellerId ? msg.receiverId.toString() : msg.senderId.toString();
+      const eventData = { id, reaction: msg.reaction };
+      getIO()
+        .to(`chat_${buyerId}_${sellerId}`)
+        .emit("message_reacted", eventData);
+    }
 
     // Trả về trạng thái phản hồi cảm xúc thành công
     return res.json({ success: true, reaction: msg.reaction });
@@ -133,19 +147,25 @@ export async function editMessage(req: Request, res: Response) {
         .json({ message: "Bạn không thể chỉnh sửa tin nhắn của người khác" });
     }
 
+    if (msg.isRecalled) {
+      return res.status(400).json({ message: "Không thể chỉnh sửa tin nhắn đã thu hồi" });
+    }
+
     // Cập nhật nội dung văn bản mới
     msg.content = content.trim();
     // Lưu lại vào DB
     await msg.save();
 
     // Gửi sự kiện cập nhật nội dung tin nhắn realtime thông qua Socket.io
-    const eventData = { id, content: msg.content };
-    getIO()
-      .to(`product_${msg.productId}_${msg.senderId}`)
-      .emit("message_edited", eventData);
-    getIO()
-      .to(`product_${msg.productId}_${msg.receiverId}`)
-      .emit("message_edited", eventData);
+    const prod = await productRepository.findById(msg.productId.toString());
+    if (prod) {
+      const sellerId = prod.sellerId.toString();
+      const buyerId = msg.senderId.toString() === sellerId ? msg.receiverId.toString() : msg.senderId.toString();
+      const eventData = { id, content: msg.content };
+      getIO()
+        .to(`chat_${buyerId}_${sellerId}`)
+        .emit("message_edited", eventData);
+    }
 
     // Trả về kết quả cập nhật thành công cho Client
     return res.json({ success: true, content: msg.content });

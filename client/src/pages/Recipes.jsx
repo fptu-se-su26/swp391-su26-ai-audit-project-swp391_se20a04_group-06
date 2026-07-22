@@ -1,4 +1,4 @@
-import { Calendar, ChefHat, Clock3, Heart, Pencil, Plus, Trash2, Users, X } from "lucide-react";
+import { Calendar, ChefHat, Clock3, Heart, Loader, Pencil, Plus, Trash2, Users, X } from "lucide-react";
 import ImageUploader from "../components/shared/ImageUploader";
 
 import { useEffect, useState, useRef } from "react";
@@ -9,6 +9,7 @@ import { apiRecipes } from "../services/api";
 import { getOptimizedImageUrl, getRecipeImageSrcSet } from "../utils/image";
 import { canManageOwnedContent } from "../utils/ownership";
 import { useConfirm } from "../context/ConfirmContext";
+import { useToast } from "../context/ToastContext";
 import IconActionButton from "../components/common/IconActionButton";
 import LivePreviewShell from "../components/preview/LivePreviewShell";
 import RecipeLivePreview from "../components/preview/RecipeLivePreview";
@@ -142,7 +143,8 @@ import useSEO from "../hooks/useSEO";
 
 export default function Recipes() {
   useSEO("Góc ẩm thực", "Tìm kiếm và chia sẻ các công thức chế biến hải sản tươi ngon, hấp dẫn.");
-  const { confirm, alert } = useConfirm();
+  const { confirm } = useConfirm();
+  const toast = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -156,6 +158,7 @@ export default function Recipes() {
   const [editingRecipe, setEditingRecipe] = useState(null);
   const [editForm, setEditForm] = useState(initialForm);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [savingCreate, setSavingCreate] = useState(false);
 
   const loadRecipes = () => {
     setLoading(true);
@@ -211,31 +214,81 @@ export default function Recipes() {
       navigate("/login", { state: { message: "Bạn cần đăng nhập để chia sẻ công thức." } });
       return;
     }
+    if (user.role !== "Admin" && !user.isVerified) {
+      toast.error("Chỉ quản trị viên hoặc ngư dân đã xác minh mới có thể chia sẻ công thức.");
+      return;
+    }
     setFormOpen((open) => !open);
+  };
+
+  const validateRecipeForm = (recipeForm) => {
+    if (!recipeForm.title || recipeForm.title.trim().length === 0) {
+      throw new Error("Tiêu đề không được để trống.");
+    }
+    if (recipeForm.title.trim().length > 150) {
+      throw new Error("Tiêu đề không được vượt quá 150 ký tự.");
+    }
+    if (!recipeForm.description || recipeForm.description.trim().length === 0) {
+      throw new Error("Mô tả không được để trống.");
+    }
+    if (recipeForm.description.trim().length > 5000) {
+      throw new Error("Mô tả không được vượt quá 5000 ký tự.");
+    }
+    const cTime = Number(recipeForm.cookingTime);
+    if (isNaN(cTime) || cTime <= 0 || cTime > 1440) {
+      throw new Error("Thời gian chế biến phải lớn hơn 0 và tối đa 1440 phút (24 giờ).");
+    }
+    const servs = Number(recipeForm.servings);
+    if (isNaN(servs) || servs <= 0 || servs > 100) {
+      throw new Error("Khẩu phần ăn phải lớn hơn 0 và tối đa 100 người.");
+    }
+    if (recipeForm.ingredients.trim().length > 2000) {
+      throw new Error("Nguyên liệu không được vượt quá 2000 ký tự.");
+    }
+    const ingredientsArray = recipeForm.ingredients.split("\n").map((item) => item.trim()).filter(Boolean);
+    if (ingredientsArray.length > 100) {
+      throw new Error("Số lượng nguyên liệu tối đa là 100.");
+    }
+    if (recipeForm.instructions.trim().length > 4000) {
+      throw new Error("Hướng dẫn không được vượt quá 4000 ký tự.");
+    }
+    const instructionsArray = recipeForm.instructions.split("\n").map((item) => item.trim()).filter(Boolean);
+    if (instructionsArray.length > 100) {
+      throw new Error("Số lượng bước hướng dẫn tối đa là 100.");
+    }
+    const tagsArray = recipeForm.tags.split(",").map((item) => item.trim()).filter(Boolean);
+    if (tagsArray.length > 10) {
+      throw new Error("Số lượng tags tối đa là 10.");
+    }
+    for (const tag of tagsArray) {
+      if (tag.length > 30) {
+        throw new Error("Mỗi tag tối đa 30 ký tự.");
+      }
+    }
   };
 
   const createRecipe = async (event) => {
     event.preventDefault();
+    try {
+      validateRecipeForm(form);
+    } catch (err) {
+      toast.error(err.message);
+      return;
+    }
     if (form.imageFile) {
       const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
       if (!allowedTypes.includes(form.imageFile.type)) {
-        await alert({
-          title: "Định dạng không hợp lệ",
-          message: "Chỉ cho phép tải lên hình ảnh định dạng JPG, PNG hoặc WEBP.",
-          variant: "warning"
-        });
+        toast.error("Chỉ cho phép tải lên hình ảnh định dạng JPG, PNG hoặc WEBP.");
         return;
       }
       if (form.imageFile.size > 2 * 1024 * 1024) {
-        await alert({
-          title: "Kích thước ảnh quá lớn",
-          message: "Vui lòng chọn hình ảnh có dung lượng nhỏ hơn 2MB.",
-          variant: "warning"
-        });
+        toast.error("Vui lòng chọn hình ảnh có dung lượng nhỏ hơn 2MB.");
         return;
       }
     }
 
+    setSavingCreate(true);
+    const toastId = toast.loading("Đang đăng công thức...");
     try {
       let imageUrl = "";
       if (form.imageFile) {
@@ -245,12 +298,11 @@ export default function Recipes() {
       await loadRecipes();
       setForm(initialForm);
       setFormOpen(false);
+      toast.update(toastId, "Đăng công thức thành công!", "success");
     } catch (error) {
-      await alert({
-        title: "Lỗi đăng công thức",
-        message: error.message,
-        variant: "danger"
-      });
+      toast.update(toastId, error.message || "Không thể đăng công thức.", "error");
+    } finally {
+      setSavingCreate(false);
     }
   };
 
@@ -308,27 +360,27 @@ export default function Recipes() {
     const id = editingRecipe?.id || editingRecipe?._id;
     if (!id || !canManageOwnedContent(user, editingRecipe.authorId)) return;
 
+    try {
+      validateRecipeForm(editForm);
+    } catch (err) {
+      toast.error(err.message);
+      return;
+    }
+
     if (editForm.imageFile) {
       const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
       if (!allowedTypes.includes(editForm.imageFile.type)) {
-        await alert({
-          title: "Định dạng không hợp lệ",
-          message: "Chỉ cho phép tải lên hình ảnh định dạng JPG, PNG hoặc WEBP.",
-          variant: "warning"
-        });
+        toast.error("Chỉ cho phép tải lên hình ảnh định dạng JPG, PNG hoặc WEBP.");
         return;
       }
       if (editForm.imageFile.size > 2 * 1024 * 1024) {
-        await alert({
-          title: "Kích thước ảnh quá lớn",
-          message: "Vui lòng chọn hình ảnh có dung lượng nhỏ hơn 2MB.",
-          variant: "warning"
-        });
+        toast.error("Vui lòng chọn hình ảnh có dung lượng nhỏ hơn 2MB.");
         return;
       }
     }
 
     setSavingEdit(true);
+    const toastId = toast.loading("Đang cập nhật công thức...");
     try {
       let imageUrl = editForm.imageUrl;
       if (editForm.imageFile) {
@@ -339,12 +391,9 @@ export default function Recipes() {
       await loadRecipes();
       setEditingRecipe(null);
       setEditForm(initialForm);
+      toast.update(toastId, "Cập nhật công thức thành công!", "success");
     } catch (error) {
-      await alert({
-        title: "Lỗi sửa công thức",
-        message: error.message,
-        variant: "danger"
-      });
+      toast.update(toastId, error.message || "Không thể cập nhật công thức.", "error");
     } finally {
       setSavingEdit(false);
     }
@@ -365,12 +414,9 @@ export default function Recipes() {
     try {
       await apiRecipes.delete(id);
       setRecipes((current) => current.filter((item) => (item.id || item._id) !== id));
+      toast.success("Đã xóa công thức thành công.");
     } catch (error) {
-      await alert({
-        title: "Lỗi xóa công thức",
-        message: error.message,
-        variant: "danger"
-      });
+      toast.error(error.message || "Không thể xóa công thức.");
     } finally {
       setDeletingId(null);
     }
@@ -460,7 +506,7 @@ export default function Recipes() {
             </label>
 
             <div className="recipe-form-footer recipe-form-layout__full">
-              <button className="button button--primary" type="submit">Đăng công thức</button>
+              <button className="button button--primary" disabled={savingCreate} type="submit">{savingCreate ? <><Loader size={15} className="toast-spinner" /> Đang xử lý...</> : "Đăng công thức"}</button>
             </div>
           </form>
 

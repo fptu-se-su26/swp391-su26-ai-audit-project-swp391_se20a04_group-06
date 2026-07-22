@@ -23,7 +23,8 @@ export default function ProductLivePreview({ product }) {
 
   const formatPrice = (val) => {
     if (!val || isNaN(val)) return "Giá sẽ hiển thị ở đây";
-    return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(val) + " / kg";
+    const formatted = new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(val);
+    return `${formatted} / kg`;
   };
 
   return (
@@ -43,7 +44,7 @@ export default function ProductLivePreview({ product }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
             <span style={{ fontSize: "0.7rem", color: "#67e8f9", background: "rgba(34, 243, 255, 0.08)", padding: "1px 6px", borderRadius: "4px", fontWeight: "700" }}>
-              {product?.type === "Fresh" ? "Tươi sống" : "Đồ khô"}
+              {product?.type === "Fresh" ? "Tươi" : "Đồ khô"}
             </span>
             <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>
               {getCategoryLabel(product?.category)}

@@ -5,6 +5,8 @@ import { NotFoundError } from "../../../../shared/domain/exceptions/DomainExcept
 import { notifyPostLike } from "../../../../services/notification.service";
 import { userRepository } from "../../../../repositories/user.repository";
 
+import { logger } from "../../../../utils/logger";
+
 /**
  * Use Case thích hoặc bỏ thích bài đăng trên diễn đàn.
  */
@@ -39,9 +41,9 @@ export class ToggleLikePostUseCase {
             postAuthorId: props.userId,
             likerName: user.name,
             likerId: userId,
-          }).catch((err) => console.error("Failed to notify post like:", err));
+          }).catch((err) => logger.error("Failed to notify post like:", err));
         }
-      }).catch((err) => console.error("Failed to find liker user details:", err));
+      }).catch((err) => logger.error("Failed to find liker user details:", err));
     }
 
     // Trả về trạng thái thích (true/false) và tổng số lượng lượt thích hiện tại của bài viết

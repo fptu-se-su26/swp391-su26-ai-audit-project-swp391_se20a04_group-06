@@ -79,12 +79,12 @@ export function uploadToCloudinary(
   folder = "seafood",
 ): Promise<{ url: string; publicId: string }> {
   return new Promise((resolve, reject) => {
-    // Thiết lập cơ chế tự động ngắt (Timeout): ngắt luồng tải lên và ném lỗi nếu quá 15 giây mà chưa hoàn tất
+    // Thiết lập cơ chế tự động ngắt (Timeout): ngắt luồng tải lên và ném lỗi nếu quá 30 giây mà chưa hoàn tất
     const timeout = setTimeout(() => {
       reject(
         new Error("Tải lên Cloudinary thất bại do hết thời gian chờ (Timeout)"),
       );
-    }, 15000);
+    }, 30000);
 
     // Khởi tạo luồng tải lên (Upload Stream) của SDK Cloudinary
     const stream = cloudinary.uploader.upload_stream(

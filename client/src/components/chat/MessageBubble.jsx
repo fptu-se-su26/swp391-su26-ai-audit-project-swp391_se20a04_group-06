@@ -43,7 +43,7 @@ function MessageBubble({
               </a>
             )}
             {message.content && <p>{message.content}</p>}
-            {message.location && (
+            {message.location && message.location.latitude != null && message.location.longitude != null && (
               <a
                 className="message-location"
                 href={`https://www.openstreetmap.org/?mlat=${message.location.latitude}&mlon=${message.location.longitude}#map=15/${message.location.latitude}/${message.location.longitude}`}

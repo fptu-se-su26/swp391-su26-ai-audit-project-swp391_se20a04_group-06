@@ -14,16 +14,17 @@ export const categoryLabelMap = {
   other: "Khác",
   others: "Khác",
   "Cua, ghẹ": "Cua, ghẹ",
-  "Nhuyễn thể": "Nhuyễn thể",
+  "Nhuyễn thể": "Ốc, sò",
+  "Ốc, sò": "Ốc, sò",
 };
 
 export const freshnessLabelMap = {
   LIVE: "Còn sống",
-  FRESH: "Tươi sống",
+  FRESH: "Tươi",
   FROZEN: "Đông lạnh",
   DRIED: "Đồ khô",
   live: "Còn sống",
-  fresh: "Tươi sống",
+  fresh: "Tươi",
   frozen: "Đông lạnh",
   dried: "Đồ khô",
 };

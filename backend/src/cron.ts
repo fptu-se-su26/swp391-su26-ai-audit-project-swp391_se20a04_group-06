@@ -51,10 +51,10 @@ export function startCronJobs() {
         "[CRON] Khóa phân tán được thiết lập thành công. Tiến hành hết hạn hải sản tươi...",
       );
 
-      // Khởi tạo mốc thời gian ngày hôm qua (trước 24 giờ)
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      // Khởi tạo mốc thời gian hai ngày trước (trước 48 giờ)
+      const now = new Date();
+      const threeDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000);
       const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+
       // Thực hiện cập nhật hàng loạt các sản phẩm Fresh đang Active nhưng đã quá hạn bán
       const result = await productRepository.updateMany(
         {
@@ -62,10 +62,15 @@ export function startCronJobs() {
           type: "Fresh",
           // Đang hoạt động
           status: "Active",
-          // Quá hạn: Thời gian đánh bắt quá 48 tiếng HOẶC thời gian tạo bài đăng quá 24 tiếng
+          // Quá hạn: Có ngày hết hạn và đã qua ngày hết hạn, HOẶC catchTime > 72h, HOẶC createdAt > 48h nếu thiếu catchTime/expiryDate
           $or: [
-            { catchTime: { $lte: twoDaysAgo } },
-            { createdAt: { $lte: yesterday } },
+            { expiryDate: { $lte: now } },
+            { catchTime: { $lte: threeDaysAgo }, expiryDate: { $in: [null, undefined] } },
+            {
+              catchTime: { $in: [null, undefined] },
+              expiryDate: { $in: [null, undefined] },
+              createdAt: { $lte: twoDaysAgo }
+            }
           ],
         },
         // Chuyển đổi trạng thái sản phẩm sang Expired (Hết hạn)

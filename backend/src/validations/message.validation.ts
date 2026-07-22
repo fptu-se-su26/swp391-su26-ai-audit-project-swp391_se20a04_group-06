@@ -19,10 +19,10 @@ export const sendMessageSchema = z.object({
     // Vị trí chia sẻ location là tùy chọn và có thể nhận giá trị null, nếu gửi lên phải tuân thủ schema con
     location: z
       .object({
-        // Vĩ độ GPS phải là kiểu số
-        latitude: z.number(),
-        // Kinh độ GPS phải là kiểu số
-        longitude: z.number(),
+        // Vĩ độ GPS phải là kiểu số trong khoảng -90 đến 90
+        latitude: z.number().min(-90, "Vĩ độ không hợp lệ (từ -90 đến 90)").max(90, "Vĩ độ không hợp lệ (từ -90 đến 90)"),
+        // Kinh độ GPS phải là kiểu số trong khoảng -180 đến 180
+        longitude: z.number().min(-180, "Kinh độ không hợp lệ (từ -180 đến 180)").max(180, "Kinh độ không hợp lệ (từ -180 đến 180)"),
         // Địa chỉ hiển thị là tùy chọn
         address: z.string().optional(),
       })

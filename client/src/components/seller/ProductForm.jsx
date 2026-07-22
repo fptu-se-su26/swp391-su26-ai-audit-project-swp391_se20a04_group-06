@@ -2,6 +2,7 @@ import { X } from "lucide-react";
 import ImageUploader from "../shared/ImageUploader";
 import LocationPicker from "../shared/LocationPicker";
 import DateTimePicker from "../shared/DateTimePicker";
+import DatePicker from "../shared/DatePicker";
 import { useEffect } from "react";
 
 
@@ -10,26 +11,26 @@ const categories = [
   ["Shrimp", "Tôm"],
   ["Squid", "Mực"],
   ["Crab", "Cua, ghẹ"],
-  ["Shellfish", "Nhuyễn thể"],
+  ["Shellfish", "Ốc, sò"],
   ["Others", "Khác"],
 ];
 
-export default function ProductForm({ form, onCancel, onChange, onSubmit, saving }) {
+export default function ProductForm({ form, batches = [], onCancel, onChange, onSubmit, saving }) {
   const update = (field) => (event) => onChange(field, event.target.value);
 
   useEffect(() => {
-    if (!form.id && !form.lat && !form.lng) {
+    if (form.type === "Fresh" && !form.lat && !form.lng) {
       navigator.geolocation?.getCurrentPosition(
         ({ coords }) => {
           onChange("lat", String(coords.latitude.toFixed(6)));
           onChange("lng", String(coords.longitude.toFixed(6)));
         },
         (error) => {
-          console.warn("Autofill product GPS location failed:", error);
+          console.warn("Autofill fresh fish GPS location failed:", error);
         }
       );
     }
-  }, [form.id]);
+  }, [form.type, form.lat, form.lng]);
 
   return (
     <form className="product-form dashboard-panel" onSubmit={onSubmit}>
@@ -57,7 +58,7 @@ export default function ProductForm({ form, onCancel, onChange, onSubmit, saving
         <label className="form-field">
           <span>Loại</span>
           <select onChange={update("type")} value={form.type}>
-            <option value="Fresh">Tươi sống</option>
+            <option value="Fresh">Tươi</option>
             <option value="Dried">Đồ khô</option>
           </select>
         </label>
@@ -70,6 +71,17 @@ export default function ProductForm({ form, onCancel, onChange, onSubmit, saving
           <select onChange={update("salesType")} value={form.salesType}>
             <option value="Retail">Bán lẻ</option>
             <option value="Wholesale">Bán sỉ thương lượng</option>
+          </select>
+        </label>
+        <label className="form-field">
+          <span>Liên kết vựa cá (không bắt buộc)</span>
+          <select onChange={update("batchId")} value={form.batchId || ""}>
+            <option value="">Đăng bán lẻ (Không vào vựa)</option>
+            {batches.map((batch) => (
+              <option key={batch.id || batch._id} value={batch.id || batch._id}>
+                {batch.title} {batch.boatName ? `(${batch.boatName})` : ""}
+              </option>
+            ))}
           </select>
         </label>
         <label className="form-field">
@@ -91,15 +103,12 @@ export default function ProductForm({ form, onCancel, onChange, onSubmit, saving
           onChange={(value) => onChange("catchTime", value)}
         />
 
-        <label className="form-field">
-          <span>Hạn sử dụng</span>
-          <input
-            onChange={update("expiryDate")}
-            type="date"
-            value={form.expiryDate}
-            style={{ colorScheme: "dark" }}
-          />
-        </label>
+        <DatePicker
+          id="product-expiryDate"
+          label="Hạn sử dụng"
+          value={form.expiryDate}
+          onChange={(value) => onChange("expiryDate", value)}
+        />
 
         <div className="form-field form-field--wide">
           <span>Kích thước hải sản</span>

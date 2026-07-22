@@ -39,12 +39,118 @@ export default function SeafoodAssistant() {
   const [history, setHistory] = useState([
     {
       role: "assistant",
-      content: "Xin chào! Tôi hỗ trợ về hải sản, giá bán, bảo quản, chế biến và nguồn gốc.",
+      content: "Xin chào! Tôi hỗ trợ về hải sản, giá bán, bảo quan, chế biến và nguồn gốc.",
     },
   ]);
   const [sending, setSending] = useState(false);
   const sendingRef = useRef(false);
   const hasUserMessage = history.some((entry) => entry.role === "user");
+
+  // Draggable position state
+  const dragRef = useRef(null);
+  const draggedRef = useRef(false);
+  const [position, setPosition] = useState(() => {
+    try {
+      const saved = localStorage.getItem("chatbotPosition");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          x: Math.max(10, Math.min(parsed.x, window.innerWidth - 70)),
+          y: Math.max(10, Math.min(parsed.y, window.innerHeight - 70))
+        };
+      }
+    } catch {}
+    // Default: bottom-left (24px from left, bottom of the screen)
+    return { x: 24, y: window.innerHeight - 100 };
+  });
+
+  // Handle window resizing
+  useEffect(() => {
+    const handleResize = () => {
+      setPosition((current) => ({
+        x: Math.max(10, Math.min(current.x, window.innerWidth - 70)),
+        y: Math.max(10, Math.min(current.y, window.innerHeight - 70))
+      }));
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const handleMouseDown = (e) => {
+    if (e.button !== 0) return;
+    draggedRef.current = false;
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startPosX = position.x;
+    const startPosY = position.y;
+
+    const handleMouseMove = (moveEvent) => {
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        draggedRef.current = true;
+      }
+      const newX = Math.max(10, Math.min(startPosX + dx, window.innerWidth - 70));
+      const newY = Math.max(10, Math.min(startPosY + dy, window.innerHeight - 70));
+      setPosition({ x: newX, y: newY });
+    };
+
+    const handleMouseUp = (upEvent) => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      if (draggedRef.current) {
+        const dx = upEvent.clientX - startX;
+        const dy = upEvent.clientY - startY;
+        const finalX = Math.max(10, Math.min(startPosX + dx, window.innerWidth - 70));
+        const finalY = Math.max(10, Math.min(startPosY + dy, window.innerHeight - 70));
+        setPosition({ x: finalX, y: finalY });
+        localStorage.setItem("chatbotPosition", JSON.stringify({ x: finalX, y: finalY }));
+      }
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const handleTouchStart = (e) => {
+    draggedRef.current = false;
+    const touch = e.touches[0];
+    const startX = touch.clientX;
+    const startY = touch.clientY;
+    const startPosX = position.x;
+    const startPosY = position.y;
+
+    const handleTouchMove = (moveEvent) => {
+      const touchMove = moveEvent.touches[0];
+      const dx = touchMove.clientX - startX;
+      const dy = touchMove.clientY - startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        draggedRef.current = true;
+      }
+      const newX = Math.max(10, Math.min(startPosX + dx, window.innerWidth - 70));
+      const newY = Math.max(10, Math.min(startPosY + dy, window.innerHeight - 70));
+      setPosition({ x: newX, y: newY });
+    };
+
+    const handleTouchEnd = (endEvent) => {
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchend", handleTouchEnd);
+      if (draggedRef.current) {
+        const touchEnd = endEvent.changedTouches[0] || endEvent.touches[0];
+        if (touchEnd) {
+          const dx = touchEnd.clientX - startX;
+          const dy = touchEnd.clientY - startY;
+          const finalX = Math.max(10, Math.min(startPosX + dx, window.innerWidth - 70));
+          const finalY = Math.max(10, Math.min(startPosY + dy, window.innerHeight - 70));
+          setPosition({ x: finalX, y: finalY });
+          localStorage.setItem("chatbotPosition", JSON.stringify({ x: finalX, y: finalY }));
+        }
+      }
+    };
+
+    document.addEventListener("touchmove", handleTouchMove, { passive: true });
+    document.addEventListener("touchend", handleTouchEnd);
+  };
 
   const sendQuestion = useCallback(async (value) => {
     const question = value.trim();
@@ -128,10 +234,46 @@ export default function SeafoodAssistant() {
     }
   };
 
+  const handleLauncherClick = (e) => {
+    if (draggedRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    toggleAssistant();
+  };
+
+  const isLeft = position.x < window.innerWidth / 2;
+  const isTop = position.y < window.innerHeight / 2;
+
   return createPortal(
-    <div className="seafood-assistant">
+    <div
+      className="seafood-assistant"
+      ref={dragRef}
+      style={{
+        position: "fixed",
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        right: "auto",
+        bottom: "auto",
+        zIndex: 9999,
+        touchAction: "none"
+      }}
+    >
       {open && (
-        <section className="seafood-assistant__panel" aria-label="Trợ lý Hải Sản AI" data-tour="ai-panel">
+        <section
+          className="seafood-assistant__panel"
+          aria-label="Trợ lý Hải Sản AI"
+          data-tour="ai-panel"
+          style={{
+            position: "absolute",
+            left: isLeft ? "0" : "auto",
+            right: isLeft ? "auto" : "0",
+            top: isTop ? "64px" : "auto",
+            bottom: isTop ? "auto" : "64px",
+            margin: 0
+          }}
+        >
           <header>
             <span><Bot size={19} /></span>
             <div><strong>Trợ lý Hải Sản AI</strong><small>Chuyên gia hải sản</small></div>
@@ -188,7 +330,9 @@ export default function SeafoodAssistant() {
         className="seafood-assistant__launcher"
         data-tour="ai-launcher"
         data-tooltip={open ? "Đóng trợ lý AI" : "Trợ lý AI"}
-        onClick={toggleAssistant}
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
+        onClick={handleLauncherClick}
         title="Trợ lý AI"
         type="button"
       >

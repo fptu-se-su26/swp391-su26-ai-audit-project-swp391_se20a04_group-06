@@ -27,6 +27,8 @@ declare global {
         role: "User" | "Admin";
         // Chế độ phiên hiện tại do người dùng chọn khi đăng nhập.
         sessionRole?: "buyer" | "seller";
+        isVerified?: boolean;
+        isPremium?: boolean;
       };
       // Thuộc tính csrfToken tùy chọn dùng để xác minh chống tấn công giả mạo yêu cầu CSRF
       csrfToken?: string;

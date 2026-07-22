@@ -24,6 +24,7 @@ import { Post } from "../../../../models/Post";
 import { Recipe } from "../../../../models/Recipe";
 import { BoatLog } from "../../../../models/BoatLog";
 import { PaymentTransaction } from "../../../../models/PaymentTransaction";
+import { LandingBatch } from "../../../../models/LandingBatch";
 
 /**
  * USE CASE: XÓA TÀI KHOẢN NGƯỜI DÙNG (GDPR COMPLIANCE / ACCOUNT DELETION)
@@ -87,6 +88,40 @@ export class DeleteAccountUseCase {
       // Gom lại danh sách ID sản phẩm do người dùng này sở hữu
       productIds = products.map((p) => p._id);
 
+      // Thu thập Public ID của Avatar cá nhân
+      if (user.avatar) {
+        const avatarId = extractPublicId(user.avatar);
+        if (avatarId) allPublicIds.push(avatarId);
+      }
+
+      // Thu thập Public ID ảnh của các vựa cá sở hữu
+      const batches = await LandingBatch.find({ sellerId: userId }, null, dbOptions);
+      const batchPublicIds = batches
+         .flatMap((b) => (b.images || []).map(extractPublicId))
+         .filter((id): id is string => !!id);
+      allPublicIds.push(...batchPublicIds);
+
+      // Thu thập Public ID ảnh của các bài đăng cộng đồng
+      const posts = await Post.find({ userId: userId }, null, dbOptions);
+      const postPublicIds = posts
+         .flatMap((p) => (p.images || []).map(extractPublicId))
+         .filter((id): id is string => !!id);
+      allPublicIds.push(...postPublicIds);
+
+      // Thu thập Public ID ảnh của các công thức nấu ăn
+      const recipes = await Recipe.find({ authorId: userId }, null, dbOptions);
+      const recipePublicIds = recipes
+         .map((r) => r.imageUrl ? extractPublicId(r.imageUrl) : null)
+         .filter((id): id is string => !!id);
+      allPublicIds.push(...recipePublicIds);
+
+      // Thu thập Public ID ảnh của các nhật ký đi biển
+      const boatLogs = await BoatLog.find({ userId: userId }, null, dbOptions);
+      const boatLogPublicIds = boatLogs
+         .flatMap((b) => (b.images || []).map(extractPublicId))
+         .filter((id): id is string => !!id);
+      allPublicIds.push(...boatLogPublicIds);
+
       // 3. XÓA SẠCH QUAN HỆ THEO DÕI (FOLLOWERS & FOLLOWING) VÀ THẢ TIM SẢN PHẨM
       // Tìm tất cả các người dùng khác và loại bỏ ID của tài khoản bị xóa khỏi danh sách theo dõi 'following' của họ
       await MongooseUser.updateMany(
@@ -115,6 +150,8 @@ export class DeleteAccountUseCase {
 
       // Xóa tất cả các sản phẩm do người dùng này đăng bán
       await Product.deleteMany({ sellerId: userId }, dbOptions);
+      // Xóa các vựa cá do người dùng này sở hữu
+      await LandingBatch.deleteMany({ sellerId: userId }, dbOptions);
 
       // Xóa các đánh giá do người dùng này viết hoặc được người dùng khác viết cho người dùng này
       await Review.deleteMany(
@@ -144,6 +181,12 @@ export class DeleteAccountUseCase {
       await Recipe.updateMany({}, { $pull: { likes: userId as any } }, dbOptions);
       // Xóa bỏ tất cả các bình luận (Comments) của người này ở toàn bộ các bài viết diễn đàn khác
       await Post.updateMany(
+        {},
+        { $pull: { comments: { userId: userId as any } } },
+        dbOptions
+      );
+      // Xóa bỏ tất cả các bình luận (Comments) của người này ở toàn bộ các công thức nấu ăn khác
+      await Recipe.updateMany(
         {},
         { $pull: { comments: { userId: userId as any } } },
         dbOptions

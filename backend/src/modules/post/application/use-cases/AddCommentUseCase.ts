@@ -7,6 +7,7 @@ import { userRepository } from "../../../../repositories/user.repository";
 // Import ngoại lệ nghiệp vụ NotFoundError để báo lỗi khi không tìm thấy bài đăng hoặc người dùng
 import { NotFoundError } from "../../../../shared/domain/exceptions/DomainException";
 import { notifyPostComment, notifyCommentReply } from "../../../../services/notification.service";
+import { logger } from "../../../../utils/logger";
 
 /**
  * Use Case thêm bình luận mới vào bài viết diễn đàn.
@@ -54,7 +55,7 @@ export class AddCommentUseCase {
         commenterName: user.name,
         commenterId: userId,
         commentText: text,
-      }).catch((err) => console.error("Failed to notify post comment:", err));
+      }).catch((err) => logger.error("Failed to notify post comment:", err));
     }
 
     if (parentId) {
@@ -71,7 +72,7 @@ export class AddCommentUseCase {
             replierName: user.name,
             replierId: userId,
             replyText: text,
-          }).catch((err) => console.error("Failed to notify comment reply:", err));
+          }).catch((err) => logger.error("Failed to notify comment reply:", err));
         }
       }
     }

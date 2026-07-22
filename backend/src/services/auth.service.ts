@@ -33,6 +33,7 @@ import { Notification } from "../models/Notification";
 import { Post } from "../models/Post";
 import { Recipe } from "../models/Recipe";
 import { BoatLog } from "../models/BoatLog";
+import { LandingBatch } from "../models/LandingBatch";
 
 // Định nghĩa cấu trúc giao diện trả về sau khi xác thực người dùng thành công
 export interface AuthUserResult {
@@ -398,6 +399,8 @@ export const authService = {
       await Recipe.deleteMany({ authorId: userId }, dbOptions);
       // Xóa toàn bộ nhật ký cabin của người dùng này
       await BoatLog.deleteMany({ userId: userId }, dbOptions);
+      // Xóa toàn bộ vựa cá của người dùng này
+      await LandingBatch.deleteMany({ sellerId: userId }, dbOptions);
 
       // Xóa ID người dùng khỏi mảng lượt thích bài viết của tất cả mọi người
       await Post.updateMany({}, { $pull: { likes: userId as any } }, dbOptions);

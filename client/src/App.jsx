@@ -3,11 +3,11 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { AuthProvider } from "./context/AuthContext";
 import { SocketProvider } from "./context/SocketContext";
 import { ConfirmProvider } from "./context/ConfirmContext";
+import { ToastProvider } from "./context/ToastContext";
 import { Provider } from "react-redux";
 import { store } from "./store";
 
 import Footer from "./components/Footer";
-import FloatingContact from "./components/FloatingContact";
 import Navbar from "./components/Navbar";
 import SeafoodAssistant from "./components/SeafoodAssistant";
 import TourGuide from "./components/tour/TourGuide";
@@ -15,6 +15,8 @@ import { RequireAuth, RequireRole } from "./components/RouteGuard";
 import { useAuth } from "./context/AuthContext";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import ScrollToTop from "./components/common/ScrollToTop";
+import VideoCall from "./components/chat/VideoCall";
+import { useSocket } from "./context/SocketContext";
 
 const Home = lazy(() => import("./pages/Home"));
 const Chat = lazy(() => import("./pages/Chat"));
@@ -38,22 +40,31 @@ const Recipes = lazy(() => import("./pages/Recipes"));
 const RecipeDetail = lazy(() => import("./pages/RecipeDetail"));
 const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 const LandingBatchDetail = lazy(() => import("./pages/LandingBatchDetail"));
+const PurchaseGuide = lazy(() => import("./pages/PurchaseGuide"));
+const QualityGuarantee = lazy(() => import("./pages/QualityGuarantee"));
+const SafetyPolicy = lazy(() => import("./pages/SafetyPolicy"));
+const Terms = lazy(() => import("./pages/Terms"));
 
 import { getUserRole } from "./config/navigation";
 
-/** Resolve which shell background class to apply based on user role */
-function resolveShellClass(user) {
-  const role = getUserRole(user); // handles Admin/Seller/User/Buyer/guest variants
-  if (role === "admin") return "shell-admin";
-  if (role === "seller") return "shell-seller";
-  return "shell-buyer"; // buyer + guest both get the ocean buyer look
+/** Resolve which shell background class to apply based on path and user capabilities */
+function resolveShellClass(user, pathname) {
+  if ((user?.role === "Admin" || user?.role === "admin") && pathname?.startsWith("/admin")) {
+    return "shell-admin";
+  }
+  if (pathname?.startsWith("/seller")) {
+    return "shell-seller";
+  }
+  return "shell-buyer";
 }
 
 function AppContent() {
   const location = useLocation();
   const { user } = useAuth();
+  const { socket } = useSocket() || {};
   const isAuthPage = ["/login", "/register"].includes(location.pathname);
-  const shellClass = resolveShellClass(user);
+  const isChatPage = location.pathname === "/chat";
+  const shellClass = resolveShellClass(user, location.pathname);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
@@ -67,6 +78,22 @@ function AppContent() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
+  }, []);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => {
+          const loc = { latitude: coords.latitude, longitude: coords.longitude };
+          localStorage.setItem("viewerLocation", JSON.stringify(loc));
+          window.dispatchEvent(new Event("locationUpdated"));
+        },
+        (error) => {
+          console.warn("Global geolocation prompt failed:", error);
+        },
+        { enableHighAccuracy: false, timeout: 8000 }
+      );
+    }
   }, []);
 
   return (
@@ -92,7 +119,7 @@ function AppContent() {
                   <Route path="/product/:id" element={<ProductDetail />} />
                   <Route path="/landing-batches/:id" element={<LandingBatchDetail />} />
                   <Route path="/fisherman/:id" element={<SellerProfile />} />
-                  <Route path="/chat" element={<Chat />} />
+                  <Route path="/chat" element={<RequireAuth><Chat /></RequireAuth>} />
                   <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
                   <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
                   <Route path="/premium" element={<RequireAuth><Premium /></RequireAuth>} />
@@ -101,6 +128,10 @@ function AppContent() {
                   <Route path="/recipes/:id" element={<RecipeDetail />} />
                   <Route path="/leaderboard" element={<Leaderboard />} />
                   <Route path="/boat-log" element={<RequireRole roles={["buyer"]}><BoatLog readOnly /></RequireRole>} />
+                  <Route path="/purchase-guide" element={<PurchaseGuide />} />
+                  <Route path="/quality-guarantee" element={<QualityGuarantee />} />
+                  <Route path="/safety-policy" element={<SafetyPolicy />} />
+                  <Route path="/terms" element={<Terms />} />
 
                   <Route path="/buyer" element={<Navigate to="/" replace />} />
                   <Route path="/buyer/favorites" element={<RequireAuth><Favorites /></RequireAuth>} />
@@ -124,8 +155,8 @@ function AppContent() {
       {!isAuthPage && (
         <>
           <SeafoodAssistant />
-          <FloatingContact />
-          <Footer />
+          {user && <VideoCall currentUser={user} socket={socket} />}
+          {!isChatPage && <Footer />}
         </>
       )}
     </div>
@@ -138,10 +169,12 @@ export default function App() {
       <AuthProvider>
         <SocketProvider>
           <ConfirmProvider>
-            <BrowserRouter>
-              <ScrollToTop />
-              <AppContent />
-            </BrowserRouter>
+            <ToastProvider>
+              <BrowserRouter>
+                <ScrollToTop />
+                <AppContent />
+              </BrowserRouter>
+            </ToastProvider>
           </ConfirmProvider>
         </SocketProvider>
       </AuthProvider>

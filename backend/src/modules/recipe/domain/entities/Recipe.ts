@@ -137,5 +137,6 @@ export class Recipe extends AggregateRoot<RecipeProps> {
   get authorId() { return this.props.authorId; }
   // Getter để truy xuất nhanh danh sách lượt thích
   get likes() { return this.props.likes; }
+  get imageUrl() { return this.props.imageUrl; }
 }
 

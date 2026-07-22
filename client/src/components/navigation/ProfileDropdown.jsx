@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Compass, Crown, LayoutDashboard, LogOut, User } from "lucide-react";
+import { Compass, Crown, LayoutDashboard, LogOut, User, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 
 function initials(name) {
@@ -20,7 +20,7 @@ export default function ProfileDropdown({
   onLogout,
   onStartTour,
 }) {
-  const workspacePath = role === "seller" ? "/seller" : role === "admin" ? "/admin" : null;
+  const workspacePath = (user?.role === "Admin" || user?.role === "admin") ? "/admin" : (user?.isPremium || user?.isVerified) ? "/seller" : null;
   const [avatarError, setAvatarError] = useState(false);
 
   useEffect(() => {
@@ -53,21 +53,14 @@ export default function ProfileDropdown({
             <LayoutDashboard size={16} /> <span>Khu vực làm việc</span>
           </Link>
         )}
+        <Link className="profile-menu__item" to="/buyer/favorites" onClick={onClose}>
+          <Heart size={16} /> <span>Đã lưu</span>
+        </Link>
         <Link className="profile-menu__item" to="/premium" onClick={onClose}>
           <Crown size={16} /> <span>Premium</span>
         </Link>
       </div>
 
-      {/* Nhóm giao diện & trợ giúp */}
-      <div className="profile-menu__section">
-        <button
-          className="profile-menu__item profile-menu__button"
-          onClick={onStartTour}
-          type="button"
-        >
-          <Compass size={16} /> <span>Hướng dẫn nhanh</span>
-        </button>
-      </div>
 
       {/* Nhóm cuối: Đăng xuất */}
       <div className="profile-menu__section">

@@ -60,6 +60,11 @@ export async function listUsers(req: Request, res: Response) {
 // Khóa hoặc kích hoạt lại tài khoản người dùng
 export async function toggleUser(req: Request, res: Response) {
   const { id } = req.params;
+  const adminId = req.user.userId;
+  if (id === adminId) {
+    return res.status(400).json({ message: "Bạn không thể tự khóa tài khoản của chính mình!" });
+  }
+
   try {
     const isActive = await adminService.toggleUserActive(id);
     return res.json({ isActive });

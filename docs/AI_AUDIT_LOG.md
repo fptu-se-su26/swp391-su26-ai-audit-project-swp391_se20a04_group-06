@@ -150,6 +150,38 @@
 
 ---
 
+### AL-009
+
+| | |
+|---|---|
+| **Ngày** | 19/07/2026 |
+| **Sinh viên** | DE190058 |
+| **Công cụ AI** | Claude Sonnet |
+| **Branch** | `main` |
+| **Nhiệm vụ** | Audit bảo mật backend, rà soát lỗ hổng dữ liệu & ObjectId validation |
+| **Mục đích** | Rà soát các điểm có nguy cơ NoSQL Injection và rò rỉ dữ liệu khi filter sản phẩm |
+| **Prompt tham chiếu** | DE190058/PROMPTS.md → P-002 |
+| **Kết quả** | AI chỉ ra điểm thiếu `ObjectId.isValid()` trong controller và các query tham số địa lý chưa sanitization. Đã vá triệt để |
+| **Đánh giá** | ✅ Tốt — phát hiện đúng điểm yếu bảo mật |
+
+---
+
+### AL-010
+
+| | |
+|---|---|
+| **Ngày** | 20/07/2026 |
+| **Sinh viên** | DE190058 |
+| **Công cụ AI** | Claude Sonnet |
+| **Branch** | `main` |
+| **Nhiệm vụ** | Đồng bộ hóa lô sản phẩm (Batch products) và củng cố Auth Messaging Integrity |
+| **Mục đích** | Thiết kế logic xử lý đồng bộ giao dịch theo lô trong MongoDB (session transaction) |
+| **Prompt tham chiếu** | N/A |
+| **Kết quả** | AI cung cấp pattern Mongoose `withTransaction` đảm bảo tính toàn vẹn dữ liệu khi đồng bộ hàng loạt sản phẩm |
+| **Đánh giá** | ✅ Tốt — giúp mã nguồn chạy ổn định và an toàn |
+
+---
+
 *Thêm log mới vào bên dưới khi sử dụng AI tiếp theo.*
 
 ---
@@ -158,8 +190,9 @@
 
 | Công cụ | Số lần dùng | Tỷ lệ dùng được |
 |---|---|---|
-| Claude Sonnet | 6 | 85% dùng trực tiếp, 15% cần chỉnh |
+| Claude Sonnet | 8 | 85% dùng trực tiếp, 15% cần chỉnh |
 | GitHub Copilot | 1 | ✅ |
 | ChatGPT | 1 | ✅ |
 
 > **Cam kết:** Nhóm có thể giải thích, kiểm chứng và bảo vệ toàn bộ code được hỗ trợ bởi AI.
+

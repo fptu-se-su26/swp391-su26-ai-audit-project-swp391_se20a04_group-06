@@ -51,7 +51,7 @@
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Ngày**       | 23/06/2026                                                                                                                                                            |
 | **Sinh viên**  | Nguyễn Thành Thuận - DE191012                                                                                                                                         |
-| **Công cụ AI** | Gemini Sonnet                                                                                                                                                         |
+| **Công cụ AI** | Gemini                                                                                                                                                        |
 | **Commit**     | `4dd83426`                                                                                                                                                            |
 | **Nhiệm vụ**   | Merge và đồng bộ nhánh cá nhân (cập nhật UI/UX) vào codebase chung                                                                                                    |
 | **Mục đích**   | Nhờ AI hỗ trợ xác định và xử lý các conflict phát sinh khi merge hai nhánh cập nhật UI/UX cùng lúc, đảm bảo không mất code của các thành phần đã thêm trước đó        |

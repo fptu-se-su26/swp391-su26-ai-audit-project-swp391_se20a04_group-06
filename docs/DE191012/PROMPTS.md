@@ -85,4 +85,3 @@ service đã thêm trước đó.
 
 ---
 
-*Thêm prompt mới khi có phiên làm việc AI tiếp theo.*

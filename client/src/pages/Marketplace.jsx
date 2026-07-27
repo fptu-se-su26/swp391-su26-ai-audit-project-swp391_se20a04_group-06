@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { LocateFixed, RefreshCw, Search, Ship, Anchor } from "lucide-react";
+import { LocateFixed, RefreshCw, Search, Ship, Anchor, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
 import LandingBatchCard from "../components/LandingBatchCard";
 import ProductGrid from "../components/ProductGrid";
 import { useAuth } from "../context/AuthContext";
@@ -24,6 +24,7 @@ export default function Marketplace() {
   const [category, setCategory] = useState("All");
   const [type, setType] = useState("All");
   const [sort, setSort] = useState("fresh");
+  const [showFilters, setShowFilters] = useState(false);
   const [viewerLocation, setViewerLocation] = useState(() => {
     try {
       const saved = localStorage.getItem("viewerLocation");
@@ -202,118 +203,115 @@ export default function Marketplace() {
   };
 
   return (
-    <div className="marketplace-page page-container">
-      <header className="page-heading" data-tour="marketplace-heading">
-        <div>
-          <h1>Chợ hải sản</h1>
-          <p>Tìm mẻ hàng phù hợp và trao đổi trực tiếp với người bán.</p>
+    <div className="marketplace-page page-container" style={{ paddingTop: "1rem" }}>
+      {/* Compact Top Header Bar */}
+      <header className="page-heading" data-tour="marketplace-heading" style={{ marginBottom: "0.75rem", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: "800", margin: 0, color: "#0f172a" }}>Chợ hải sản</h1>
+          
+          {/* Compact View Mode Tabs */}
+          <div className="marketplace-view-tabs" data-tour="marketplace-view-tabs" role="tablist" aria-label="Kiểu hiển thị chợ" style={{ margin: 0 }}>
+            <button
+              aria-selected={viewMode === "products"}
+              className={viewMode === "products" ? "is-active" : ""}
+              onClick={() => setViewMode("products")}
+              role="tab"
+              type="button"
+              style={{ padding: "5px 12px", fontSize: "0.85rem" }}
+            >
+              Theo sản phẩm ({filteredProducts.length})
+            </button>
+            <button
+              aria-selected={viewMode === "batches"}
+              className={viewMode === "batches" ? "is-active" : ""}
+              onClick={() => setViewMode("batches")}
+              role="tab"
+              type="button"
+              style={{ padding: "5px 12px", fontSize: "0.85rem" }}
+            >
+              Theo vựa cá ({landingBatches.length})
+            </button>
+          </div>
         </div>
-        {viewerLocation ? (
+
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <button
-            className="button button--secondary"
-            data-tour="marketplace-location-button"
-            onClick={useCurrentLocation}
+            className={`button ${showFilters || search || category !== "All" || type !== "All" ? "button--primary" : "button--secondary"}`}
+            onClick={() => setShowFilters(!showFilters)}
             type="button"
-            style={{
-              color: "var(--market-primary-strong)",
-              borderColor: "rgba(8, 145, 178, 0.3)",
-              background: "rgba(8, 145, 178, 0.08)",
-              fontWeight: "700"
-            }}
+            style={{ padding: "6px 14px", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "6px" }}
           >
-            <LocateFixed size={17} style={{ color: "var(--market-primary)" }} /> Đã xác định vị trí (Nhấp để cập nhật)
+            <SlidersHorizontal size={15} />
+            <span>Tìm kiếm & Bộ lọc</span>
+            {(search || category !== "All" || type !== "All") && (
+              <span style={{ background: "#ffffff", color: "#0284c7", borderRadius: "10px", padding: "1px 6px", fontSize: "0.75rem", fontWeight: "bold" }}>●</span>
+            )}
+            {showFilters ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
-        ) : (
-          <button className="button button--secondary" data-tour="marketplace-location-button" onClick={useCurrentLocation} type="button">
-            <LocateFixed size={17} /> Dùng vị trí của tôi
-          </button>
-        )}
+
+          {viewerLocation ? (
+            <button
+              className="button button--secondary button--active"
+              onClick={useCurrentLocation}
+              type="button"
+              style={{ padding: "6px 12px", fontSize: "0.85rem" }}
+            >
+              <LocateFixed size={15} /> Đã xác định vị trí
+            </button>
+          ) : (
+            <button className="button button--secondary" onClick={useCurrentLocation} type="button" style={{ padding: "6px 12px", fontSize: "0.85rem" }}>
+              <LocateFixed size={15} /> Dùng vị trí của tôi
+            </button>
+          )}
+        </div>
       </header>
 
-      {locationMessage && <p className="inline-notice">{locationMessage}</p>}
+      {locationMessage && <p className="inline-notice" style={{ margin: "0 0 0.5rem 0" }}>{locationMessage}</p>}
       {loadError && (
-        <div className="inline-notice inline-notice--danger" style={{ color: "#ef4444", background: "rgba(239, 68, 68, 0.08)", padding: "14px 18px", borderRadius: "8px", marginBottom: "20px", display: "flex", gap: "10px", alignItems: "center" }}>
+        <div className="inline-notice inline-notice--danger" style={{ marginBottom: "0.5rem" }}>
           <span>⚠️</span> {loadError}
         </div>
       )}
 
-      <div className="marketplace-view-tabs" data-tour="marketplace-view-tabs" role="tablist" aria-label="Kiểu hiển thị chợ">
-        <button
-          aria-selected={viewMode === "products"}
-          className={viewMode === "products" ? "is-active" : ""}
-          onClick={() => setViewMode("products")}
-          role="tab"
-          type="button"
-        >
-          Theo sản phẩm
-        </button>
-        <button
-          aria-selected={viewMode === "batches"}
-          className={viewMode === "batches" ? "is-active" : ""}
-          onClick={() => setViewMode("batches")}
-          role="tab"
-          type="button"
-        >
-          Theo vựa cá
-        </button>
-      </div>
+      {/* Sleek Collapsible Filter Bar */}
+      {showFilters && (
+        <section className="marketplace-filters" aria-label={viewMode === "products" ? "Bộ lọc sản phẩm" : "Tìm vựa cá"} data-tour="marketplace-filters" style={{ padding: "12px 16px", borderRadius: "12px", marginBottom: "1.25rem", background: "#ffffff", border: "1px solid #e2e8f0", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px", width: "100%" }}>
+            <label className="search-field" data-tour="marketplace-search" style={{ flex: "1 1 240px", margin: 0, height: "38px" }}>
+              <Search size={16} />
+              <span className="visually-hidden">Tìm kiếm</span>
+              <input
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Tìm cua, tôm, cá biển, người bán..."
+                type="search"
+                value={search}
+                style={{ height: "36px", fontSize: "0.88rem" }}
+              />
+            </label>
 
-      <section className="marketplace-filters" aria-label={viewMode === "products" ? "Bộ lọc sản phẩm" : "Tìm vựa cá"} data-tour="marketplace-filters">
-        <label className="search-field" data-tour="marketplace-search">
-          <Search size={17} />
-          <span className="visually-hidden">Tìm kiếm</span>
-          <input
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Tìm cua, tôm, cá biển, người bán..."
-            type="search"
-            value={search}
-          />
-        </label>
+            {viewMode === "products" && (
+              <select onChange={(event) => setCategory(event.target.value)} value={category} style={{ height: "38px", padding: "0 10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "0.85rem" }}>
+                {categories.map((item) => (
+                  <option key={item} value={item}>{item === "All" ? "Tất cả danh mục" : getCategoryLabel(item)}</option>
+                ))}
+              </select>
+            )}
 
-        {viewMode === "products" && (
-          <label>
-            <span>Danh mục</span>
-            <select onChange={(event) => setCategory(event.target.value)} value={category}>
-              {categories.map((item) => (
-                <option key={item} value={item}>{item === "All" ? "Tất cả" : getCategoryLabel(item)}</option>
-              ))}
-            </select>
-          </label>
-        )}
+            {viewMode === "products" && (
+              <select onChange={(event) => setSort(event.target.value)} value={sort} style={{ height: "38px", padding: "0 10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "0.85rem" }}>
+                <option value="fresh">Mới nhất</option>
+                <option value="price-low">Giá tăng dần</option>
+                <option value="price-high">Giá giảm dần</option>
+                <option value="popular">Xem nhiều nhất</option>
+              </select>
+            )}
 
-        {viewMode === "products" && (
-          <label>
-            <span>Sắp xếp</span>
-            <select onChange={(event) => setSort(event.target.value)} value={sort}>
-              <option value="fresh">Mới nhất</option>
-              <option value="price-low">Giá tăng dần</option>
-              <option value="price-high">Giá giảm dần</option>
-              <option value="popular">Xem nhiều nhất</option>
-            </select>
-          </label>
-        )}
-
-        {viewMode === "products" && <div className="filter-pills" data-tour="marketplace-type-filter">
-          {[
-            ["All", "Tất cả"],
-            ["Fresh", "Tươi"],
-            ["Dried", "Đồ khô"],
-          ].map(([value, label]) => (
-            <button
-              className={type === value ? "is-active" : ""}
-              key={value}
-              onClick={() => setType(value)}
-              type="button"
-            >
-              {label}
+            <button className="button button--ghost" onClick={resetFilters} type="button" style={{ height: "38px", padding: "0 10px", fontSize: "0.82rem" }}>
+              <RefreshCw size={14} /> Đặt lại
             </button>
-          ))}
-        </div>}
-
-        <button className="filter-reset" onClick={resetFilters} type="button">
-          <RefreshCw size={15} /> Đặt lại
-        </button>
-      </section>
+          </div>
+        </section>
+      )}
 
       <div className="marketplace-results-heading" data-tour="marketplace-results">
         <h2>{viewMode === "products" ? "Mẻ hàng đang bán" : "Vựa cá đang mở"}</h2>

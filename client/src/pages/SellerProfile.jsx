@@ -18,6 +18,17 @@ import { useConfirm } from "../context/ConfirmContext";
 import { apiFishermen, apiLandingBatches } from "../services/api";
 import { formatCurrency, formatDate, getProductId, getProductImage } from "../utils/product";
 
+function initials(name) {
+  if (!name) return "ND";
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
 export default function SellerProfile() {
   const { alert } = useConfirm();
   const { id } = useParams();
@@ -87,7 +98,7 @@ export default function SellerProfile() {
     <div className="page-container seller-public-page">
       <section className="seller-public-hero">
         <span className="seller-public-avatar">
-          {seller.avatar ? <img alt={seller.name} src={seller.avatar} /> : (seller.name || "ND").slice(0, 2).toUpperCase()}
+          {seller.avatar ? <img alt={seller.name} src={seller.avatar} /> : initials(seller.name)}
         </span>
         <div>
           <span className="eyebrow">PUBLIC FISHERMAN PROFILE</span>

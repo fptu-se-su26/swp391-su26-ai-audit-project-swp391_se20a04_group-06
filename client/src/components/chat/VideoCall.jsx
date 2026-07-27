@@ -6,6 +6,8 @@ import {
   PhoneOff,
   Video,
   VideoOff,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 
 const RTC_CONFIG = {
@@ -23,6 +25,17 @@ const RTC_CONFIG = {
     }
   ],
 };
+
+function getInitials(name) {
+  if (!name) return "ND";
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
 
 export default function VideoCall({
   currentUser,
@@ -42,15 +55,17 @@ export default function VideoCall({
   const remoteIdRef = useRef(propPartnerId || "");
   const queuedCandidatesRef = useRef([]);
   const callingTimeoutRef = useRef(null);
-  const [phase, setPhase] = useState("idle");
+  
+  const [phase, setPhase] = useState("idle"); // "idle" | "calling" | "incoming" | "connecting" | "connected"
   const [isOpen, setIsOpen] = useState(false);
   const [incoming, setIncoming] = useState(null);
   const [error, setError] = useState("");
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
+  const [callTimer, setCallTimer] = useState(0);
   const ringtoneRef = useRef(null);
 
-  // Sync props to state if provided (for local/backward-compatible mode)
+  // Sync props to state if provided
   useEffect(() => {
     if (propPartnerId) setPartnerId(propPartnerId);
     if (propPartnerName) setPartnerName(propPartnerName);
@@ -61,6 +76,28 @@ export default function VideoCall({
   useEffect(() => {
     productIdRef.current = productId;
   }, [productId]);
+
+  // Live Timer for Connected Call
+  useEffect(() => {
+    let interval = null;
+    if (phase === "connected") {
+      setCallTimer(0);
+      interval = setInterval(() => {
+        setCallTimer((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setCallTimer(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [phase]);
+
+  const formatTimer = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  };
 
   const startRingtone = useCallback(() => {
     if (ringtoneRef.current) return;
@@ -75,7 +112,7 @@ export default function VideoCall({
         const gainNode = ctx.createGain();
 
         osc1.type = "sine";
-        osc1.frequency.value = 480; // Standard ringback tone frequencies
+        osc1.frequency.value = 480;
         osc2.type = "sine";
         osc2.frequency.value = 620;
 
@@ -93,7 +130,6 @@ export default function VideoCall({
         osc2.stop(ctx.currentTime + 1.5);
       };
 
-      // Play immediately
       playRingTone();
       const intervalId = setInterval(playRingTone, 3000);
       ringtoneRef.current = { ctx, intervalId };
@@ -147,7 +183,9 @@ export default function VideoCall({
     setCameraEnabled(true);
   }, [stopMedia]);
 
-  const endCall = useCallback((notify = true, targetPartnerId = partnerId, targetProductId = productId) => {
+  const endCall = useCallback((notify = true) => {
+    const targetPartnerId = remoteIdRef.current || partnerId;
+    const targetProductId = productIdRef.current || productId;
     if (notify && targetPartnerId) {
       socket?.emit("end_call", { to: targetPartnerId, productId: targetProductId });
     }
@@ -199,11 +237,12 @@ export default function VideoCall({
   }, [resetCall, socket]);
 
   const startCall = useCallback(async (targetPartnerId = partnerId, targetProductId = productId) => {
-    console.log("[VideoCall.jsx] startCall invoked", { targetPartnerId, targetProductId, hasSocket: !!socket });
     if (!socket || !targetPartnerId || !targetProductId) {
-      console.warn("[VideoCall.jsx] startCall aborted - missing parameters", { hasSocket: !!socket, targetPartnerId, targetProductId });
+      console.warn("[VideoCall] Cannot start call - missing params");
       return;
     }
+    remoteIdRef.current = targetPartnerId;
+    productIdRef.current = targetProductId;
     setError("");
     setPhase("calling");
     setIsOpen(true);
@@ -216,16 +255,16 @@ export default function VideoCall({
       socket.emit("call_user", {
         to: targetPartnerId,
         offer,
-        callerName: currentUser?.name,
+        callerName: currentUser?.name || "Người mua",
         productId: targetProductId,
       });
 
       callingTimeoutRef.current = setTimeout(() => {
-        setError("Người nhận không trả lời.");
-        endCall(true, targetPartnerId, targetProductId);
+        setError("Người nhận không trả lời hoặc không trực tuyến.");
+        endCall(true);
       }, 30000);
     } catch (callError) {
-      setError(callError.message || "Không thể khởi tạo cuộc gọi.");
+      setError(callError.message || "Không thể mở camera/micro để gọi.");
       resetCall();
     }
   }, [socket, currentUser, ensureMedia, createPeer, endCall, resetCall, partnerId, productId]);
@@ -261,10 +300,11 @@ export default function VideoCall({
   useEffect(() => {
     const handleStartCall = (e) => {
       const { partnerId: pId, partnerName: pName, productId: prodId } = e.detail;
-      console.log("[VideoCall.jsx] Custom event start_video_call received on window", { pId, pName, prodId });
       setPartnerId(pId);
       setPartnerName(pName);
       setProductId(prodId);
+      remoteIdRef.current = pId;
+      productIdRef.current = prodId;
       void startCall(pId, prodId);
     };
     window.addEventListener("start_video_call", handleStartCall);
@@ -275,15 +315,12 @@ export default function VideoCall({
     if (!socket) return undefined;
 
     const onIncoming = (data) => {
-      console.log("[VideoCall.jsx] socket event incoming_call received", data);
-      if (phase !== "idle") {
-        console.warn("[VideoCall.jsx] incoming_call ignored - current phase is not idle", phase);
-        return;
-      }
+      if (phase !== "idle") return;
       setPartnerId(data.from);
-      setPartnerName(data.callerName || "Người dùng");
+      setPartnerName(data.callerName || "Ngư dân");
       setProductId(data.productId);
       remoteIdRef.current = data.from;
+      productIdRef.current = data.productId;
       setIncoming(data);
       setPhase("incoming");
       setIsOpen(true);
@@ -367,6 +404,7 @@ export default function VideoCall({
   };
 
   const isGlobal = !propPartnerId;
+  const currentDisplayName = incoming?.callerName || partnerName || "Đối phương";
 
   return (
     <>
@@ -385,38 +423,132 @@ export default function VideoCall({
 
       {(phase !== "idle" || isOpen) && (
         <div className="video-call-overlay" role="dialog" aria-modal="true">
-          <section className="video-call-panel">
-            <header>
-              <div><strong>{incoming?.callerName || partnerName}</strong><span>{phase === "incoming" ? "đang gọi cho bạn" : phase === "calling" ? "Đang đổ chuông..." : phase === "connected" ? "Đã kết nối" : phase === "idle" ? "Cuộc gọi bị gián đoạn" : "Đang kết nối..."}</span></div>
+          <section className="video-call-panel" style={{ background: "#0b132b", border: "1px solid #1e293b", width: "min(680px, 94vw)", borderRadius: "24px", boxShadow: "0 25px 60px rgba(0,0,0,0.6)" }}>
+            {/* Call Header */}
+            <header style={{ padding: "16px 24px", borderBottom: "1px solid #1e293b", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <strong style={{ fontSize: "1.1rem", color: "#f8fafc" }}>{currentDisplayName}</strong>
+                <span style={{ fontSize: "0.85rem", color: phase === "connected" ? "#34d399" : "#94a3b8", fontWeight: "600", marginTop: "2px" }}>
+                  {phase === "incoming" && "📲 Cuộc gọi video đến..."}
+                  {phase === "calling" && "📞 Đang đổ chuông... Chờ đối phương bắt máy"}
+                  {phase === "connecting" && "⌛ Đang kết nối tín hiệu..."}
+                  {phase === "connected" && `🟢 Đã kết nối • ${formatTimer(callTimer)}`}
+                  {phase === "idle" && (error || "Cuộc gọi đã kết thúc")}
+                </span>
+              </div>
             </header>
-            <div className="video-call-stage">
-              {phase !== "idle" ? (
-                <>
-                  <video autoPlay className="video-call-remote" playsInline ref={remoteVideoRef} />
-                  <video autoPlay className="video-call-local" muted playsInline ref={localVideoRef} />
-                </>
-              ) : (
-                <div className="video-call-placeholder">
-                  <VideoOff size={42} />
-                  <p>{error || "Không thể thực hiện cuộc gọi."}</p>
+
+            {/* Video Stage / Calling Animation View */}
+            <div className="video-call-stage" style={{ background: "#020617", minHeight: "360px", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+              {/* Active Stream View when Connected */}
+              <video 
+                autoPlay 
+                className="video-call-remote" 
+                playsInline 
+                ref={remoteVideoRef} 
+                style={{ display: phase === "connected" ? "block" : "none", width: "100%", height: "100%", objectFit: "cover" }} 
+              />
+
+              <video 
+                autoPlay 
+                className="video-call-local" 
+                muted 
+                playsInline 
+                ref={localVideoRef} 
+                style={{ 
+                  display: (phase === "connected" || phase === "calling" || phase === "connecting") ? "block" : "none",
+                  position: "absolute", right: "16px", bottom: "16px", width: "140px", height: "105px", borderRadius: "12px", border: "2px solid #38bdf8", objectFit: "cover", zIndex: 10 
+                }} 
+              />
+
+              {/* Calling / Incoming Avatar Pulsing Interface */}
+              {(phase === "calling" || phase === "incoming" || phase === "connecting" || (phase === "idle" && error)) && (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px", zIndex: 5, padding: "2rem", textAlign: "center" }}>
+                  <div style={{ position: "relative", display: "grid", placeItems: "center" }}>
+                    {/* Ripple animation ring */}
+                    {(phase === "calling" || phase === "incoming") && (
+                      <div style={{ position: "absolute", width: "140px", height: "140px", borderRadius: "50%", background: "#0284c7", opacity: 0.2, animation: "ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite" }} />
+                    )}
+                    <div style={{ width: "100px", height: "100px", borderRadius: "50%", background: "linear-gradient(135deg, #0284c7, #0d9488)", color: "#fff", display: "grid", placeItems: "center", fontSize: "2rem", fontWeight: "800", boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>
+                      {getInitials(currentDisplayName)}
+                    </div>
+                  </div>
+
+                  <div style={{ color: "#f8fafc" }}>
+                    <h3 style={{ margin: "0 0 6px 0", fontSize: "1.25rem", fontWeight: "700" }}>{currentDisplayName}</h3>
+                    <p style={{ margin: 0, fontSize: "0.9rem", color: "#94a3b8" }}>
+                      {phase === "calling" && "Đang gửi yêu cầu cuộc gọi qua máy chủ..."}
+                      {phase === "incoming" && "Muốn thực hiện cuộc gọi trò chuyện trực tiếp với bạn"}
+                      {phase === "connecting" && "Đang thông tuyến video WebRTC..."}
+                      {phase === "idle" && (error || "Cuộc gọi đã hoàn tất.")}
+                    </p>
+                  </div>
                 </div>
               )}
-              {phase === "incoming" && <div className="video-call-placeholder"><Video size={42} /><p>Cuộc gọi video đến</p></div>}
             </div>
-            {error && <p className="video-call-error">{error}</p>}
-            <footer>
+
+            {error && <p className="video-call-error" style={{ margin: 0, padding: "10px 16px", background: "#450a0a", color: "#fca5a5", fontSize: "0.85rem", textAlign: "center" }}>{error}</p>}
+
+            {/* Footer Control Buttons */}
+            <footer style={{ padding: "18px 24px", background: "#0f172a", borderTop: "1px solid #1e293b", display: "flex", justifyContent: "center", gap: "16px" }}>
               {phase === "incoming" ? (
                 <>
-                  <button className="video-control is-accept" onClick={acceptCall} type="button"><Phone size={20} /> Chấp nhận</button>
-                  <button className="video-control is-end" onClick={rejectCall} type="button"><PhoneOff size={20} /> Từ chối</button>
+                  <button 
+                    className="video-control is-accept" 
+                    onClick={acceptCall} 
+                    type="button" 
+                    style={{ background: "#16a34a", color: "#fff", padding: "12px 28px", borderRadius: "999px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "8px", border: "none", cursor: "pointer", fontSize: "0.95rem" }}
+                  >
+                    <Phone size={20} /> Chấp nhận nghe
+                  </button>
+                  <button 
+                    className="video-control is-end" 
+                    onClick={rejectCall} 
+                    type="button" 
+                    style={{ background: "#dc2626", color: "#fff", padding: "12px 28px", borderRadius: "999px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "8px", border: "none", cursor: "pointer", fontSize: "0.95rem" }}
+                  >
+                    <PhoneOff size={20} /> Từ chối
+                  </button>
                 </>
               ) : phase === "idle" ? (
-                <button className="video-control is-end" onClick={() => setIsOpen(false)} type="button">Đóng</button>
+                <button 
+                  className="video-control is-end" 
+                  onClick={() => setIsOpen(false)} 
+                  type="button" 
+                  style={{ background: "#334155", color: "#fff", padding: "10px 24px", borderRadius: "999px", fontWeight: "600", border: "none", cursor: "pointer" }}
+                >
+                  Đóng giao diện
+                </button>
               ) : (
                 <>
-                  <button className="video-control" onClick={toggleMic} type="button">{micEnabled ? <Mic size={20} /> : <MicOff size={20} />}</button>
-                  <button className="video-control" onClick={toggleCamera} type="button">{cameraEnabled ? <Video size={20} /> : <VideoOff size={20} />}</button>
-                  <button className="video-control is-end" onClick={() => endCall(true)} type="button"><PhoneOff size={20} /> Kết thúc</button>
+                  <button 
+                    className="video-control" 
+                    onClick={toggleMic} 
+                    type="button" 
+                    style={{ background: micEnabled ? "#334155" : "#ef4444", color: "#fff", width: "48px", height: "48px", borderRadius: "50%", border: "none", cursor: "pointer", display: "grid", placeItems: "center" }}
+                    title={micEnabled ? "Tắt micro" : "Bật micro"}
+                  >
+                    {micEnabled ? <Mic size={20} /> : <MicOff size={20} />}
+                  </button>
+
+                  <button 
+                    className="video-control" 
+                    onClick={toggleCamera} 
+                    type="button" 
+                    style={{ background: cameraEnabled ? "#334155" : "#ef4444", color: "#fff", width: "48px", height: "48px", borderRadius: "50%", border: "none", cursor: "pointer", display: "grid", placeItems: "center" }}
+                    title={cameraEnabled ? "Tắt camera" : "Bật camera"}
+                  >
+                    {cameraEnabled ? <Video size={20} /> : <VideoOff size={20} />}
+                  </button>
+
+                  <button 
+                    className="video-control is-end" 
+                    onClick={() => endCall(true)} 
+                    type="button" 
+                    style={{ background: "#dc2626", color: "#fff", padding: "12px 28px", borderRadius: "999px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "8px", border: "none", cursor: "pointer", fontSize: "0.95rem" }}
+                  >
+                    <PhoneOff size={20} /> Tắt máy / Hủy gọi
+                  </button>
                 </>
               )}
             </footer>

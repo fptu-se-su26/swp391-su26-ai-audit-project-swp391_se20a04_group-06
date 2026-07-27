@@ -3,7 +3,7 @@ import { useEffect } from "react";
 export default function useSEO(title, description) {
   useEffect(() => {
     if (title) {
-      document.title = `${title} - HảiSản.vn`;
+      document.title = title;
     }
     if (description) {
       let metaDesc = document.querySelector('meta[name="description"]');

@@ -33,12 +33,11 @@ const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminPayments = lazy(() => import("./pages/admin/AdminPayments"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const Broadcast = lazy(() => import("./pages/admin/Broadcast"));
-const BoatLog = lazy(() => import("./pages/seller/BoatLog"));
+const SettingsManagement = lazy(() => import("./pages/SettingsManagement"));
 const SellerDashboard = lazy(() => import("./pages/seller/SellerDashboard"));
 const Community = lazy(() => import("./pages/Community"));
 const Recipes = lazy(() => import("./pages/Recipes"));
 const RecipeDetail = lazy(() => import("./pages/RecipeDetail"));
-const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 const LandingBatchDetail = lazy(() => import("./pages/LandingBatchDetail"));
 const PurchaseGuide = lazy(() => import("./pages/PurchaseGuide"));
 const QualityGuarantee = lazy(() => import("./pages/QualityGuarantee"));
@@ -115,7 +114,7 @@ function AppContent() {
                   <Route path="/" element={<Home />} />
                   <Route path="/marketplace" element={<Marketplace />} />
                   <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
+                  <Route path="/register" element={<Navigate to="/login" replace />} />
                   <Route path="/product/:id" element={<ProductDetail />} />
                   <Route path="/landing-batches/:id" element={<LandingBatchDetail />} />
                   <Route path="/fisherman/:id" element={<SellerProfile />} />
@@ -126,8 +125,9 @@ function AppContent() {
                   <Route path="/community" element={<Community />} />
                   <Route path="/recipes" element={<Recipes />} />
                   <Route path="/recipes/:id" element={<RecipeDetail />} />
-                  <Route path="/leaderboard" element={<Leaderboard />} />
-                  <Route path="/boat-log" element={<RequireRole roles={["buyer"]}><BoatLog readOnly /></RequireRole>} />
+                  <Route path="/leaderboard" element={<Navigate to="/community" replace />} />
+                  <Route path="/settings" element={<RequireAuth><Profile initialTab="account" /></RequireAuth>} />
+                  <Route path="/boat-log" element={<Navigate to="/profile?tab=settings" replace />} />
                   <Route path="/purchase-guide" element={<PurchaseGuide />} />
                   <Route path="/quality-guarantee" element={<QualityGuarantee />} />
                   <Route path="/safety-policy" element={<SafetyPolicy />} />
@@ -136,7 +136,7 @@ function AppContent() {
                   <Route path="/buyer" element={<Navigate to="/" replace />} />
                   <Route path="/buyer/favorites" element={<RequireAuth><Favorites /></RequireAuth>} />
 
-                  <Route path="/seller/boat-log" element={<RequireRole roles={["seller", "admin"]}><BoatLog /></RequireRole>} />
+                  <Route path="/seller/boat-log" element={<Navigate to="/settings" replace />} />
                   <Route path="/seller/*" element={<RequireRole roles={["seller", "admin"]}><SellerDashboard /></RequireRole>} />
 
                   <Route path="/admin/payments" element={<RequireRole roles={["admin"]}><AdminPayments /></RequireRole>} />
@@ -154,7 +154,7 @@ function AppContent() {
 
       {!isAuthPage && (
         <>
-          <SeafoodAssistant />
+          {!isChatPage && <SeafoodAssistant />}
           {user && <VideoCall currentUser={user} socket={socket} />}
           {!isChatPage && <Footer />}
         </>

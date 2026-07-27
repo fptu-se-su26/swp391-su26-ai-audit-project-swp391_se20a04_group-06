@@ -1,8 +1,10 @@
 import { useState } from "react";
 import SupportLayout from "../components/SupportLayout";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import useSEO from "../hooks/useSEO";
 
 export default function Terms() {
+  useSEO("Quy chế hoạt động", "Quy chế hoạt động và chính sách sàn giao dịch HảiSản.vn.");
   const [openSection, setOpenSection] = useState(0);
 
   const sections = [

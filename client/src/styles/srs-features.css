@@ -2098,6 +2098,13 @@ body.modal-open {
   cursor: pointer;
 }
 
+@keyframes ping {
+  75%, 100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
 .video-call-trigger:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -2105,13 +2112,13 @@ body.modal-open {
 
 .video-call-overlay {
   position: fixed;
-  z-index: 1000;
+  z-index: 999999;
   inset: 0;
   display: grid;
   place-items: center;
   padding: 18px;
-  background: rgba(2, 6, 23, 0.88);
-  backdrop-filter: blur(6px);
+  background: rgba(2, 6, 23, 0.92);
+  backdrop-filter: blur(10px);
 }
 
 .video-call-panel {

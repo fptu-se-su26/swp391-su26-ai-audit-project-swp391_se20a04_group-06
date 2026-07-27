@@ -24,9 +24,8 @@ import DateTimePicker, { formatDateTimeForInput } from "../../components/shared/
 import { useConfirm } from "../../context/ConfirmContext";
 import { useToast } from "../../context/ToastContext";
 import IconActionButton from "../../components/common/IconActionButton";
-
-
-
+import useSEO from "../../hooks/useSEO";
+import AdBanner from "../../components/AdBanner";
 
 const archivedLogStorageKey = "haisan-archived-boat-logs";
 
@@ -39,6 +38,7 @@ function getArchivedLogIds() {
 }
 
 export default function BoatLog({ readOnly = false }) {
+  useSEO("Nhật ký đi biển", "Theo dõi nhật ký chuyến ra khơi và đánh bắt hải sản.");
   const { confirm } = useConfirm();
   const toast = useToast();
   const { user } = useAuth();
@@ -255,29 +255,60 @@ export default function BoatLog({ readOnly = false }) {
   };
 
   return (
-    <div className={`workspace-page boat-log-page${readOnly ? " boat-log-page--readonly" : ""}`}>
-      <header className="page-heading page-heading--compact" data-tour="boat-log-heading">
-        <div>
-          <span className="eyebrow">NHẬT KÝ TRUY XUẤT</span>
-          <h1>Nhật ký biển</h1>
-          <p>
-            {readOnly
-              ? "Theo dõi nhật ký chuyến biển và nguồn gốc hải sản từ cộng đồng ngư dân."
-              : "Nhật ký chuyến biển và nguồn gốc của các mẻ hải sản."}
-          </p>
-        </div>
-        {!readOnly && (
-          <div className="page-heading__actions">
-            <button className="button button--secondary" onClick={() => setShowArchived((current) => !current)} type="button">
-              {showArchived ? <Eye size={17} /> : <EyeOff size={17} />}
-              {showArchived ? "Nhật ký đang hiển thị" : `Đã lưu trữ (${archivedIds.size})`}
-            </button>
-            <button className="button button--primary" data-tour="boat-log-create" onClick={formOpen ? closeForm : startCreate} type="button">
-              <Plus size={17} /> Thêm nhật ký
-            </button>
+    <div className={`workspace-page boat-log-page fb-page-layout${readOnly ? " boat-log-page--readonly" : ""}`}>
+      <div className="fb-layout-3col">
+        {/* ── CỘT 1: LEFT SIDEBAR NHẬT KÝ (Chuẩn Facebook) ── */}
+        <aside className="fb-left-column fb-sticky-sidebar">
+          <div className="fb-sidebar-card">
+            <h3 className="fb-sidebar-title">
+              <Ship size={20} /> Nhật Ký Biển
+            </h3>
+            <div className="fb-menu-list">
+              <div className="fb-menu-item is-active">
+                <Anchor size={18} /> Nhật ký chuyến biển
+              </div>
+              <div className="fb-menu-item">
+                <MapPin size={18} /> Vùng biển đánh bắt
+              </div>
+              {!readOnly && (
+                <button
+                  className="fb-menu-item"
+                  onClick={() => setShowArchived((current) => !current)}
+                  type="button"
+                >
+                  {showArchived ? <Eye size={18} /> : <EyeOff size={18} />}
+                  {showArchived ? "Nhật ký đang hiển thị" : `Lưu trữ (${archivedIds.size})`}
+                </button>
+              )}
+            </div>
+
+            {!readOnly && (
+              <button
+                className="button button--primary"
+                style={{ width: "100%", marginTop: "16px", borderRadius: "12px" }}
+                data-tour="boat-log-create"
+                onClick={formOpen ? closeForm : startCreate}
+                type="button"
+              >
+                <Plus size={17} /> Thêm nhật ký
+              </button>
+            )}
           </div>
-        )}
-      </header>
+        </aside>
+
+        {/* ── CỘT 2: CENTER MAIN CABIN FEED ── */}
+        <main className="fb-center-column">
+          <header className="page-heading page-heading--compact" data-tour="boat-log-heading" style={{ marginBottom: "16px" }}>
+            <div>
+              <span className="eyebrow">NHẬT KÝ TRUY XUẤT</span>
+              <h1>Nhật ký biển & Nguồn gốc hải sản</h1>
+              <p>
+                {readOnly
+                  ? "Theo dõi nhật ký chuyến biển và nguồn gốc hải sản từ cộng đồng ngư dân."
+                  : "Nhật ký chuyến biển và nguồn gốc của các mẻ hải sản."}
+              </p>
+            </div>
+          </header>
 
       {!readOnly && formOpen && (
         <form className="boat-log-form" onSubmit={saveLog}>
@@ -460,6 +491,24 @@ export default function BoatLog({ readOnly = false }) {
               : "Chưa có nhật ký chuyến biển."}
           </div>
         )}
+          </div>
+        </main>
+
+        {/* ── CỘT 3: RIGHT SIDEBAR ADS & THỜI TIẾT BIỂN (Chuẩn Facebook) ── */}
+        <aside className="fb-right-column fb-sticky-sidebar">
+          <AdBanner targetRole="seller" />
+          <div className="fb-sidebar-card">
+            <h4 className="fb-sidebar-title">
+              🌊 Dự Báo Thời Tiết Biển
+            </h4>
+            <div style={{ fontSize: "0.88rem", color: "#475569", lineHeight: 1.5 }}>
+              <p style={{ margin: "0 0 6px 0", fontWeight: 700, color: "#0f172a" }}>Vùng biển Hoàng Sa - Trường Sa</p>
+              <p style={{ margin: "0 0 4px 0" }}>💨 Gió Đông Nam cấp 4-5</p>
+              <p style={{ margin: "0 0 4px 0" }}>🌊 Sóng biển cao 1.2m - 1.8m</p>
+              <p style={{ margin: 0, color: "#16a34a", fontWeight: 700 }}>✅ Biển êm, thuận lợi ra khơi</p>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   );

@@ -8,7 +8,7 @@ export default function Footer() {
         {/* Cột 1: Thương hiệu */}
         <div className="footer-section footer-brand">
           <Link to="/" className="footer-brand__logo">
-            <img src="/favicon.png" alt="Logo HaiSan.vn" />
+            <img src="/logo-icon.png" alt="Logo HaiSan.vn" />
             <span>HaiSan.vn</span>
           </Link>
           <p className="footer-brand__tagline">
@@ -23,7 +23,7 @@ export default function Footer() {
             <li><Link to="/marketplace">Chợ hải sản</Link></li>
             <li><Link to="/landing-batches">Vựa cá cập bến</Link></li>
             <li><Link to="/recipes">Góc ẩm thực biển</Link></li>
-            <li><Link to="/boat-logs">Nhật ký đi biển</Link></li>
+            <li><Link to="/boat-log">Nhật ký đi biển</Link></li>
           </ul>
         </div>
 

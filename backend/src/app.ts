@@ -72,6 +72,7 @@ import postRoutes from "./routes/post.routes";
 // Import định tuyến viết nhật ký đi biển cabin logs
 import boatLogRoutes from "./routes/boatLog.routes";
 import landingBatchRoutes from "./routes/landingBatch.routes";
+import adRoutes from "./routes/ad.routes";
 
 // Khởi tạo đối tượng ứng dụng express
 const app = express();
@@ -292,6 +293,7 @@ app.use("/api/posts", postRoutes);
 app.use("/api/boat-logs", boatLogRoutes);
 // Khai báo định tuyến Vựa cá / Phiên cập bến
 app.use("/api/landing-batches", landingBatchRoutes);
+app.use("/api/ads", adRoutes);
 
 // Bắt các yêu cầu truy cập sai địa chỉ API và trả về lỗi 404
 app.use((_req, res) =>

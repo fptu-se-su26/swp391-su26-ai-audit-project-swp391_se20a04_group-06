@@ -4,10 +4,12 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import InteractiveUnderwaterBackground from "../components/effects/InteractiveUnderwaterBackground";
 import { useAuth } from "../context/AuthContext";
 import { apiAuth } from "../services/api";
+import useSEO from "../hooks/useSEO";
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 export default function Login() {
+  useSEO("Đăng nhập", "Đăng nhập tài khoản HảiSản.vn để mua bán hải sản tươi sống.");
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();

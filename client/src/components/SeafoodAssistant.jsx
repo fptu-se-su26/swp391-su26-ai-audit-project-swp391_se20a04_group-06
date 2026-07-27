@@ -54,14 +54,16 @@ export default function SeafoodAssistant() {
       const saved = localStorage.getItem("chatbotPosition");
       if (saved) {
         const parsed = JSON.parse(saved);
-        return {
-          x: Math.max(10, Math.min(parsed.x, window.innerWidth - 70)),
-          y: Math.max(10, Math.min(parsed.y, window.innerHeight - 70))
-        };
+        if (parsed.x && parsed.x > 200) {
+          return {
+            x: Math.max(10, Math.min(parsed.x, window.innerWidth - 70)),
+            y: Math.max(10, Math.min(parsed.y, window.innerHeight - 70))
+          };
+        }
       }
     } catch {}
-    // Default: bottom-left (24px from left, bottom of the screen)
-    return { x: 24, y: window.innerHeight - 100 };
+    // Default: bottom-right (80px from right, bottom of screen)
+    return { x: Math.max(10, window.innerWidth - 80), y: Math.max(10, window.innerHeight - 100) };
   });
 
   // Handle window resizing

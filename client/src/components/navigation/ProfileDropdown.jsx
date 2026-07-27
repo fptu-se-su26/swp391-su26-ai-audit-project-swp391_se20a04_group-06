@@ -3,9 +3,10 @@ import { Compass, Crown, LayoutDashboard, LogOut, User, Heart } from "lucide-rea
 import { Link } from "react-router-dom";
 
 function initials(name) {
-  if (!name) return "?";
+  if (!name) return "U";
   return name
     .split(" ")
+    .filter(Boolean)
     .map((part) => part[0])
     .slice(0, 2)
     .join("")
@@ -45,19 +46,31 @@ export default function ProfileDropdown({
 
       {/* Nhóm tài khoản */}
       <div className="profile-menu__section">
-        <Link className="profile-menu__item" to="/profile" onClick={onClose}>
-          <User size={16} /> <span>Hồ sơ</span>
+        <Link className="profile-menu__item" to="/profile" onClick={onClose} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div className="fb-3d-icon fb-3d-icon--cyan" style={{ width: "28px", height: "28px" }}>
+            <User size={15} />
+          </div>
+          <span>Hồ sơ cá nhân</span>
         </Link>
         {workspacePath && (
-          <Link className="profile-menu__item" to={workspacePath} onClick={onClose}>
-            <LayoutDashboard size={16} /> <span>Khu vực làm việc</span>
+          <Link className="profile-menu__item" to={workspacePath} onClick={onClose} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div className="fb-3d-icon fb-3d-icon--blue" style={{ width: "28px", height: "28px" }}>
+              <LayoutDashboard size={15} />
+            </div>
+            <span>Khu vực làm việc</span>
           </Link>
         )}
-        <Link className="profile-menu__item" to="/buyer/favorites" onClick={onClose}>
-          <Heart size={16} /> <span>Đã lưu</span>
+        <Link className="profile-menu__item" to="/buyer/favorites" onClick={onClose} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div className="fb-3d-icon fb-3d-icon--magenta" style={{ width: "28px", height: "28px" }}>
+            <Heart size={15} />
+          </div>
+          <span>Danh sách đã lưu</span>
         </Link>
-        <Link className="profile-menu__item" to="/premium" onClick={onClose}>
-          <Crown size={16} /> <span>Premium</span>
+        <Link className="profile-menu__item" to="/premium" onClick={onClose} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div className="fb-3d-icon fb-3d-icon--gold" style={{ width: "28px", height: "28px" }}>
+            <Crown size={15} />
+          </div>
+          <span>Gói Premium</span>
         </Link>
       </div>
 
@@ -68,8 +81,12 @@ export default function ProfileDropdown({
           className="profile-menu__item profile-menu__button logout"
           onClick={onLogout}
           type="button"
+          style={{ display: "flex", alignItems: "center", gap: "10px" }}
         >
-          <LogOut size={16} /> <span>Đăng xuất</span>
+          <div className="fb-3d-icon fb-3d-icon--rose" style={{ width: "28px", height: "28px" }}>
+            <LogOut size={15} />
+          </div>
+          <span>Đăng xuất</span>
         </button>
       </div>
     </section>

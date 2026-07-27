@@ -1066,5 +1066,352 @@
   }
 }
 
+/* ==================================================
+   SHARE RECIPE PAGE COLOR SYSTEM IMPROVEMENTS
+   ================================================== */
+
+/* 1. Background */
+.recipes-page,
+.recipe-editor-layout,
+.theme-light .recipes-page {
+  background-color: #f8fbfd !important;
+}
+
+/* 2. Cards */
+.recipe-form-card,
+.recipe-form-layout,
+.recipe-form-card.dashboard-panel,
+.recipe-edit-modal {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
+}
+
+/* 3. Titles */
+.recipes-page h1,
+.page-heading h1 {
+  color: #0f172a !important;
+}
+
+.recipe-form-card h2,
+.recipe-editor-layout h2,
+.recipe-edit-modal h2,
+.recipe-form-card h3 {
+  color: #334155 !important;
+}
+
+/* 4. Labels */
+.recipe-form-card label > span,
+.form-field > span,
+.recipe-form-layout span {
+  color: #475569 !important;
+  font-weight: 600 !important;
+}
+
+/* 5. Input Fields */
+.recipe-form-card input,
+.recipe-form-card textarea,
+.recipe-form-card select,
+.recipe-edit-modal input,
+.recipe-edit-modal textarea,
+.recipe-edit-modal select {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #1e293b !important;
+  border-radius: 8px !important;
+}
+
+.recipe-form-card input::placeholder,
+.recipe-form-card textarea::placeholder,
+.recipe-form-card select::placeholder,
+.recipe-edit-modal input::placeholder,
+.recipe-edit-modal textarea::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+.recipe-form-card input:focus,
+.recipe-form-card textarea:focus,
+.recipe-form-card select:focus,
+.recipe-edit-modal input:focus,
+.recipe-edit-modal textarea:focus,
+.recipe-edit-modal select:focus {
+  border-color: #0ea5e9 !important;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2) !important;
+  outline: none !important;
+}
+
+/* 6. Upload Button */
+.recipe-image-field button,
+.recipe-edit-image button,
+.recipe-form-card .image-uploader button[type="button"] {
+  background: #f0f9ff !important;
+  border: 1.5px dashed #38bdf8 !important;
+  color: #0284c7 !important;
+  border-radius: 9px !important;
+}
+
+.recipe-image-field button:hover,
+.recipe-edit-image button:hover,
+.recipe-form-card .image-uploader button[type="button"]:hover {
+  background: #e0f2fe !important;
+  color: #0284c7 !important;
+}
+
+/* 7. Difficulty Selector */
+.difficulty-toggle {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  padding: 4px !important;
+  gap: 4px !important;
+}
+
+.difficulty-option {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1px solid transparent !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+}
+
+.difficulty-option:hover {
+  background: #e0f2fe !important;
+  color: #0284c7 !important;
+}
+
+.difficulty-option.active {
+  background: #0ea5e9 !important;
+  color: #ffffff !important;
+  border-color: #0ea5e9 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.25) !important;
+}
+
+/* 8. Preview Card */
+.live-preview-shell,
+.recipe-preview-panel .live-preview-shell {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12) !important;
+}
+
+.recipe-live-preview h3,
+.live-preview-shell__title-group h3 {
+  color: #ffffff !important;
+}
+
+.recipe-live-preview p,
+.live-preview-shell__title-group p {
+  color: #cbd5e1 !important;
+}
+
+.recipe-meta svg,
+.recipe-live-preview svg {
+  color: #38bdf8 !important;
+}
+
+.recipe-meta span,
+.recipe-meta__item span,
+.recipe-live-preview ul li,
+.recipe-live-preview ol li {
+  color: #e2e8f0 !important;
+}
+
+.recipe-live-preview h4 {
+  color: #38bdf8 !important;
+}
+
+.recipe-tag {
+  background: rgba(56, 189, 248, 0.15) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  color: #38bdf8 !important;
+}
+
+/* 9. Summary Box */
+.preview-summary,
+.recipe-form-sub-details,
+.recipe-form-summary {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  padding: 14px !important;
+}
+
+.preview-summary__title,
+.preview-summary h4,
+.preview-summary__item {
+  color: #0f172a !important;
+}
+
+.preview-summary__item strong {
+  color: #0284c7 !important;
+}
+
+/* 10. Sidebar */
+.fb-left-column,
+.recipe-sidebar,
+.recipe-filter-panel {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
+}
+
+.fb-left-column h2,
+.fb-left-column h3,
+.recipe-sidebar h2,
+.recipe-sidebar h3 {
+  color: #0f172a !important;
+}
+
+.fb-left-column svg,
+.recipe-sidebar svg {
+  color: #0ea5e9 !important;
+}
+
+.fb-left-column input,
+.recipe-sidebar input {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #1e293b !important;
+  border-radius: 8px !important;
+}
+
+.fb-left-column input::placeholder,
+.recipe-sidebar input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* 11. Primary Button ("Chia sẻ công thức") */
+[data-tour="recipes-create"],
+.recipe-form-footer .button--primary,
+.recipes-page .button--primary {
+  background: #0ea5e9 !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+}
+
+[data-tour="recipes-create"]:hover,
+.recipe-form-footer .button--primary:hover,
+.recipes-page .button--primary:hover {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+}
+
+[data-tour="recipes-create"]:active,
+.recipe-form-footer .button--primary:active,
+.recipes-page .button--primary:active {
+  background: #0369a1 !important;
+  color: #ffffff !important;
+}
+
+/* ==================================================
+   RECIPE PREVIEW CARD SPECIFIC STYLING OVERRIDES
+   ================================================== */
+
+/* 1 & 2. Preview Image Area & Placeholder */
+.recipe-live-preview .recipe-detail__media,
+.recipe-live-preview .recipe-detail__placeholder,
+.live-preview-shell .recipe-detail__placeholder,
+.theme-light .recipe-detail__placeholder {
+  position: relative !important;
+  z-index: 2 !important;
+  background: #1e293b !important;
+  border-radius: 14px !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  opacity: 1 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+}
+
+.recipe-live-preview .recipe-detail__placeholder svg,
+.live-preview-shell .recipe-detail__placeholder svg,
+.theme-light .recipe-detail__placeholder svg {
+  color: #38bdf8 !important;
+  opacity: 1 !important;
+  z-index: 3 !important;
+}
+
+.recipe-live-preview .recipe-detail__placeholder span,
+.live-preview-shell .recipe-detail__placeholder span,
+.theme-light .live-preview-shell .recipe-detail__placeholder span,
+.theme-light .recipe-detail__placeholder span {
+  color: #e2e8f0 !important;
+  opacity: 1 !important;
+  font-weight: 500 !important;
+  font-size: 0.85rem !important;
+  z-index: 3 !important;
+  position: relative !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* 3. Metadata Chips (Time and Servings) */
+.recipe-live-preview .recipe-meta {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+  margin-bottom: 16px !important;
+  padding: 0 !important;
+  border-bottom: none !important;
+}
+
+.recipe-live-preview .recipe-meta__item {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 6px 14px !important;
+  background: #f0f9ff !important;
+  border: 1px solid #bae6fd !important;
+  border-radius: 999px !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+}
+
+.recipe-live-preview .recipe-meta__item svg {
+  color: #0284c7 !important;
+}
+
+.recipe-live-preview .recipe-meta__item span {
+  color: #0f172a !important;
+}
+
+/* 4. Difficulty Badge */
+.recipe-live-preview .eyebrow {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 4px 12px !important;
+  background: #e0f2fe !important;
+  color: #075985 !important;
+  border: 1px solid #bae6fd !important;
+  border-radius: 999px !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.3px !important;
+  text-shadow: none !important;
+}
+
+/* 5. Typography */
+.recipe-live-preview h3,
+.recipe-live-preview h3 span {
+  color: #0f172a !important;
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+}
+
+.recipe-live-preview p,
+.recipe-live-preview p span {
+  color: #64748b !important;
+  font-size: 0.88rem !important;
+}
+
 
 

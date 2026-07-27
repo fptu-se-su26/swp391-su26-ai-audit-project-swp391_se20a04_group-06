@@ -1,7 +1,9 @@
 import { ArrowLeft, ArrowRight, Fish } from "lucide-react";
 import { Link } from "react-router-dom";
+import useSEO from "../hooks/useSEO";
 
 export default function Register() {
+  useSEO("Đăng ký tài khoản", "Đăng ký tài khoản mới trên HảiSản.vn.");
   return (
     <main className="auth-page">
       <section className="auth-card auth-card--center">

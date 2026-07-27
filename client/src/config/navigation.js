@@ -8,7 +8,7 @@ import {
   Home,
   LayoutDashboard,
   Radio,
-  Settings,
+  User,
   ShieldCheck,
   Store,
   Users,
@@ -22,8 +22,6 @@ const buyerNavigation = [
   { label: "Chợ hải sản", path: "/marketplace", icon: Store },
   { label: "Diễn đàn", path: "/community", icon: UsersRound },
   { label: "Công thức", path: "/recipes", icon: ChefHat },
-  { label: "Nhật ký biển", path: "/boat-log", icon: BookOpenText },
-  { label: "Xếp hạng", path: "/leaderboard", icon: Trophy },
 ];
 
 const sellerNavigation = [
@@ -33,7 +31,6 @@ const sellerNavigation = [
   { label: "Vựa cá", path: "/seller/landing-batches", icon: PackageOpen },
   { label: "Diễn đàn", path: "/community", icon: UsersRound },
   { label: "Công thức", path: "/recipes", icon: ChefHat },
-  { label: "Nhật ký biển", path: "/seller/boat-log", icon: BookOpenText },
 ];
 
 const adminNavigation = [
@@ -45,16 +42,13 @@ const adminNavigation = [
   { label: "Báo cáo vi phạm", path: "/admin/reports", icon: AlertTriangle },
   { label: "Doanh thu gói", path: "/admin/payments", icon: Crown },
   { label: "Phát sóng", path: "/admin/broadcast", icon: Radio },
-  { label: "Cài đặt", path: "/admin/settings", icon: Settings },
 ];
-
 
 const guestNavigation = [
   { label: "Trang chủ", path: "/", icon: Home },
   { label: "Chợ hải sản", path: "/marketplace", icon: Store },
   { label: "Diễn đàn", path: "/community", icon: UsersRound },
   { label: "Công thức", path: "/recipes", icon: ChefHat },
-  { label: "Xếp hạng", path: "/leaderboard", icon: Trophy },
 ];
 
 export function getUserRole(user) {

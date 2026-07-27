@@ -1,27 +1,58 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, MapPin, MessageSquare, ShieldCheck, Ship, Anchor } from "lucide-react";
+import { MapPin, MessageSquare, ShieldCheck, Ship, Anchor, ArrowRight, Search, LocateFixed, RefreshCw, ShoppingBag } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import heroSeafoodMarket from "../assets/hero-seafood-market.png";
 import ProductGrid from "../components/ProductGrid";
+import LandingBatchCard from "../components/LandingBatchCard";
 import { useAuth } from "../context/AuthContext";
-import { apiFavorites, apiFishermen, apiProducts } from "../services/api";
+import { apiFavorites, apiFishermen, apiProducts, apiLandingBatches } from "../services/api";
 import { useConfirm } from "../context/ConfirmContext";
 import useSEO from "../hooks/useSEO";
 
 import { getOptimizedImageUrl } from "../utils/image";
 import { formatCurrency, getProductId, getProductImage } from "../utils/product";
 
+const categories = [
+  { id: "All", label: "Tất cả" },
+  { id: "fish", label: "Cá tươi" },
+  { id: "shrimp", label: "Tôm các loại" },
+  { id: "crab", label: "Cua - Ghẹ" },
+  { id: "squid", label: "Mực - Bạch tuộc" },
+  { id: "shellfish", label: "Ngaêu - Sò - Ốc" },
+  { id: "other", label: "Hải sản khác" },
+];
+
+function initials(name) {
+  if (!name) return "ND";
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
 export default function Home() {
-  useSEO("Trang chủ", "Hệ thống kết nối trực tiếp Người mua & Ngư dân bán hải sản tươi sống chất lượng.");
+  useSEO("Trang chủ & Chợ hải sản", "Hệ thống kết nối trực tiếp Người mua & Ngư dân bán hải sản tươi sống chất lượng.");
   const { alert } = useConfirm();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [products, setProducts] = useState([]);
 
+  const [products, setProducts] = useState([]);
+  const [landingBatches, setLandingBatches] = useState([]);
   const [fishermen, setFishermen] = useState([]);
   const [slideIndex, setSlideIndex] = useState(0);
   const [favorites, setFavorites] = useState(new Set());
   const [heroBackgroundReady, setHeroBackgroundReady] = useState(false);
+
+  // Marketplace Filters integrated into Home
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("All");
+  const [sort, setSort] = useState("fresh");
+  const [viewMode, setViewMode] = useState("products"); // "products" | "batches"
+  const [locationMessage, setLocationMessage] = useState("");
+
   const [viewerLocation, setViewerLocation] = useState(() => {
     try {
       const saved = localStorage.getItem("viewerLocation");
@@ -43,6 +74,22 @@ export default function Home() {
       }
     };
     window.addEventListener("locationUpdated", handleLocationUpdate);
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => {
+          const loc = { latitude: coords.latitude, longitude: coords.longitude };
+          setViewerLocation(loc);
+          localStorage.setItem("viewerLocation", JSON.stringify(loc));
+          window.dispatchEvent(new Event("locationUpdated"));
+        },
+        (error) => {
+          console.warn("Auto geolocation failed in Home:", error);
+        },
+        { enableHighAccuracy: false, timeout: 8000 }
+      );
+    }
+
     return () => window.removeEventListener("locationUpdated", handleLocationUpdate);
   }, []);
 
@@ -67,12 +114,17 @@ export default function Home() {
 
   useEffect(() => {
     Promise.allSettled([
-      apiProducts.getAll({ limit: 24 }),
+      apiProducts.getAll(),
+      apiLandingBatches.getMarketplace({ limit: 50 }),
       apiFishermen.getAll({ limit: 6 }),
-    ]).then(([productResult, fishermanResult]) => {
+    ]).then(([productResult, batchResult, fishermanResult]) => {
       if (productResult.status === "fulfilled") {
         const data = productResult.value;
         setProducts(Array.isArray(data) ? data : data?.data || data?.products || []);
+      }
+      if (batchResult.status === "fulfilled") {
+        const data = batchResult.value;
+        setLandingBatches(Array.isArray(data) ? data : data?.data || []);
       }
       if (fishermanResult.status === "fulfilled") {
         const data = fishermanResult.value;
@@ -92,29 +144,40 @@ export default function Home() {
   }, [user]);
 
   const activeProducts = useMemo(() => {
-    const filtered = products.filter(
+    return products.filter(
       (product) => (product.status || "Active").toLowerCase() === "active"
     );
-
-    const mapped = filtered.map((p) => ({
-      product: p,
-      isFeatured: Boolean(p.featured || p.isFeatured || p.isNew || p.latest),
-      time: new Date(p.bumpedAt || p.createdAt || 0).getTime(),
-      views: Number(p.viewCount || 0)
-    }));
-
-    mapped.sort((left, right) => {
-      const featuredDiff = Number(right.isFeatured) - Number(left.isFeatured);
-      if (featuredDiff !== 0) return featuredDiff;
-
-      const timeDiff = right.time - left.time;
-      if (timeDiff !== 0) return timeDiff;
-
-      return right.views - left.views;
-    });
-
-    return mapped.map((item) => item.product);
   }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    let list = [...activeProducts];
+
+    if (search.trim()) {
+      const query = search.toLowerCase().trim();
+      list = list.filter(
+        (p) =>
+          p.name?.toLowerCase().includes(query) ||
+          p.description?.toLowerCase().includes(query) ||
+          p.sellerName?.toLowerCase().includes(query) ||
+          p.originLocationName?.toLowerCase().includes(query)
+      );
+    }
+
+    if (category !== "All") {
+      list = list.filter((p) => (p.category || "").toLowerCase() === category.toLowerCase());
+    }
+
+    if (sort === "price_asc") {
+      list.sort((a, b) => (a.price || 0) - (b.price || 0));
+    } else if (sort === "price_desc") {
+      list.sort((a, b) => (b.price || 0) - (a.price || 0));
+    } else if (sort === "fresh") {
+      list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    }
+
+    return list;
+  }, [activeProducts, search, category, sort]);
+
   const bannerProducts = useMemo(() => activeProducts.slice(0, 6), [activeProducts]);
   const featuredProduct = bannerProducts[slideIndex % Math.max(bannerProducts.length, 1)];
 
@@ -158,37 +221,52 @@ export default function Home() {
         variant: "danger"
       });
     }
+  };
 
+  const updateLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationMessage("Trình duyệt của bạn không hỗ trợ định vị.");
+      return;
+    }
+
+    setLocationMessage("Đang lấy vị trí hiện tại...");
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const loc = { latitude: coords.latitude, longitude: coords.longitude };
+        setViewerLocation(loc);
+        localStorage.setItem("viewerLocation", JSON.stringify(loc));
+        window.dispatchEvent(new Event("locationUpdated"));
+        setLocationMessage("Đã cập nhật vị trí của bạn.");
+      },
+      (error) => {
+        setLocationMessage(`Không thể vị trí: ${error.message}`);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   return (
     <div className="home-page ocean-background page-container">
+      {/* Hero Banner Section */}
       <section
         className={`market-hero hero-on-image ${heroBackgroundReady ? "has-background" : "is-fallback"}`}
         data-tour="home-hero"
         style={heroBackgroundReady ? { backgroundImage: `url(${heroSeafoodMarket})` } : undefined}
       >
         <div className="market-hero__overlay" />
-        {bannerProducts.length > 1 && (
-          <>
-            <button aria-label="Mẻ hàng trước" className="market-hero__arrow is-left" onClick={() => changeSlide(-1)} type="button">
-              <ChevronLeft />
-            </button>
-            <button aria-label="Mẻ hàng tiếp theo" className="market-hero__arrow is-right" onClick={() => changeSlide(1)} type="button">
-              <ChevronRight />
-            </button>
-          </>
-        )}
         <div className="market-hero__content">
-          <span className="eyebrow">CHỢ HẢI SẢN TRỰC TIẾP</span>
-          <h1>Hải sản theo mẻ theo vị trí từ người bán thật.</h1>
+          <span className="eyebrow">SÀN HẢI SẢN TRỰC TIẾP</span>
+          <h1>Hải sản tươi sống ngay tại tàu & vựa biển.</h1>
           <p>
-            Khám phá nguồn hàng, kiểm tra độ tươi và trò chuyện trực tiếp với ngư dân.
-            Mọi trao đổi mua bán diễn ra trực tiếp giữa hai bên qua tin nhắn.
+            Xem ngay mẻ hàng mới nhất, kiểm tra độ tươi và nhắn tin mua hàng trực tiếp từ ngư dân Việt Nam.
           </p>
           <div className="market-hero__actions">
-            <Link className="button button--primary" data-tour="home-explore-button" to="/marketplace">Khám phá chợ hải sản</Link>
-            <Link className="button button--secondary" to="/chat"><MessageSquare size={17} /> Tin nhắn</Link>
+            <a href="#market-catalog" className="button button--primary">
+              <ShoppingBag size={18} /> Khám phá sản phẩm ngay
+            </a>
+            <Link className="button button--secondary" to="/chat">
+              <MessageSquare size={17} /> Tin nhắn người bán
+            </Link>
           </div>
           {featuredProduct && (
             <button
@@ -211,44 +289,27 @@ export default function Home() {
             </button>
           )}
         </div>
-        {bannerProducts.length > 1 && (
-          <div className="market-hero__dots" aria-label="Chọn mẻ hàng nổi bật">
-            {bannerProducts.map((product, index) => (
-              <button
-                aria-current={
-                  slideIndex % bannerProducts.length === index ? "true" : undefined
-                }
-                aria-label={`Xem mẻ hàng ${index + 1}: ${product.name}`}
-                className={
-                  slideIndex % bannerProducts.length === index ? "is-active" : ""
-                }
-                key={getProductId(product)}
-                onClick={() => setSlideIndex(index)}
-                type="button"
-              />
-            ))}
-          </div>
-        )}
       </section>
 
-      <section className="home-section section-shell" data-tour="home-new-products">
-        <header className="section-heading">
-          <div><h2>Mẻ hàng mới</h2></div>
-          <Link to="/marketplace">Xem tất cả</Link>
+      {/* Featured Products Section */}
+      <section className="home-section section-shell" style={{ marginTop: "2rem" }}>
+        <header className="section-heading" style={{ marginBottom: "1.5rem" }}>
+          <div>
+            <h2 style={{ fontSize: "1.6rem", fontWeight: "800", color: "#0f172a", margin: 0 }}>Sản Phẩm Nổi Bật</h2>
+          </div>
         </header>
 
         {activeProducts.length === 0 ? (
           <div className="empty-state-card">
             <div className="empty-state-icon"><Ship size={32} /></div>
-            <h3>Chưa có mẻ hàng phù hợp</h3>
-            <p>Thử thay đổi bộ lọc hoặc xem toàn bộ chợ hải sản.</p>
-            <Link className="button button--primary" to="/marketplace">Xem tất cả</Link>
+            <h3>Chưa có sản phẩm nào</h3>
+            <p>Vui lòng quay lại sau khi ngư dân cập bến mẻ cá mới.</p>
           </div>
         ) : (
           <ProductGrid
             favorites={favorites}
             onToggleFavorite={toggleFavorite}
-            products={activeProducts.slice(0, 4)}
+            products={activeProducts}
             viewerLocation={viewerLocation}
           />
         )}
@@ -256,9 +317,10 @@ export default function Home() {
 
       <div className="section-divider" />
 
+      {/* Featured Fishermen Section */}
       <section className="home-section section-shell" data-tour="home-featured-sellers">
         <header className="section-heading">
-          <div><h2>Ngư dân nổi bật</h2></div>
+          <div><h2>Ngư dân uy tín tại các cảng biển</h2></div>
         </header>
 
         {fishermen.length === 0 ? (
@@ -266,13 +328,18 @@ export default function Home() {
             <div className="empty-state-icon"><Anchor size={32} /></div>
             <h3>Chưa có hồ sơ ngư dân</h3>
             <p>Theo dõi ngư dân uy tín để nhận thông báo khi có mẻ mới.</p>
-            <Link className="button button--primary" to="/marketplace">Khám phá chợ hải sản</Link>
           </div>
         ) : (
           <div className="home-seller-grid">
             {fishermen.slice(0, 6).map((seller) => (
               <Link className="home-seller-card" key={seller.id || seller._id} to={`/fisherman/${seller.id || seller._id}`}>
-                <span>{(seller.name || "ND").slice(0, 2).toUpperCase()}</span>
+                <span className="home-seller-avatar">
+                  {seller.avatar || seller.avatarUrl ? (
+                    <img src={seller.avatar || seller.avatarUrl} alt={seller.name || ""} />
+                  ) : (
+                    initials(seller.name)
+                  )}
+                </span>
                 <div>
                   <h3>{seller.name} {seller.isVerified && <ShieldCheck size={15} />}</h3>
                   <p><MapPin size={13} /> {seller.locationName || "Việt Nam"}</p>
@@ -286,4 +353,5 @@ export default function Home() {
     </div>
   );
 }
+
 

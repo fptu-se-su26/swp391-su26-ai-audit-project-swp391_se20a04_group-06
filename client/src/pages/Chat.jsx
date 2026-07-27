@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, PackageOpen, X, Video } from "lucide-react";
+import { AlertCircle, PackageOpen, X, Video, Phone, BellOff, ChevronDown, User, Search, Type } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import ChatComposer from "../components/chat/ChatComposer";
 import ConversationList from "../components/chat/ConversationList";
@@ -38,6 +38,17 @@ const playMessageBeep = () => {
   }
 };
 
+function getInitials(name) {
+  if (!name) return "ND";
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
 export default function Chat() {
   const { confirm, alert } = useConfirm();
   const { user } = useAuth();
@@ -64,7 +75,10 @@ export default function Chat() {
     }
     return new Set();
   });
+
   const routeHandledRef = useRef("");
+  const messagesEndRef = useRef(null);
+
   const [showWarning, setShowWarning] = useState(() => {
     return localStorage.getItem("haisan-chat-warning-dismissed") !== "true";
   });
@@ -73,7 +87,13 @@ export default function Chat() {
     setShowWarning(false);
     localStorage.setItem("haisan-chat-warning-dismissed", "true");
   };
-  const messagesEndRef = useRef(null);
+
+  const [isMuted, setIsMuted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchBox, setShowSearchBox] = useState(false);
+  const [nickname, setNickname] = useState("");
+  const [chatEmoji, setChatEmoji] = useState("👍");
+  const [themeColor, setThemeColor] = useState("#0284c7");
 
   const activeThread = useMemo(
     () => threads.find((thread) => thread.id === activeThreadId) || null,
@@ -442,102 +462,227 @@ export default function Chat() {
       />
 
       {activeThread ? (
-        <section className="chat-window">
-          <header className="chat-window__header">
-            <div>
-              <strong>{activeThread.partnerName}</strong>
-              <span><PackageOpen size={14} /> {activeThread.productName}</span>
-            </div>
-            <div className="chat-window__actions">
-              <button
-                aria-label="Gọi video"
-                className="video-call-trigger"
-                disabled={!socket || !isConnected}
-                onClick={() => {
-                  console.log("[Chat.jsx] Video call clicked", {
-                    partnerId: activeThread?.partnerId,
-                    partnerName: activeThread?.partnerName,
-                    productId: activeThread?.productId
-                  });
-                  window.dispatchEvent(new CustomEvent("start_video_call", {
-                    detail: {
-                      partnerId: activeThread.partnerId,
-                      partnerName: activeThread.partnerName,
-                      productId: activeThread.productId
-                    }
-                  }));
-                }}
-                title={socket && isConnected ? "Gọi video" : "Socket chưa kết nối"}
-                type="button"
-              >
-                <Video size={18} /> Gọi video
-              </button>
-              {(!socket || !isConnected) && (
-                <span className="socket-status" style={{ color: "#ef4444" }}><AlertCircle size={14} /> Ngoại tuyến</span>
-              )}
-            </div>
-          </header>
-
-          {(!socket || !isConnected) && (
-            <div className="chat-offline-banner" style={{ background: "rgba(239, 68, 68, 0.08)", borderBottom: "1px solid rgba(239, 68, 68, 0.15)", color: "#ef4444", padding: "10px 16px", fontSize: "0.88rem", display: "flex", gap: "8px", alignItems: "center", fontWeight: "500" }}>
-              <AlertCircle size={16} /> Mất kết nối máy chủ chat thời gian thực. Đang kết nối lại...
-            </div>
-          )}
-
-          {showWarning && (
-            <div className="chat-trade-warning-banner" style={{ background: "rgba(245, 158, 11, 0.08)", borderBottom: "1px solid rgba(245, 158, 11, 0.15)", color: "#d97706", padding: "10px 16px", fontSize: "0.83rem", display: "flex", gap: "8px", alignItems: "center", justifyContent: "space-between", fontWeight: "500", lineHeight: "1.4" }}>
-              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                <AlertCircle size={16} style={{ flexShrink: 0 }} />
-                <span>
-                  <strong>Cảnh báo an toàn:</strong> HảiSản.vn không xử lý thanh toán và vận chuyển. Vui lòng tự kiểm tra kỹ hàng hóa trước khi giao dịch trực tiếp, tuyệt đối không chuyển khoản đặt cọc trước cho người lạ.
+        <>
+          <section className="chat-window fb-chat-main-window">
+            <header className="chat-window__header fb-chat-header">
+              <div className="fb-chat-partner-info">
+                <span className="fb-chat-partner-avatar" style={{ overflow: "hidden", display: "grid", placeItems: "center" }}>
+                  {activeThread.partnerAvatar || activeThread.partnerAvatarUrl ? (
+                    <img src={activeThread.partnerAvatar || activeThread.partnerAvatarUrl} alt={activeThread.partnerName || ""} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    getInitials(nickname || activeThread.partnerName)
+                  )}
                 </span>
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <strong style={{ fontSize: "1rem", color: "#0f172a", lineHeight: "1.2" }}>{nickname || activeThread.partnerName}</strong>
+                  <span className="fb-active-status" style={{ fontSize: "0.78rem", color: "#64748b" }}>
+                    {isConnected ? "Đang hoạt động" : "Hoạt động gần đây"} {activeThread.productName ? `· ${activeThread.productName}` : ""}
+                  </span>
+                </div>
               </div>
-              <button 
-                onClick={dismissWarning} 
-                style={{ background: "transparent", border: 0, color: "#d97706", cursor: "pointer", padding: "4px", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.8 }}
-                type="button"
-                aria-label="Đóng cảnh báo"
-              >
-                <X size={16} />
-              </button>
-            </div>
-          )}
+              <div className="chat-window__actions fb-header-actions" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "10px" }}>
+                <button
+                  type="button"
+                  disabled={!socket || !isConnected}
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent("start_video_call", {
+                      detail: {
+                        partnerId: activeThread.partnerId,
+                        partnerName: nickname || activeThread.partnerName,
+                        productId: activeThread.productId
+                      }
+                    }));
+                  }}
+                  title={socket && isConnected ? "Cuộc gọi thoại" : "Socket chưa kết nối"}
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "50%",
+                    background: "#f1f5f9",
+                    color: isConnected ? "#0284c7" : "#94a3b8",
+                    border: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: isConnected ? "pointer" : "not-allowed"
+                  }}
+                >
+                  <Phone size={18} />
+                </button>
 
-          <div className="chat-window__messages">
-            {(activeThread.messages || []).filter(Boolean).map((message, index) => (
-              <MessageBubble
-                isMine={String(message.senderId) === String(user.id || user._id)}
-                key={message.id || message._id || index}
-                message={message}
-                onEdit={editMessage}
-                onReact={reactMessage}
-                onRecall={recallMessage}
-                onReply={setReplyTo}
-              />
-            ))}
-            {activeThread.messages.length === 0 && (
-              <p className="chat-window__empty">
-                Hãy bắt đầu bằng một câu hỏi rõ ràng về mẻ hàng, giá hoặc thời gian nhận hàng.
-              </p>
+                <button
+                  aria-label="Gọi video"
+                  disabled={!socket || !isConnected}
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent("start_video_call", {
+                      detail: {
+                        partnerId: activeThread.partnerId,
+                        partnerName: nickname || activeThread.partnerName,
+                        productId: activeThread.productId
+                      }
+                    }));
+                  }}
+                  title={socket && isConnected ? "Gọi video" : "Socket chưa kết nối"}
+                  type="button"
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "50%",
+                    background: "#f1f5f9",
+                    color: isConnected ? "#0284c7" : "#94a3b8",
+                    border: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: isConnected ? "pointer" : "not-allowed"
+                  }}
+                >
+                  <Video size={18} />
+                </button>
+
+                {(!socket || !isConnected) && (
+                  <span className="socket-status" style={{ color: "#ef4444", fontSize: "0.8rem", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <AlertCircle size={14} /> Ngoại tuyến
+                  </span>
+                )}
+              </div>
+            </header>
+
+            {(!socket || !isConnected) && (
+              <div className="chat-offline-banner" style={{ background: "rgba(239, 68, 68, 0.08)", borderBottom: "1px solid rgba(239, 68, 68, 0.15)", color: "#ef4444", padding: "10px 16px", fontSize: "0.88rem", display: "flex", gap: "8px", alignItems: "center", fontWeight: "500" }}>
+                <AlertCircle size={16} /> Mất kết nối máy chủ chat thời gian thực. Đang kết nối lại...
+              </div>
             )}
-            <div ref={messagesEndRef} />
-          </div>
 
-          <ChatComposer
-            initialText={initialText}
-            onCancelReply={() => setReplyTo(null)}
-            onSend={sendMessage}
-            onShareLocation={shareLocation}
-            replyTo={replyTo}
-            sending={sending}
-          />
-        </section>
+            {showSearchBox && (
+              <div style={{ padding: "8px 16px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", display: "flex", gap: "8px", alignItems: "center" }}>
+                <Search size={16} color="#64748b" />
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm nội dung tin nhắn trong cuộc trò chuyện..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{ flex: 1, padding: "6px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "0.88rem" }}
+                />
+                <button type="button" onClick={() => { setSearchQuery(""); setShowSearchBox(false); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+
+            {showWarning && (
+              <div className="chat-trade-warning-banner" style={{ background: "rgba(245, 158, 11, 0.08)", borderBottom: "1px solid rgba(245, 158, 11, 0.15)", color: "#d97706", padding: "10px 16px", fontSize: "0.83rem", display: "flex", gap: "8px", alignItems: "center", justifyContent: "space-between", fontWeight: "500", lineHeight: "1.4" }}>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                  <span>
+                    <strong>Cảnh báo an toàn:</strong> HảiSản.vn không xử lý thanh toán và vận chuyển. Vui lòng tự kiểm tra kỹ hàng hóa trước khi giao dịch trực tiếp, tuyệt đối không chuyển khoản đặt cọc trước cho người lạ.
+                  </span>
+                </div>
+                <button 
+                  onClick={dismissWarning} 
+                  style={{ background: "transparent", border: 0, color: "#d97706", cursor: "pointer", padding: "4px", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.8 }}
+                  type="button"
+                  aria-label="Đóng cảnh báo"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+
+            <div className="chat-window__messages">
+              {(activeThread.messages || [])
+                .filter(Boolean)
+                .filter((msg) => !searchQuery.trim() || msg.content?.toLowerCase().includes(searchQuery.toLowerCase()))
+                .map((message, index) => (
+                  <MessageBubble
+                    isMine={String(message.senderId) === String(user.id || user._id)}
+                    key={message.id || message._id || index}
+                    message={message}
+                    onEdit={editMessage}
+                    onReact={reactMessage}
+                    onRecall={recallMessage}
+                    onReply={setReplyTo}
+                  />
+                ))}
+              {activeThread.messages.length === 0 && (
+                <p className="chat-window__empty">
+                  Hãy bắt đầu bằng một câu hỏi rõ ràng về mẻ hàng, giá hoặc thời gian nhận hàng.
+                </p>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            <ChatComposer
+              initialText={initialText}
+              onCancelReply={() => setReplyTo(null)}
+              onSend={sendMessage}
+              onShareLocation={shareLocation}
+              replyTo={replyTo}
+              sending={sending}
+            />
+          </section>
+
+          {/* Facebook Messenger Right Column Details Panel */}
+          <aside className="fb-chat-info-sidebar">
+            <div className="fb-info-profile-section">
+              <div className="fb-info-avatar-lg" style={{ overflow: "hidden", display: "grid", placeItems: "center" }}>
+                {activeThread.partnerAvatar || activeThread.partnerAvatarUrl ? (
+                  <img src={activeThread.partnerAvatar || activeThread.partnerAvatarUrl} alt={activeThread.partnerName || ""} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  getInitials(nickname || activeThread.partnerName)
+                )}
+              </div>
+              <h2 className="fb-info-name">{nickname || activeThread.partnerName}</h2>
+              <span className="fb-info-status">{isConnected ? "Đang hoạt động" : "Hoạt động gần đây"}</span>
+              <div className="fb-encrypted-badge">🔒 Bảo mật kết nối thời gian thực</div>
+
+              <div className="fb-info-quick-actions">
+                <Link to={`/fisherman/${activeThread.partnerId}`} className="fb-info-action-btn" title="Trang cá nhân">
+                  <div className="fb-circle-sm-btn"><User size={18} /></div>
+                  <span>Hồ sơ cá nhân</span>
+                </Link>
+                <button type="button" className="fb-info-action-btn" onClick={() => setIsMuted(!isMuted)} title={isMuted ? "Bật thông báo" : "Tắt thông báo"}>
+                  <div className="fb-circle-sm-btn" style={{ background: isMuted ? "#fee2e2" : undefined, color: isMuted ? "#ef4444" : undefined }}>
+                    <BellOff size={18} />
+                  </div>
+                  <span>{isMuted ? "Đã tắt TV" : "Tắt thông báo"}</span>
+                </button>
+                <button type="button" className="fb-info-action-btn" onClick={() => setShowSearchBox(!showSearchBox)} title="Tìm kiếm tin nhắn">
+                  <div className="fb-circle-sm-btn"><Search size={18} /></div>
+                  <span>Tìm kiếm</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="fb-info-accordion-list">
+              <details open className="fb-info-accordion">
+                <summary>
+                  <span>Thông tin về đoạn chat</span>
+                  <ChevronDown size={16} />
+                </summary>
+                <div className="fb-accordion-content">
+                  <div className="fb-info-item" style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "6px 0" }}>
+                    <span style={{ fontSize: "0.85rem", color: "#64748b" }}>Sản phẩm quan tâm:</span>
+                    <strong style={{ fontSize: "0.95rem", color: "#0284c7", fontWeight: "700" }}>{activeThread.productName || "Mẻ hải sản"}</strong>
+                  </div>
+                  {activeThread.productPrice > 0 && (
+                    <div className="fb-info-item" style={{ marginTop: "6px" }}>
+                      <span>Giá niêm yết</span>
+                      <strong style={{ color: "#0284c7" }}>{activeThread.productPrice.toLocaleString("vi-VN")}đ / kg</strong>
+                    </div>
+                  )}
+                </div>
+              </details>
+            </div>
+          </aside>
+        </>
       ) : (
         <section className="chat-window chat-window--empty">
           <MessageSquareIcon />
           <p>Chọn một cuộc trò chuyện để xem tin nhắn.</p>
         </section>
       )}
+
     </div>
   );
 }

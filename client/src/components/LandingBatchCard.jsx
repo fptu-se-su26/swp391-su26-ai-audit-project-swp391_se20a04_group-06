@@ -19,6 +19,17 @@ import {
 } from "../utils/landingBatch";
 import { formatCurrency, getProductId } from "../utils/product";
 
+function initials(name) {
+  if (!name) return "ND";
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
 export default function LandingBatchCard({ batch }) {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -74,7 +85,13 @@ export default function LandingBatchCard({ batch }) {
 
       <div className="landing-batch-card__body">
         <div className="landing-batch-card__seller">
-          <span>{(batch.sellerName || "ND").slice(0, 2).toUpperCase()}</span>
+          <span>
+            {batch.sellerAvatar ? (
+              <img src={batch.sellerAvatar} alt={batch.sellerName || ""} />
+            ) : (
+              initials(batch.sellerName)
+            )}
+          </span>
           <strong>
             {batch.sellerName || "Ngư dân"}
             {batch.sellerIsVerified && <ShieldCheck size={14} />}

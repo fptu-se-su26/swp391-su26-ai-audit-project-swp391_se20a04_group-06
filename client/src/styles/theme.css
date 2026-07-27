@@ -5,25 +5,38 @@
 :root,
 .theme-light,
 .theme-dark {
-  --color-page: #eef8fc;
+  --color-page: #f8fafc;
   --color-surface: #ffffff;
-  --color-surface-raised: #f8fdff;
-  --color-surface-soft: #eaf6fb;
+  --color-surface-raised: #ffffff;
+  --color-surface-soft: #f1f5f9;
 
   --color-text: #0f172a;
-  --color-heading: #0b1220;
-  --color-muted: #475569;
-  --color-subtle: #64748b;
+  --color-heading: #0f172a;
+  --color-body: #334155;
+  --color-muted: #64748b;
+  --color-subtle: #94a3b8;
 
-  --color-border: rgba(8, 145, 178, 0.22);
-  --color-border-strong: rgba(8, 145, 178, 0.42);
+  --color-text-on-dark: #ffffff;
+  --color-body-on-dark: #e2e8f0;
+  --color-muted-on-dark: #cbd5e1;
 
-  --color-primary: #0891b2;
-  --color-primary-strong: #0e7490;
-  --color-danger: #e11d48;
-  --color-danger-strong: #be123c;
+  --color-border: #e2e8f0;
+  --color-border-strong: #cbd5e1;
 
-  --shadow-card: 0 16px 40px rgba(15, 23, 42, 0.08);
+  --color-primary: #0ea5e9;
+  --color-primary-strong: #0284c7;
+  --color-secondary: #0284c7;
+  --color-danger: #ef4444;
+  --color-danger-strong: #dc2626;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+
+  --shadow-card: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-hover: 0 12px 30px rgba(15, 23, 42, 0.12);
+
+  --radius-card: 12px;
+  --radius-button: 10px;
+  --radius-input: 8px;
 
   /* Map old variables to new tokens to support existing codebase */
   --market-bg: var(--color-page);
@@ -34,9 +47,10 @@
   --market-muted: var(--color-muted);
   --market-primary: var(--color-primary);
   --market-primary-strong: var(--color-primary-strong);
-  --market-blue: #0284c7;
+  --market-blue: #0ea5e9;
   --market-danger: var(--color-danger);
   --market-shadow: var(--shadow-card);
+  --market-radius: var(--radius-card);
 }
 
 /* ==================================================
@@ -45,11 +59,12 @@
 
 .on-dark,
 .hero-on-image,
-.dark-panel {
-  --local-text: #f8fafc;
+.dark-panel,
+.landing-batch-hero {
+  --local-text: #e2e8f0;
   --local-heading: #ffffff;
   --local-muted: #cbd5e1;
-  color: #f8fafc;
+  color: #e2e8f0;
 }
 
 /* -------------------------------------------------------
@@ -67,6 +82,9 @@
 .dark-panel h2,
 .on-dark h1,
 .on-dark h2,
+.landing-batch-hero h1,
+.landing-batch-hero h2,
+.landing-batch-hero__content h1,
 .theme-light .hero-on-image h1,
 .theme-light .hero-on-image h2,
 .theme-light .hero-on-image h3,
@@ -74,9 +92,13 @@
 .theme-light .dark-panel h1,
 .theme-light .dark-panel h2,
 .theme-light .on-dark h1,
-.theme-light .on-dark h2 {
+.theme-light .on-dark h2,
+.theme-light .landing-batch-hero h1,
+.theme-light .landing-batch-hero h2,
+.theme-light .landing-batch-hero__content h1 {
   color: #ffffff !important;
   opacity: 1 !important;
+  font-weight: 800 !important;
   text-shadow: 0 4px 24px rgba(0, 0, 0, 0.55), 0 1px 6px rgba(0, 0, 0, 0.35);
 }
 
@@ -84,11 +106,14 @@
 .hero-on-image .eyebrow,
 .dark-panel .eyebrow,
 .on-dark .eyebrow,
+.landing-batch-hero .eyebrow,
 .theme-light .hero-on-image .eyebrow,
 .theme-light .dark-panel .eyebrow,
-.theme-light .on-dark .eyebrow {
-  color: #67f8ff !important;
+.theme-light .on-dark .eyebrow,
+.theme-light .landing-batch-hero .eyebrow {
+  color: #38bdf8 !important;
   opacity: 1 !important;
+  font-weight: 700 !important;
   text-shadow: none;
 }
 
@@ -96,12 +121,28 @@
 .hero-on-image p,
 .dark-panel p,
 .on-dark p,
+.landing-batch-hero p,
+.landing-batch-hero__content > p,
 .theme-light .hero-on-image p,
 .theme-light .dark-panel p,
-.theme-light .on-dark p {
-  color: #dbeafe !important;
+.theme-light .on-dark p,
+.theme-light .landing-batch-hero p,
+.theme-light .landing-batch-hero__content > p {
+  color: #e2e8f0 !important;
   opacity: 1 !important;
   text-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Seller Link on Dark Hero */
+.landing-batch-seller,
+.theme-light .landing-batch-seller {
+  color: #38bdf8 !important;
+  font-weight: 600 !important;
+}
+
+.landing-batch-seller strong,
+.theme-light .landing-batch-seller strong {
+  color: #ffffff !important;
 }
 
 /* Spans inside hero (NOT buttons) */
@@ -115,23 +156,27 @@
 .hero-on-image .button--secondary,
 .dark-panel .button--secondary,
 .on-dark .button--secondary,
+.landing-batch-hero .button--secondary,
 .theme-light .hero-on-image .button--secondary,
 .theme-light .dark-panel .button--secondary,
-.theme-light .on-dark .button--secondary {
-  background: rgba(255, 255, 255, 0.15) !important;
-  border-color: rgba(255, 255, 255, 0.3) !important;
-  color: #ffffff !important;
+.theme-light .on-dark .button--secondary,
+.theme-light .landing-batch-hero .button--secondary {
+  background: #ffffff !important;
+  border-color: #0ea5e9 !important;
+  color: #0f172a !important;
 }
 
 .hero-on-image .button--secondary:hover,
 .dark-panel .button--secondary:hover,
 .on-dark .button--secondary:hover,
+.landing-batch-hero .button--secondary:hover,
 .theme-light .hero-on-image .button--secondary:hover,
 .theme-light .dark-panel .button--secondary:hover,
-.theme-light .on-dark .button--secondary:hover {
-  background: rgba(255, 255, 255, 0.26) !important;
-  border-color: rgba(255, 255, 255, 0.5) !important;
-  color: #ffffff !important;
+.theme-light .on-dark .button--secondary:hover,
+.theme-light .landing-batch-hero .button--secondary:hover {
+  background: #f0f9ff !important;
+  border-color: #0284c7 !important;
+  color: #0284c7 !important;
 }
 
 /* ==================================================
@@ -322,42 +367,27 @@
 }
 
 /* ==================================================
-   PHẦN 7: SỬA NAVBAR LIGHT THEME
+   PHẦN 7: SỬA NAVBAR LIGHT THEME (FACEBOOK WEB EXACT MATCH)
    ================================================== */
 
 .theme-light .app-navbar {
-  background: rgba(244, 251, 255, 0.96) !important;
-  border-bottom: 1px solid var(--color-border) !important;
-  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04) !important;
-}
-
-.theme-light .app-navbar__mobile {
-  background: rgba(244, 251, 255, 0.98) !important;
-  border-top: 1px solid var(--color-border) !important;
+  background: #ffffff !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06) !important;
 }
 
 .theme-light .app-nav-link {
-  color: #334155 !important;
-  font-weight: 650 !important;
-}
-
-.theme-light .app-nav-link:hover {
-  color: var(--color-primary-strong) !important;
-  background: rgba(8, 145, 178, 0.06) !important;
-  border-color: rgba(8, 145, 178, 0.2) !important;
+  padding: 0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .theme-light .app-nav-link.is-active {
-  color: var(--color-primary-strong) !important;
-  background: rgba(8, 145, 178, 0.08) !important;
-  border-color: rgba(8, 145, 178, 0.3) !important;
-  box-shadow: 0 4px 16px rgba(8, 145, 178, 0.06) !important;
-  font-weight: 800 !important;
-}
-
-.theme-light .app-nav-link.is-active svg {
-  color: var(--color-primary-strong) !important;
-  stroke: currentColor;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .theme-light .navbar-profile-button,
@@ -378,54 +408,79 @@
    ================================================== */
 
 /* Primary Button */
+.button--primary,
 .theme-light .button--primary,
 .theme-light .bl-form__submit {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong)) !important;
+  background: var(--color-primary) !important;
   color: #ffffff !important;
   border: none !important;
+  border-radius: var(--radius-button) !important;
+  font-weight: 600 !important;
 }
 
+.button--primary:hover:not(:disabled),
 .theme-light .button--primary:hover:not(:disabled),
 .theme-light .bl-form__submit:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--color-primary-strong), var(--color-primary-strong)) !important;
-  box-shadow: 0 10px 26px rgba(8, 145, 178, 0.18) !important;
+  background: var(--color-primary-strong) !important;
+  box-shadow: 0 8px 20px rgba(14, 165, 233, 0.25) !important;
   color: #ffffff !important;
 }
 
 /* Secondary Button */
+.button--secondary,
 .theme-light .button--secondary {
-  border: 1px solid var(--color-border-strong) !important;
-  background: var(--color-surface) !important;
-  color: var(--color-text) !important;
+  border: 1.5px solid var(--color-primary) !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-radius: var(--radius-button) !important;
+  font-weight: 600 !important;
 }
 
+.button--secondary:hover:not(:disabled),
 .theme-light .button--secondary:hover:not(:disabled) {
-  background: var(--color-surface-soft) !important;
+  background: #f0f9ff !important;
   border-color: var(--color-primary-strong) !important;
   color: var(--color-primary-strong) !important;
-  box-shadow: 0 10px 24px rgba(8, 145, 178, 0.08) !important;
+  box-shadow: 0 6px 18px rgba(14, 165, 233, 0.12) !important;
 }
 
 /* Ghost Button */
+.button--ghost,
 .theme-light .button--ghost {
   border: 1px solid var(--color-border) !important;
   background: transparent !important;
   color: var(--color-muted) !important;
+  border-radius: var(--radius-button) !important;
 }
 
+.button--ghost:hover:not(:disabled),
 .theme-light .button--ghost:hover:not(:disabled) {
-  background: rgba(8, 145, 178, 0.06) !important;
+  background: #f0f9ff !important;
   color: var(--color-primary-strong) !important;
-  border-color: var(--color-border-strong) !important;
+  border-color: var(--color-primary) !important;
 }
 
 /* Danger Button */
+.button-danger,
+.button--danger,
+.is-danger,
 .theme-light .button-danger,
 .theme-light .button--danger,
 .theme-light .is-danger {
-  color: var(--color-danger) !important;
-  border: 1px solid rgba(225, 29, 72, 0.25) !important;
-  background: transparent !important;
+  color: #ffffff !important;
+  border: none !important;
+  background: var(--color-danger) !important;
+  border-radius: var(--radius-button) !important;
+  font-weight: 600 !important;
+}
+
+.button-danger:hover:not(:disabled),
+.button--danger:hover:not(:disabled),
+.theme-light .button-danger:hover:not(:disabled),
+.theme-light .button--danger:hover:not(:disabled) {
+  background: var(--color-danger-strong) !important;
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.25) !important;
+  color: #ffffff !important;
 }
 
 .theme-light .button-danger:hover,
@@ -437,66 +492,156 @@
 }
 
 /* Inputs, Textareas, Selects */
+input,
+textarea,
+select,
 .theme-light input,
 .theme-light textarea,
-.theme-light select {
-  background: var(--color-surface) !important;
-  color: var(--color-text) !important;
+.theme-light select,
+.feature-form input,
+.feature-form textarea,
+.feature-form select {
+  background: #ffffff !important;
+  color: #0f172a !important;
   border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-input) !important;
 }
 
+input:focus,
+textarea:focus,
+select:focus,
 .theme-light input:focus,
 .theme-light textarea:focus,
-.theme-light select:focus {
-  border-color: var(--color-primary-strong) !important;
-  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.15) !important;
+.theme-light select:focus,
+.feature-form input:focus,
+.feature-form textarea:focus,
+.feature-form select:focus {
+  border-color: #0ea5e9 !important;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2) !important;
+  outline: none !important;
 }
 
+::placeholder,
 .theme-light ::placeholder {
-  color: var(--color-subtle) !important;
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+/* Tables System */
+table,
+.theme-light table,
+.workspace-table,
+.admin-table {
+  width: 100%;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-card) !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+table thead,
+table th,
+.theme-light table thead,
+.theme-light table th,
+.workspace-table th,
+.admin-table th {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  padding: 12px 16px !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  text-align: left !important;
+}
+
+table tbody tr,
+.theme-light table tbody tr,
+.workspace-table tbody tr {
+  background: #ffffff !important;
+  transition: background-color 150ms ease;
+}
+
+table tbody tr:nth-child(even),
+.theme-light table tbody tr:nth-child(even),
+.workspace-table tbody tr:nth-child(even) {
+  background: #f8fafc !important;
+}
+
+table tbody tr:hover,
+.theme-light table tbody tr:hover,
+.workspace-table tbody tr:hover {
+  background: #f0f9ff !important;
+}
+
+table td,
+.theme-light table td,
+.workspace-table td {
+  border-bottom: 1px solid var(--color-border) !important;
+  color: #334155 !important;
+  padding: 12px 16px !important;
 }
 
 /* ==================================================
    PHẦN 9: SỬA RECIPE / COMMUNITY / CARD LIGHT THEME
    ================================================== */
 
+/* Cards System */
+.card,
+.market-card,
+.stat-card,
+.admin-stat-card,
+.recipe-card,
+.product-card,
+.landing-batch-card,
+.boat-log-card,
+.dashboard-panel,
+.section-shell,
+.recipe-ingredients-card,
+.recipe-steps-card,
+.recipe-summary-card,
+.recipe-action-bar,
+.recipe-comments-drawer,
+.product-detail-card,
+.location-panel,
+.price-history-panel,
+.bl-form__trip-card,
 .theme-light .recipe-card,
 .theme-light .product-card,
 .theme-light .landing-batch-card,
 .theme-light .boat-log-card,
-.theme-light .dashboard-panel {
-  background: var(--color-surface) !important;
-  border: 1px solid var(--color-border) !important;
-  box-shadow: var(--shadow-card) !important;
+.theme-light .dashboard-panel,
+.theme-light .product-detail-card,
+.theme-light .location-panel,
+.theme-light .price-history-panel {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
 }
 
+.recipe-card h1, .recipe-card h2, .recipe-card h3,
+.product-card h1, .product-card h2, .product-card h3,
+.landing-batch-card h1, .landing-batch-card h2, .landing-batch-card h3,
+.boat-log-card h1, .boat-log-card h2, .boat-log-card h3,
+.location-panel h1, .location-panel h2, .location-panel h3,
 .theme-light .recipe-card h2,
 .theme-light .product-card h3,
 .theme-light .landing-batch-card h3,
 .theme-light .boat-log-card h3 {
-  color: var(--color-heading) !important;
+  color: #0f172a !important;
 }
 
+.recipe-card p,
+.product-card p,
+.landing-batch-card p,
+.boat-log-card p,
 .theme-light .recipe-card p,
 .theme-light .product-card p,
 .theme-light .landing-batch-card p,
 .theme-light .boat-log-card p {
-  color: var(--color-muted) !important;
-}
-
-/* Details Page (RecipeDetail, ProductDetail, LandingBatchDetail) */
-.theme-light .recipe-ingredients-card,
-.theme-light .recipe-steps-card,
-.theme-light .recipe-summary-card,
-.theme-light .recipe-action-bar,
-.theme-light .recipe-comments-drawer,
-.theme-light .product-detail-card,
-.theme-light .location-panel,
-.theme-light .price-history-panel,
-.theme-light .bl-form__trip-card {
-  background: var(--color-surface) !important;
-  border: 1px solid var(--color-border) !important;
-  box-shadow: var(--shadow-card) !important;
+  color: #334155 !important;
 }
 
 /* Product Detail specifics */
@@ -789,20 +934,20 @@
 }
 
 .theme-light .live-preview-shell p,
-.theme-light .live-preview-shell span,
+.theme-light .live-preview-shell span:not(.recipe-detail__placeholder *):not(.recipe-meta__item *):not(.eyebrow),
 .theme-light .live-preview-shell li,
-.theme-light .live-preview-shell strong {
+.theme-light .live-preview-shell strong:not(.recipe-detail__placeholder *) {
   color: var(--color-text) !important;
 }
 
 .theme-light .live-preview-shell small,
 .theme-light .live-preview-shell .text-muted,
-.theme-light .live-preview-shell span[style*="color: '#94a3b8'"],
+.theme-light .live-preview-shell span[style*="color: '#94a3b8'"]:not(.recipe-detail__placeholder *),
 .theme-light .live-preview-shell p[style*="color: '#94a3b8'"] {
   color: var(--color-muted) !important;
 }
 
-.theme-light .live-preview-shell svg {
+.theme-light .live-preview-shell svg:not(.recipe-detail__placeholder *):not(.recipe-meta__item *) {
   color: var(--color-primary-strong) !important;
 }
 
@@ -862,34 +1007,52 @@
 .theme-light .page-container .hero-on-image h3,
 .theme-light .page-container .hero-on-image h4,
 .theme-light .page-container .hero-on-image h5,
-.theme-light .page-container .hero-on-image h6 {
+.theme-light .page-container .hero-on-image h6,
+.theme-light .landing-batch-hero h1,
+.theme-light .landing-batch-hero h2,
+.theme-light .landing-batch-hero__content h1 {
   color: #ffffff !important;
   opacity: 1 !important;
+  font-weight: 800 !important;
   text-shadow: 0 4px 24px rgba(0, 0, 0, 0.6), 0 1px 6px rgba(0, 0, 0, 0.4) !important;
 }
 
 .theme-light .page-container .hero-on-image p,
-.theme-light .page-container .hero-on-image li {
-  color: #dbeafe !important;
+.theme-light .page-container .hero-on-image li,
+.theme-light .landing-batch-hero p,
+.theme-light .landing-batch-hero__content > p {
+  color: #e2e8f0 !important;
   opacity: 1 !important;
   text-shadow: 0 2px 16px rgba(0, 0, 0, 0.4) !important;
 }
 
-.theme-light .page-container .hero-on-image .eyebrow {
-  color: #67f8ff !important;
+.theme-light .page-container .hero-on-image .eyebrow,
+.theme-light .landing-batch-hero .eyebrow {
+  color: #38bdf8 !important;
   opacity: 1 !important;
+  font-weight: 700 !important;
 }
 
-.theme-light .page-container .hero-on-image .button--secondary {
-  background: rgba(255, 255, 255, 0.15) !important;
-  border-color: rgba(255, 255, 255, 0.35) !important;
+.theme-light .landing-batch-seller {
+  color: #38bdf8 !important;
+}
+
+.theme-light .landing-batch-seller strong {
   color: #ffffff !important;
 }
 
-.theme-light .page-container .hero-on-image .button--secondary:hover {
-  background: rgba(255, 255, 255, 0.27) !important;
-  border-color: rgba(255, 255, 255, 0.55) !important;
-  color: #ffffff !important;
+.theme-light .page-container .hero-on-image .button--secondary,
+.theme-light .landing-batch-hero .button--secondary {
+  background: #ffffff !important;
+  border-color: #0ea5e9 !important;
+  color: #0f172a !important;
+}
+
+.theme-light .page-container .hero-on-image .button--secondary:hover,
+.theme-light .landing-batch-hero .button--secondary:hover {
+  background: #f0f9ff !important;
+  border-color: #0284c7 !important;
+  color: #0284c7 !important;
 }
 
 /* CTA featured card in hero */
